@@ -11,7 +11,7 @@ Scope here is grounded in interviews with two real prospective users — a talen
 - [Functionality](#functionality)
 - [Roles and verticals](#roles-and-verticals)
 - [Ingestion](#ingestion)
-- [Understanding and deal matching](#understanding-and-deal-matching)
+- [Understanding and project matching](#understanding-and-project-matching)
 - [Pipeline](#pipeline)
 - [Entity model](#entity-model)
 - [Schema](#schema)
@@ -48,29 +48,39 @@ Tagged by when it's built: **MVP** ships first. **Phase 2** follows once the cor
 - Vertical-specific fields — usage rights and exclusivity windows for a brand deal, guarantee versus door split for a music gig — **Phase 2**.
 - Guidance on contract language, royalty structures, or red flags — **Later**. Needs a legal or rights specialist involved before it's built at all.
 
-### Deals, not messages
+### Projects, not messages
+
+A **project** (UI: 專案) is the unit a person manages: one ongoing deal with one counterparty. Messages, contract versions, calendar events, money, and to-dos all belong to a project.
 
 - Group the messages and contract versions that belong to one ongoing deal into a single project — **MVP**.
+- Track each project through stages — offer, negotiating, signed, in progress, collecting payment, closed, or declined / cancelled. The system suggests a stage change; the person confirms it or sets the stage by hand — **MVP**.
+- Project types, each with its own fields, screens, milestones, and to-dos: `gig` and `other` — **MVP**; `brand_deal` — **Phase 2**; further types as research shows a need — **Later**.
 - Match a new message to an existing project automatically, and always ask the person to confirm the match — **MVP**.
 - Detect that a new message is an updated version of an existing contract, and show exactly what changed — fee, dates, terms — **MVP**.
 - Manually merge or split projects when the automatic match is wrong — **MVP**, basic version; refined once real usage shows where it fails.
 
 ### Quoting and drafting
 
-- Draft a reply, quote, or payment follow-up — several versions at once — for the person to review and send themselves — **MVP**. Validated as the single most requested capability in interviews; the system never sends on its own.
+- Analyze each message: a summary, the extracted facts, what the sender is asking for, and what's missing (e.g. no load-in time) — **MVP**.
+- Draft a reply, quote, or payment follow-up — several versions at once — for the person to review and send themselves — **MVP**. Validated as the single most requested capability in interviews; the system never sends on its own. Drafts are stored, along with which one the person picked and how they edited it.
 - Toggle a quote between tax-inclusive and tax-exclusive amounts — **Phase 2**.
 - Draft against the person's own past phrasing and process, not a generic template — **Phase 2**. Needs enough confirmed history per person to draw from.
 
 ### Review and action
 
 - A review queue — nothing is recorded as fact, drafted, or scheduled without a person confirming it — **MVP**.
+- An in-app calendar of events and deadlines across projects, filterable to one project — **MVP**.
 - A downloadable calendar file for a confirmed event — **MVP**.
-- To-dos generated from extracted deadlines: reply by Friday, deposit due Oct 1, review this changed contract — **MVP**.
+- A private calendar subscription link, so confirmed events appear in Google or Apple Calendar with no account connection — **MVP**.
+- To-dos generated from extracted deadlines: reply by Friday, deposit due Oct 1, review this changed contract — **MVP**. To-dos are also how a message is tracked: its "to respond" / "waiting for reply" state is read from the to-dos linked to it, since the system never sees the person's own replies.
 - Direct calendar account connection, so confirmed events appear without a download step — **Phase 2**.
 
 ### Billing and payments
 
-- Track a deal's payment status against extracted amounts and due dates — deposit paid, balance outstanding, overdue — **MVP**. This is a to-do generated from data extraction already in scope, not new infrastructure.
+- Track a project's payment status against extracted amounts and due dates — deposit paid, balance outstanding, overdue — **MVP**. The amount actually received is recorded separately from the amount agreed, since withholding tax and the supplementary health-insurance premium (二代健保) often make them differ.
+- Record expenses against a project by hand — amount, label, project — and show net per project — **MVP**. No receipts, categories, or reports.
+- Amounts in TWD only — **MVP**. Each amount still carries its currency.
+- Multiple currencies, with a per-user default currency the dashboard converts into — **Later**. See [Multi-currency](#multi-currency-later).
 - A running record of which counterparties pay late and by how much — **Later**. Needs enough payment history per counterparty to be meaningful.
 
 ### Analytics and insights
@@ -145,15 +155,16 @@ The first version never scans a mailbox in the background. Every message arrives
 
 > **Message content is untrusted input regardless of channel.** The extractor returns schema-validated data and has no tools of its own, so nothing inside a message can trigger an action by itself. Every write — a confirmed event, a saved contract — happens only after a person confirms it in the review queue.
 
-## Understanding and deal matching
+## Understanding and project matching
 
-Extraction turns a message into facts. Matching decides which ongoing deal those facts belong to. These are separate steps, and the second one is the harder engineering problem.
+Analysis turns a message into facts. Matching decides which project those facts belong to. These are separate steps, and the second one is the harder engineering problem.
 
-### Extraction
+### Analysis
 
-- A classifier call labels the message type. An extractor call — forced into a schema, not free text — pulls out the core fields, plus vertical fields once those exist.
+- A classifier call labels the message type. An extractor call — forced into a schema, not free text — pulls out the core fields, plus the project type's fields once those exist (the type registry supplies that schema).
+- Beyond the facts, the analysis records a short summary, what the sender is asking for, and what's missing (no start time, no deposit terms) — the drafter uses the last two directly.
 - Images (screenshots, photos, rendered PDF pages) go through the same extractor using a vision-capable model call rather than a separate OCR step.
-- Every extraction is stored with the model version and a confidence score, versioned per message rather than overwritten — re-running extraction later doesn't lose the earlier attempt.
+- Every analysis is stored with the model version and a confidence score, versioned per message rather than overwritten — re-running it later doesn't lose the earlier attempt.
 
 ### Matching a message to a project
 
@@ -167,11 +178,15 @@ A deal is rarely one message. A venue's first offer, the signed contract, and a 
 ### Versioning and diffing
 
 - When a message is confirmed as part of an existing project and it's a contract, it becomes a new version linked to the one it replaces.
+- Each contract version has a status — received, changes requested, signed, or void. "Superseded" isn't stored; a newer version implies it.
+- Offer-stage terms stay on the offer message's analysis; comparing them against the contract is what surfaces "this contract doesn't match its offer."
 - The diff is computed over the structured fields, not the raw document — "fee changed from $500 to $650," "deposit deadline moved from Oct 1 to Oct 15" — because that's what a person needs to see at a glance. The raw attachments for both versions stay available underneath.
 
 ### Drafting
 
-A drafter call sits alongside the classifier and extractor, not inside them. Given a project's confirmed history and the message that prompted it, it produces several candidate replies, quotes, or payment follow-ups. It writes nothing anywhere and sends nothing — its output is text on the review screen, and only a person's own send action leaves the system.
+A drafter call sits alongside the classifier and extractor, not inside them. Given a project's confirmed history, the message's analysis, and the message that prompted it, it produces several candidate replies, quotes, or payment follow-ups. It sends nothing — only a person's own send action leaves the system.
+
+Drafts are stored (`reply_draft`) with the version the person picked and their edits, so they can come back to one, and so Phase 2 can draft in the person's own voice. Using a draft completes its reply to-do and offers a follow-up date — the closest the system gets to knowing a reply went out, since it never sees the person's sent mail.
 
 ## Pipeline
 
@@ -189,7 +204,7 @@ flowchart TD
 
     Q -->|worker pulls| CL[Classifier]
     CL -->|type| EX[Extractor]
-    EX -->|ExtractionResult: type, fields, confidence| DM[Deal matcher]
+    EX -->|MessageAnalysis: type, facts, confidence| DM[Project matcher]
     DM <-.->|similarity search| OP[("Open projects<br/>(pgvector)")]
 
     DM -->|proposed link: existing or new project| OR[Action orchestrator]
@@ -201,11 +216,11 @@ flowchart TD
     WEB -->|on confirm only: generate file| CAL
 ```
 
-Ingestion only happens when a person acts, so every message has a known, authenticated source — there's no sender-identity check to perform. The deal matcher runs before anything is written, so a proposed project link is confirmed by the person alongside the extracted facts, not merged silently.
+Ingestion only happens when a person acts, so every message has a known, authenticated source — there's no sender-identity check to perform. The project matcher runs before anything is written, so a proposed project link is confirmed by the person alongside the extracted facts, not merged silently.
 
-### Event lifecycle
+### Calendar event lifecycle
 
-Without a direct calendar connection, "cancelling" an event here can't reach into a calendar app and remove a file already handed over — it only stops the system from treating it as upcoming.
+Without a direct calendar connection, "cancelling" an event here can't reach into a calendar app and remove a file already handed over — it only stops the system from treating it as upcoming. The subscription link does better: a cancelled event drops out of subscribed calendars on their next refresh.
 
 ```mermaid
 stateDiagram-v2
@@ -221,76 +236,142 @@ A rejected proposal never generates a file. A cancelled confirmed event only sto
 
 ## Entity model
 
-`Membership` makes manager and agency accounts a permissions problem rather than a schema problem — even though only the `owner` role is created automatically for now. `Project` and `Contract` together are what let a deal be tracked as one thing across several messages and versions.
+Two ideas carry the model. **A login is not a business:** `person` is someone who signs in, `talent` is the artist or creator whose business is tracked, and `membership` links them with a role — so manager accounts (one person, many talents) and bands (many people, one talent) are a permissions change, not a schema change. **The project is the unit a person manages:** messages, contract versions, calendar events, money, and to-dos all hang off it.
 
 ```mermaid
 erDiagram
     PERSON ||--o{ MEMBERSHIP : has
     TALENT ||--o{ MEMBERSHIP : has
     PERSON ||--o{ INBOUND_GRANT : authorizes
+    TALENT ||--o{ PROJECT : has
     TALENT ||--o{ MESSAGE : receives
     PERSON ||--o{ MESSAGE : submits
-    MESSAGE ||--o{ EXTRACTION_RESULT : produces
-    TALENT ||--o{ PROJECT : has
+    PROJECT ||--o{ MESSAGE : "groups (once confirmed)"
+    MESSAGE ||--o{ MESSAGE_FILE : contains
+    MESSAGE ||--o{ MESSAGE_ANALYSIS : produces
+    MESSAGE ||--o{ REPLY_DRAFT : "drafted for"
     PROJECT ||--o{ CONTRACT : "has versions"
     CONTRACT ||--o| CONTRACT : supersedes
-    CONTRACT ||--o| CONTRACT_DIFF : has
-    CONTRACT ||--o| EVENT : produces
-    PROJECT ||--o{ EVENT : has
+    PROJECT ||--o{ CALENDAR_EVENT : has
+    PROJECT ||--o{ PAYMENT : has
     PROJECT ||--o{ TODO : has
+    MESSAGE ||--o{ TODO : "tracked by"
     TALENT ||--o{ AUDIT_LOG : has
 ```
 
-| From | To | Cardinality | Via |
-|---|---|---|---|
-| Person | Talent | N—M | `Membership` (role) |
-| Person | InboundGrant | 1—N | `person_id` |
-| Talent | Message | 1—N | `talent_id` |
-| Talent | Project | 1—N | `talent_id` |
-| Message | ExtractionResult | 1—N | `message_id` — versioned, latest wins |
-| Project | Contract | 1—N | `project_id` — each row is one version |
-| Contract | Contract | 0/1—0/1 | `supersedes_id` — the version it replaces |
-| Contract | ContractDiff | 1—0/1 | `contract_id` — present from version 2 onward |
-| Contract | Event | 1—0/1 | `event.contract_id` |
-| Project | Todo | 1—N | `project_id` |
-| Talent | AuditLog | 1—N | `talent_id` |
+| Table | What a row is | Built in |
+|---|---|---|
+| `person` | A login. Doubles as Better Auth's user table | M1 |
+| `auth_session`, `auth_account`, `auth_verification` | Better Auth internals: sessions, password hashes and Google links, email-verification tokens | M1 |
+| `talent` | The artist or creator whose business is tracked; holds the vertical | M1 |
+| `membership` | A person's role on a talent | M1 |
+| `message` | One submission — an email, or a batch of screenshots of one conversation | M2 |
+| `message_file` | One file in a message: email body, an attachment, or one screenshot, in order | M2 |
+| `message_analysis` | One AI reading of a message — facts, summary, asks, what's missing. Versioned | M2 |
+| `reply_draft` | One drafted reply, with whether it was picked and how it was edited | M2 |
+| `project` (UI: 專案) | One ongoing deal with one counterparty, with a type and a stage | M2 (one project per confirmed message); matching in M4 |
+| `calendar_event` | Something that happens at a time — performance, load-in, travel | M2 |
+| `todo` | Something the person needs to do; also the source of a message's reply status | M2 |
+| `payment` | Money in or out for a project, expected and actual | M2 |
+| `audit_log` | Who confirmed or changed what, and when | M2 |
+| `contract` | One version of a contract document, with status and diff | M2 (v1 only); versions and diff in M4 |
+| `inbound_grant` | Authorization from the Gmail add-on | M3 |
 
-Full field-level detail lives in the schema below — the DDL is the authoritative reference, not duplicated here.
+**M1–M5** are the MVP build milestones (the 階段 in the internal timeline). **Phase 2** and **Later** remain the post-MVP scope tags used under [Functionality](#functionality).
+
+### Glossary
+
+Chinese labels are proposals except 專案, which is decided.
+
+| Code | UI (zh) | Meaning |
+|---|---|---|
+| `talent` | 藝人 | The artist or creator whose business is tracked |
+| `project` | 專案 | One ongoing deal with one counterparty |
+| `project.stage` | 階段 | Where the project is in its lifecycle |
+| `project.type` | 類型 | What kind of project — drives fields, screens, milestones |
+| `contract` | 合約 | One version of a contract document |
+| `todo` | 待辦 | Something to do, optionally with a due date |
+| `payment` | 款項 | Money in (fee, deposit, balance) or out (an expense) |
+
+### How the pieces behave
+
+**Project stage.** `offer → negotiating → signed → in_progress → collecting_payment → closed`, with `declined` and `cancelled` as exits. Every type shares this set so cross-project views work; a type may relabel a stage in the UI. The system *suggests* moves — an offer confirmed (offer), a counter-offer draft used or a contract returned with changes (negotiating), a contract version signed (signed), the first event date reached (in progress), the event past with money outstanding (collecting payment), all expected payments settled (closed), a decline draft used or the counterparty cancels (declined / cancelled). The person confirms, or sets the stage by hand. Every change is written to `audit_log`.
+
+**Project types.** One `project.type` column plus a `details` jsonb for type-specific fields. Behavior lives in a type registry in code — one file per type (`lib/project-types/gig.ts`) defining its UI label, the schema for `details` (which is also the extraction schema), which panels the project page shows, its milestone and to-do templates, and which verticals offer it. Type-specific steps (a brand deal's draft submitted → approved → posted) are milestones inside `in_progress`, generated as to-dos and calendar events. Adding a type is adding a file, not a migration. MVP types: `gig`, `other`.
+
+**A message's reply status comes from to-dos.** "To respond" is an open reply to-do linked to the message; "waiting for reply" is an open follow-up to-do; no open to-dos means done. Nothing on the message itself, so the to-do list and the message can't disagree. `message.status` is only the pipeline and review lifecycle.
+
+**Calendar.** Things that happen at a time are `calendar_event`s; deadlines are to-dos with a due date. The in-app calendar shows both, filterable by project. Each event stores its IANA time zone — a Taipei artist playing Tokyo sees the gig at Tokyo time, and the `.ics` file needs it. The private subscription link is a per-membership secret token (only its hash is stored); resetting it cuts off the old link.
+
+**Money.** One `payment` table for both directions, so income and expenses share project and cross-project summaries. The agreed amount and the settled amount are separate columns — withholding tax and 二代健保 often make the received amount smaller, and that gap should show. "Overdue" is computed (due date past, still expected), never stored. Amounts are `numeric`, never floating point.
+
+#### Multi-currency (Later)
+
+The MVP is TWD only, enforced by a check constraint, but every `payment` row already stores its own `currency`, so no existing data changes when this ships. The design:
+
+- `person.default_currency` — the currency the dashboard shows totals in.
+- An `exchange_rate` table (date, from, to, rate, source), filled daily from a rates provider.
+- Settled amounts convert at the rate on their settled date, so past totals never shift. Expected amounts convert at the latest rate and are labeled as estimates.
+- Original amount and currency are always shown alongside the converted figure.
+- Drop the TWD-only check when this ships.
+
+### Conventions
+
+- **Singular, snake_case table names.** Drizzle maps camelCase TypeScript to snake_case columns.
+- **`talent_id` on every business table**, even where a join could reach it. Authorization is checked in app code, so "only this talent's data" is always one filter.
+- **Fixed value lists are `text` + `check`** (statuses, stages). Lists that grow with the type registry (`project.type`, `calendar_event.kind`) are `text` validated in code. No Postgres enum types — they can't drop a value.
+- **Deleting deletes.** A user-initiated delete removes the rows and their stored files; there's no soft-delete flag. Hiding from day-to-day view is what closing a project is for.
+- **Row-level security enabled on every table, with no policies.** The app connects as the database owner and isn't affected; anything reaching Postgres through Supabase's Data API gets nothing.
+- `created_at` everywhere, `updated_at` on tables that are edited; all timestamps are `timestamptz`.
 
 ## Schema
 
-Raw payloads live in blob storage, never inlined in a row. `message.raw_payload_uri` is a pointer.
+The authoritative definition is the Drizzle schema in `lib/db/schema.ts`; this DDL is the design reference and covers every table, including ones not built yet. Raw payloads live in blob storage, never inlined in a row — `message_file.storage_key` is a key, not a URL. Every table also has `enable row level security` (omitted below).
 
 ```sql
+-- Identity -------------------------------------------------------------------
+
+-- Better Auth's `user` model, renamed. Better Auth lowercases emails itself.
 create table person (
-  id            uuid primary key default gen_random_uuid(),
-  email         citext unique not null,
-  display_name  text not null,
-  created_at    timestamptz not null default now()
+  id              uuid primary key default gen_random_uuid(),
+  email           text unique not null,
+  email_verified  boolean not null default false,
+  display_name    text not null,
+  image           text,
+  account_type    text not null default 'individual'
+                    check (account_type in ('individual','manager','agency')),
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
 );
+
+-- auth_session, auth_account, auth_verification: Better Auth's own tables
+-- (session tokens; password hashes and Google sign-in links; verification
+-- tokens). Columns follow Better Auth and are defined only in lib/db/schema.ts.
 
 create table talent (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
   vertical    text not null check (vertical in ('music','influencer','model','other')),
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
 );
 
 create table membership (
   id          uuid primary key default gen_random_uuid(),
-  talent_id   uuid not null references talent(id),
-  person_id   uuid not null references person(id),
+  talent_id   uuid not null references talent(id) on delete cascade,
+  person_id   uuid not null references person(id) on delete cascade,
   role        text not null default 'owner'
                 check (role in ('owner','manager','agency_admin')),
   status      text not null default 'active'
                 check (status in ('invited','active','revoked')),
+  calendar_feed_token_hash  text unique,   -- M5: hash of the subscription link's secret
   created_at  timestamptz not null default now(),
   unique (talent_id, person_id)
 );
 
 create table inbound_grant (
   id             uuid primary key default gen_random_uuid(),
-  person_id      uuid not null references person(id),
+  person_id      uuid not null references person(id) on delete cascade,
   provider       text not null check (provider in ('gmail')),
   scope_tier     text not null
                    check (scope_tier in ('addon_current_message','full_mailbox')),
@@ -300,121 +381,208 @@ create table inbound_grant (
   created_at     timestamptz not null default now()
 );
 
-create table message (
-  id               uuid primary key default gen_random_uuid(),
-  talent_id        uuid not null references talent(id),
-  submitted_by     uuid not null references person(id),  -- always the authenticated user
-  channel          text not null check (channel in ('gmail_addon','upload','forwarded_email')),
-  external_ref     text,                                  -- Gmail message id, when channel = gmail_addon
-  received_at      timestamptz not null,
-  raw_payload_uri  text not null,                          -- pointer into blob storage
-  origin_hint      text,                                   -- model's guess for uploads: 'instagram', 'sms'...; never trusted
-  dedup_key        text not null,                          -- gmail_addon: the Message-ID header
-                                                            -- upload: sha256(file bytes)
-                                                            -- forwarded_email: sha256(unwrapped original sender + sent time + body)
-  status           text not null default 'pending'
-                     check (status in ('pending','classified','processed','error')),
-  created_at       timestamptz not null default now(),
-  unique (dedup_key, talent_id)
-);
-create index message_talent_status_idx on message (talent_id, status);
-
-create table extraction_result (
-  id            uuid primary key default gen_random_uuid(),
-  message_id    uuid not null references message(id),
-  message_type  text not null
-                  check (message_type in ('gig_offer','contract','payment_note','other')),
-  extracted     jsonb not null,      -- core fields + vertical extension, schema-validated
-  confidence    numeric(4,3) not null,
-  model_version text not null,
-  created_at    timestamptz not null default now()
-);
+-- Projects -------------------------------------------------------------------
 
 create table project (
-  id           uuid primary key default gen_random_uuid(),
-  talent_id    uuid not null references talent(id),
-  counterparty text not null,
-  project_type text not null check (project_type in ('booking','brand_deal','publishing','other')),
-  status       text not null default 'open' check (status in ('open','closed')),
-  created_at   timestamptz not null default now()
+  id            uuid primary key default gen_random_uuid(),
+  talent_id     uuid not null references talent(id) on delete cascade,
+  title         text not null,                    -- "The Blue Room, Nov 14"
+  counterparty  text not null,
+  type          text not null,                    -- type registry key: 'gig', 'other'
+  stage         text not null default 'offer'
+                  check (stage in ('offer','negotiating','signed','in_progress',
+                                   'collecting_payment','closed','declined','cancelled')),
+  details       jsonb not null default '{}',      -- validated by the type's schema
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
 );
+create index project_talent_stage_idx on project (talent_id, stage);
+
+-- Messages -------------------------------------------------------------------
+
+create table message (
+  id             uuid primary key default gen_random_uuid(),
+  talent_id      uuid not null references talent(id) on delete cascade,
+  project_id     uuid references project(id) on delete set null,  -- null until confirmed
+  submitted_by   uuid not null references person(id),             -- always the authenticated user
+  channel        text not null check (channel in ('gmail_addon','upload','forwarded_email')),
+  external_ref   text,                              -- Gmail message id, when channel = gmail_addon
+  received_at    timestamptz not null,
+  origin_hint    text,                              -- model's guess for uploads: 'instagram', 'sms'...; never trusted
+  dedup_key      text not null,                     -- gmail_addon: the Message-ID header
+                                                    -- upload: sha256 of the files' bytes, in order
+                                                    -- forwarded_email: sha256(unwrapped original sender + sent time + body)
+  status         text not null default 'pending'    -- pipeline + review lifecycle; reply status comes from todos
+                   check (status in ('pending','analyzed','confirmed','dismissed','error')),
+  created_at     timestamptz not null default now(),
+  unique (talent_id, dedup_key)
+);
+create index message_talent_status_idx on message (talent_id, status);
+create index message_project_idx on message (project_id);
+
+create table message_file (
+  id            uuid primary key default gen_random_uuid(),
+  message_id    uuid not null references message(id) on delete cascade,
+  talent_id     uuid not null references talent(id) on delete cascade,
+  position      int not null,                       -- upload / attachment order
+  role          text not null check (role in ('body','attachment','screenshot')),
+  storage_key   text not null,                      -- 'messages/{talent_id}/{message_id}/{position}'
+  content_type  text not null,
+  filename      text,
+  size_bytes    bigint not null,
+  created_at    timestamptz not null default now(),
+  unique (message_id, position)
+);
+
+create table message_analysis (
+  id             uuid primary key default gen_random_uuid(),
+  message_id     uuid not null references message(id) on delete cascade,
+  talent_id      uuid not null references talent(id) on delete cascade,
+  message_type   text not null
+                   check (message_type in ('gig_offer','contract','payment_note','other')),
+  analysis       jsonb not null,   -- { summary, facts: core + type fields, asks, missing }
+  confidence     numeric(4,3) not null,
+  model_version  text not null,
+  created_at     timestamptz not null default now()   -- latest row wins
+);
+
+-- Contracts ------------------------------------------------------------------
 
 create table contract (
   id              uuid primary key default gen_random_uuid(),
-  project_id      uuid not null references project(id),
-  message_id      uuid references message(id),
+  project_id      uuid not null references project(id) on delete cascade,
+  talent_id       uuid not null references talent(id) on delete cascade,
+  message_id      uuid references message(id) on delete set null,
   version_number  int not null default 1,
   supersedes_id   uuid references contract(id),
-  contract_type   text not null
-                    check (contract_type in ('booking','recording','publishing','sync','brand_deal')),
+  status          text not null default 'received'
+                    check (status in ('received','changes_requested','signed','void')),
   terms           jsonb not null,
-  status          text not null default 'draft' check (status in ('draft','confirmed','void')),
+  diff            jsonb,             -- vs. the superseded version: [{ field, before, after }]
+  signed_at       timestamptz,
   created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
   unique (project_id, version_number)
 );
 
-create table contract_diff (
-  id           uuid primary key default gen_random_uuid(),
-  contract_id  uuid not null references contract(id),   -- the newer version
-  diff         jsonb not null,        -- [{ field, before, after }, ...]
-  created_at   timestamptz not null default now()
-);
+-- Calendar, to-dos, money ----------------------------------------------------
 
-create table event (
-  id          uuid primary key default gen_random_uuid(),
-  project_id  uuid not null references project(id),
-  contract_id uuid references contract(id),
-  title       text not null,
-  venue       text,
-  start_at    timestamptz not null,
-  end_at      timestamptz,
-  status      text not null default 'proposed'
-                check (status in ('proposed','confirmed','cancelled')),
-  created_at  timestamptz not null default now()
+create table calendar_event (
+  id                 uuid primary key default gen_random_uuid(),
+  project_id         uuid not null references project(id) on delete cascade,
+  talent_id          uuid not null references talent(id) on delete cascade,
+  contract_id        uuid references contract(id) on delete set null,
+  source_message_id  uuid references message(id) on delete set null,
+  kind               text not null,        -- registry-driven: 'performance', 'load_in', 'travel'...
+  title              text not null,
+  location           text,
+  start_at           timestamptz not null,
+  end_at             timestamptz,
+  all_day            boolean not null default false,
+  time_zone          text not null,        -- IANA, e.g. 'Asia/Tokyo'
+  status             text not null default 'proposed'
+                       check (status in ('proposed','confirmed','cancelled')),
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
 );
+create index calendar_event_talent_start_idx on calendar_event (talent_id, start_at);
+
+create table payment (
+  id                 uuid primary key default gen_random_uuid(),
+  project_id         uuid not null references project(id) on delete cascade,
+  talent_id          uuid not null references talent(id) on delete cascade,
+  contract_id        uuid references contract(id) on delete set null,
+  source_message_id  uuid references message(id) on delete set null,
+  direction          text not null check (direction in ('in','out')),
+  label              text not null,                 -- 'deposit', 'balance', 'train to Tainan'
+  amount             numeric(12,2) not null,        -- agreed / expected
+  currency           char(3) not null default 'TWD'
+                       check (currency = 'TWD'),    -- MVP: TWD only; see Multi-currency
+  due_at             timestamptz,
+  status             text not null default 'expected'
+                       check (status in ('expected','settled','cancelled')),
+  settled_amount     numeric(12,2),                 -- what actually arrived or was paid
+  settled_at         timestamptz,
+  method             text,                          -- 'bank_transfer', 'cash', 'paypal'...
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
+);
+create index payment_talent_status_due_idx on payment (talent_id, status, due_at);
 
 create table todo (
-  id                 uuid primary key default gen_random_uuid(),
-  project_id         uuid not null references project(id),
-  talent_id          uuid not null references talent(id),
-  type               text not null
-                        check (type in ('respond_to_offer','review_contract_change','confirm_event',
-                                        'payment_due','payment_overdue','confirm_logistics','custom')),
-  title              text not null,
-  due_at             timestamptz,
-  status             text not null default 'open' check (status in ('open','done','dismissed')),
-  source_message_id  uuid references message(id),
-  created_at         timestamptz not null default now()
+  id            uuid primary key default gen_random_uuid(),
+  project_id    uuid not null references project(id) on delete cascade,
+  talent_id     uuid not null references talent(id) on delete cascade,
+  message_id    uuid references message(id) on delete set null,    -- drives the message's reply status
+  contract_id   uuid references contract(id) on delete set null,
+  payment_id    uuid references payment(id) on delete set null,
+  type          text not null
+                  check (type in ('reply','follow_up','review_contract','review_contract_change',
+                                  'confirm_event','payment_due','confirm_logistics','milestone','custom')),
+  title         text not null,
+  due_at        timestamptz,
+  status        text not null default 'open' check (status in ('open','done','dismissed')),
+  completed_at  timestamptz,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index todo_talent_status_due_idx on todo (talent_id, status, due_at);
+create index todo_message_idx on todo (message_id);
+
+create table reply_draft (
+  id             uuid primary key default gen_random_uuid(),
+  message_id     uuid not null references message(id) on delete cascade,
+  talent_id      uuid not null references talent(id) on delete cascade,
+  todo_id        uuid references todo(id) on delete set null,
+  label          text not null,                     -- 'accept as-is', 'counter at $950'
+  body           text not null,
+  edited_body    text,                              -- what the person changed it to
+  chosen_at      timestamptz,                       -- set when the person used this draft
+  model_version  text not null,
+  created_at     timestamptz not null default now()
 );
 
 create table audit_log (
   id               uuid primary key default gen_random_uuid(),
-  talent_id        uuid not null references talent(id),
-  actor_person_id  uuid not null references person(id),
-  action           text not null,     -- e.g. 'event.confirmed', 'project.linked'
+  talent_id        uuid not null references talent(id) on delete cascade,
+  actor_person_id  uuid references person(id) on delete set null,
+  action           text not null,     -- e.g. 'calendar_event.confirmed', 'project.stage_changed'
   target_type      text not null,
   target_id        uuid not null,
+  details          jsonb,             -- e.g. { "from": "negotiating", "to": "signed" }
   created_at       timestamptz not null default now()
 );
 ```
 
 ## Stack
 
-Opinionated defaults, not mandates.
+Shaped by the situation: a part-time build, a handful of solo artists at first, low message volume, and sensitive data (contracts, money). The guiding constraint is **no vendor lock-in** — every hosted service should be replaceable by moving data, not rewriting the app. The options weighed for each decision are in [`stack-options.md`](stack-options.md).
 
-| Layer | Choice | Why |
-|---|---|---|
-| Frontend | Next.js (React, TS) | One language across the stack; suits a review-queue-and-dashboard app |
-| Backend / API | Same Next.js app *(open)* | Single deployable to start; split out a worker service if the pipeline outgrows it |
-| LLM | Claude API | Structured JSON extraction, vision input for screenshots and PDF pages, embeddings for deal matching |
-| Primary DB | Postgres | Relational integrity matters once money, contracts, and versions are involved |
-| Vector search | pgvector | Used now for deal matching; avoids a second datastore |
-| Job queue | pg-boss / graphile-worker | Postgres-backed, no extra infra to start |
-| Blob storage | S3 (or GCS) | Raw emails, screenshots, PDFs; presigned uploads straight from the browser |
-| Gmail ingestion | Google Workspace Add-on | Per-message, user-initiated, narrower authorization than full mailbox access |
-| Calendar output | Generated `.ics` file | No calendar account connection, no stored tokens |
-| App auth (login) | Clerk / NextAuth | Login only — separate from any mailbox authorization |
-| Hosting | Fly.io / Render *(open)* | Fast to ship, low ops; move to AWS/GCP if more control is needed |
+| Layer | Choice | Status | Why |
+|---|---|---|---|
+| App shape | Next.js monolith (React, TS) — route handlers + server actions | Decided | One deployable and shared types; the Gmail add-on webhook is just another route handler. Split only for a concrete reason (see below) |
+| Primary DB | Postgres, hosted on Supabase | Decided | Relational integrity for money, contracts, and versions. Supabase gives free local dev (`supabase start`) and Asia regions; to us it is plain Postgres |
+| Vector search | pgvector | Decided | Project matching without a second datastore; supported by every major Postgres host |
+| DB access + migrations | Drizzle (`drizzle-kit`) | Decided | SQL-shaped, typed queries and typed `jsonb`; schema lives in TS; works on any Postgres |
+| App auth (login) | Better Auth — email/password + Google sign-in | Decided | Users and sessions live in our own Postgres tables, so changing host never touches identity. Google sign-in from day one eases linking the Gmail add-on later. Login only — separate from any mailbox authorization |
+| Blob storage | Supabase Storage, through its S3-compatible API | Decided | Raw emails, screenshots, PDFs; presigned uploads straight from the browser. The S3 API means moving to S3, R2, or GCS is an endpoint change |
+| LLM | Claude API | Decided | Structured JSON extraction, vision input for screenshots and PDF pages, drafting |
+| Embeddings | Voyage AI or similar | Open — M4 | Claude has no embeddings API; needed only once project matching is built |
+| Transactional email | Resend or similar | Open — M1 | Password reset and verification for Better Auth |
+| Job queue | Start with Next.js `after()` + `message.status`; pg-boss / Inngest when needed | Open — M2 | Low volume doesn't need a queue yet; the choice depends on hosting |
+| Hosting | Vercel / Fly.io / Render | Open — M2 | Serverless (Vercel) can't run a long-lived worker; decide together with the queue |
+| Gmail ingestion | Google Workspace Add-on | M3 | Per-message, user-initiated, narrower authorization than full mailbox access |
+| Calendar output | Generated `.ics` file | Decided | No calendar account connection, no stored tokens |
+
+### Portability rules
+
+These keep a future move off Supabase (to any vendor) a matter of days, not weeks.
+
+- All database access goes through Drizzle. Supabase client libraries are not used.
+- Authorization is checked in app code, not Postgres row-level security (RLS). RLS is enabled with no policies, so the database rejects any access that doesn't come through our server.
+- Auth and storage sit behind our own small modules (`lib/auth`, `lib/storage`); nothing else imports a vendor SDK directly.
+- Store blob keys, never full URLs — `raw_payload_uri` is a key like `messages/{talent_id}/{message_id}.eml`.
+- No Supabase-only features: no Realtime, Edge Functions, or Supabase Auth.
 
 ### Designed for, not built yet
 

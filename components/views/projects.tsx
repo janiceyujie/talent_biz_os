@@ -1,14 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
+import { archiveProject, setProjectStage } from "@/lib/actions/projects";
 import { money } from "@/lib/domain/money";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
 import { stageLabels } from "@/lib/labels";
 import { projectType, projectTypes } from "@/lib/project-types";
-import { stages } from "@/lib/types";
+import { stages, type Stage } from "@/lib/types";
 import { ProjectWorkflowPanel } from "./project-workflow-panel";
 
 export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
@@ -19,6 +20,10 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
   const [type, setType] = useState("all");
   const [archived, setArchived] = useState(false);
   const [selected, setSelected] = useState(selectedId);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const run = (action: () => Promise<string | null>) =>
+    startTransition(async () => setError(await action()));
   const visible = data.projects.filter(
     (p) =>
       p.archived === archived &&
@@ -96,7 +101,11 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
           </div>
           <label>
             案件階段
-            <select value={active.stage} disabled>
+            <select
+              value={active.stage}
+              disabled={pending || active.archived}
+              onChange={(e) => run(() => setProjectStage(active.id, e.target.value as Stage))}
+            >
               {stages.map((s) => (
                 <option key={s} value={s}>
                   {stageLabels[s]}
@@ -152,7 +161,19 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
             >
               新增關聯請款
             </button>
+            <button
+              className="text-button"
+              disabled={pending}
+              onClick={() => run(() => archiveProject(active.id, !active.archived))}
+            >
+              {active.archived ? "還原合作案" : "歸檔合作案"}
+            </button>
           </div>
+          {error && (
+            <p className="notice error" role="alert">
+              {error}
+            </p>
+          )}
           <ProjectWorkflowPanel key={active.id} project={active} edit={setEditor} compose={compose} />
         </aside>
       )}

@@ -15,6 +15,13 @@
       "when": 1790917192495,
       "tag": "0001_talent_time_zone",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790924440822,
+      "tag": "0002_projects_contacts",
+      "breakpoints": true
     }
   ]
 }

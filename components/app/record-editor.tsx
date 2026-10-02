@@ -10,6 +10,8 @@ import {
   stageLabels,
 } from "@/lib/labels";
 import { projectTypes } from "@/lib/project-types";
+import { saveContact } from "@/lib/actions/contacts";
+import { saveProject } from "@/lib/actions/projects";
 import { calendarKinds, contactRoles, stages, type Project } from "@/lib/types";
 import { useAppData } from "./app-data";
 import { Modal } from "./modal";
@@ -39,6 +41,14 @@ const entries = <K extends string>(labels: Record<K, string>, keys: readonly K[]
   keys.map((k) => [k, labels[k]] as const);
 const typeOptions: Option[] = projectTypes.map((t) => [t.key, t.label] as const);
 
+type Saver = (data: RecordData) => Promise<string | null>;
+
+// Kinds whose table is built. The rest open read-only until wired.
+const savers: Partial<Record<EditorKind, Saver>> = {
+  project: saveProject,
+  contact: saveContact,
+};
+
 const names: Record<EditorKind, string> = {
   project: "合作案",
   contact: "藝人與合作方",
@@ -49,18 +59,10 @@ const names: Record<EditorKind, string> = {
 };
 
 /**
- * One add/edit dialog for every record kind. `onSave` is wired per kind as
- * its table is built; without it the form is read-only with a note.
+ * One add/edit dialog for every record kind. Saving goes through the kind's
+ * server action; kinds without one open read-only with a note.
  */
-export function RecordEditor({
-  editor,
-  onClose,
-  onSave,
-}: {
-  editor: Editor;
-  onClose: () => void;
-  onSave?: (kind: EditorKind, data: RecordData) => Promise<string | null>;
-}) {
+export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () => void }) {
   const data$ = useAppData();
   const today = dateInZone(data$.talent.timeZone);
   const defaults: Record<EditorKind, RecordData> = {
@@ -68,16 +70,12 @@ export function RecordEditor({
       title: "",
       counterparty: "",
       counterpartyId: "",
-      artist: data$.talent.name,
       type: "gig",
       stage: "offer",
       quotedAmount: 0,
       currency: "TWD",
       taxRate: 5,
       taxIncluded: false,
-      nextDue: "",
-      nextAction: "",
-      offerText: "",
       contractNotes: "",
       deliverables: "",
       rights: "",
@@ -117,6 +115,7 @@ export function RecordEditor({
     draft: { projectId: "", subject: "", recipient: "", projectType: "gig", source: "", body: "" },
   };
   const kind = editor.kind;
+  const onSave = savers[kind];
   const [data, setData] = useState<RecordData>(() => ({ ...defaults[kind], ...editor.item }));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -194,7 +193,7 @@ export function RecordEditor({
           e.preventDefault();
           if (!onSave) return;
           setPending(true);
-          const failure = await onSave(kind, data);
+          const failure = await onSave(data);
           setPending(false);
           if (failure) setError(failure);
           else onClose();
@@ -213,16 +212,10 @@ export function RecordEditor({
                 ])}
                 {!data.counterpartyId && field("counterparty", "合作方")}
               </div>
-              <div>{field("artist", "藝人")}</div>
               {field("type", "商案類型", "text", true, typeOptions)}
               {field("stage", "階段", "text", true, entries(stageLabels, stages))}
             </div>
             {pricing("quotedAmount")}
-            <div className="form-grid">
-              {field("nextDue", "下一步期限", "date")}
-              {field("nextAction", "下一步工作")}
-            </div>
-            {field("offerText", "Offer／邀約原文", "textarea")}
             {field("contractNotes", "合約內容與待確認事項", "textarea")}
             {field("deliverables", "交付項目", "textarea")}
             {field("rights", "素材授權範圍／期限", "textarea")}

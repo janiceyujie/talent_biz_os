@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { projectRecord, RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
+import { archiveContact } from "@/lib/actions/contacts";
 import { contactRoleLabels } from "@/lib/labels";
 import { contactRoles } from "@/lib/types";
 
@@ -12,6 +13,8 @@ export function ContactsView() {
   const [q, setQ] = useState("");
   const [role, setRole] = useState("all");
   const [archived, setArchived] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const visible = data.contacts.filter(
     (c) =>
       c.archived === archived &&
@@ -39,6 +42,11 @@ export function ContactsView() {
           已歸檔
         </label>
       </div>
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
       <div className="contact-grid">
         {visible.map((c) => (
           <article className="surface contact-card" key={c.id}>
@@ -62,6 +70,13 @@ export function ContactsView() {
             <div className="row-actions">
               <button className="secondary" onClick={() => setEditor({ kind: "contact", item: toRecord(c) })}>
                 編輯資料
+              </button>
+              <button
+                className="text-button"
+                disabled={pending}
+                onClick={() => startTransition(async () => setError(await archiveContact(c.id, !c.archived)))}
+              >
+                {c.archived ? "還原" : "歸檔"}
               </button>
             </div>
           </article>

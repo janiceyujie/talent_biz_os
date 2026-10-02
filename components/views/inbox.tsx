@@ -23,20 +23,12 @@ export function InboxView() {
           </div>
           <span className="mock-chip">Gmail 外掛即將推出</span>
         </div>
-        <p className="muted">上傳截圖、PDF，或貼上邀約文字。系統會整理重點並建議分類，由你確認後才建立合作案。</p>
+        <p className="muted">上傳截圖、PDF，或貼上邀約文字。系統會整理重點並建議分類，由你確認後才建立合作案。上傳與貼上功能開發中；目前可直接「新增合作案」。</p>
         <div className="row-actions">
           <button className="primary" disabled>
             上傳截圖／PDF
           </button>
-          <button
-            className="secondary"
-            onClick={() =>
-              setEditor({
-                kind: "project",
-                item: { title: "新邀約", notes: "請將原始邀約貼入 Offer／邀約原文欄位，再確認商案類型與金額。" },
-              })
-            }
-          >
+          <button className="secondary" disabled>
             貼上邀約文字
           </button>
         </div>
@@ -46,7 +38,7 @@ export function InboxView() {
           {!data.inbox.length && (
             <div className="empty">
               <h3>這裡還沒有邀約</h3>
-              <p>上傳一封邀約，或使用「貼上邀約文字」建立案件。</p>
+              <p>邀約進件功能開發中，目前可直接新增合作案。</p>
             </div>
           )}
           {data.inbox.map((m) => (

@@ -4,14 +4,18 @@ import { sql, type SQL } from "drizzle-orm";
 import {
   type AnyPgColumn,
   boolean,
+  char,
   check,
   index,
+  jsonb,
+  numeric,
   pgTable,
   text,
   timestamp,
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { contactRoles, stages as projectStages } from "../types"; // relative: drizzle-kit loads this file too
 
 const id = () => uuid().primaryKey().defaultRandom();
 const createdAt = () => timestamp({ withTimezone: true }).notNull().defaultNow();
@@ -142,4 +146,79 @@ export const membership = pgTable(
     check("membership_role_check", oneOf(t.role, membershipRoles)),
     check("membership_status_check", oneOf(t.status, membershipStatuses)),
   ],
+).enableRLS();
+
+// Contacts and projects ----------------------------------------------------------
+
+// Someone the talent works with. Same name never implies same contact.
+export const contact = pgTable(
+  "contact",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    role: text({ enum: contactRoles }).notNull(),
+    name: text().notNull(),
+    company: text(),
+    email: text(),
+    phone: text(),
+    notes: text(),
+    archivedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("contact_talent_idx").on(t.talentId), check("contact_role_check", oneOf(t.role, contactRoles))],
+).enableRLS();
+
+/** Type-specific fields; each type's registry entry decides which apply. */
+export type ProjectDetails = { deliverables?: string; rights?: string; travel?: string; contractNotes?: string };
+
+// One ongoing deal with one counterparty (UI: 專案 / 合作案).
+export const project = pgTable(
+  "project",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    title: text().notNull(),
+    counterparty: text().notNull(), // kept even when linked to a contact
+    counterpartyId: uuid().references(() => contact.id, { onDelete: "set null" }),
+    type: text().notNull(), // project type registry key, validated in code
+    stage: text({ enum: projectStages }).notNull().default("offer"),
+    quotedAmount: numeric({ precision: 12, scale: 2, mode: "number" }), // as entered; see taxIncluded
+    quoteCurrency: char({ length: 3 }).notNull().default("TWD"),
+    taxRate: numeric({ precision: 5, scale: 2, mode: "number" }).notNull().default(0),
+    taxIncluded: boolean().notNull().default(false),
+    details: jsonb().$type<ProjectDetails>().notNull().default({}),
+    notes: text(),
+    archivedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("project_talent_stage_idx").on(t.talentId, t.stage),
+    check("project_stage_check", oneOf(t.stage, projectStages)),
+    check("project_quote_currency_check", sql`${t.quoteCurrency} = 'TWD'`), // MVP: TWD only
+    check("project_tax_rate_check", sql`${t.taxRate} between 0 and 100`),
+  ],
+).enableRLS();
+
+// Who confirmed or changed what, and when.
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    actorPersonId: uuid().references(() => person.id, { onDelete: "set null" }),
+    action: text().notNull(), // e.g. 'project.stage_changed'
+    targetType: text().notNull(),
+    targetId: uuid().notNull(),
+    details: jsonb().$type<Record<string, unknown>>(), // e.g. { from: 'negotiating', to: 'signed' }
+    createdAt: createdAt(),
+  },
+  (t) => [index("audit_log_target_idx").on(t.targetType, t.targetId)],
 ).enableRLS();

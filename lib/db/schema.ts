@@ -12,6 +12,7 @@ import {
   numeric,
   pgTable,
   text,
+  time,
   timestamp,
   unique,
   uuid,
@@ -270,5 +271,83 @@ export const payment = pgTable(
     check("payment_tax_rate_check", sql`${t.taxRate} between 0 and 100`),
     check("payment_amount_check", sql`${t.amount} >= 0 and (${t.settledAmount} is null or ${t.settledAmount} >= 0)`),
     check("payment_settled_check", sql`(${t.status} = 'settled') = (${t.settledOn} is not null)`),
+  ],
+).enableRLS();
+
+// Calendar and to-dos ----------------------------------------------------------------
+// Both store local wall time: a calendar day, an optional time (null = all day
+// or no set time), and the IANA time zone it was entered in.
+
+export const calendarEventStatuses = ["proposed", "confirmed", "cancelled"] as const;
+
+// Something that happens at a time: a performance, meeting, travel, a stay.
+export const calendarEvent = pgTable(
+  "calendar_event",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    projectId: uuid().references(() => project.id, { onDelete: "cascade" }),
+    kind: text().notNull(), // 'performance', 'meeting', 'travel', 'accommodation'; validated in code
+    title: text().notNull(),
+    location: text(),
+    startDate: date().notNull(),
+    startTime: time({ precision: 0 }),
+    timeZone: text().notNull(),
+    status: text({ enum: calendarEventStatuses }).notNull().default("confirmed"),
+    notes: text(),
+    archivedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("calendar_event_talent_start_idx").on(t.talentId, t.startDate),
+    index("calendar_event_project_idx").on(t.projectId),
+    check("calendar_event_status_check", oneOf(t.status, calendarEventStatuses)),
+  ],
+).enableRLS();
+
+export const todoTypes = [
+  "reply",
+  "follow_up",
+  "review_contract",
+  "review_contract_change",
+  "confirm_event",
+  "payment_due",
+  "confirm_logistics",
+  "deliverable",
+  "milestone",
+  "custom",
+] as const;
+export const todoStatuses = ["open", "done", "dismissed"] as const;
+
+// Something the person needs to do, optionally by a date. Dismissed is how
+// a to-do is archived.
+export const todo = pgTable(
+  "todo",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    projectId: uuid().references(() => project.id, { onDelete: "cascade" }),
+    paymentId: uuid().references(() => payment.id, { onDelete: "set null" }),
+    type: text({ enum: todoTypes }).notNull().default("custom"),
+    title: text().notNull(),
+    dueDate: date(),
+    dueTime: time({ precision: 0 }),
+    timeZone: text().notNull(),
+    status: text({ enum: todoStatuses }).notNull().default("open"),
+    completedAt: timestamp({ withTimezone: true }),
+    notes: text(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("todo_talent_status_due_idx").on(t.talentId, t.status, t.dueDate),
+    index("todo_project_idx").on(t.projectId),
+    check("todo_type_check", oneOf(t.type, todoTypes)),
+    check("todo_status_check", oneOf(t.status, todoStatuses)),
   ],
 ).enableRLS();

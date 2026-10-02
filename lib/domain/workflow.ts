@@ -36,7 +36,7 @@ export function projectSettlement(data: AppData, project: Project) {
     pending: sum(income.filter((p) => p.status === "expected"), paymentTotal) / 100,
     shortfall: (sum(settled, paymentTotal) - received) / 100,
     unbilled: (quoted - billed) / 100,
-    openItems: data.calendar.filter((c) => c.projectId === project.id && !c.archived && !c.done),
+    openItems: data.calendar.filter((c) => c.projectId === project.id && c.source === "todo" && !c.archived && !c.done),
     unpaidCosts: rows.filter((p) => p.direction === "out" && p.status === "expected"),
   };
 }
@@ -110,13 +110,16 @@ export const isActiveProject = (p: Project) => !p.archived && openStages.include
 
 export type Notification = { id: string; title: string; detail: string; href: string };
 
-/** In-app notifications: calendar items within a week, and overdue income. */
+/**
+ * In-app notifications: open to-dos due within a week (overdue ones stay),
+ * events in the coming week, and overdue income. A past event isn't overdue.
+ */
 export function notifications(data: AppData, now = new Date()): Notification[] {
   const today = dateInZone(data.talent.timeZone, 0, now);
   const soon = dateInZone(data.talent.timeZone, 7, now);
   return [
     ...data.calendar
-      .filter((c) => !c.archived && !c.done && c.date <= soon)
+      .filter((c) => !c.archived && !c.done && c.date <= soon && (c.source === "todo" || c.date >= today))
       .map((c) => ({
         id: `calendar:${c.id}:${c.date}:${c.time}`,
         title: c.title,

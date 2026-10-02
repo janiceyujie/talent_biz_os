@@ -337,7 +337,7 @@ There's no "awaiting signature" stage — many gigs never have a written contrac
 
 **A message's reply status comes from to-dos.** "To respond" is an open reply to-do linked to the message; "waiting for reply" is an open follow-up to-do; no open to-dos means done. Nothing on the message itself, so the to-do list and the message can't disagree. `message.status` is only the pipeline and review lifecycle.
 
-**Calendar.** Things that happen at a time are `calendar_event`s; deadlines are to-dos with a due date. The in-app calendar shows both, filterable by project. Each event stores its IANA time zone — a Taipei artist playing Tokyo sees the gig at Tokyo time, and the `.ics` file needs it. The private subscription link is a per-membership secret token (only its hash is stored); resetting it cuts off the old link.
+**Calendar.** Things that happen at a time are `calendar_event`s; deadlines are to-dos with a due date. The in-app calendar shows both, filterable by project; either can stand alone without a project. Both store local wall time — a calendar day, an optional time (none = all day), and the IANA time zone it was entered in — so a Taipei artist playing Tokyo sees the gig at Tokyo time exactly as entered, and the `.ics` file can derive the instant. A project's next step is its earliest open to-do. Events entered by hand are `confirmed`; `proposed` is for ones the pipeline suggests. The private subscription link is a per-membership secret token (only its hash is stored); resetting it cuts off the old link.
 
 **Contacts.** A project links to a `contact` for its counterparty when one exists, and always keeps the counterparty name as text, so quick entries without a contact still work. A contact's email is the default recipient for drafts on its projects. Same name never implies same contact.
 
@@ -538,25 +538,24 @@ create table contract (
 
 create table calendar_event (
   id                 uuid primary key default gen_random_uuid(),
-  project_id         uuid not null references project(id) on delete cascade,
   talent_id          uuid not null references talent(id) on delete cascade,
-  contract_id        uuid references contract(id) on delete set null,
-  source_message_id  uuid references message(id) on delete set null,
+  project_id         uuid references project(id) on delete cascade,      -- null for a standalone event
+  contract_id        uuid references contract(id) on delete set null,    -- added with contract
+  source_message_id  uuid references message(id) on delete set null,     -- added with message
   kind               text not null,        -- registry-driven: 'performance', 'meeting', 'travel', 'accommodation'...
   title              text not null,
   location           text,
-  start_at           timestamptz not null,
-  end_at             timestamptz,
-  all_day            boolean not null default false,
-  time_zone          text not null,        -- IANA, e.g. 'Asia/Tokyo'
-  status             text not null default 'proposed'
+  start_date         date not null,        -- local wall time: day ...
+  start_time         time,                 -- ... and time (null = all day) ...
+  time_zone          text not null,        -- ... in this IANA zone, e.g. 'Asia/Tokyo'
+  status             text not null default 'confirmed'   -- 'proposed' when the pipeline suggests it
                        check (status in ('proposed','confirmed','cancelled')),
   notes              text,
   archived_at        timestamptz,
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now()
 );
-create index calendar_event_talent_start_idx on calendar_event (talent_id, start_at);
+create index calendar_event_talent_start_idx on calendar_event (talent_id, start_date);
 
 create table payment (
   id                 uuid primary key default gen_random_uuid(),
@@ -591,22 +590,25 @@ create index payment_talent_status_due_idx on payment (talent_id, status, due_on
 
 create table todo (
   id            uuid primary key default gen_random_uuid(),
-  project_id    uuid not null references project(id) on delete cascade,
   talent_id     uuid not null references talent(id) on delete cascade,
-  message_id    uuid references message(id) on delete set null,    -- drives the message's reply status
-  contract_id   uuid references contract(id) on delete set null,
+  project_id    uuid references project(id) on delete cascade,      -- null for a standalone to-do
+  message_id    uuid references message(id) on delete set null,     -- drives the message's reply status; added with message
+  contract_id   uuid references contract(id) on delete set null,    -- added with contract
   payment_id    uuid references payment(id) on delete set null,
-  type          text not null
+  type          text not null default 'custom'
                   check (type in ('reply','follow_up','review_contract','review_contract_change',
                                   'confirm_event','payment_due','confirm_logistics','deliverable','milestone','custom')),
   title         text not null,
-  due_at        timestamptz,
-  status        text not null default 'open' check (status in ('open','done','dismissed')),
+  due_date      date,                                -- local wall time, like calendar_event
+  due_time      time,
+  time_zone     text not null,
+  status        text not null default 'open' check (status in ('open','done','dismissed')),  -- dismissed = archived
   completed_at  timestamptz,
+  notes         text,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
-create index todo_talent_status_due_idx on todo (talent_id, status, due_at);
+create index todo_talent_status_due_idx on todo (talent_id, status, due_date);
 create index todo_message_idx on todo (message_id);
 
 create table reply_template (

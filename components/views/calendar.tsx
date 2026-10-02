@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
+import { archiveCalendarItem, setTodoDone } from "@/lib/actions/calendar";
 import { dateInZone } from "@/lib/domain/dates";
 import { calendarKindLabels } from "@/lib/labels";
 
@@ -16,10 +17,17 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
   const [day, setDay] = useState(initialDay);
   const [showDone, setShowDone] = useState(false);
   const [archived, setArchived] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const run = (action: () => Promise<string | null>) => startTransition(async () => setError(await action()));
+  // Ticking a to-do shows immediately; the server's answer replaces it.
+  const [calendar, markDone] = useOptimistic(data.calendar, (state, change: { id: string; done: boolean }) =>
+    state.map((c) => (c.id === change.id ? { ...c, done: change.done } : c)),
+  );
   const start = new Date(`${month}-01T12:00:00Z`);
   const pad = start.getUTCDay();
   const count = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)).getUTCDate();
-  const items = data.calendar
+  const items = calendar
     .filter((c) => c.archived === archived && (showDone || !c.done) && c.date.startsWith(month) && (!day || c.date === day))
     .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
   const move = (n: number) => {
@@ -64,6 +72,11 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
         </label>
       </div>
       <p className="muted">日期按各筆行程登錄的當地日期排列，時間旁保留時區。</p>
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
       <div className="surface calendar-grid">
         {["日", "一", "二", "三", "四", "五", "六"].map((d) => (
           <small key={d}>{d}</small>
@@ -73,7 +86,7 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
         ))}
         {Array.from({ length: count }, (_, i) => {
           const date = `${month}-${String(i + 1).padStart(2, "0")}`;
-          const n = data.calendar.filter((c) => !c.archived && !c.done && c.date === date).length;
+          const n = calendar.filter((c) => !c.archived && !c.done && c.date === date).length;
           return (
             <button
               className={`${date === day ? "selected" : ""} ${date === today ? "today" : ""}`}
@@ -90,7 +103,23 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
         <h2>{day || month} 的行程</h2>
         {items.map((c) => (
           <article className="event-row" key={c.id}>
-            <input type="checkbox" aria-label={`完成 ${c.title}`} checked={c.done} disabled />
+            {c.source === "todo" ? (
+              <input
+                type="checkbox"
+                aria-label={`完成 ${c.title}`}
+                checked={c.done}
+                disabled={pending || c.archived}
+                onChange={(e) => {
+                  const done = e.target.checked;
+                  startTransition(async () => {
+                    markDone({ id: c.id, done });
+                    setError(await setTodoDone(c.id, done));
+                  });
+                }}
+              />
+            ) : (
+              <span aria-hidden="true" />
+            )}
             <div>
               <button className="text-button left" onClick={() => setEditor({ kind: "calendar", item: toRecord(c) })}>
                 <strong>{c.title}</strong>
@@ -104,6 +133,9 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
               </p>
               {c.projectId && <small>合作案：{data.projects.find((p) => p.id === c.projectId)?.title || "未找到"}</small>}
             </div>
+            <button className="text-button" disabled={pending} onClick={() => run(() => archiveCalendarItem(c.id, c.source, !c.archived))}>
+              {c.archived ? "還原" : "歸檔"}
+            </button>
           </article>
         ))}
         {!items.length && <p className="empty">這段日期沒有符合條件的行程。</p>}

@@ -8,7 +8,7 @@ import { createPaymentPlan } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
 import { money, splitPayments } from "@/lib/domain/money";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
-import { paymentStatusLabel } from "@/lib/labels";
+import { calendarKindLabels, paymentStatusLabel } from "@/lib/labels";
 import { projectType } from "@/lib/project-types";
 import type { Project } from "@/lib/types";
 
@@ -103,7 +103,7 @@ export function ProjectWorkflowPanel({
       <div className="stack-buttons">
         {items.map((c) => (
           <button key={c.id} className="text-button left" onClick={() => edit({ kind: "calendar", item: toRecord(c) })}>
-            {c.done ? "已完成" : "待辦"} · {c.date} · {c.title}
+            {c.source === "todo" ? (c.done ? "已完成" : "待辦") : calendarKindLabels[c.kind]} · {c.date} · {c.title}
           </button>
         ))}
         {payments.map((p) => (

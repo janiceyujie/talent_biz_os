@@ -1,0 +1,142 @@
+"use server";
+
+import { and, eq } from "drizzle-orm";
+import { refresh } from "next/cache";
+import { z } from "zod";
+import { requireTalent } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { calendarEvent, project, todo } from "@/lib/db/schema";
+import { calendarKinds, type CalendarKind } from "@/lib/types";
+import { firstIssue, optionalId, optionalText } from "./validation";
+
+// Calendar kinds that are deadlines (to-dos) rather than things that happen
+// at a time (calendar events), and the to-do type each one maps to.
+const todoKinds: Partial<Record<CalendarKind, "custom" | "deliverable" | "payment_due">> = {
+  todo: "custom",
+  deliverable: "deliverable",
+  payment: "payment_due",
+};
+const sourceOf = (kind: CalendarKind) => (kind in todoKinds ? "todo" : "event");
+
+const isTimeZone = (value: string) => {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const itemInput = z.object({
+  id: optionalId,
+  source: z.enum(["event", "todo"]).optional(),
+  kind: z.enum(calendarKinds, "請選擇事項類型。"),
+  title: z.string().trim().min(1, "請填寫事項名稱。").max(200),
+  date: z.iso.date("日期格式不正確。"),
+  time: z
+    .union([z.literal(""), z.iso.time({ precision: -1, message: "時間格式不正確。" })])
+    .optional()
+    .transform((v) => v || null),
+  timeZone: z.string().trim().refine(isTimeZone, "時區無效，請使用 IANA 名稱，例如 Asia/Taipei。"),
+  projectId: optionalId,
+  location: optionalText,
+  notes: optionalText,
+  done: z.boolean().optional().default(false),
+});
+
+/** Create or update a calendar item; its kind decides whether it's a to-do or an event. */
+export async function saveCalendarItem(data: Record<string, unknown>): Promise<string | null> {
+  const { talent } = await requireTalent();
+  const parsed = itemInput.safeParse(data);
+  if (!parsed.success) return firstIssue(parsed.error);
+  const input = parsed.data;
+  const target = sourceOf(input.kind);
+  if (input.id && input.source && input.source !== target) return "已建立的待辦與行程不能互換類型，請另外新增。";
+
+  if (input.projectId) {
+    const [owned] = await db
+      .select({ id: project.id })
+      .from(project)
+      .where(and(eq(project.id, input.projectId), eq(project.talentId, talent.id)));
+    if (!owned) return "找不到這個合作案。";
+  }
+
+  if (target === "todo") {
+    const values = {
+      projectId: input.projectId,
+      type: todoKinds[input.kind]!,
+      title: input.title,
+      dueDate: input.date,
+      dueTime: input.time,
+      timeZone: input.timeZone,
+      status: input.done ? ("done" as const) : ("open" as const),
+      completedAt: input.done ? new Date() : null,
+      notes: input.notes,
+    };
+    if (!input.id) await db.insert(todo).values({ ...values, talentId: talent.id });
+    else {
+      const rows = await db
+        .update(todo)
+        .set(values)
+        .where(and(eq(todo.id, input.id), eq(todo.talentId, talent.id)))
+        .returning({ id: todo.id });
+      if (!rows.length) return "找不到這個待辦。";
+    }
+  } else {
+    const values = {
+      projectId: input.projectId,
+      kind: input.kind,
+      title: input.title,
+      startDate: input.date,
+      startTime: input.time,
+      timeZone: input.timeZone,
+      location: input.location,
+      notes: input.notes,
+    };
+    if (!input.id) await db.insert(calendarEvent).values({ ...values, talentId: talent.id });
+    else {
+      const rows = await db
+        .update(calendarEvent)
+        .set(values)
+        .where(and(eq(calendarEvent.id, input.id), eq(calendarEvent.talentId, talent.id)))
+        .returning({ id: calendarEvent.id });
+      if (!rows.length) return "找不到這個行程。";
+    }
+  }
+  refresh();
+  return null;
+}
+
+export async function setTodoDone(id: string, done: boolean): Promise<string | null> {
+  const { talent } = await requireTalent();
+  if (!z.uuid().safeParse(id).success) return "資料格式不正確。";
+  const rows = await db
+    .update(todo)
+    .set({ status: done ? "done" : "open", completedAt: done ? new Date() : null })
+    .where(and(eq(todo.id, id), eq(todo.talentId, talent.id)))
+    .returning({ id: todo.id });
+  if (!rows.length) return "找不到這個待辦。";
+  refresh();
+  return null;
+}
+
+/** Archive or restore. A to-do is archived by dismissing it. */
+export async function archiveCalendarItem(id: string, source: "event" | "todo", archived: boolean): Promise<string | null> {
+  const { talent } = await requireTalent();
+  if (!z.uuid().safeParse(id).success) return "資料格式不正確。";
+  const rows =
+    source === "todo"
+      ? await db
+          .update(todo)
+          .set({ status: archived ? "dismissed" : "open", completedAt: null })
+          .where(and(eq(todo.id, id), eq(todo.talentId, talent.id)))
+          .returning({ id: todo.id })
+      : await db
+          .update(calendarEvent)
+          .set({ archivedAt: archived ? new Date() : null })
+          .where(and(eq(calendarEvent.id, id), eq(calendarEvent.talentId, talent.id)))
+          .returning({ id: calendarEvent.id });
+  if (!rows.length) return "找不到這筆事項。";
+  refresh();
+  return null;
+}

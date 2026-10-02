@@ -11,6 +11,7 @@ import {
 } from "@/lib/labels";
 import { projectTypes } from "@/lib/project-types";
 import { saveContact } from "@/lib/actions/contacts";
+import { saveCalendarItem } from "@/lib/actions/calendar";
 import { savePayment } from "@/lib/actions/payments";
 import { saveProject } from "@/lib/actions/projects";
 import { calendarKinds, contactRoles, stages, type Project } from "@/lib/types";
@@ -49,7 +50,11 @@ const savers: Partial<Record<EditorKind, Saver>> = {
   project: saveProject,
   contact: saveContact,
   payment: savePayment,
+  calendar: saveCalendarItem,
 };
+
+// Kinds stored as to-dos; the rest are calendar events. Kept in step with lib/actions/calendar.
+const todoKinds: readonly string[] = ["todo", "deliverable", "payment"];
 
 const names: Record<EditorKind, string> = {
   project: "合作案",
@@ -244,12 +249,21 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
               {field("date", "日期", "date", true)}
               {field("time", "時間", "time")}
               {field("timeZone", "時區", "text", true)}
-              {field("kind", "事項類型", "text", true, entries(calendarKindLabels, calendarKinds))}
+              {field(
+                "kind",
+                "事項類型",
+                "text",
+                true,
+                // An existing item can't move between to-dos and events.
+                entries(calendarKindLabels, calendarKinds).filter(
+                  ([k]) => !data.source || todoKinds.includes(k) === (data.source === "todo"),
+                ),
+              )}
             </div>
             {projectLink()}
-            {field("location", "地點／會議網址")}
+            {!todoKinds.includes(String(data.kind)) && field("location", "地點／會議網址")}
             {field("notes", "備註", "textarea")}
-            {field("done", "已完成", "checkbox")}
+            {todoKinds.includes(String(data.kind)) && field("done", "已完成", "checkbox")}
           </>
         )}
         {kind === "payment" && (

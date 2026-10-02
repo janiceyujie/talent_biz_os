@@ -568,7 +568,7 @@ Shaped by the situation: a part-time build, a handful of solo artists at first, 
 | Blob storage | Supabase Storage, through its S3-compatible API | Decided | Raw emails, screenshots, PDFs; presigned uploads straight from the browser. The S3 API means moving to S3, R2, or GCS is an endpoint change |
 | LLM | Claude API | Decided | Structured JSON extraction, vision input for screenshots and PDF pages, drafting |
 | Embeddings | Voyage AI or similar | Open — M4 | Claude has no embeddings API; needed only once project matching is built |
-| Transactional email | Resend or similar | Open — M1 | Password reset and verification for Better Auth |
+| Transactional email | Plain SMTP (nodemailer); Mailpit locally, provider TBD at deploy (e.g. Resend) | Decided — provider open until M2 | Password reset and verification. Every provider speaks SMTP, so switching is a `SMTP_URL` change |
 | Job queue | Start with Next.js `after()` + `message.status`; pg-boss / Inngest when needed | Open — M2 | Low volume doesn't need a queue yet; the choice depends on hosting |
 | Hosting | Vercel / Fly.io / Render | Open — M2 | Serverless (Vercel) can't run a long-lived worker; decide together with the queue |
 | Gmail ingestion | Google Workspace Add-on | M3 | Per-message, user-initiated, narrower authorization than full mailbox access |

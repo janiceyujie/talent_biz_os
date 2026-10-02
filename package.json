@@ -17,6 +17,7 @@
     "better-auth": "^1.7.7",
     "drizzle-orm": "^0.45.3",
     "next": "16.3.8",
+    "nodemailer": "^10.0.13",
     "postgres": "^3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -25,6 +26,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.11",

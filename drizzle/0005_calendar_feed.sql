@@ -1,0 +1,2 @@
+ALTER TABLE "membership" ADD COLUMN "calendar_feed_token_hash" text;--> statement-breakpoint
+ALTER TABLE "membership" ADD CONSTRAINT "membership_calendar_feed_token_hash_unique" UNIQUE("calendar_feed_token_hash");

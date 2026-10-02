@@ -140,6 +140,8 @@ export const membership = pgTable(
       .references(() => person.id, { onDelete: "cascade" }),
     role: text({ enum: membershipRoles }).notNull().default("owner"),
     status: text({ enum: membershipStatuses }).notNull().default("active"),
+    // SHA-256 of the calendar subscription link's secret; the secret itself is never stored.
+    calendarFeedTokenHash: text().unique("membership_calendar_feed_token_hash_unique"),
     createdAt: createdAt(),
   },
   (t) => [

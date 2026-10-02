@@ -1,9 +1,9 @@
 import "server-only";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { and, desc, eq, getTableColumns } from "drizzle-orm";
 import { cache } from "react";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { calendarEvent, contact, payment, project, talent, todo } from "@/lib/db/schema";
+import { calendarEvent, contact, membership, payment, project, talent, todo } from "@/lib/db/schema";
 import { isProjectType } from "@/lib/project-types";
 import { calendarKinds, type AppData, type CalendarItem, type CalendarKind } from "@/lib/types";
 
@@ -18,11 +18,15 @@ const eventKind = (k: string): CalendarKind => (calendarKinds.includes(k as Cale
  */
 export const getAppData = cache(async (): Promise<AppData> => {
   const { person, talent: current } = await requireTalent();
-  const [[talentRow], projectRows, contactRows, paymentRows, eventRows, todoRows] = await Promise.all([
+  const [[talentRow], [memberRow], projectRows, contactRows, paymentRows, eventRows, todoRows] = await Promise.all([
     db
       .select({ id: talent.id, name: talent.name, timeZone: talent.timeZone })
       .from(talent)
       .where(eq(talent.id, current.id)),
+    db
+      .select({ feedHash: membership.calendarFeedTokenHash })
+      .from(membership)
+      .where(and(eq(membership.personId, person.personId), eq(membership.talentId, current.id))),
     db.select().from(project).where(eq(project.talentId, current.id)).orderBy(desc(project.updatedAt)),
     db.select().from(contact).where(eq(contact.talentId, current.id)).orderBy(contact.name),
     db
@@ -79,6 +83,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
   return {
     talent: talentRow,
     person: { displayName: person.displayName, email: person.email },
+    calendarFeed: Boolean(memberRow?.feedHash),
     projects: projectRows.map((p) => ({
       id: p.id,
       title: p.title,

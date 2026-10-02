@@ -142,6 +142,7 @@ export type InboxMessage = {
 export type AppData = {
   talent: { id: string; name: string; timeZone: string };
   person: { displayName: string; email: string };
+  calendarFeed: boolean; // a subscription link exists (the URL itself is only shown once)
   projects: Project[];
   contacts: Contact[];
   calendar: CalendarItem[];

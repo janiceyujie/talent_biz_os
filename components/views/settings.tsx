@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { updateWorkspace, type SettingsState } from "@/app/(app)/settings/actions";
 import { useAppData } from "@/components/app/app-data";
 import { SignOutButton } from "@/components/sign-out-button";
+import { CalendarFeedSettings } from "./calendar-feed-settings";
 
 export function SettingsView() {
   const data = useAppData();
@@ -41,6 +42,7 @@ export function SettingsView() {
           </button>
         </form>
       </section>
+      <CalendarFeedSettings />
       <section className="surface padded">
         <div className="section-header">
           <div>

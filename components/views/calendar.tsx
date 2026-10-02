@@ -132,6 +132,11 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
                 {c.notes ? ` · ${c.notes}` : ""}
               </p>
               {c.projectId && <small>合作案：{data.projects.find((p) => p.id === c.projectId)?.title || "未找到"}</small>}
+              {c.source === "event" && !c.archived && (
+                <a className="text-button" href={`/api/calendar/events/${c.id}`} download>
+                  下載 .ics
+                </a>
+              )}
             </div>
             <button className="text-button" disabled={pending} onClick={() => run(() => archiveCalendarItem(c.id, c.source, !c.archived))}>
               {c.archived ? "還原" : "歸檔"}

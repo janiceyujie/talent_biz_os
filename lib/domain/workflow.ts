@@ -9,22 +9,32 @@ import { minorUnits, money, quote } from "./money";
 export const paymentTotal = (p: Pick<Payment, "amount" | "taxRate" | "taxIncluded" | "currency">) =>
   quote(p.amount, p.taxRate, p.taxIncluded, p.currency).total;
 
+/** Cash that actually moved for a settled payment: the settled amount, or the full total. */
+export const paymentCash = (p: Payment) => (p.status === "settled" ? (p.settledAmount ?? paymentTotal(p)) : 0);
+
 export const projectQuoteTotal = (p: Project) =>
   quote(p.quotedAmount, p.taxRate, p.taxIncluded, p.currency).total;
 
-/** Quoted vs. billed vs. received for one project, plus what still blocks closing. */
+/**
+ * Quoted vs. billed vs. received for one project, plus what still blocks
+ * closing. `shortfall` is billed income that settled for less than its total
+ * (withholding, fees) — shown on its own rather than left as outstanding.
+ */
 export function projectSettlement(data: AppData, project: Project) {
   const rows = data.payments.filter((p) => p.projectId === project.id && !p.archived && p.status !== "cancelled");
   const income = rows.filter((p) => p.direction === "in");
-  const sum = (list: Payment[]) => list.reduce((n, p) => n + minorUnits(paymentTotal(p), p.currency), 0);
-  const quoted = minorUnits(projectQuoteTotal(project), project.currency);
-  const billed = sum(income);
-  const received = sum(income.filter((p) => p.status === "settled"));
+  const units = (n: number) => minorUnits(n, project.currency);
+  const sum = (list: Payment[], value: (p: Payment) => number) => list.reduce((n, p) => n + units(value(p)), 0);
+  const settled = income.filter((p) => p.status === "settled");
+  const quoted = units(projectQuoteTotal(project));
+  const billed = sum(income, paymentTotal);
+  const received = sum(settled, paymentCash);
   return {
     quoted: quoted / 100,
     billed: billed / 100,
     received: received / 100,
-    pending: (billed - received) / 100,
+    pending: sum(income.filter((p) => p.status === "expected"), paymentTotal) / 100,
+    shortfall: (sum(settled, paymentTotal) - received) / 100,
     unbilled: (quoted - billed) / 100,
     openItems: data.calendar.filter((c) => c.projectId === project.id && !c.archived && !c.done),
     unpaidCosts: rows.filter((p) => p.direction === "out" && p.status === "expected"),
@@ -75,13 +85,14 @@ export function renderTemplate(template: ReplyTemplate, source: string, project?
 /** Date a payment counts on: settled date once settled, otherwise the recorded date. */
 export const paymentDate = (p: Payment) => (p.status === "settled" ? p.settledDate || p.recordedDate : p.recordedDate);
 
-/** Cash-basis totals for a date range (TWD only for the MVP). */
+/** Cash-basis totals for a date range (TWD only for the MVP): settled rows count their cash. */
 export function summarize(data: AppData, from = "", to = "9999-12-31") {
   const rows = data.payments.filter(
     (p) => !p.archived && p.status !== "cancelled" && paymentDate(p) >= from && paymentDate(p) <= to,
   );
+  const value = (p: Payment) => (p.status === "settled" ? paymentCash(p) : paymentTotal(p));
   const sum = (match: (p: Payment) => boolean) =>
-    Math.round(rows.filter(match).reduce((n, p) => n + paymentTotal(p), 0) * 100) / 100;
+    rows.filter(match).reduce((n, p) => n + minorUnits(value(p), p.currency), 0) / 100;
   return {
     rows,
     received: sum((p) => p.direction === "in" && p.status === "settled"),

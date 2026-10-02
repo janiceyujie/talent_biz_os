@@ -345,7 +345,7 @@ There's no "awaiting signature" stage — many gigs never have a written contrac
 
 **Files.** One `file` table holds both a message's files (with their order) and files uploaded to a project's archive. Bytes live in storage under `storage_key`.
 
-**Money.** One `payment` table for both directions, so income and expenses share project and cross-project summaries. A payment usually belongs to a project but doesn't have to (a general expense such as gear). Each payment, and the project's quote, stores the amount as entered, a tax rate, and whether the amount includes tax; net, tax, and total are computed in minor units so net + tax always equals total. A quote can be split into a deposit and a balance in one transaction (the balance absorbs rounding), and is refused if the project already has income rows. The settlement check compares quoted, billed (income rows), and received (settled) per project. The agreed amount and the settled amount are separate columns — withholding tax and 二代健保 often make the received amount smaller, and that gap should show. "Overdue" is computed (due date past, still expected), never stored. Amounts are `numeric`, never floating point.
+**Money.** One `payment` table for both directions, so income and expenses share project and cross-project summaries. A payment usually belongs to a project but doesn't have to (a general expense such as gear). Each payment, and the project's quote, stores the amount as entered, a tax rate, and whether the amount includes tax; net, tax, and total are computed in minor units so net + tax always equals total. A quote can be split into a deposit and a balance in one transaction (the balance absorbs rounding), and is refused if the project already has income rows. The settlement check compares quoted, billed (income rows), and received (settled) per project. The agreed amount and the settled amount are separate columns — withholding tax and 二代健保 often make the received amount smaller, and that gap should show. "Overdue" is computed (due date past, still expected), never stored. Amounts are `numeric`, never floating point. Payment dates (recorded, due, settled) are `date`s — calendar days in the talent's time zone, not instants. A payment without a project counts as 其他 in per-type summaries. Cash summaries use the settled amount: received counts what actually arrived, by settled date; outstanding counts expected rows, by recorded date.
 
 #### Multi-currency (Later)
 
@@ -562,30 +562,32 @@ create table payment (
   id                 uuid primary key default gen_random_uuid(),
   talent_id          uuid not null references talent(id) on delete cascade,
   project_id         uuid references project(id) on delete cascade,     -- null for a general expense
-  contract_id        uuid references contract(id) on delete set null,
-  source_message_id  uuid references message(id) on delete set null,
+  contract_id        uuid references contract(id) on delete set null,   -- added with contract
+  source_message_id  uuid references message(id) on delete set null,    -- added with message
   direction          text not null check (direction in ('in','out')),   -- 收入 / 成本
   installment        text not null default 'regular'
                        check (installment in ('regular','deposit','balance')),
   label              text not null,                 -- '訂金', 'train to Tainan'
-  amount             numeric(12,2) not null,        -- as entered; see tax_included
+  amount             numeric(12,2) not null check (amount >= 0),   -- as entered; see tax_included
   currency           char(3) not null default 'TWD'
                        check (currency = 'TWD'),    -- MVP: TWD only; see Multi-currency
   tax_rate           numeric(5,2) not null default 0 check (tax_rate between 0 and 100),
   tax_included       boolean not null default false,
-  due_at             timestamptz,
+  recorded_on        date not null,                 -- 登錄日期; calendar days, in the talent's time zone
+  due_on             date,
   status             text not null default 'expected'
                        check (status in ('expected','settled','cancelled')),  -- 待收・待付 / 已收・已付
   settled_amount     numeric(12,2),                 -- what actually arrived or was paid
-  settled_at         timestamptz,
+  settled_on         date,                          -- set exactly when status = 'settled'
   method             text,                          -- 'bank_transfer', 'cash', 'paypal'...
   invoice_ref        text,                          -- 發票／請款編號
   notes              text,
   archived_at        timestamptz,
   created_at         timestamptz not null default now(),
-  updated_at         timestamptz not null default now()
+  updated_at         timestamptz not null default now(),
+  check ((status = 'settled') = (settled_on is not null))
 );
-create index payment_talent_status_due_idx on payment (talent_id, status, due_at);
+create index payment_talent_status_due_idx on payment (talent_id, status, due_on);
 
 create table todo (
   id            uuid primary key default gen_random_uuid(),

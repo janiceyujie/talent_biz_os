@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
+import { archivePayment } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
 import { money, quote } from "@/lib/domain/money";
-import { paymentDate, paymentTotal, summarize } from "@/lib/domain/workflow";
+import { paymentCash, paymentDate, paymentTotal, summarize } from "@/lib/domain/workflow";
 import { directionLabels, installmentLabels, paymentStatusLabel } from "@/lib/labels";
 import { projectType } from "@/lib/project-types";
 import type { AppData } from "@/lib/types";
@@ -92,6 +93,8 @@ export function FinanceView() {
   const [rate, setRate] = useState(5);
   const [included, setIncluded] = useState(false);
   const [archived, setArchived] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const today = dateInZone(data.talent.timeZone);
   const s = summarize(data, from, to || "9999-12-31");
   const q = quote(Math.max(0, base || 0), Math.max(0, Math.min(100, rate || 0)), included);
@@ -210,6 +213,11 @@ export function FinanceView() {
           <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
           顯示已歸檔
         </label>
+        {error && (
+          <p className="notice error" role="alert">
+            {error}
+          </p>
+        )}
         <div className="table-scroll">
           <table>
             <thead>
@@ -232,7 +240,7 @@ export function FinanceView() {
                     {p.settledDate && <small>實際收付 {p.settledDate}</small>}
                   </td>
                   <td>
-                    {projectType(p.projectType).label} · {directionLabels[p.direction]}
+                    {p.projectId ? projectType(p.projectType).label : "未關聯"} · {directionLabels[p.direction]}
                   </td>
                   <td>
                     {paymentStatusLabel(p)}
@@ -240,11 +248,35 @@ export function FinanceView() {
                       <span className="danger-text"> · 逾期</span>
                     )}
                   </td>
-                  <td>{money(paymentTotal(p), p.currency)}</td>
+                  <td>
+                    {money(paymentTotal(p), p.currency)}
+                    {p.status === "settled" && paymentCash(p) !== paymentTotal(p) && (
+                      <small>
+                        實{p.direction === "in" ? "收" : "付"} {money(paymentCash(p))} · 差額 {money(paymentTotal(p) - paymentCash(p))}
+                      </small>
+                    )}
+                  </td>
                   <td>
                     <div className="row-actions">
                       <button className="secondary compact" onClick={() => setEditor({ kind: "payment", item: toRecord(p) })}>
                         編輯
+                      </button>
+                      {p.status === "expected" && !p.archived && (
+                        <button
+                          className="secondary compact"
+                          onClick={() =>
+                            setEditor({ kind: "payment", item: { ...toRecord(p), status: "settled", settledDate: today } })
+                          }
+                        >
+                          記為{p.direction === "in" ? "已收" : "已付"}
+                        </button>
+                      )}
+                      <button
+                        className="text-button"
+                        disabled={pending}
+                        onClick={() => startTransition(async () => setError(await archivePayment(p.id, !p.archived)))}
+                      >
+                        {p.archived ? "還原" : "歸檔"}
                       </button>
                     </div>
                   </td>

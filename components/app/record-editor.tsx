@@ -11,6 +11,7 @@ import {
 } from "@/lib/labels";
 import { projectTypes } from "@/lib/project-types";
 import { saveContact } from "@/lib/actions/contacts";
+import { savePayment } from "@/lib/actions/payments";
 import { saveProject } from "@/lib/actions/projects";
 import { calendarKinds, contactRoles, stages, type Project } from "@/lib/types";
 import { useAppData } from "./app-data";
@@ -47,6 +48,7 @@ type Saver = (data: RecordData) => Promise<string | null>;
 const savers: Partial<Record<EditorKind, Saver>> = {
   project: saveProject,
   contact: saveContact,
+  payment: savePayment,
 };
 
 const names: Record<EditorKind, string> = {
@@ -98,12 +100,12 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
       label: "",
       projectId: "",
       direction: "in",
-      projectType: "gig",
       recordedDate: today,
       dueDate: "",
       installment: "regular",
       status: "expected",
       settledDate: "",
+      settledAmount: "",
       invoiceRef: "",
       amount: 0,
       currency: "TWD",
@@ -256,7 +258,6 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
             {projectLink()}
             <div className="form-grid">
               {field("direction", "收支類型", "text", true, entries(directionLabels, ["in", "out"]))}
-              {!data.projectId && field("projectType", "商案類型", "text", true, typeOptions)}
               {field("recordedDate", "登錄日期", "date", true)}
               {field("dueDate", "付款期限", "date")}
               {field("installment", "款項階段", "text", true, entries(installmentLabels, ["regular", "deposit", "balance"]))}
@@ -266,9 +267,10 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
               ])}
               {field("invoiceRef", "發票／請款編號")}
               {data.status === "settled" && field("settledDate", "實際收付日期", "date", true)}
+              {data.status === "settled" && field("settledAmount", "實收／實付金額（留空＝全額）", "number")}
             </div>
             <p className="muted">
-              一筆紀錄代表一筆完整收付。分次收款請拆成訂金與尾款；尚未收到款項時保持「待收」。已收／已付的報表依實際收付日期計算。
+              一筆紀錄代表一筆完整收付。分次收款請拆成訂金與尾款；尚未收到款項時保持「待收」。已收／已付的報表依實際收付日期計算。實際入帳少於應收（例如扣繳、二代健保）時，填寫實收金額，差額會另外顯示。
             </p>
             {pricing("amount")}
             {field("notes", "備註", "textarea")}

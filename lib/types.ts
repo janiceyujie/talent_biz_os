@@ -90,6 +90,7 @@ export type Payment = {
   recordedDate: string; // 登錄日期
   dueDate: string | null;
   status: "expected" | "settled" | "cancelled";
+  settledAmount: number | null; // what actually arrived or was paid; null = the full total
   settledDate: string | null;
   invoiceRef: string;
   notes: string;

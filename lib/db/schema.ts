@@ -6,6 +6,7 @@ import {
   boolean,
   char,
   check,
+  date,
   index,
   jsonb,
   numeric,
@@ -221,4 +222,53 @@ export const auditLog = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("audit_log_target_idx").on(t.targetType, t.targetId)],
+).enableRLS();
+
+// Money ----------------------------------------------------------------------------
+
+export const paymentDirections = ["in", "out"] as const; // 收入 / 成本
+export const paymentInstallments = ["regular", "deposit", "balance"] as const;
+export const paymentStatuses = ["expected", "settled", "cancelled"] as const;
+
+// Money in or out, usually for a project. `amount` is as entered (see
+// `taxIncluded`); `settledAmount` is what actually arrived or was paid.
+// Dates are calendar days in the talent's time zone.
+export const payment = pgTable(
+  "payment",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    projectId: uuid().references(() => project.id, { onDelete: "cascade" }), // null for a general expense
+    direction: text({ enum: paymentDirections }).notNull(),
+    installment: text({ enum: paymentInstallments }).notNull().default("regular"),
+    label: text().notNull(),
+    amount: numeric({ precision: 12, scale: 2, mode: "number" }).notNull(),
+    currency: char({ length: 3 }).notNull().default("TWD"),
+    taxRate: numeric({ precision: 5, scale: 2, mode: "number" }).notNull().default(0),
+    taxIncluded: boolean().notNull().default(false),
+    recordedOn: date().notNull(), // 登錄日期
+    dueOn: date(),
+    status: text({ enum: paymentStatuses }).notNull().default("expected"),
+    settledAmount: numeric({ precision: 12, scale: 2, mode: "number" }),
+    settledOn: date(),
+    method: text(),
+    invoiceRef: text(),
+    notes: text(),
+    archivedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("payment_talent_status_due_idx").on(t.talentId, t.status, t.dueOn),
+    index("payment_project_idx").on(t.projectId),
+    check("payment_direction_check", oneOf(t.direction, paymentDirections)),
+    check("payment_installment_check", oneOf(t.installment, paymentInstallments)),
+    check("payment_status_check", oneOf(t.status, paymentStatuses)),
+    check("payment_currency_check", sql`${t.currency} = 'TWD'`), // MVP: TWD only
+    check("payment_tax_rate_check", sql`${t.taxRate} between 0 and 100`),
+    check("payment_amount_check", sql`${t.amount} >= 0 and (${t.settledAmount} is null or ${t.settledAmount} >= 0)`),
+    check("payment_settled_check", sql`(${t.status} = 'settled') = (${t.settledOn} is not null)`),
+  ],
 ).enableRLS();

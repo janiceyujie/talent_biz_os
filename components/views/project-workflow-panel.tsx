@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
 import { toRecord, type Editor } from "@/components/app/record-editor";
+import { createPaymentPlan } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
 import { money, splitPayments } from "@/lib/domain/money";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
@@ -27,6 +28,8 @@ export function ProjectWorkflowPanel({
   const [percent, setPercent] = useState(50);
   const [depositDue, setDepositDue] = useState(today);
   const [balanceDue, setBalanceDue] = useState(project.nextAction?.dueDate || today);
+  const [pending, startTransition] = useTransition();
+  const [planError, setPlanError] = useState<string | null>(null);
   const settlement = projectSettlement(data, project);
   const payments = data.payments.filter((p) => p.projectId === project.id && !p.archived);
   const items = data.calendar.filter((c) => c.projectId === project.id && !c.archived);
@@ -47,6 +50,7 @@ export function ProjectWorkflowPanel({
     settlement.unbilled > 0 && `尚未建立請款 ${money(settlement.unbilled)}`,
     settlement.unbilled < 0 && `請款超過報價 ${money(-settlement.unbilled)}，請確認是否重複或報價尚未更新`,
     settlement.pending > 0 && `尚有待收款 ${money(settlement.pending)}`,
+    settlement.shortfall > 0 && `實收較請款少 ${money(settlement.shortfall)}（扣繳或手續費？請確認）`,
     settlement.unpaidCosts.length > 0 && `${settlement.unpaidCosts.length} 筆成本尚未支付`,
   ].filter(Boolean);
 
@@ -68,6 +72,7 @@ export function ProjectWorkflowPanel({
           ["已建立請款", settlement.billed],
           ["已收款", settlement.received],
           ["待收款", settlement.pending],
+          ...(settlement.shortfall > 0 ? [["實收差額", settlement.shortfall] as const] : []),
         ].map(([label, value]) => (
           <div key={String(label)}>
             <dt>{label}</dt>
@@ -118,7 +123,17 @@ export function ProjectWorkflowPanel({
       </div>
       {plan && (
         <Modal title="確認訂金與尾款" onClose={() => setPlan(false)}>
-          <form className="editor-form" onSubmit={(e) => e.preventDefault()}>
+          <form
+            className="editor-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              startTransition(async () => {
+                const failure = await createPaymentPlan({ projectId: project.id, percent, depositDue, balanceDue });
+                setPlanError(failure);
+                if (!failure) setPlan(false);
+              });
+            }}
+          >
             <p>依本案含稅報價建立兩筆待收款；此操作不代表款項已收到。</p>
             <label>
               訂金比例 %
@@ -148,12 +163,16 @@ export function ProjectWorkflowPanel({
               <p role="alert">請確認報價及比例，拆分後兩筆金額都必須大於零。</p>
             )}
             <p className="muted">尾款承接四捨五入差額。需要三期以上或不等額付款，可改用新增關聯請款，逐筆登錄。</p>
-            <p className="muted">內帳尚未接上資料庫，建立功能開發中。</p>
+            {planError && (
+              <p className="notice error" role="alert">
+                {planError}
+              </p>
+            )}
             <footer className="modal-actions">
               <button type="button" className="secondary" onClick={() => setPlan(false)}>
                 取消
               </button>
-              <button type="submit" className="primary" disabled>
+              <button type="submit" className="primary" disabled={pending || !preview}>
                 確認建立兩筆待收款
               </button>
             </footer>

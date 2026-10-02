@@ -111,6 +111,7 @@ export const talent = pgTable(
     id: id(),
     name: text().notNull(),
     vertical: text({ enum: verticals }).notNull(),
+    timeZone: text().notNull().default("Asia/Taipei"), // IANA; decides what "today" means
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

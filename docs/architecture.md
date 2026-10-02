@@ -33,6 +33,7 @@ Tagged by when it's built: **MVP** ships first. **Phase 2** follows once the cor
 
 - Gmail add-on: open an email in Gmail, click one button to send just that message in — **MVP**.
 - Upload a screenshot, photo, or PDF from a browser, including several images from one scrolling conversation — **MVP**.
+- Paste an offer's text directly (匯入邀約) — **MVP**. It becomes a message and goes through the same analysis.
 - Email a screenshot to a personal upload address as a phone-friendly alternative to the web upload page — **MVP**.
 - Forward an email to a dedicated inbound address — **MVP alternative path**. Needs no Google authorization or review at all, and works with any email provider, not just Gmail. Weaker on two fronts: forwarding changes the message headers, so recovering the original sender and timestamp for deal-matching is less reliable than reading via API, and there's no natural UI slot for project tagging the way the add-on's dropdown provides.
 - Connect a Gmail account directly so the system reads new mail on its own, no per-message action needed — **Later**. Real access to the whole mailbox, designed for now, built when the per-message flow proves too much friction.
@@ -54,7 +55,8 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 
 - Group the messages and contract versions that belong to one ongoing deal into a single project — **MVP**.
 - Track each project through stages — offer, negotiating, signed, in progress, collecting payment, closed, or declined / cancelled. The system suggests a stage change; the person confirms it or sets the stage by hand — **MVP**.
-- Project types, each with its own fields, screens, milestones, and to-dos: `gig` and `other` — **MVP**; `brand_deal` — **Phase 2**; further types as research shows a need — **Later**.
+- Project types, each with its own fields, screens, milestones, and to-dos. The registry lists 演出 `gig`, 品牌合作 `brand_deal`, 業配 `sponsored_post`, 授權 `licensing`, and 其他 `other` from the MVP, each with its "what to confirm" checklist; `gig` gets full fields and AI extraction in the **MVP**, the others in **Phase 2**; further types as research shows a need — **Later**.
+- Archive and restore projects, contacts, payments, templates, drafts, and files — **MVP**. Archiving hides; deleting removes.
 - Match a new message to an existing project automatically, and always ask the person to confirm the match — **MVP**.
 - Detect that a new message is an updated version of an existing contract, and show exactly what changed — fee, dates, terms — **MVP**.
 - Manually merge or split projects when the automatic match is wrong — **MVP**, basic version; refined once real usage shows where it fails.
@@ -63,7 +65,9 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 
 - Analyze each message: a summary, the extracted facts, what the sender is asking for, and what's missing (e.g. no load-in time) — **MVP**.
 - Draft a reply, quote, or payment follow-up — several versions at once — for the person to review and send themselves — **MVP**. Validated as the single most requested capability in interviews; the system never sends on its own. Drafts are stored, along with which one the person picked and how they edited it.
-- Toggle a quote between tax-inclusive and tax-exclusive amounts — **Phase 2**.
+- A reply library: reusable templates with placeholders (`{{合作方}}`, `{{報價}}`…) and past replies kept for reference, per project type — **MVP**. Useful without AI, and later the examples AI drafts from.
+- Quotes and payments carry a tax rate and whether the entered amount includes tax; tax-inclusive and tax-exclusive amounts are shown side by side — **MVP**. Taiwan's 5% business tax appears on most quotes.
+- An assistant that answers questions over the person's own data ("what's due tomorrow?", "how much is unpaid?") — **Later**. The screen ships as a placeholder.
 - Draft against the person's own past phrasing and process, not a generic template — **Phase 2**. Needs enough confirmed history per person to draw from.
 
 ### Review and action
@@ -78,7 +82,9 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 ### Billing and payments
 
 - Track a project's payment status against extracted amounts and due dates — deposit paid, balance outstanding, overdue — **MVP**. The amount actually received is recorded separately from the amount agreed, since withholding tax and the supplementary health-insurance premium (二代健保) often make them differ.
-- Record expenses against a project by hand — amount, label, project — and show net per project — **MVP**. No receipts, categories, or reports.
+- Record expenses by hand — amount, label, and optionally a project — and show net per project — **MVP**. No receipts, categories, or reports.
+- Split a quote into deposit and balance payments in one step — **MVP**.
+- A project-level settlement check: quoted vs. billed vs. received, open to-dos, unpaid costs — **MVP**.
 - Amounts in TWD only — **MVP**. Each amount still carries its currency.
 - Multiple currencies, with a per-user default currency the dashboard converts into — **Later**. See [Multi-currency](#multi-currency-later).
 - A running record of which counterparties pay late and by how much — **Later**. Needs enough payment history per counterparty to be meaningful.
@@ -96,6 +102,17 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - Per-project detail: the timeline of messages and versions, current terms, open to-dos — **MVP**.
 - Concrete urgency signals validated in interviews: expected income in the next 30 days, deliverables and signatures pending, a contract that doesn't match its offer, unconfirmed travel or venue logistics, overdue payments — **MVP**.
 - A single view across every talent a manager or agency represents — **Later**.
+- Search across projects, contacts, calendar, and templates (⌘K) — **MVP**.
+- In-app notifications derived from upcoming to-dos, events, and overdue payments — **MVP**. Read/unread state — **Later**.
+
+### Contacts
+
+- A contact list of artists, counterparties, and managers — name, company, email, phone, notes — linked to projects — **MVP**. A project keeps the counterparty's name as text too, so a project without a contact still works; a draft takes its recipient from the linked contact.
+- Recognizing the same counterparty across projects for late-payment history — **Later**.
+
+### Files
+
+- A file archive per project — contracts, assets, invoices — uploaded directly, alongside the files that arrived with messages — **MVP**.
 
 ### Accounts, access, and security
 
@@ -236,7 +253,7 @@ A rejected proposal never generates a file. A cancelled confirmed event only sto
 
 ## Entity model
 
-Two ideas carry the model. **A login is not a business:** `person` is someone who signs in, `talent` is the artist or creator whose business is tracked, and `membership` links them with a role — so manager accounts (one person, many talents) and bands (many people, one talent) are a permissions change, not a schema change. **The project is the unit a person manages:** messages, contract versions, calendar events, money, and to-dos all hang off it.
+Two ideas carry the model. **A login is not a business:** `person` is someone who signs in, `talent` is the artist or creator whose business is tracked, and `membership` links them with a role — so manager accounts (one person, many talents) and bands (many people, one talent) are a permissions change, not a schema change. **The project is the unit a person manages:** messages, contract versions, calendar events, money, files, drafts, and to-dos all hang off it.
 
 ```mermaid
 erDiagram
@@ -244,12 +261,18 @@ erDiagram
     TALENT ||--o{ MEMBERSHIP : has
     PERSON ||--o{ INBOUND_GRANT : authorizes
     TALENT ||--o{ PROJECT : has
+    TALENT ||--o{ CONTACT : keeps
+    CONTACT ||--o{ PROJECT : "counterparty of"
+    TALENT ||--o{ REPLY_TEMPLATE : keeps
     TALENT ||--o{ MESSAGE : receives
     PERSON ||--o{ MESSAGE : submits
     PROJECT ||--o{ MESSAGE : "groups (once confirmed)"
-    MESSAGE ||--o{ MESSAGE_FILE : contains
+    MESSAGE ||--o{ FILE : contains
+    PROJECT ||--o{ FILE : archives
     MESSAGE ||--o{ MESSAGE_ANALYSIS : produces
     MESSAGE ||--o{ REPLY_DRAFT : "drafted for"
+    PROJECT ||--o{ REPLY_DRAFT : has
+    REPLY_TEMPLATE ||--o{ REPLY_DRAFT : "starts"
     PROJECT ||--o{ CONTRACT : "has versions"
     CONTRACT ||--o| CONTRACT : supersedes
     PROJECT ||--o{ CALENDAR_EVENT : has
@@ -263,16 +286,18 @@ erDiagram
 |---|---|---|
 | `person` | A login. Doubles as Better Auth's user table | M1 |
 | `auth_session`, `auth_account`, `auth_verification` | Better Auth internals: sessions, password hashes and Google links, email-verification tokens | M1 |
-| `talent` | The artist or creator whose business is tracked; holds the vertical | M1 |
+| `talent` | The artist or creator whose business is tracked; holds the vertical and time zone | M1 |
 | `membership` | A person's role on a talent | M1 |
-| `message` | One submission — an email, or a batch of screenshots of one conversation | M2 |
-| `message_file` | One file in a message: email body, an attachment, or one screenshot, in order | M2 |
+| `contact` | An artist, counterparty, or manager the talent works with | M2 |
+| `message` | One submission — an email, a batch of screenshots of one conversation, or pasted text | M2 |
+| `file` | One stored file: part of a message (email body, attachment, screenshot, in order) or uploaded to a project's archive | M2 |
 | `message_analysis` | One AI reading of a message — facts, summary, asks, what's missing. Versioned | M2 |
-| `reply_draft` | One drafted reply, with whether it was picked and how it was edited | M2 |
+| `reply_template` | A reusable reply template with placeholders, or a past reply kept for reference | M2 |
+| `reply_draft` | One drafted reply — from AI, a template, or by hand — with whether it was used and how it was edited | M2 |
 | `project` (UI: 專案) | One ongoing deal with one counterparty, with a type and a stage | M2 (one project per confirmed message); matching in M4 |
 | `calendar_event` | Something that happens at a time — performance, load-in, travel | M2 |
 | `todo` | Something the person needs to do; also the source of a message's reply status | M2 |
-| `payment` | Money in or out for a project, expected and actual | M2 |
+| `payment` | Money in or out — usually for a project — expected and actual, with tax | M2 |
 | `audit_log` | Who confirmed or changed what, and when | M2 |
 | `contract` | One version of a contract document, with status and diff | M2 (v1 only); versions and diff in M4 |
 | `inbound_grant` | Authorization from the Gmail add-on | M3 |
@@ -281,29 +306,46 @@ erDiagram
 
 ### Glossary
 
-Chinese labels are proposals except 專案, which is decided.
+專案 is decided; the rest follow the prototype's UI unless noted.
 
 | Code | UI (zh) | Meaning |
 |---|---|---|
 | `talent` | 藝人 | The artist or creator whose business is tracked |
 | `project` | 專案 | One ongoing deal with one counterparty |
-| `project.stage` | 階段 | Where the project is in its lifecycle |
-| `project.type` | 類型 | What kind of project — drives fields, screens, milestones |
+| `project.stage` | 階段 | Where the project is in its lifecycle — see stage labels below |
+| `project.type` | 商案類型 | What kind of project — drives fields, screens, milestones |
+| `contact` | 藝人與合作方 | Someone the talent works with; `role` 藝人 / 合作方 / 經紀人 |
+| `reply_template` | 回覆範本 / 過往回覆 | A template (`kind = template`) or a past reply (`kind = past_reply`) |
+| `reply_draft` | 回覆草稿 | A draft reply |
+| `file` | 素材 | A stored file |
 | `contract` | 合約 | One version of a contract document |
 | `todo` | 待辦 | Something to do, optionally with a due date |
-| `payment` | 款項 | Money in (fee, deposit, balance) or out (an expense) |
+| `payment` | 款項 / 內帳 | Money in (fee, deposit, balance) or out (an expense); 收入 / 成本, 待收 / 已收, 待付 / 已付 |
+| `archived_at` | 歸檔 | Hidden from day-to-day views, restorable |
+
+Stage labels: `offer` 待確認 · `negotiating` 洽談中 · `signed` 已簽約 · `in_progress` 執行中 · `collecting_payment` 待結算 · `closed` 已完成 · `declined` 已婉拒 · `cancelled` 已取消.
+
+Type labels: `gig` 演出 · `brand_deal` 品牌合作 · `sponsored_post` 業配 · `licensing` 授權 · `other` 其他.
 
 ### How the pieces behave
 
 **Project stage.** `offer → negotiating → signed → in_progress → collecting_payment → closed`, with `declined` and `cancelled` as exits. Every type shares this set so cross-project views work; a type may relabel a stage in the UI. The system *suggests* moves — an offer confirmed (offer), a counter-offer draft used or a contract returned with changes (negotiating), a contract version signed (signed), the first event date reached (in progress), the event past with money outstanding (collecting payment), all expected payments settled (closed), a decline draft used or the counterparty cancels (declined / cancelled). The person confirms, or sets the stage by hand. Every change is written to `audit_log`.
 
-**Project types.** One `project.type` column plus a `details` jsonb for type-specific fields. Behavior lives in a type registry in code — one file per type (`lib/project-types/gig.ts`) defining its UI label, the schema for `details` (which is also the extraction schema), which panels the project page shows, its milestone and to-do templates, and which verticals offer it. Type-specific steps (a brand deal's draft submitted → approved → posted) are milestones inside `in_progress`, generated as to-dos and calendar events. Adding a type is adding a file, not a migration. MVP types: `gig`, `other`.
+There's no "awaiting signature" stage — many gigs never have a written contract, so it would be a step most projects skip. Instead the UI shows a computed **待簽約** badge on a `negotiating` project whose latest contract version isn't `signed`, and the dashboard can count those. If "reviewing" and "agreed, waiting to sign" need telling apart, add an `agreed` contract status rather than a stage.
+
+**Project types.** One `project.type` column plus a `details` jsonb for type-specific fields. Behavior lives in a type registry in code — one file per type (`lib/project-types/gig.ts`) defining its UI label, the schema for `details` (which is also the extraction schema), which panels the project page shows, its milestone and to-do templates, and which verticals offer it. Type-specific steps (a brand deal's draft submitted → approved → posted) are milestones inside `in_progress`, generated as to-dos and calendar events. Adding a type is adding a file, not a migration. The registry lists all five types from the MVP, each with its "what to confirm" checklist; only `gig` gets full `details` fields and AI extraction in the MVP.
 
 **A message's reply status comes from to-dos.** "To respond" is an open reply to-do linked to the message; "waiting for reply" is an open follow-up to-do; no open to-dos means done. Nothing on the message itself, so the to-do list and the message can't disagree. `message.status` is only the pipeline and review lifecycle.
 
 **Calendar.** Things that happen at a time are `calendar_event`s; deadlines are to-dos with a due date. The in-app calendar shows both, filterable by project. Each event stores its IANA time zone — a Taipei artist playing Tokyo sees the gig at Tokyo time, and the `.ics` file needs it. The private subscription link is a per-membership secret token (only its hash is stored); resetting it cuts off the old link.
 
-**Money.** One `payment` table for both directions, so income and expenses share project and cross-project summaries. The agreed amount and the settled amount are separate columns — withholding tax and 二代健保 often make the received amount smaller, and that gap should show. "Overdue" is computed (due date past, still expected), never stored. Amounts are `numeric`, never floating point.
+**Contacts.** A project links to a `contact` for its counterparty when one exists, and always keeps the counterparty name as text, so quick entries without a contact still work. A contact's email is the default recipient for drafts on its projects. Same name never implies same contact.
+
+**Drafting and the reply library.** A `reply_template` is either a reusable template, whose placeholders (`{{合作方}}`, `{{藝人}}`, `{{案件名稱}}`, `{{邀約內容}}`, `{{報價}}`, `{{交付內容}}`, `{{授權範圍}}`, `{{下一步期限}}`) fill from the project, or a past reply kept for reference. A past reply is never applied directly — it would carry an old project's names and fees — it's saved as a template first. Missing values render as `【待確認：欄位】`, never guessed. A `reply_draft` comes from AI, from a template, or is written by hand; it may hang off a message, a project, or neither.
+
+**Files.** One `file` table holds both a message's files (with their order) and files uploaded to a project's archive. Bytes live in storage under `storage_key`.
+
+**Money.** One `payment` table for both directions, so income and expenses share project and cross-project summaries. A payment usually belongs to a project but doesn't have to (a general expense such as gear). Each payment, and the project's quote, stores the amount as entered, a tax rate, and whether the amount includes tax; net, tax, and total are computed in minor units so net + tax always equals total. A quote can be split into a deposit and a balance in one transaction (the balance absorbs rounding), and is refused if the project already has income rows. The settlement check compares quoted, billed (income rows), and received (settled) per project. The agreed amount and the settled amount are separate columns — withholding tax and 二代健保 often make the received amount smaller, and that gap should show. "Overdue" is computed (due date past, still expected), never stored. Amounts are `numeric`, never floating point.
 
 #### Multi-currency (Later)
 
@@ -320,13 +362,13 @@ The MVP is TWD only, enforced by a check constraint, but every `payment` row alr
 - **Singular, snake_case table names.** Drizzle maps camelCase TypeScript to snake_case columns.
 - **`talent_id` on every business table**, even where a join could reach it. Authorization is checked in app code, so "only this talent's data" is always one filter.
 - **Fixed value lists are `text` + `check`** (statuses, stages). Lists that grow with the type registry (`project.type`, `calendar_event.kind`) are `text` validated in code. No Postgres enum types — they can't drop a value.
-- **Deleting deletes.** A user-initiated delete removes the rows and their stored files; there's no soft-delete flag. Hiding from day-to-day view is what closing a project is for.
+- **Archiving hides, deleting deletes.** `archived_at` hides a row from day-to-day views and summaries and can be undone. A user-initiated delete removes the rows and their stored files for good.
 - **Row-level security enabled on every table, with no policies.** The app connects as the database owner and isn't affected; anything reaching Postgres through Supabase's Data API gets nothing.
 - `created_at` everywhere, `updated_at` on tables that are edited; all timestamps are `timestamptz`.
 
 ## Schema
 
-The authoritative definition is the Drizzle schema in `lib/db/schema.ts`; this DDL is the design reference and covers every table, including ones not built yet. Raw payloads live in blob storage, never inlined in a row — `message_file.storage_key` is a key, not a URL. Every table also has `enable row level security` (omitted below).
+The authoritative definition is the Drizzle schema in `lib/db/schema.ts`; this DDL is the design reference and covers every table, including ones not built yet. Raw payloads live in blob storage, never inlined in a row — `file.storage_key` is a key, not a URL. Every table also has `enable row level security` (omitted below).
 
 ```sql
 -- Identity -------------------------------------------------------------------
@@ -352,6 +394,7 @@ create table talent (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
   vertical    text not null check (vertical in ('music','influencer','model','other')),
+  time_zone   text not null default 'Asia/Taipei',   -- IANA; decides what "today" means
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -381,20 +424,42 @@ create table inbound_grant (
   created_at     timestamptz not null default now()
 );
 
--- Projects -------------------------------------------------------------------
+-- Contacts and projects ------------------------------------------------------
+
+create table contact (
+  id           uuid primary key default gen_random_uuid(),
+  talent_id    uuid not null references talent(id) on delete cascade,
+  role         text not null check (role in ('artist','counterparty','manager')),
+  name         text not null,
+  company      text,
+  email        text,
+  phone        text,
+  notes        text,
+  archived_at  timestamptz,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+create index contact_talent_idx on contact (talent_id);
 
 create table project (
-  id            uuid primary key default gen_random_uuid(),
-  talent_id     uuid not null references talent(id) on delete cascade,
-  title         text not null,                    -- "The Blue Room, Nov 14"
-  counterparty  text not null,
-  type          text not null,                    -- type registry key: 'gig', 'other'
-  stage         text not null default 'offer'
-                  check (stage in ('offer','negotiating','signed','in_progress',
-                                   'collecting_payment','closed','declined','cancelled')),
-  details       jsonb not null default '{}',      -- validated by the type's schema
-  created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now()
+  id               uuid primary key default gen_random_uuid(),
+  talent_id        uuid not null references talent(id) on delete cascade,
+  title            text not null,                 -- "The Blue Room, Nov 14"
+  counterparty     text not null,                 -- kept even when linked to a contact
+  counterparty_id  uuid references contact(id) on delete set null,
+  type             text not null,                 -- registry key: 'gig', 'brand_deal', 'sponsored_post', 'licensing', 'other'
+  stage            text not null default 'offer'
+                     check (stage in ('offer','negotiating','signed','in_progress',
+                                      'collecting_payment','closed','declined','cancelled')),
+  quoted_amount    numeric(12,2),                 -- as entered; see tax_included
+  quote_currency   char(3) not null default 'TWD' check (quote_currency = 'TWD'),
+  tax_rate         numeric(5,2) not null default 0 check (tax_rate between 0 and 100),
+  tax_included     boolean not null default false,
+  details          jsonb not null default '{}',   -- validated by the type's schema
+  notes            text,
+  archived_at      timestamptz,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
 );
 create index project_talent_stage_idx on project (talent_id, stage);
 
@@ -405,13 +470,14 @@ create table message (
   talent_id      uuid not null references talent(id) on delete cascade,
   project_id     uuid references project(id) on delete set null,  -- null until confirmed
   submitted_by   uuid not null references person(id),             -- always the authenticated user
-  channel        text not null check (channel in ('gmail_addon','upload','forwarded_email')),
+  channel        text not null check (channel in ('gmail_addon','upload','forwarded_email','paste')),
   external_ref   text,                              -- Gmail message id, when channel = gmail_addon
   received_at    timestamptz not null,
   origin_hint    text,                              -- model's guess for uploads: 'instagram', 'sms'...; never trusted
   dedup_key      text not null,                     -- gmail_addon: the Message-ID header
                                                     -- upload: sha256 of the files' bytes, in order
                                                     -- forwarded_email: sha256(unwrapped original sender + sent time + body)
+                                                    -- paste: sha256(text)
   status         text not null default 'pending'    -- pipeline + review lifecycle; reply status comes from todos
                    check (status in ('pending','analyzed','confirmed','dismissed','error')),
   created_at     timestamptz not null default now(),
@@ -420,19 +486,22 @@ create table message (
 create index message_talent_status_idx on message (talent_id, status);
 create index message_project_idx on message (project_id);
 
-create table message_file (
+create table file (
   id            uuid primary key default gen_random_uuid(),
-  message_id    uuid not null references message(id) on delete cascade,
   talent_id     uuid not null references talent(id) on delete cascade,
-  position      int not null,                       -- upload / attachment order
-  role          text not null check (role in ('body','attachment','screenshot')),
-  storage_key   text not null,                      -- 'messages/{talent_id}/{message_id}/{position}'
+  message_id    uuid references message(id) on delete cascade,      -- set for a message's files
+  project_id    uuid references project(id) on delete set null,     -- set for archive uploads
+  position      int,                                -- order within a message
+  role          text not null check (role in ('body','attachment','screenshot','upload')),
+  storage_key   text not null,                      -- 'files/{talent_id}/{id}'
   content_type  text not null,
   filename      text,
   size_bytes    bigint not null,
+  archived_at   timestamptz,
   created_at    timestamptz not null default now(),
   unique (message_id, position)
 );
+create index file_project_idx on file (project_id);
 
 create table message_analysis (
   id             uuid primary key default gen_random_uuid(),
@@ -473,7 +542,7 @@ create table calendar_event (
   talent_id          uuid not null references talent(id) on delete cascade,
   contract_id        uuid references contract(id) on delete set null,
   source_message_id  uuid references message(id) on delete set null,
-  kind               text not null,        -- registry-driven: 'performance', 'load_in', 'travel'...
+  kind               text not null,        -- registry-driven: 'performance', 'meeting', 'travel', 'accommodation'...
   title              text not null,
   location           text,
   start_at           timestamptz not null,
@@ -482,6 +551,8 @@ create table calendar_event (
   time_zone          text not null,        -- IANA, e.g. 'Asia/Tokyo'
   status             text not null default 'proposed'
                        check (status in ('proposed','confirmed','cancelled')),
+  notes              text,
+  archived_at        timestamptz,
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now()
 );
@@ -489,21 +560,28 @@ create index calendar_event_talent_start_idx on calendar_event (talent_id, start
 
 create table payment (
   id                 uuid primary key default gen_random_uuid(),
-  project_id         uuid not null references project(id) on delete cascade,
   talent_id          uuid not null references talent(id) on delete cascade,
+  project_id         uuid references project(id) on delete cascade,     -- null for a general expense
   contract_id        uuid references contract(id) on delete set null,
   source_message_id  uuid references message(id) on delete set null,
-  direction          text not null check (direction in ('in','out')),
-  label              text not null,                 -- 'deposit', 'balance', 'train to Tainan'
-  amount             numeric(12,2) not null,        -- agreed / expected
+  direction          text not null check (direction in ('in','out')),   -- 收入 / 成本
+  installment        text not null default 'regular'
+                       check (installment in ('regular','deposit','balance')),
+  label              text not null,                 -- '訂金', 'train to Tainan'
+  amount             numeric(12,2) not null,        -- as entered; see tax_included
   currency           char(3) not null default 'TWD'
                        check (currency = 'TWD'),    -- MVP: TWD only; see Multi-currency
+  tax_rate           numeric(5,2) not null default 0 check (tax_rate between 0 and 100),
+  tax_included       boolean not null default false,
   due_at             timestamptz,
   status             text not null default 'expected'
-                       check (status in ('expected','settled','cancelled')),
+                       check (status in ('expected','settled','cancelled')),  -- 待收・待付 / 已收・已付
   settled_amount     numeric(12,2),                 -- what actually arrived or was paid
   settled_at         timestamptz,
   method             text,                          -- 'bank_transfer', 'cash', 'paypal'...
+  invoice_ref        text,                          -- 發票／請款編號
+  notes              text,
+  archived_at        timestamptz,
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now()
 );
@@ -518,7 +596,7 @@ create table todo (
   payment_id    uuid references payment(id) on delete set null,
   type          text not null
                   check (type in ('reply','follow_up','review_contract','review_contract_change',
-                                  'confirm_event','payment_due','confirm_logistics','milestone','custom')),
+                                  'confirm_event','payment_due','confirm_logistics','deliverable','milestone','custom')),
   title         text not null,
   due_at        timestamptz,
   status        text not null default 'open' check (status in ('open','done','dismissed')),
@@ -529,17 +607,36 @@ create table todo (
 create index todo_talent_status_due_idx on todo (talent_id, status, due_at);
 create index todo_message_idx on todo (message_id);
 
+create table reply_template (
+  id            uuid primary key default gen_random_uuid(),
+  talent_id     uuid not null references talent(id) on delete cascade,
+  project_type  text not null,                      -- registry key; templates are per type
+  kind          text not null check (kind in ('template','past_reply')),
+  title         text not null,
+  body          text not null,
+  tone          text,
+  archived_at   timestamptz,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+
 create table reply_draft (
   id             uuid primary key default gen_random_uuid(),
-  message_id     uuid not null references message(id) on delete cascade,
   talent_id      uuid not null references talent(id) on delete cascade,
+  project_id     uuid references project(id) on delete cascade,
+  message_id     uuid references message(id) on delete set null,
   todo_id        uuid references todo(id) on delete set null,
-  label          text not null,                     -- 'accept as-is', 'counter at $950'
-  body           text not null,
-  edited_body    text,                              -- what the person changed it to
+  template_id    uuid references reply_template(id) on delete set null,
+  label          text,                              -- AI variant: 'accept as-is', 'counter at $950'
+  subject        text not null,
+  recipient      text,
+  body           text not null,                     -- as generated, or as written
+  edited_body    text,                              -- what the person changed a generated draft to
+  model_version  text,                              -- null when written by hand or from a template
   chosen_at      timestamptz,                       -- set when the person used this draft
-  model_version  text not null,
-  created_at     timestamptz not null default now()
+  archived_at    timestamptz,
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
 );
 
 create table audit_log (

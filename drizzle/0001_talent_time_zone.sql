@@ -1,0 +1,1 @@
+ALTER TABLE "talent" ADD COLUMN "time_zone" text DEFAULT 'Asia/Taipei' NOT NULL;

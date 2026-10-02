@@ -1,29 +1,24 @@
 import type { ComponentProps, ReactNode } from "react";
 
-export const inputClass =
-  "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-300";
-
-export const buttonClass =
-  "w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300";
-
-export const secondaryButtonClass =
-  "w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800";
+// Auth and onboarding forms, styled by the app's global CSS (app/globals.css).
+export const buttonClass = "primary full";
+export const secondaryButtonClass = "secondary full";
 
 export function Field({ label, ...input }: { label: string } & ComponentProps<"input">) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="font-medium">{label}</span>
-      <input className={inputClass} {...input} />
+    <label>
+      {label}
+      <input {...input} />
     </label>
   );
 }
 
 export function FormMessage({ tone, children }: { tone: "error" | "info"; children: ReactNode }) {
-  const color =
-    tone === "error"
-      ? "bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
-      : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200";
-  return <p className={`rounded-md px-3 py-2 text-sm ${color}`}>{children}</p>;
+  return (
+    <p className={tone === "error" ? "notice error" : "notice"} role={tone === "error" ? "alert" : "status"}>
+      {children}
+    </p>
+  );
 }
 
 // Better Auth error codes → what the person sees.

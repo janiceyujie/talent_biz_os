@@ -1,11 +1,11 @@
 import { PageHeader } from "@/components/app/page-header";
-import { TodayView } from "@/components/views/today";
+import { InboxView } from "@/components/views/inbox";
 
 export default function Page() {
   return (
     <>
-      <PageHeader title="今日總覽" />
-      <TodayView />
+      <PageHeader title="進件分類" />
+      <InboxView />
     </>
   );
 }

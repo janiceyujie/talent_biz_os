@@ -1,11 +1,11 @@
 import { PageHeader } from "@/components/app/page-header";
-import { TodayView } from "@/components/views/today";
+import { FinanceView } from "@/components/views/finance";
 
 export default function Page() {
   return (
     <>
-      <PageHeader title="今日總覽" />
-      <TodayView />
+      <PageHeader title="內帳分析" />
+      <FinanceView />
     </>
   );
 }

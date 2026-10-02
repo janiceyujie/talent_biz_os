@@ -17,18 +17,15 @@ const accountTypeOptions = [
   { value: "agency", label: "經紀公司", available: false },
 ];
 
-const optionClass =
-  "flex items-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm has-checked:border-zinc-900 has-disabled:opacity-50 dark:border-zinc-700 dark:has-checked:border-zinc-300";
-
 export function OnboardingForm({ defaultName }: { defaultName: string }) {
   const [state, action, pending] = useActionState<OnboardingState, FormData>(createTalent, {});
 
   return (
-    <form action={action} className="flex flex-col gap-6">
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-medium">你是…</legend>
+    <form action={action}>
+      <fieldset className="choice-list">
+        <legend>你是…</legend>
         {accountTypeOptions.map((option) => (
-          <label key={option.value} className={optionClass}>
+          <label key={option.value} className="choice">
             <input
               type="radio"
               name="accountType"
@@ -37,23 +34,21 @@ export function OnboardingForm({ defaultName }: { defaultName: string }) {
               disabled={!option.available}
             />
             {option.label}
-            {!option.available && <span className="ml-auto text-xs text-zinc-500">即將推出</span>}
+            {!option.available && <small>即將推出</small>}
           </label>
         ))}
       </fieldset>
 
       <Field label="藝名或品牌名稱" name="name" defaultValue={defaultName} required />
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-medium">類型</legend>
-        <div className="grid grid-cols-2 gap-2">
-          {verticalOptions.map((option) => (
-            <label key={option.value} className={optionClass}>
-              <input type="radio" name="vertical" value={option.value} required />
-              {option.label}
-            </label>
-          ))}
-        </div>
+      <fieldset className="choice-list two-up">
+        <legend>類型</legend>
+        {verticalOptions.map((option) => (
+          <label key={option.value} className="choice">
+            <input type="radio" name="vertical" value={option.value} required />
+            {option.label}
+          </label>
+        ))}
       </fieldset>
 
       {state.error && <FormMessage tone="error">{state.error}</FormMessage>}

@@ -8,14 +8,14 @@ export default async function ResetPasswordPage({ searchParams }: PageProps<"/re
   const { token } = await searchParams;
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">設定新密碼</h1>
+    <div className="auth-stack">
+      <h1>設定新密碼</h1>
       {typeof token === "string" ? (
         <ResetPasswordForm token={token} />
       ) : (
         <>
           <FormMessage tone="error">連結無效或已過期，請重新申請。</FormMessage>
-          <Link href="/forgot-password" className="text-sm hover:underline">
+          <Link href="/forgot-password">
             重新申請重設連結
           </Link>
         </>

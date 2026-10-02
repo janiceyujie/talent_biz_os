@@ -35,7 +35,7 @@ export function SignUpForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit}>
       <Field label="你的名字" name="name" autoComplete="name" required />
       <Field label="電子郵件" name="email" type="email" autoComplete="email" required />
       <Field

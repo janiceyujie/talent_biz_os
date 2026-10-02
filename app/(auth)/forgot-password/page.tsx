@@ -25,13 +25,13 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">忘記密碼</h1>
+    <div className="auth-stack">
+      <h1>忘記密碼</h1>
       {sent ? (
         // Same message whether or not the email has an account.
         <FormMessage tone="info">如果這個電子郵件有註冊，重設密碼的連結已經寄出。</FormMessage>
       ) : (
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <form onSubmit={onSubmit}>
           <Field label="電子郵件" name="email" type="email" autoComplete="email" required />
           {error && <FormMessage tone="error">{error}</FormMessage>}
           <button type="submit" className={buttonClass} disabled={pending}>
@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
           </button>
         </form>
       )}
-      <Link href="/sign-in" className="text-sm text-zinc-600 hover:underline dark:text-zinc-400">
+      <Link href="/sign-in" className="muted">
         回到登入
       </Link>
     </div>

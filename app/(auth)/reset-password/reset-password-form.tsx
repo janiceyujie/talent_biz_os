@@ -28,7 +28,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     return (
       <>
         <FormMessage tone="info">密碼已更新，其他裝置上的登入也已登出。</FormMessage>
-        <Link href="/sign-in" className="text-sm hover:underline">
+        <Link href="/sign-in">
           前往登入
         </Link>
       </>
@@ -36,7 +36,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit}>
       <Field
         label="新密碼（至少 8 個字元）"
         name="password"

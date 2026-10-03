@@ -18,6 +18,7 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { contactRoles, stages as projectStages, transportModes } from "../types"; // relative: drizzle-kit loads this file too
 
 const id = () => uuid().primaryKey().defaultRandom();
@@ -351,6 +352,68 @@ export const calendarEvent = pgTable(
   ],
 ).enableRLS();
 
+// Messages and their analysis ------------------------------------------------------
+// A message is something the person sent in (pasted text now; uploads, the Gmail
+// add-on, and forwarding later). Its analysis is the model's proposal, versioned
+// per message; nothing becomes a project, to-do, or event until a person confirms.
+
+export const messageChannels = ["paste", "upload", "gmail_addon", "forwarded_email"] as const;
+export const messageStatuses = ["pending", "analyzed", "confirmed", "dismissed", "error"] as const;
+export const messageTypes = ["gig_offer", "contract", "payment_note", "other"] as const;
+
+export const message = pgTable(
+  "message",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    projectId: uuid().references(() => project.id, { onDelete: "set null" }), // null until confirmed
+    submittedBy: uuid()
+      .notNull()
+      .references(() => person.id),
+    channel: text({ enum: messageChannels }).notNull(),
+    externalRef: text(), // Gmail message id, when channel = gmail_addon
+    receivedAt: timestamp({ withTimezone: true }).notNull(),
+    bodyText: text(), // the message's text: pasted text, an email's plain-text body
+    dedupKey: text().notNull(), // paste: sha256 of the normalized text
+    status: text({ enum: messageStatuses }).notNull().default("pending"),
+    failure: text(), // why the last analysis failed, for the person to see
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique("message_talent_dedup_key").on(t.talentId, t.dedupKey),
+    index("message_talent_status_idx").on(t.talentId, t.status),
+    index("message_project_idx").on(t.projectId),
+    check("message_channel_check", oneOf(t.channel, messageChannels)),
+    check("message_status_check", oneOf(t.status, messageStatuses)),
+  ],
+).enableRLS();
+
+export const messageAnalysis = pgTable(
+  "message_analysis",
+  {
+    id: id(),
+    messageId: uuid()
+      .notNull()
+      .references(() => message.id, { onDelete: "cascade" }),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    messageType: text({ enum: messageTypes }).notNull(),
+    analysis: jsonb().$type<MessageAnalysis>().notNull(), // summary, facts, asks, missing — lib/ai/analysis.ts
+    confidence: numeric({ precision: 4, scale: 3, mode: "number" }).notNull(),
+    modelVersion: text().notNull(), // provider and model, e.g. "ollama:qwen3:8b"
+    createdAt: createdAt(), // latest row wins
+  },
+  (t) => [
+    index("message_analysis_message_idx").on(t.messageId, t.createdAt),
+    check("message_analysis_type_check", oneOf(t.messageType, messageTypes)),
+    check("message_analysis_confidence_check", sql`${t.confidence} between 0 and 1`),
+  ],
+).enableRLS();
+
 export const todoTypes = [
   "reply",
   "follow_up",
@@ -376,6 +439,7 @@ export const todo = pgTable(
       .references(() => talent.id, { onDelete: "cascade" }),
     projectId: uuid().references(() => project.id, { onDelete: "cascade" }),
     paymentId: uuid().references(() => payment.id, { onDelete: "set null" }),
+    messageId: uuid().references(() => message.id, { onDelete: "set null" }), // the message a reply to-do is about
     type: text({ enum: todoTypes }).notNull().default("custom"),
     title: text().notNull(),
     dueDate: date(),

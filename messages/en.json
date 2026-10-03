@@ -385,17 +385,70 @@
   "inbox": {
     "title": "Offers to review",
     "gmailSoon": "Gmail add-on coming soon",
-    "intro": "Upload screenshots or a PDF, or paste an offer's text. We pull out the key details and suggest a type; nothing becomes a project until you confirm. Uploading and pasting are still in development — for now, use “New project”.",
-    "upload": "Upload screenshots / PDF",
-    "paste": "Paste offer text",
+    "intro": "Paste an offer and the system pulls out the key facts and suggests a type; nothing becomes a project until you confirm. Screenshot upload and the Gmail add-on are on the way.",
+    "upload": "Upload screenshot / PDF",
+    "paste": "Paste an offer",
     "emptyTitle": "No offers here yet",
-    "emptyBody": "Offer intake is in development — for now, add a project directly.",
-    "noSubject": "(No subject)",
-    "typeOf": "Type for {subject}",
-    "newOffer": "New offer",
-    "openProject": "Create / open project",
-    "draftReply": "Draft a reply",
-    "pick": "Pick an offer to read it."
+    "emptyBody": "Use “Paste an offer” to bring in your first one.",
+    "pick": "Pick a message to see it.",
+    "replyTodo": "Reply: {title}",
+    "pasteTitle": "Paste an offer",
+    "pasteLabel": "Message",
+    "pastePlaceholder": "Paste a LINE, Instagram, or email conversation here…",
+    "pasteHint": "It's only read and summarized as a suggestion — nothing is replied to or created on its own.",
+    "analyze": "Analyze",
+    "submitting": "Sending…",
+    "duplicate": "You've brought this in before — here it is.",
+    "showDismissed": "Show dismissed",
+    "status": {
+      "pending": "Analyzing",
+      "analyzed": "To review",
+      "confirmed": "Filed",
+      "dismissed": "Dismissed",
+      "error": "Failed"
+    },
+    "channel": {
+      "paste": "Pasted",
+      "upload": "Upload",
+      "gmail_addon": "Gmail",
+      "forwarded_email": "Forwarded email"
+    },
+    "pendingBody": "The AI is reading this message; the result appears here on its own. The local model takes about half a minute.",
+    "failed": "The analysis didn't finish: {reason}",
+    "summary": "Summary",
+    "facts": "What it says",
+    "field": {
+      "type": "Type",
+      "counterparty": "From",
+      "contact": "Contact",
+      "dates": "Dates",
+      "money": "Fee",
+      "paymentTerms": "Payment terms",
+      "replyBy": "Reply by",
+      "venue": "Venue",
+      "setLength": "Set length",
+      "loadIn": "Load-in",
+      "equipment": "Equipment",
+      "deliverables": "Deliverables",
+      "rights": "Rights"
+    },
+    "taxIncluded": "incl. tax",
+    "taxExcluded": "excl. tax",
+    "asks": "What they're asking",
+    "missing": "Not stated yet",
+    "aiNote": "An AI suggestion and may be wrong — check before filing. Confidence {confidence}% · {model}",
+    "original": "Original message",
+    "createProject": "Create a project",
+    "linkProject": "Add to an existing project",
+    "pickProject": "Project",
+    "link": "Add",
+    "dismiss": "Dismiss",
+    "restore": "Restore",
+    "reanalyze": "Analyze again",
+    "viewProject": "Open project",
+    "untitled": "Untitled message",
+    "notesHeading": "From the offer (AI summary)",
+    "foreignCurrency": "Fee stated as {amount} — only TWD is supported for now, so the quote is left blank."
   },
   "contacts": {
     "search": "Search contacts",
@@ -588,7 +641,8 @@
       "transportMode": "Transport",
       "operator": "Airline / operator",
       "serviceNumber": "Flight / train number",
-      "seat": "Seat / carriage"
+      "seat": "Seat / carriage",
+      "replyBy": "Reply by"
     },
     "unlinked": "Unlinked",
     "paymentHelp": "One entry is one complete payment. Split staged payments into deposit and balance; keep it “Outstanding” until the money arrives. Received and paid totals use the settled date. If less arrives than billed (withholding tax, the NHI supplementary premium), enter the amount received — the gap is shown separately.",
@@ -612,7 +666,8 @@
     "contactLinked": "Linked to contact {name}",
     "contactUnlinked": "Not linked to a contact — saved on this project only",
     "contactHint": "Search your partners by name or company, or type a new name",
-    "contactClear": "Clear partner"
+    "contactClear": "Clear partner",
+    "replyByHelp": "Adds a reply to-do on this date. Check it — the AI may have guessed it."
   },
   "tone": {
     "natural": "Natural and professional",
@@ -755,7 +810,10 @@
     "endIncomplete": "Enter the arrival / check-out date, time, and time zone together — or leave all three blank.",
     "endBeforeStart": "Arrival / check-out must be after departure / check-in (time zones included).",
     "transportModeRequired": "Choose how you're travelling.",
-    "hotelNameRequired": "Enter the hotel name."
+    "hotelNameRequired": "Enter the hotel name.",
+    "pasteRequired": "Paste the message text first.",
+    "pasteTooLong": "That's too long to analyze — paste at most {max} characters.",
+    "messageNotFound": "Message not found, or it has already been handled."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",
@@ -941,5 +999,13 @@
     "clear": "Clear time zone",
     "noMatch": "No matching time zone — try a city, a zone name such as Asia/Tokyo, or an offset such as UTC+9.",
     "yourTime": "Your time: {when}"
+  },
+  "errorPage": {
+    "staleTitle": "This page is out of date",
+    "staleBody": "The app was updated while this page was open. Reload to continue — nothing you saved is lost.",
+    "title": "Something went wrong",
+    "body": "This part of the page couldn't load. Try again, or reload the page.",
+    "reload": "Reload",
+    "retry": "Try again"
   }
 }

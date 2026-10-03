@@ -20,7 +20,7 @@ export function PageHeader({ titleKey }: { titleKey: NavKey }) {
         <h1>{t(`nav.${titleKey}`)}</h1>
         {withActions.includes(titleKey) && (
           <div className="page-actions">
-            <Link className="secondary" href="/inbox">
+            <Link className="secondary" href="/inbox?paste=1">
               {t("shell.importOffer")}
             </Link>
             <button className="primary" onClick={() => setEditor({ kind: "project" })}>

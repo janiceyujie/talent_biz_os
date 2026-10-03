@@ -27,3 +27,4 @@ When a choice is easy to get wrong later, was argued over, or trades something a
 | [0003](0003-scheduled-times-as-local-time-plus-zone.md) | Scheduled times are stored as local time plus zone, not UTC | Accepted |
 | [0004](0004-execution-work-needs-a-signed-project.md) | Execution work attaches only to signed projects | Accepted |
 | [0005](0005-language-neutral-template-placeholders.md) | Reply-template placeholders are stored language-neutral | Accepted |
+| [0006](0006-model-provider.md) | Model calls go through one provider seam; a free local model during development | Accepted |

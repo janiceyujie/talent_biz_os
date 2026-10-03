@@ -93,6 +93,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   const { unread } = useNotifications();
+  // Messages waiting for the person: analyzed and not yet filed or dismissed.
+  const toReview = data.inbox.filter((m) => m.status === "analyzed" || m.status === "error").length;
   const results = [
     ...data.projects
       .filter((p) => !p.archived)
@@ -166,7 +168,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 >
                   <Icon size={19} />
                   <span>{tNav(item.key)}</span>
-                  {item.href === "/inbox" && data.inbox.length > 0 && <em>{data.inbox.length}</em>}
+                  {item.href === "/inbox" && toReview > 0 && <em>{toReview}</em>}
                 </Link>
               </div>
             );

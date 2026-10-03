@@ -290,6 +290,12 @@ export function RecordEditor({
                 {field("type", t("field.type"), "text", true, typeOptions)}
                 {field("stage", t("field.stage"), "text", true, options(stages, labels.stage))}
               </div>
+              {!!data.messageId && (
+                <div>
+                  {field("replyBy", t("field.replyBy"), "date")}
+                  <small className="muted">{t("replyByHelp")}</small>
+                </div>
+              )}
               {pricing("quotedAmount", false)}
               <p className="muted">{t("quoteHelp")}</p>
               {field("contractNotes", t("field.contractNotes"), "textarea")}

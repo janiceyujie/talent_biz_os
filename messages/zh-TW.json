@@ -385,17 +385,70 @@
   "inbox": {
     "title": "待確認的邀約",
     "gmailSoon": "Gmail 外掛即將推出",
-    "intro": "上傳截圖、PDF，或貼上邀約文字。系統會整理重點並建議分類，由你確認後才建立合作案。上傳與貼上功能開發中；目前可直接「新增合作案」。",
+    "intro": "貼上邀約文字，系統會整理重點並建議分類；你確認後才會建立合作案。截圖上傳與 Gmail 外掛開發中。",
     "upload": "上傳截圖／PDF",
     "paste": "貼上邀約文字",
     "emptyTitle": "這裡還沒有邀約",
-    "emptyBody": "邀約進件功能開發中，目前可直接新增合作案。",
-    "noSubject": "（無主旨）",
-    "typeOf": "{subject}分類",
-    "newOffer": "新邀約",
-    "openProject": "建立／開啟合作案",
-    "draftReply": "建立回覆草稿",
-    "pick": "選擇一封邀約查看內容。"
+    "emptyBody": "按「貼上邀約文字」匯入第一則邀約。",
+    "pick": "選擇一則訊息查看內容。",
+    "replyTodo": "回覆：{title}",
+    "pasteTitle": "貼上邀約",
+    "pasteLabel": "邀約內容",
+    "pastePlaceholder": "把 LINE、Instagram 或 Email 的對話、信件內容貼在這裡…",
+    "pasteHint": "只會讀取並整理成建議，不會自動回覆或建立任何東西。",
+    "analyze": "開始分析",
+    "submitting": "送出中…",
+    "duplicate": "這段內容先前已匯入，已為你開啟。",
+    "showDismissed": "顯示已略過",
+    "status": {
+      "pending": "分析中",
+      "analyzed": "待確認",
+      "confirmed": "已建檔",
+      "dismissed": "已略過",
+      "error": "分析失敗"
+    },
+    "channel": {
+      "paste": "貼上",
+      "upload": "上傳",
+      "gmail_addon": "Gmail",
+      "forwarded_email": "轉寄信件"
+    },
+    "pendingBody": "AI 正在整理這則訊息，完成後會自動顯示。本機模型約需半分鐘。",
+    "failed": "分析沒有完成：{reason}",
+    "summary": "摘要",
+    "facts": "整理出的資訊",
+    "field": {
+      "type": "合作類型",
+      "counterparty": "合作方",
+      "contact": "聯絡方式",
+      "dates": "日期",
+      "money": "報價",
+      "paymentTerms": "付款條件",
+      "replyBy": "回覆期限",
+      "venue": "場地",
+      "setLength": "演出長度",
+      "loadIn": "進場時間",
+      "equipment": "器材",
+      "deliverables": "交付內容",
+      "rights": "授權"
+    },
+    "taxIncluded": "含稅",
+    "taxExcluded": "未稅",
+    "asks": "對方想知道",
+    "missing": "尚未說明",
+    "aiNote": "AI 建議，可能有誤，建檔前請核對。信心 {confidence}% · {model}",
+    "original": "原始內容",
+    "createProject": "建立新合作案",
+    "linkProject": "加到既有合作案",
+    "pickProject": "選擇合作案",
+    "link": "加入",
+    "dismiss": "略過",
+    "restore": "還原",
+    "reanalyze": "重新分析",
+    "viewProject": "查看合作案",
+    "untitled": "未命名訊息",
+    "notesHeading": "來自邀約（AI 整理）",
+    "foreignCurrency": "報價為 {amount}，目前僅支援台幣，報價先留白。"
   },
   "contacts": {
     "search": "搜尋聯絡人",
@@ -588,7 +641,8 @@
       "transportMode": "交通方式",
       "operator": "航空公司／營運單位",
       "serviceNumber": "班次／航班號碼",
-      "seat": "座位／車廂"
+      "seat": "座位／車廂",
+      "replyBy": "回覆期限"
     },
     "unlinked": "未關聯",
     "paymentHelp": "一筆紀錄代表一筆完整收付。分次收款請拆成訂金與尾款；尚未收到款項時保持「待收」。已收／已付的報表依實際收付日期計算。實際入帳少於應收（例如扣繳、二代健保）時，填寫實收金額，差額會另外顯示。",
@@ -612,7 +666,8 @@
     "contactLinked": "已連結聯絡人：{name}",
     "contactUnlinked": "未連結聯絡人，只存在這個合作案",
     "contactHint": "搜尋合作方姓名或公司，或直接輸入新名稱",
-    "contactClear": "清除合作方"
+    "contactClear": "清除合作方",
+    "replyByHelp": "會在這天建立回覆待辦。請核對，日期可能是 AI 推測的。"
   },
   "tone": {
     "natural": "自然專業",
@@ -755,7 +810,10 @@
     "endIncomplete": "抵達／退房的日期、時間與時區請一起填寫，或全部留白。",
     "endBeforeStart": "抵達／退房須晚於出發／入住（已考慮時差）。",
     "transportModeRequired": "請選擇交通方式。",
-    "hotelNameRequired": "請填寫飯店名稱。"
+    "hotelNameRequired": "請填寫飯店名稱。",
+    "pasteRequired": "請先貼上訊息內容。",
+    "pasteTooLong": "內容太長，最多可貼上 {max} 個字元。",
+    "messageNotFound": "找不到這則訊息，或已經處理過了。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",
@@ -941,5 +999,13 @@
     "clear": "清除時區",
     "noMatch": "找不到符合的時區，可輸入城市、Asia/Tokyo 這類時區名稱，或 UTC+9 這類時差。",
     "yourTime": "你的時間：{when}"
+  },
+  "errorPage": {
+    "staleTitle": "這個頁面已經更新",
+    "staleBody": "你開著頁面的時候，系統更新了。重新整理後再繼續操作即可，已儲存的資料不會遺失。",
+    "title": "出了點問題",
+    "body": "這個畫面沒有正常載入。請再試一次，或重新整理頁面。",
+    "reload": "重新整理",
+    "retry": "再試一次"
   }
 }

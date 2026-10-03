@@ -1,9 +1,9 @@
 import "server-only";
-import { and, desc, eq, getTableColumns } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { cache } from "react";
 import { isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { authAccount, calendarEvent, contact, membership, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { authAccount, calendarEvent, contact, membership, message, messageAnalysis, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
@@ -20,7 +20,7 @@ const eventKind = (k: string): CalendarKind => (calendarKinds.includes(k as Cale
  */
 export const getAppData = cache(async (): Promise<AppData> => {
   const { person, talent: current } = await requireTalent();
-  const [[talentRow], [memberRow], projectRows, contactRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows] = await Promise.all([
+  const [[talentRow], [memberRow], projectRows, contactRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows, messageRows] = await Promise.all([
     db
       .select({ id: talent.id, name: talent.name, timeZone: talent.timeZone, vertical: talent.vertical })
       .from(talent)
@@ -47,7 +47,22 @@ export const getAppData = cache(async (): Promise<AppData> => {
     db.select().from(replyTemplate).where(eq(replyTemplate.talentId, current.id)).orderBy(desc(replyTemplate.updatedAt)),
     db.select().from(notificationState).where(eq(notificationState.personId, person.personId)),
     db.select({ id: authAccount.id, providerId: authAccount.providerId }).from(authAccount).where(eq(authAccount.personId, person.personId)),
+    db.select().from(message).where(eq(message.talentId, current.id)).orderBy(desc(message.receivedAt)).limit(200),
   ]);
+
+  // Latest analysis per message (analyses are versioned; the newest wins).
+  const analysisRows = messageRows.length
+    ? await db
+        .select()
+        .from(messageAnalysis)
+        .where(inArray(messageAnalysis.messageId, messageRows.map((m) => m.id)))
+        .orderBy(desc(messageAnalysis.createdAt))
+    : [];
+  const latestAnalysis = new Map<string, (typeof analysisRows)[number]>();
+  for (const a of analysisRows) if (!latestAnalysis.has(a.messageId)) latestAnalysis.set(a.messageId, a);
+  // A project's offer text is the earliest message filed under it.
+  const offerText = new Map<string, string>();
+  for (const m of [...messageRows].reverse()) if (m.projectId && !offerText.has(m.projectId)) offerText.set(m.projectId, m.bodyText ?? "");
 
   const calendar: CalendarItem[] = [
     ...eventRows.map((e) => ({
@@ -138,7 +153,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       taxRate: p.taxRate,
       taxIncluded: p.taxIncluded,
       details: p.details,
-      offerText: "", // from the source message, once messages are built
+      offerText: offerText.get(p.id) ?? "",
       notes: p.notes ?? "",
       nextAction: nextAction.get(p.id) ?? null,
       archived: p.archivedAt !== null,
@@ -186,6 +201,18 @@ export const getAppData = cache(async (): Promise<AppData> => {
     })),
     drafts: [],
     files: [],
-    inbox: [],
+    inbox: messageRows.map((m) => {
+      const a = latestAnalysis.get(m.id);
+      return {
+        id: m.id,
+        channel: m.channel,
+        body: m.bodyText ?? "",
+        receivedAt: m.receivedAt.toISOString(),
+        status: m.status,
+        failure: m.failure,
+        projectId: m.projectId,
+        analysis: a ? { ...a.analysis, modelVersion: a.modelVersion } : null,
+      };
+    }),
   };
 });

@@ -190,10 +190,11 @@ Analysis turns a message into facts. Matching decides which project those facts 
 
 ### Analysis
 
-- A classifier call labels the message type. An extractor call — forced into a schema, not free text — pulls out the core fields, plus the project type's fields once those exist (the type registry supplies that schema).
+- One model call, forced into a schema rather than free text, labels the message type and pulls out the core fields, plus the project type's fields (`lib/ai/analysis.ts`). Classifying and extracting can split into two calls later if a cheap triage step pays off. The model sits behind one seam (`lib/ai/model.ts`): a free local model in development, Claude for production — see [decision 0006](decisions/0006-model-provider.md).
 - Beyond the facts, the analysis records a short summary, what the sender is asking for, and what's missing (no start time, no deposit terms) — the drafter uses the last two directly.
 - Images (screenshots, photos, rendered PDF pages) go through the same extractor using a vision-capable model call rather than a separate OCR step.
 - Every analysis is stored with the model version and a confidence score, versioned per message rather than overwritten — re-running it later doesn't lose the earlier attempt.
+- **Pasted offers (built).** 匯入邀約 stores the text as a `message` (channel `paste`, duplicate pastes return the existing message), analyzes it in the background (`after()`, status `pending` → `analyzed` or `error` with a retry), and shows the proposal in the inbox beside the original text. Filing it either creates a project — the form prefilled from the analysis, stage 待確認 — or adds it to an existing project; either way the reply-by date is shown for the person to confirm before it becomes a `reply` to-do linked to the message (`todo.message_id`). The project's Offer section shows the earliest message filed under it.
 
 ### Matching a message to a project
 
@@ -517,6 +518,7 @@ create table message (
   submitted_by   uuid not null references person(id),             -- always the authenticated user
   channel        text not null check (channel in ('gmail_addon','upload','forwarded_email','paste')),
   external_ref   text,                              -- Gmail message id, when channel = gmail_addon
+  body_text      text,                              -- the message's text: pasted text, an email's plain-text body
   received_at    timestamptz not null,
   origin_hint    text,                              -- model's guess for uploads: 'instagram', 'sms'...; never trusted
   dedup_key      text not null,                     -- gmail_addon: the Message-ID header
@@ -525,6 +527,7 @@ create table message (
                                                     -- paste: sha256(text)
   status         text not null default 'pending'    -- pipeline + review lifecycle; reply status comes from todos
                    check (status in ('pending','analyzed','confirmed','dismissed','error')),
+  failure        text,                              -- why the last analysis failed, shown with a retry
   created_at     timestamptz not null default now(),
   unique (talent_id, dedup_key)
 );

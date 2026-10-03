@@ -2729,3 +2729,105 @@ a.disabled {
   align-items: center;
   flex-wrap: wrap;
 }
+
+/* Inbox: message status, analysis, actions */
+.message-status {
+  display: inline-block;
+  font-style: normal;
+  font-weight: 650;
+  font-size: 12px;
+  border-radius: 6px;
+  padding: 1px 7px;
+  margin-right: 4px;
+  background: var(--paper);
+  color: var(--muted);
+}
+.message-status.status-pending {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.message-status.status-analyzed {
+  background: #fff1d6;
+  color: #8a5a00;
+}
+.message-status.status-confirmed {
+  background: var(--lime-soft);
+  color: var(--accent);
+}
+.message-status.status-error {
+  background: #fde3e1;
+  color: #a2332b;
+}
+.notice.analyzing::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: analyzing-pulse 1.2s ease-in-out infinite;
+}
+@keyframes analyzing-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notice.analyzing::before {
+    animation: none;
+  }
+}
+.message-analysis h3 {
+  margin: 18px 0 6px;
+  font-size: 15px;
+}
+.message-analysis dl {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+.message-analysis dl > div {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.message-analysis dt {
+  color: var(--muted);
+}
+.message-analysis dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.message-analysis dd ul,
+.message-analysis > ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.ai-note {
+  margin-top: 14px;
+  font-size: 13px;
+}
+.original-message {
+  margin-top: 16px;
+}
+.original-message summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+.link-project {
+  display: flex;
+  gap: 10px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.link-project label {
+  flex: 1 1 220px;
+}
+/* An inbox entry without the prototype's checkbox and type columns */
+.inbox-layout .mail-item.single {
+  grid-template-columns: minmax(0, 1fr);
+}

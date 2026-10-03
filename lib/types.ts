@@ -3,6 +3,7 @@
 // (see lib/data). Dates are local YYYY-MM-DD strings in the talent's time zone.
 import type { Locale } from "@/lib/i18n/config";
 import type { Appearance, Role } from "@/lib/roles";
+import type { MessageAnalysis } from "@/lib/ai/analysis";
 import type { ProjectType } from "@/lib/project-types";
 
 export const stages = [
@@ -149,15 +150,16 @@ export type StoredFile = {
   archived: boolean;
 };
 
+/** A message the person sent in, with the latest analysis of it (the model's proposal). */
 export type InboxMessage = {
   id: string;
-  sender: string;
-  subject: string;
+  channel: "paste" | "upload" | "gmail_addon" | "forwarded_email";
   body: string;
-  receivedAt: string;
-  suggestedType: ProjectType | null;
-  analysisNote: string;
+  receivedAt: string; // ISO instant
+  status: "pending" | "analyzed" | "confirmed" | "dismissed" | "error";
+  failure: string | null;
   projectId: string | null;
+  analysis: (MessageAnalysis & { modelVersion: string }) | null;
 };
 
 export type AppData = {

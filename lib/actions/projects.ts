@@ -5,9 +5,10 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { auditLog, contact, project } from "@/lib/db/schema";
+import { auditLog, contact, message, project } from "@/lib/db/schema";
 import { projectTypeKeys } from "@/lib/project-types";
 import { stages, type Stage } from "@/lib/types";
+import { confirmFollowUps } from "./message-follow-ups";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
 const projectInput = z
@@ -35,6 +36,11 @@ const projectInput = z
     travel: optionalText,
     contractNotes: optionalText,
     notes: optionalText,
+    messageId: optionalId, // creating the project from an inbox message
+    replyBy: z
+      .union([z.literal(""), z.iso.date("dateInvalid")])
+      .optional()
+      .transform((v) => v || null), // its reply-by date, as confirmed in the form
   })
   .refine((p) => p.counterpartyId || p.counterparty, { message: "counterpartyRequired" });
 
@@ -76,10 +82,30 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
 
   const failure = await db.transaction(async (tx) => {
     if (!input.id) {
+      if (input.messageId) {
+        const [source] = await tx
+          .select({ id: message.id })
+          .from(message)
+          .where(and(eq(message.id, input.messageId), eq(message.talentId, talent.id), eq(message.status, "analyzed")))
+          .for("update");
+        if (!source) return fail("messageNotFound");
+      }
       const [created] = await tx
         .insert(project)
         .values({ ...values, talentId: talent.id })
         .returning({ id: project.id });
+      if (input.messageId) {
+        // The message this project comes from: file it here and add its reply to-do.
+        await tx.update(message).set({ projectId: created.id, status: "confirmed" }).where(eq(message.id, input.messageId));
+        await confirmFollowUps(tx, {
+          talentId: talent.id,
+          personId: person.personId,
+          messageId: input.messageId,
+          projectId: created.id,
+          projectTitle: input.title,
+          replyBy: input.replyBy,
+        });
+      }
       await tx.insert(auditLog).values({
         talentId: talent.id,
         actorPersonId: person.personId,

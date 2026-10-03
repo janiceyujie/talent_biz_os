@@ -6,7 +6,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { SignOutButton } from "@/components/sign-out-button";
-import { PRODUCT_MONOGRAM, PRODUCT_NAME, SEARCH_SHORTCUT } from "@/lib/brand";
+import { LocaleSwitch } from "@/components/locale-switch";
+import { PRODUCT_MONOGRAM, PRODUCT_NAME, PRODUCT_TAGLINE, SEARCH_SHORTCUT } from "@/lib/brand";
 import { notifications } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
 import { useNotificationText } from "./notification-text";
@@ -20,7 +21,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const data = useAppData();
   const t = useTranslations("shell");
   const tNav = useTranslations("nav");
-  const tEyebrow = useTranslations("eyebrow");
   const notificationText = useNotificationText();
   const labels = useLabels();
   const pathname = usePathname();
@@ -130,7 +130,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span>{PRODUCT_MONOGRAM}</span>
           <div>
             <strong>{PRODUCT_NAME}</strong>
-            <small>{tEyebrow("workspaceTag")}</small>
+            <small>{PRODUCT_TAGLINE}</small>
           </div>
           <button className="close-nav" aria-label={tNav("closeMenu")} onClick={() => setMobile(false)}>
             <X size={20} />
@@ -203,6 +203,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <kbd>{SEARCH_SHORTCUT}</kbd>
           </button>
           <div className="top-actions">
+            <LocaleSwitch compact />
             <button
               aria-label={t("notifications", { count: alerts.length })}
               onClick={() => setShowNotifications(true)}

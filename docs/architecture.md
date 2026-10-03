@@ -87,6 +87,9 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - Record expenses by hand — amount, label, and optionally a project — and show net per project — **MVP**. No receipts, categories, or reports.
 - Split a quote into deposit and balance payments in one step — **MVP**.
 - A project-level settlement check: quoted vs. billed vs. received, open to-dos, unpaid costs — **MVP**.
+- Void (作廢) a mistaken or duplicate payment entry: it drops out of every total and chart but stays viewable and restorable — **MVP**. This is the payment's archive; past months need no voiding, they're just a date filter.
+- Finance views: money still to pay, the last six months of cash in and out, overdue-income aging, and signed-contract totals — **MVP**.
+- Subscription plans and billing for the product itself — **Later**. Kept entirely separate from a talent's project payments.
 - Amounts in TWD only — **MVP**. Each amount still carries its currency.
 - Multiple currencies, with a per-user default currency the dashboard converts into — **Later**. See [Multi-currency](#multi-currency-later).
 - A running record of which counterparties pay late and by how much — **Later**. Needs enough payment history per counterparty to be meaningful.
@@ -105,12 +108,12 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - Concrete urgency signals validated in interviews: expected income in the next 30 days, deliverables and signatures pending, a contract that doesn't match its offer, unconfirmed travel or venue logistics, overdue payments — **MVP**.
 - A single view across every talent a manager or agency represents — **Later**.
 - Search across projects, contacts, calendar, and templates (⌘K) — **MVP**.
-- In-app notifications derived from upcoming to-dos, events, and overdue payments — **MVP**. Read/unread state — **Later**.
+- In-app notifications derived from upcoming to-dos, events, and payments due to be received or paid — **MVP**. Ordered by urgency (within the next two hours, overdue, today, later); read state and "remind me in an hour" are saved per person — **MVP**. Background push (browser, email) — **Later**.
 
 ### Contacts
 
 - A contact list of artists, counterparties, and managers — name, company, email, phone, notes — linked to projects — **MVP**. A project keeps the counterparty's name as text too, so a project without a contact still works; a draft takes its recipient from the linked contact.
-- Recognizing the same counterparty across projects for late-payment history — **Later**.
+- Partner history (合作紀錄): per counterparty contact, the number of signed projects, on-time payment rate, average days late, and overdue money still owed — **MVP**. Computed from projects linked to the contact and their income payments; same name never implies same contact. It's a record, not a credit score.
 
 ### Files
 
@@ -132,8 +135,12 @@ Vertical and account type are independent axes, set separately at onboarding. A 
 
 | Axis | Values | What it changes |
 |---|---|---|
-| Vertical | Music artist, influencer, model, other | Which extraction fields apply beyond the core set, and which labels the dashboard uses |
+| Vertical | Music artist, influencer, model, video (videographer / filmmaker), other | Which extraction fields apply beyond the core set, and which labels the dashboard uses |
 | Account type | Individual, manager, agency | Whether one `Talent` or many are attached to the person's account, and who can see what |
+
+Onboarding asks a single question — "what's your role?" — with six cards: 音樂人 (musician), 經紀人 (manager), 影像工作者 (videographer / filmmaker), Influencer, Model, 其他 (other). The answer is saved onto these two axes, not as a third field: 經紀人 sets `account_type = manager`; every other card sets `vertical`. A manager picks the vertical of the talent they're setting up. Choosing 經紀人 is allowed now and still manages one talent until multi-talent accounts ship (Later). The role is a working preference shown in the UI and can be changed in settings; it never grants or limits access — permissions come from `membership.role`.
+
+Each person also picks how the assistant character looks — female, male, or non-binary (`person.avatar_appearance`). It's purely presentational.
 
 Every extraction schema starts from the same core: who the counterparty is, what the message is about, when, how much money, how it's paid, and any reply-by deadline. A vertical adds fields on top of that core rather than replacing it — a brand deal still has a date and a payment, it also has deliverables and a usage window.
 
@@ -333,6 +340,12 @@ Type labels: `gig` 演出 · `brand_deal` 品牌合作 · `sponsored_post` 業�
 
 **Project stage.** `offer → negotiating → signed → in_progress → collecting_payment → closed`, with `declined` and `cancelled` as exits. Every type shares this set so cross-project views work; a type may relabel a stage in the UI. The system *suggests* moves — an offer confirmed (offer), a counter-offer draft used or a contract returned with changes (negotiating), a contract version signed (signed), the first event date reached (in progress), the event past with money outstanding (collecting payment), all expected payments settled (closed), a decline draft used or the counterparty cancels (declined / cancelled). The person confirms, or sets the stage by hand. Every change is written to `audit_log`.
 
+**Phases.** The UI groups stages into three phases, computed, not stored: 洽談 negotiation (`offer`, `negotiating`), 執行 execution (`signed`, `in_progress`), 結算 settlement (`collecting_payment`, `closed`). `declined` and `cancelled` sit outside the three, as finished.
+
+**Which to-dos a project can have depends on its phase.** Communication to-dos — `reply` and `follow_up` — are allowed at any stage; they're how a message shows as waiting for a reply during negotiation. Execution to-dos (deliverables, logistics, payment due, milestones) and calendar events linked to a project are allowed only once it's signed (execution or settlement phase), and the server enforces it, not just the UI. Standalone to-dos and events need no project.
+
+**Unset quote.** `project.quoted_amount` null means the fee isn't decided yet (報價未定), not zero; zero is an explicit free project. An unset quote can't be split into deposit and balance, and drafts mark it to confirm rather than quoting 0.
+
 There's no "awaiting signature" stage — many gigs never have a written contract, so it would be a step most projects skip. Instead the UI shows a computed **待簽約** badge on a `negotiating` project whose latest contract version isn't `signed`, and the dashboard can count those. If "reviewing" and "agreed, waiting to sign" need telling apart, add an `agreed` contract status rather than a stage.
 
 **Project types.** One `project.type` column plus a `details` jsonb for type-specific fields. Behavior lives in a type registry in code — one file per type (`lib/project-types/gig.ts`) defining its UI label, the schema for `details` (which is also the extraction schema), which panels the project page shows, its milestone and to-do templates, and which verticals offer it. Type-specific steps (a brand deal's draft submitted → approved → posted) are milestones inside `in_progress`, generated as to-dos and calendar events. Adding a type is adding a file, not a migration. The registry lists all five types from the MVP, each with its "what to confirm" checklist; only `gig` gets full `details` fields and AI extraction in the MVP.
@@ -340,6 +353,10 @@ There's no "awaiting signature" stage — many gigs never have a written contrac
 **A message's reply status comes from to-dos.** "To respond" is an open reply to-do linked to the message; "waiting for reply" is an open follow-up to-do; no open to-dos means done. Nothing on the message itself, so the to-do list and the message can't disagree. `message.status` is only the pipeline and review lifecycle.
 
 **Calendar.** Things that happen at a time are `calendar_event`s; deadlines are to-dos with a due date. The in-app calendar shows both, filterable by project; either can stand alone without a project. Both store local wall time — a calendar day, an optional time (none = all day), and the IANA time zone it was entered in — so a Taipei artist playing Tokyo sees the gig at Tokyo time exactly as entered, and the `.ics` file can derive the instant. A project's next step is its earliest open to-do. Events entered by hand are `confirmed`; `proposed` is for ones the pipeline suggests. The private subscription link is a per-membership secret token (only its hash is stored); resetting it cuts off the old link.
+
+**Travel and stays.** `travel` and `accommodation` events also carry an end — `end_date`, `end_time`, `end_time_zone` (arrival or check-out, in its own zone) — plus transport details (mode, operator, flight or train number, destination, seat), a hotel name, and an optional ticket or booking file. The calendar shows departure/arrival or check-in/check-out as two markers of one event; completing or archiving acts on the event. The end must be later than the start once both are converted to instants; a wall time made ambiguous or nonexistent by daylight saving is rejected rather than guessed. Every timed event's `.ics` uses its real end when it has one. Nothing here books tickets or checks live flight data.
+
+**Notification state.** Notifications stay derived, never stored. `notification_state` records per person which ones were read and which were snoozed until when ("remind me in an hour"); a snooze never changes the event or due date itself.
 
 **Contacts.** A project links to a `contact` for its counterparty when one exists, and always keeps the counterparty name as text, so quick entries without a contact still work. A contact's email is the default recipient for drafts on its projects. Same name never implies same contact.
 
@@ -394,6 +411,8 @@ create table person (
   account_type    text not null default 'individual'
                     check (account_type in ('individual','manager','agency')),
   locale          text not null default 'zh-TW',   -- UI language; supported list lives in code
+  avatar_appearance text not null default 'non_binary'
+                    check (avatar_appearance in ('female','male','non_binary')),  -- assistant character's look
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -405,7 +424,7 @@ create table person (
 create table talent (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
-  vertical    text not null check (vertical in ('music','influencer','model','other')),
+  vertical    text not null check (vertical in ('music','influencer','model','video','other')),
   time_zone   text not null default 'Asia/Taipei',   -- IANA; decides what "today" means
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
@@ -505,6 +524,7 @@ create table file (
   project_id    uuid references project(id) on delete set null,     -- set for archive uploads
   position      int,                                -- order within a message
   role          text not null check (role in ('body','attachment','screenshot','upload')),
+  category      text check (category in ('contract','asset','invoice','other')),  -- for archive uploads
   storage_key   text not null,                      -- 'files/{talent_id}/{id}'
   content_type  text not null,
   filename      text,
@@ -560,6 +580,16 @@ create table calendar_event (
   start_date         date not null,        -- local wall time: day ...
   start_time         time,                 -- ... and time (null = all day) ...
   time_zone          text not null,        -- ... in this IANA zone, e.g. 'Asia/Tokyo'
+  end_date           date,                 -- arrival / check-out (or an event's end), local to end_time_zone
+  end_time           time,
+  end_time_zone      text,
+  transport_mode     text,                 -- travel: 'flight', 'high_speed_rail', 'train', 'transfer', 'other'
+  operator           text,                 -- airline, rail operator
+  service_number     text,                 -- flight / train number
+  destination        text,
+  seat               text,
+  hotel_name         text,                 -- accommodation
+  ticket_file_id     uuid references file(id) on delete set null,   -- ticket or booking confirmation
   status             text not null default 'confirmed'   -- 'proposed' when the pipeline suggests it
                        check (status in ('proposed','confirmed','cancelled')),
   notes              text,
@@ -654,6 +684,14 @@ create table reply_draft (
   archived_at    timestamptz,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
+);
+
+create table notification_state (
+  person_id        uuid not null references person(id) on delete cascade,
+  notification_id  text not null,      -- stable id of a derived notification, e.g. 'calendar:{id}:{date}:{time}'
+  read_at          timestamptz,
+  snoozed_until    timestamptz,        -- computed by the server ("remind me in an hour")
+  primary key (person_id, notification_id)
 );
 
 create table audit_log (

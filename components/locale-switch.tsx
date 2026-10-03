@@ -5,14 +5,19 @@ import { useTransition } from "react";
 import { setLocale } from "@/lib/actions/locale";
 import { localeNames, locales } from "@/lib/i18n/config";
 
-export function LocaleSwitch({ className }: { className?: string }) {
+/**
+ * Language picker. `compact` is the top-bar version: the visible label is
+ * dropped (each option names itself) but kept for screen readers.
+ */
+export function LocaleSwitch({ className, compact = false }: { className?: string; compact?: boolean }) {
   const t = useTranslations("locale");
   const current = useLocale();
   const [pending, startTransition] = useTransition();
   return (
-    <label className={className}>
-      {t("label")}
+    <label className={compact ? "language-switch" : className}>
+      {compact ? <span className="sr-only">{t("label")}</span> : t("label")}
       <select
+        aria-label={compact ? t("label") : undefined}
         value={current}
         disabled={pending}
         onChange={(e) => {

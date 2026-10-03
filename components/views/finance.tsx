@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
-import { archivePayment } from "@/lib/actions/payments";
+import { voidPayment } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
 import { quote, supportedCurrencies } from "@/lib/domain/money";
 import { useMoney } from "@/lib/i18n/format";
@@ -101,14 +101,14 @@ export function FinanceView() {
   const [base, setBase] = useState(50000);
   const [rate, setRate] = useState(5);
   const [included, setIncluded] = useState(false);
-  const [archived, setArchived] = useState(false);
+  const [showVoided, setShowVoided] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const today = dateInZone(data.talent.timeZone);
   const s = summarize(data, from, to || "9999-12-31");
   const q = quote(Math.max(0, base || 0), Math.max(0, Math.min(100, rate || 0)), included);
-  const rows = archived
-    ? data.payments.filter((p) => p.archived && paymentDate(p) >= from && paymentDate(p) <= (to || "9999-12-31"))
+  const rows = showVoided
+    ? data.payments.filter((p) => p.voided && paymentDate(p) >= from && paymentDate(p) <= (to || "9999-12-31"))
     : s.rows;
 
   function exportCsv() {
@@ -223,9 +223,10 @@ export function FinanceView() {
           <button onClick={() => setEditor({ kind: "payment" })}>{t("newEntry")}</button>
         </div>
         <label className="check-line">
-          <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
-          {t("showArchived")}
+          <input type="checkbox" checked={showVoided} onChange={(e) => setShowVoided(e.target.checked)} />
+          {t("showVoided")}
         </label>
+        <p className="muted">{t("voidHelp")}</p>
         {error && (
           <p className="notice error" role="alert">
             {error}
@@ -274,7 +275,7 @@ export function FinanceView() {
                       <button className="secondary compact" onClick={() => setEditor({ kind: "payment", item: toRecord(p) })}>
                         {t("edit")}
                       </button>
-                      {p.status === "expected" && !p.archived && (
+                      {p.status === "expected" && !p.voided && (
                         <button
                           className="secondary compact"
                           onClick={() =>
@@ -287,9 +288,9 @@ export function FinanceView() {
                       <button
                         className="text-button"
                         disabled={pending}
-                        onClick={() => startTransition(async () => setError(await archivePayment(p.id, !p.archived)))}
+                        onClick={() => startTransition(async () => setError(await voidPayment(p.id, !p.voided)))}
                       >
-                        {p.archived ? t("restore") : t("archive")}
+                        {p.voided ? t("restore") : t("void")}
                       </button>
                     </div>
                   </td>

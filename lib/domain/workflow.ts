@@ -22,7 +22,7 @@ export const projectQuoteTotal = (p: Project) =>
  * (withholding, fees) — shown on its own rather than left as outstanding.
  */
 export function projectSettlement(data: AppData, project: Project) {
-  const rows = data.payments.filter((p) => p.projectId === project.id && !p.archived && p.status !== "cancelled");
+  const rows = data.payments.filter((p) => p.projectId === project.id && !p.voided && p.status !== "cancelled");
   const income = rows.filter((p) => p.direction === "in");
   const units = (n: number) => minorUnits(n, project.currency);
   const sum = (list: Payment[], value: (p: Payment) => number) => list.reduce((n, p) => n + units(value(p)), 0);
@@ -81,7 +81,7 @@ export const paymentDate = (p: Payment) => (p.status === "settled" ? p.settledDa
 /** Cash-basis totals for a date range (TWD only for the MVP): settled rows count their cash. */
 export function summarize(data: AppData, from = "", to = "9999-12-31") {
   const rows = data.payments.filter(
-    (p) => !p.archived && p.status !== "cancelled" && paymentDate(p) >= from && paymentDate(p) <= to,
+    (p) => !p.voided && p.status !== "cancelled" && paymentDate(p) >= from && paymentDate(p) <= to,
   );
   const value = (p: Payment) => (p.status === "settled" ? paymentCash(p) : paymentTotal(p));
   const sum = (match: (p: Payment) => boolean) =>
@@ -126,7 +126,7 @@ export function notifications(data: AppData, now = new Date()): Notification[] {
         href: `/calendar?day=${c.date}`,
       })),
     ...data.payments
-      .filter((p) => !p.archived && p.direction === "in" && p.status === "expected" && p.dueDate && p.dueDate < today)
+      .filter((p) => !p.voided && p.direction === "in" && p.status === "expected" && p.dueDate && p.dueDate < today)
       .map((p) => ({
         id: `payment:${p.id}:${p.dueDate}`,
         kind: "overduePayment" as const,

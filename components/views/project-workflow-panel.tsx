@@ -35,7 +35,7 @@ export function ProjectWorkflowPanel({
   const [pending, startTransition] = useTransition();
   const [planError, setPlanError] = useState<string | null>(null);
   const settlement = projectSettlement(data, project);
-  const payments = data.payments.filter((p) => p.projectId === project.id && !p.archived);
+  const payments = data.payments.filter((p) => p.projectId === project.id && !p.voided);
   const items = data.calendar.filter((c) => c.projectId === project.id && !c.archived);
   const drafts = data.drafts.filter((d) => d.projectId === project.id && !d.archived);
   const files = data.files.filter((f) => f.projectId === project.id && !f.archived);

@@ -102,13 +102,14 @@ export async function savePayment(data: Record<string, unknown>): Promise<string
   return null;
 }
 
-export async function archivePayment(id: string, archived: boolean): Promise<string | null> {
+/** Void (作廢) or restore a payment entered by mistake; voided entries leave every total. */
+export async function voidPayment(id: string, voided: boolean): Promise<string | null> {
   const { talent: current } = await requireTalent();
   const fail = await errorText();
   if (!z.uuid().safeParse(id).success) return fail("invalid");
   const rows = await db
     .update(payment)
-    .set({ archivedAt: archived ? new Date() : null })
+    .set({ voidedAt: voided ? new Date() : null })
     .where(and(eq(payment.id, id), eq(payment.talentId, current.id)))
     .returning({ id: payment.id });
   if (!rows.length) return fail("paymentNotFound");
@@ -155,7 +156,7 @@ export async function createPaymentPlan(data: Record<string, unknown>): Promise<
           eq(payment.projectId, projectId),
           eq(payment.direction, "in"),
           ne(payment.status, "cancelled"),
-          isNull(payment.archivedAt),
+          isNull(payment.voidedAt),
         ),
       )
       .limit(1);

@@ -95,7 +95,7 @@ export type Payment = {
   settledDate: string | null;
   invoiceRef: string;
   notes: string;
-  archived: boolean;
+  voided: boolean; // 作廢: a mistaken or duplicate entry, out of every total
 };
 
 export type ReplyTemplate = {

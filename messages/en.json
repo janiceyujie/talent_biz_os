@@ -194,7 +194,6 @@
     "useInLedger": "Add to ledger",
     "ledgerTitle": "Ledger",
     "newEntry": "+ New entry",
-    "showArchived": "Show archived",
     "colDateName": "Date / name",
     "colCategory": "Category",
     "colStatus": "Status",
@@ -225,8 +224,10 @@
       "filename": "talent-ledger-TWD.csv"
     },
     "edit": "Edit",
-    "archive": "Archive",
-    "restore": "Restore"
+    "restore": "Restore",
+    "showVoided": "Show voided",
+    "void": "Void",
+    "voidHelp": "Void an entry made by mistake or duplicated: it drops out of every total but stays here and can be restored. Past months don't need voiding — use the date filter."
   },
   "projects": {
     "search": "Search projects",

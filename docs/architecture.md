@@ -87,7 +87,7 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - Record expenses by hand — amount, label, and optionally a project — and show net per project — **MVP**. No receipts, categories, or reports.
 - Split a quote into deposit and balance payments in one step — **MVP**.
 - A project-level settlement check: quoted vs. billed vs. received, open to-dos, unpaid costs — **MVP**.
-- Void (作廢) a mistaken or duplicate payment entry: it drops out of every total and chart but stays viewable and restorable — **MVP**. This is the payment's archive; past months need no voiding, they're just a date filter.
+- Void (作廢) a mistaken or duplicate payment entry: it drops out of every total and chart but stays viewable and restorable — **MVP**. Payments have no archive: past months need no hiding, they're just a date filter.
 - Finance views: money still to pay, the last six months of cash in and out, overdue-income aging, and signed-contract totals — **MVP**.
 - Subscription plans and billing for the product itself — **Later**. Kept entirely separate from a talent's project payments.
 - Amounts in TWD only — **MVP**. Each amount still carries its currency.
@@ -390,7 +390,11 @@ The MVP is TWD only, enforced by a check constraint, but every `payment` row alr
 - **Singular, snake_case table names.** Drizzle maps camelCase TypeScript to snake_case columns.
 - **`talent_id` on every business table**, even where a join could reach it. Authorization is checked in app code, so "only this talent's data" is always one filter.
 - **Fixed value lists are `text` + `check`** (statuses, stages). Lists that grow with the type registry (`project.type`, `calendar_event.kind`) are `text` validated in code. No Postgres enum types — they can't drop a value.
-- **Archiving hides, deleting deletes.** `archived_at` hides a row from day-to-day views and summaries and can be undone. A user-initiated delete removes the rows and their stored files for good.
+- **Archiving, voiding, and deleting are different.**
+  - *Archive* (`archived_at`; projects, contacts, templates, files, events) hides a valid row from day-to-day views and can be undone. An archived project's payments still count — history stays true.
+  - *Void* (`payment.voided_at`, 作廢) is for a payment entered by mistake or duplicated: it never counted, so it drops out of every total, yet stays viewable and restorable.
+  - *Cancelled* (`payment.status`) is a real payment that won't happen, such as a cancelled gig; it's no longer outstanding but stays in history.
+  - *Delete*, when the user asks, removes the rows and their stored files for good.
 - **Row-level security enabled on every table, with no policies.** The app connects as the database owner and isn't affected; anything reaching Postgres through Supabase's Data API gets nothing.
 - `created_at` everywhere, `updated_at` on tables that are edited; all timestamps are `timestamptz`.
 
@@ -623,7 +627,7 @@ create table payment (
   method             text,                          -- 'bank_transfer', 'cash', 'paypal'...
   invoice_ref        text,                          -- 發票／請款編號
   notes              text,
-  archived_at        timestamptz,
+  voided_at          timestamptz,                   -- 作廢: entered by mistake or duplicated; out of every total
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now(),
   check ((status = 'settled') = (settled_on is not null))

@@ -194,7 +194,6 @@
     "useInLedger": "帶入新增內帳",
     "ledgerTitle": "內帳明細",
     "newEntry": "＋新增紀錄",
-    "showArchived": "顯示已歸檔",
     "colDateName": "日期／名稱",
     "colCategory": "分類",
     "colStatus": "狀態",
@@ -225,8 +224,10 @@
       "filename": "內帳-TWD.csv"
     },
     "edit": "編輯",
-    "archive": "歸檔",
-    "restore": "還原"
+    "restore": "還原",
+    "showVoided": "顯示已作廢",
+    "void": "作廢",
+    "voidHelp": "作廢用於誤登或重複的紀錄：會從所有加總排除，但保留可查看、可還原。過去月份不需作廢，用日期篩選即可。"
   },
   "projects": {
     "search": "搜尋合作案",

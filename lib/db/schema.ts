@@ -260,7 +260,8 @@ export const payment = pgTable(
     method: text(),
     invoiceRef: text(),
     notes: text(),
-    archivedAt: timestamp({ withTimezone: true }),
+    // Void (作廢): entered by mistake or duplicated — out of every total, kept and restorable.
+    voidedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

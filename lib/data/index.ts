@@ -133,7 +133,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       settledDate: p.settledOn,
       invoiceRef: p.invoiceRef ?? "",
       notes: p.notes ?? "",
-      archived: p.archivedAt !== null,
+      voided: p.voidedAt !== null,
     })),
     templates: templateRows.map((t) => ({
       id: t.id,

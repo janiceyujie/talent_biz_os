@@ -1,0 +1,53 @@
+{
+  "common": {
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "archive": "Archive",
+    "restore": "Restore",
+    "edit": "Edit"
+  },
+  "nav": {
+    "today": "Today",
+    "inbox": "Intake",
+    "projects": "Projects",
+    "drafts": "Drafts",
+    "finance": "Finance",
+    "assistant": "Assistant",
+    "contacts": "Artists & partners",
+    "files": "Files",
+    "calendar": "Calendar",
+    "settings": "Settings",
+    "groupWork": "Workspace",
+    "groupManage": "Manage",
+    "menuLabel": "Workspace menu",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "closeBackdrop": "Close menu backdrop"
+  },
+  "shell": {
+    "searchPlaceholder": "Search projects, partners, calendar, templates…",
+    "searchTitle": "Search workspace",
+    "searchInput": "Keyword",
+    "noResults": "No matching results.",
+    "notifications": "{count, plural, =0 {Notifications} one {Notifications · # item} other {Notifications · # items}}",
+    "notificationsEmpty": "No notifications. Upcoming events, to-do deadlines, and overdue payments will show up here.",
+    "openSettings": "Open settings",
+    "importOffer": "Import offer",
+    "newProject": "New project",
+    "signOut": "Sign out",
+    "resultProject": "Project · {counterparty}",
+    "resultCalendar": "Calendar · {date}",
+    "resultTemplate": "Template",
+    "overdue": "Overdue",
+    "followUpPayment": "Follow up payment: {label}",
+    "paymentDue": "Due {date} · {amount}"
+  },
+  "locale": {
+    "label": "Language",
+    "heading": "Language",
+    "help": "Sets the language of the app, emails we send you, and exported files.",
+    "saved": "Language updated."
+  }
+}

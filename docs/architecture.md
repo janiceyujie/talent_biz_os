@@ -16,6 +16,7 @@ Scope here is grounded in interviews with two real prospective users — a talen
 - [Entity model](#entity-model)
 - [Schema](#schema)
 - [Stack](#stack)
+- [Internationalization](#internationalization)
 - [Splitting the monolith later](#splitting-the-monolith-later)
 - [Open questions](#open-questions)
 
@@ -25,6 +26,7 @@ Tagged by when it's built: **MVP** ships first. **Phase 2** follows once the cor
 
 ### Onboarding and identity
 
+- The app in Traditional Chinese (`zh-TW`) and English (`en`), switchable per person; more languages later without code changes — **MVP**. See [Internationalization](#internationalization).
 - Sign up and choose a vertical: music artist, influencer, model, or other — **MVP**. Only music is populated with real extraction fields at first; the choice itself, and the framework behind it, ships from day one.
 - Choose account type: an individual managing their own career — **MVP**, or a manager/agency managing several talents — **Later**.
 - Dashboard labels and extraction fields tailored to the chosen vertical — **Phase 2**. Needs real data from a second vertical first.
@@ -203,7 +205,7 @@ A deal is rarely one message. A venue's first offer, the signed contract, and a 
 
 A drafter call sits alongside the classifier and extractor, not inside them. Given a project's confirmed history, the message's analysis, and the message that prompted it, it produces several candidate replies, quotes, or payment follow-ups. It sends nothing — only a person's own send action leaves the system.
 
-Drafts are stored (`reply_draft`) with the version the person picked and their edits, so they can come back to one, and so Phase 2 can draft in the person's own voice. Using a draft completes its reply to-do and offers a follow-up date — the closest the system gets to knowing a reply went out, since it never sees the person's sent mail.
+Drafts are written in the language of the message they answer, not the UI language — a Taipei artist using the Chinese UI still replies to a Tokyo promoter in English — with a per-draft override; analysis summaries follow the UI language. Drafts are stored (`reply_draft`) with the version the person picked and their edits, so they can come back to one, and so Phase 2 can draft in the person's own voice. Using a draft completes its reply to-do and offers a follow-up date — the closest the system gets to knowing a reply went out, since it never sees the person's sent mail.
 
 ## Pipeline
 
@@ -341,7 +343,7 @@ There's no "awaiting signature" stage — many gigs never have a written contrac
 
 **Contacts.** A project links to a `contact` for its counterparty when one exists, and always keeps the counterparty name as text, so quick entries without a contact still work. A contact's email is the default recipient for drafts on its projects. Same name never implies same contact.
 
-**Drafting and the reply library.** A `reply_template` is either a reusable template, whose placeholders (`{{合作方}}`, `{{藝人}}`, `{{案件名稱}}`, `{{邀約內容}}`, `{{報價}}`, `{{交付內容}}`, `{{授權範圍}}`, `{{下一步期限}}`) fill from the project, or a past reply kept for reference. A past reply is never applied directly — it would carry an old project's names and fees — it's saved as a template first. Missing values render as `【待確認：欄位】`, never guessed. A `reply_draft` comes from AI, from a template, or is written by hand; it may hang off a message, a project, or neither.
+**Drafting and the reply library.** A `reply_template` is either a reusable template, whose placeholders fill from the project. Placeholders are stored as language-neutral keys (`{{counterparty}}`, `{{artist}}`, `{{project}}`, `{{offer}}`, `{{quote}}`, `{{deliverables}}`, `{{rights}}`, `{{next_due}}`), shown under their localized names in the editor (`{{合作方}}`, `{{報價}}`…), and accepted in either spelling when typed, or a past reply kept for reference. A past reply is never applied directly — it would carry an old project's names and fees — it's saved as a template first. Missing values render as `【待確認：欄位】`, never guessed. A `reply_draft` comes from AI, from a template, or is written by hand; it may hang off a message, a project, or neither.
 
 **Files.** One `file` table holds both a message's files (with their order) and files uploaded to a project's archive. Bytes live in storage under `storage_key`.
 
@@ -382,6 +384,7 @@ create table person (
   image           text,
   account_type    text not null default 'individual'
                     check (account_type in ('individual','manager','agency')),
+  locale          text not null default 'zh-TW',   -- UI language; supported list lives in code
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -616,6 +619,7 @@ create table reply_template (
   talent_id     uuid not null references talent(id) on delete cascade,
   project_type  text not null,                      -- registry key; templates are per type
   kind          text not null check (kind in ('template','past_reply')),
+  language      text not null,                      -- language the reply is written in, e.g. 'zh-TW', 'en'
   title         text not null,
   body          text not null,
   tone          text,
@@ -673,7 +677,8 @@ Shaped by the situation: a part-time build, a handful of solo artists at first, 
 | Job queue | Start with Next.js `after()` + `message.status`; pg-boss / Inngest when needed | Open — M2 | Low volume doesn't need a queue yet; the choice depends on hosting |
 | Hosting | Vercel / Fly.io / Render | Open — M2 | Serverless (Vercel) can't run a long-lived worker; decide together with the queue |
 | Gmail ingestion | Google Workspace Add-on | M3 | Per-message, user-initiated, narrower authorization than full mailbox access |
-| Calendar output | Generated `.ics` file | Decided | No calendar account connection, no stored tokens |
+| Calendar output | Generated `.ics` file + private subscription feed | Decided | No calendar account connection, no stored tokens |
+| Internationalization | `next-intl`, no locale in URLs | Decided | Works in server components, client components, server actions, and route handlers; ICU messages; locale-aware formatting; typed keys. See [Internationalization](#internationalization) |
 
 ### Portability rules
 
@@ -690,6 +695,18 @@ These keep a future move off Supabase (to any vendor) a matter of days, not week
 - **Full mailbox connection** — Gmail API and Microsoft Graph over OAuth, poll then push. Built if the per-message add-on flow proves too much friction.
 - **Direct calendar connection** — Google Calendar API / Microsoft Graph Calendar, once a person wants events to appear without a download step.
 - **Other email providers** — inbound email parsing (Postmark / SendGrid Inbound Parse) for forwarding on non-Gmail accounts.
+
+## Internationalization
+
+The MVP ships Traditional Chinese (`zh-TW`) and English (`en`). Nothing below is specific to those two: adding a language is adding a message file and one entry in the supported-locales list.
+
+- **Library:** `next-intl`, in its mode without locale routing. It works the same in server components, client components, server actions, metadata, and route handlers; messages use ICU syntax (plurals, interpolation); dates, numbers, and currency format by locale and time zone; message keys are typed, so a wrong key fails the build. Options weighed are in [`stack-options.md`](stack-options.md#internationalization).
+- **No locale in URLs.** Every route stays `/projects`, not `/en/projects`. The app sits behind a login, so per-language URLs buy no search indexing and would restructure every route. Public marketing pages, if they come, can add localized URLs on their own.
+- **Where the locale comes from:** signed in, `person.locale`, changed in 設定; signed out (sign-in, sign-up, password reset), a `NEXT_LOCALE` cookie set by the page's language switch, then the browser's `Accept-Language`, then the default. A new account takes the locale it signed up in.
+- **Default locale `zh-TW`; reference and fallback locale `en`.** New users get Chinese unless their browser asks for English. English is the reference catalog: it defines the full key set, translations are made from it, and a key missing in another language falls back to English — readable to translators and to users of any future language. A check (`npm run i18n:check`) keeps every catalog's keys and placeholders in step, so for the MVP neither file is ever incomplete.
+- **Message files:** `messages/en.json` and `messages/zh-TW.json`, one namespace per screen plus shared `common`, `labels` (stages, project types, roles, payment states), `errors`, and `emails`. Key names are English identifiers (`projects.editor.title`), never shown to users. Codes in the database (`negotiating`, `gig`) are translated through `labels`; the project type registry keeps keys and logic in code and its labels and checklists in messages.
+- **Server-side text uses the person's locale, not the request's:** action errors in the requester's locale; emails in the recipient's (`person.locale`, or the sign-up page's locale for the verification email); CSV headers and the `.ics` calendar name in the owner's.
+- **UI language is not content language.** Drafts follow the language of the message they answer, with an override; reply templates record the `language` they're written in; template placeholders are language-neutral (see Drafting).
 
 ## Splitting the monolith later
 

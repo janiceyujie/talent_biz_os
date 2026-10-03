@@ -64,6 +64,28 @@ Google sign-in is on from day one because the M3 Gmail add-on identifies users b
 | Supabase client only | Awkward for multi-table transactions like confirming a review; ties every query to the vendor. |
 | Raw SQL | No type safety; a renamed column fails at runtime instead of at build. |
 
+## Internationalization
+
+Decided 2026-10-02. MVP: `zh-TW` and `en`; built so more languages are a file, not a rewrite.
+
+| Option | Verdict |
+|---|---|
+| **`next-intl`** | ✅ Chosen. Built for the App Router: one API across server components, client components, server actions, metadata, and route handlers — we use all five. ICU messages, locale-aware date/number/currency formatting with time zones, typed keys, and a mode without locale routing. Supports Next 16. |
+| Next.js dictionary pattern (`getDictionary`) | No plurals or interpolation, no client hook, and formatting and fallback are ours to build. Fine for a static site, thin for an app. |
+| `react-i18next` | Mature, but not built around server components; more wiring for server actions and RSC. |
+| Lingui | Good extraction and compile-time catalogs; adds a build step and macros we don't need at two languages. |
+| Paraglide (inlang) | Compile-time, tree-shaken messages; newer, and its tooling assumes the inlang workflow. |
+
+| Decision | Choice | Why |
+|---|---|---|
+| Locale in URL | No | The app is behind a login: per-language URLs buy no indexing and would restructure every route. |
+| Default locale | `zh-TW` | The first users are in Taiwan. |
+| Reference / fallback locale | `en` | Translators and translation tools work from English; a missing key in a future language falls back to something most people read. Costs nothing now, since the check script keeps both catalogs complete. |
+| Template placeholders | Language-neutral keys, localized display | `{{合作方}}` stored in a user's template can't work in an English template, or vice versa. |
+| AI draft language | The incoming message's language, with override | UI language and content language differ: a Chinese UI user still replies to English email in English. |
+
+**Revisit when:** a third language arrives (add a translation-management service — Crowdin, Lokalise, Tolgee — reading the same JSON), or public pages need localized URLs.
+
 ## Deferred decisions
 
 - **Job queue (M2).** Start with Next.js `after()` to run extraction after an upload is accepted, using `message.status` as the state machine. Move to pg-boss (needs a long-lived worker) or Inngest / Trigger.dev (serverless-friendly) when that stops being enough.

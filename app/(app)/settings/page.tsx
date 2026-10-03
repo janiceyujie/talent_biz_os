@@ -4,7 +4,7 @@ import { SettingsView } from "@/components/views/settings";
 export default function Page() {
   return (
     <>
-      <PageHeader title="設定" />
+      <PageHeader title="settings" />
       <SettingsView />
     </>
   );

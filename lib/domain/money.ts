@@ -1,8 +1,9 @@
 // Money and tax arithmetic, done in minor units (cents; whole yen) so that
 // net + tax always equals total. Ported from the prototype's domain rules.
 
-export const money = (n: number, currency = "TWD") =>
-  new Intl.NumberFormat("zh-TW", {
+/** Currency for display in a UI locale: TWD reads "$21,000.00" in zh-TW, "NT$21,000.00" in en. */
+export const money = (n: number, locale: string, currency = "TWD") =>
+  new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     maximumFractionDigits: currency === "JPY" ? 0 : 2,

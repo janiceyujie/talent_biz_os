@@ -1,0 +1,53 @@
+{
+  "common": {
+    "save": "儲存",
+    "saving": "儲存中…",
+    "cancel": "取消",
+    "close": "關閉",
+    "archive": "歸檔",
+    "restore": "還原",
+    "edit": "編輯"
+  },
+  "nav": {
+    "today": "今日總覽",
+    "inbox": "進件分類",
+    "projects": "合作案",
+    "drafts": "擬稿工作台",
+    "finance": "內帳分析",
+    "assistant": "個人助理",
+    "contacts": "藝人與合作方",
+    "files": "素材歸檔",
+    "calendar": "行程",
+    "settings": "設定",
+    "groupWork": "工作區",
+    "groupManage": "管理",
+    "menuLabel": "工作區選單",
+    "openMenu": "開啟選單",
+    "closeMenu": "關閉選單",
+    "closeBackdrop": "關閉背景選單"
+  },
+  "shell": {
+    "searchPlaceholder": "搜尋案件、合作方、行程、範本…",
+    "searchTitle": "搜尋工作區",
+    "searchInput": "輸入關鍵字",
+    "noResults": "沒有符合的結果。",
+    "notifications": "{count, plural, =0 {通知} other {通知 · # 則}}",
+    "notificationsEmpty": "目前沒有通知。近期行程、待辦期限與逾期款項會自動出現在這裡。",
+    "openSettings": "開啟設定",
+    "importOffer": "匯入邀約",
+    "newProject": "新增合作案",
+    "signOut": "登出",
+    "resultProject": "合作案 · {counterparty}",
+    "resultCalendar": "行程 · {date}",
+    "resultTemplate": "範本",
+    "overdue": "已過期",
+    "followUpPayment": "追蹤收款：{label}",
+    "paymentDue": "到期 {date} · {amount}"
+  },
+  "locale": {
+    "label": "語言",
+    "heading": "語言",
+    "help": "設定介面、寄給你的信件與匯出檔案使用的語言。",
+    "saved": "語言已更新。"
+  }
+}

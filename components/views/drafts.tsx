@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { useRef, useState } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
@@ -12,6 +13,7 @@ const gmailComposeUrl = (to: string, subject: string, body: string) =>
 
 export function DraftsView({ initialProjectId = "" }: { initialProjectId?: string }) {
   const data = useAppData();
+  const locale = useLocale(); // stands in for the template's own language until reply_template.language exists
   const [editor, setEditor] = useState<Editor | null>(null);
   const [notice, setNotice] = useState("");
   const initial = data.projects.find((p) => p.id === initialProjectId && !p.archived);
@@ -47,7 +49,7 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
     const template = data.templates.find((t) => t.id === templateId);
     if (!template) return;
     try {
-      const result = renderTemplate(template, source, project);
+      const result = renderTemplate(template, source, project, locale);
       setBody(result.body);
       setMode(result.missing.length ? `已套用範本 · 待確認：${result.missing.join("、")}` : "已套用範本");
     } catch (e) {

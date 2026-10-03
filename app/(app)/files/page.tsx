@@ -4,7 +4,7 @@ import { FilesView } from "@/components/views/files";
 export default function Page() {
   return (
     <>
-      <PageHeader title="素材歸檔" />
+      <PageHeader title="files" />
       <FilesView />
     </>
   );

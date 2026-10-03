@@ -19,6 +19,7 @@ export const getSession = cache(async () => {
     personId: session.user.id,
     email: session.user.email,
     displayName: session.user.name,
+    locale: session.user.locale,
   };
 });
 

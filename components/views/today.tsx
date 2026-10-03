@@ -6,14 +6,17 @@ import { useState } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { RecordEditor, type Editor } from "@/components/app/record-editor";
 import { dateInZone } from "@/lib/domain/dates";
-import { money } from "@/lib/domain/money";
+import { useMoney } from "@/lib/i18n/format";
 import { isActiveProject, notifications, summarize } from "@/lib/domain/workflow";
 import { openStages, stageLabels } from "@/lib/labels";
+import { useNotificationText } from "@/components/app/notification-text";
 import { AssistantView } from "./assistant";
 import { Metric, Revenue } from "./finance";
 
 export function TodayView() {
   const data = useAppData();
+  const money = useMoney();
+  const notificationText = useNotificationText();
   const router = useRouter();
   const [editor, setEditor] = useState<Editor | null>(null);
   const summary = summarize(data);
@@ -57,15 +60,18 @@ export function TodayView() {
             </div>
             <Link href="/calendar">查看行程</Link>
           </div>
-          {alerts.slice(0, 5).map((n, i) => (
-            <button className="action-row" key={n.id} onClick={() => router.push(n.href)}>
-              <span className={`priority p-${i + 1}`}>{String(i + 1).padStart(2, "0")}</span>
-              <div>
-                <strong>{n.title}</strong>
-                <small>{n.detail}</small>
-              </div>
-            </button>
-          ))}
+          {alerts.slice(0, 5).map((n, i) => {
+            const text = notificationText(n);
+            return (
+              <button className="action-row" key={n.id} onClick={() => router.push(n.href)}>
+                <span className={`priority p-${i + 1}`}>{String(i + 1).padStart(2, "0")}</span>
+                <div>
+                  <strong>{text.title}</strong>
+                  <small>{text.detail}</small>
+                </div>
+              </button>
+            );
+          })}
           {!alerts.length && <p className="empty">目前沒有近期到期事項。新增待辦後會出現在這裡。</p>}
         </section>
         <AssistantView compact />

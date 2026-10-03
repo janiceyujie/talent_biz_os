@@ -5,7 +5,8 @@ import { useAppData } from "@/components/app/app-data";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { archivePayment } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
-import { money, quote } from "@/lib/domain/money";
+import { quote } from "@/lib/domain/money";
+import { useMoney } from "@/lib/i18n/format";
 import { paymentCash, paymentDate, paymentTotal, summarize } from "@/lib/domain/workflow";
 import { directionLabels, installmentLabels, paymentStatusLabel } from "@/lib/labels";
 import { projectType } from "@/lib/project-types";
@@ -24,6 +25,7 @@ export function Metric({ label, value, note, tone = "plain" }: { label: string; 
 const donutColors = ["var(--lime)", "var(--orange)", "var(--blue)", "var(--violet)", "#80887c"];
 
 export function Revenue({ data, from = "", to = "9999-12-31" }: { data: AppData; from?: string; to?: string }) {
+  const money = useMoney();
   const s = summarize(data, from, to);
   let pos = 0;
   const gradient = s.split
@@ -86,6 +88,7 @@ function csvCell(v: unknown) {
 
 export function FinanceView() {
   const data = useAppData();
+  const money = useMoney();
   const [editor, setEditor] = useState<Editor | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");

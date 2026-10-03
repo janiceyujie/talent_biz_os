@@ -2140,3 +2140,10 @@ a.disabled {
   pointer-events: none;
   opacity: 0.45;
 }
+.auth-locale {
+  margin-top: 24px;
+  font-size: 12px;
+}
+.auth-locale select {
+  margin-top: 4px;
+}

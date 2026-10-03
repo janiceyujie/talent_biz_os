@@ -4,10 +4,13 @@ import { useActionState } from "react";
 import { updateWorkspace, type SettingsState } from "@/app/(app)/settings/actions";
 import { useAppData } from "@/components/app/app-data";
 import { SignOutButton } from "@/components/sign-out-button";
+import { LocaleSwitch } from "@/components/locale-switch";
+import { useTranslations } from "next-intl";
 import { CalendarFeedSettings } from "./calendar-feed-settings";
 
 export function SettingsView() {
   const data = useAppData();
+  const t = useTranslations("locale");
   const [state, action, pending] = useActionState<SettingsState, FormData>(updateWorkspace, {});
 
   return (
@@ -41,6 +44,18 @@ export function SettingsView() {
             {pending ? "儲存中…" : "儲存設定"}
           </button>
         </form>
+      </section>
+      <section className="surface padded">
+        <div className="section-header">
+          <div>
+            <span>Language</span>
+            <h2>{t("heading")}</h2>
+          </div>
+        </div>
+        <p className="muted">{t("help")}</p>
+        <div className="form-grid">
+          <LocaleSwitch />
+        </div>
       </section>
       <CalendarFeedSettings />
       <section className="surface padded">

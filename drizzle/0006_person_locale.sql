@@ -1,0 +1,1 @@
+ALTER TABLE "person" ADD COLUMN "locale" text DEFAULT 'zh-TW' NOT NULL;

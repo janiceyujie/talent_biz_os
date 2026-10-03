@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
 import { archiveProject, setProjectStage } from "@/lib/actions/projects";
-import { money } from "@/lib/domain/money";
+import { useMoney } from "@/lib/i18n/format";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
 import { stageLabels } from "@/lib/labels";
 import { projectType, projectTypes } from "@/lib/project-types";
@@ -14,6 +14,7 @@ import { ProjectWorkflowPanel } from "./project-workflow-panel";
 
 export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
   const data = useAppData();
+  const money = useMoney();
   const router = useRouter();
   const [editor, setEditor] = useState<Editor | null>(null);
   const [search, setSearch] = useState("");

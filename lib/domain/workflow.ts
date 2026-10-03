@@ -57,7 +57,7 @@ export function starterTemplate(type: ProjectType) {
  * 【待確認：欄位】, never guessed. Past replies are refused — they carry an old
  * project's names and fees.
  */
-export function renderTemplate(template: ReplyTemplate, source: string, project?: Project) {
+export function renderTemplate(template: ReplyTemplate, source: string, project: Project | undefined, language: string) {
   if (template.kind !== "template")
     throw new Error("過往回覆僅供參考，不能直接套用。請先另存為範本，將舊案的人名、金額與檔期改成替換欄位。");
   const values: Record<string, string> = {
@@ -70,7 +70,7 @@ export function renderTemplate(template: ReplyTemplate, source: string, project?
     下一步期限: project?.nextAction?.dueDate || "",
     報價:
       project && project.quotedAmount > 0
-        ? `${money(projectQuoteTotal(project), project.currency)}（含稅，稅率 ${project.taxRate}%）`
+        ? `${money(projectQuoteTotal(project), language, project.currency)}（含稅，稅率 ${project.taxRate}%）`
         : "",
   };
   const missing = new Set<string>();
@@ -108,7 +108,10 @@ export function summarize(data: AppData, from = "", to = "9999-12-31") {
 
 export const isActiveProject = (p: Project) => !p.archived && openStages.includes(p.stage);
 
-export type Notification = { id: string; title: string; detail: string; href: string };
+/** Structured so each screen words it in the active language. */
+export type Notification =
+  | { id: string; kind: "calendar"; title: string; date: string; time: string; overdue: boolean; href: string }
+  | { id: string; kind: "overduePayment"; title: string; date: string; amount: number; href: string };
 
 /**
  * In-app notifications: open to-dos due within a week (overdue ones stay),
@@ -122,16 +125,21 @@ export function notifications(data: AppData, now = new Date()): Notification[] {
       .filter((c) => !c.archived && !c.done && c.date <= soon && (c.source === "todo" || c.date >= today))
       .map((c) => ({
         id: `calendar:${c.id}:${c.date}:${c.time}`,
+        kind: "calendar" as const,
         title: c.title,
-        detail: `${c.date} ${c.time}${c.date < today ? " · 已過期" : ""}`,
+        date: c.date,
+        time: c.time,
+        overdue: c.date < today,
         href: `/calendar?day=${c.date}`,
       })),
     ...data.payments
       .filter((p) => !p.archived && p.direction === "in" && p.status === "expected" && p.dueDate && p.dueDate < today)
       .map((p) => ({
         id: `payment:${p.id}:${p.dueDate}`,
-        title: `追蹤收款：${p.label}`,
-        detail: `到期 ${p.dueDate} · ${money(paymentTotal(p), p.currency)}`,
+        kind: "overduePayment" as const,
+        title: p.label,
+        date: p.dueDate!,
+        amount: paymentTotal(p),
         href: "/finance",
       })),
   ];

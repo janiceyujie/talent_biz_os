@@ -46,6 +46,7 @@ export const person = pgTable(
     displayName: text().notNull(),
     image: text(),
     accountType: text({ enum: accountTypes }).notNull().default("individual"),
+    locale: text().notNull().default("zh-TW"), // UI language; supported list in lib/i18n/config
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

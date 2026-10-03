@@ -6,7 +6,8 @@ import { Modal } from "@/components/app/modal";
 import { toRecord, type Editor } from "@/components/app/record-editor";
 import { createPaymentPlan } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
-import { money, splitPayments } from "@/lib/domain/money";
+import { splitPayments } from "@/lib/domain/money";
+import { useMoney } from "@/lib/i18n/format";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
 import { calendarKindLabels, paymentStatusLabel } from "@/lib/labels";
 import { projectType } from "@/lib/project-types";
@@ -23,6 +24,7 @@ export function ProjectWorkflowPanel({
   compose: (id: string) => void;
 }) {
   const data = useAppData();
+  const money = useMoney();
   const today = dateInZone(data.talent.timeZone);
   const [plan, setPlan] = useState(false);
   const [percent, setPercent] = useState(50);

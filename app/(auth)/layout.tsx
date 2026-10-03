@@ -1,3 +1,5 @@
+import { LocaleSwitch } from "@/components/locale-switch";
+
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (
     <main className="auth-page">
@@ -7,6 +9,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
           <strong>Talent Business OS</strong>
         </div>
         {children}
+        <LocaleSwitch className="auth-locale" />
       </div>
     </main>
   );

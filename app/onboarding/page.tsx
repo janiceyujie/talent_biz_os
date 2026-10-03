@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { getCurrentTalent, requirePerson } from "@/lib/auth";
+import { PRODUCT_MONOGRAM, PRODUCT_NAME } from "@/lib/brand";
 import { OnboardingForm } from "./onboarding-form";
 
 export default async function OnboardingPage() {
@@ -12,8 +13,8 @@ export default async function OnboardingPage() {
     <main className="auth-page">
       <div className="surface auth-card wide">
         <div className="auth-brand">
-          <span>TB</span>
-          <strong>Talent Business OS</strong>
+          <span>{PRODUCT_MONOGRAM}</span>
+          <strong>{PRODUCT_NAME}</strong>
         </div>
         <div className="auth-stack">
           <div>

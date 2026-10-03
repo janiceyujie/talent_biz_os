@@ -18,6 +18,7 @@ import { Metric, Revenue } from "./finance";
 export function TodayView() {
   const data = useAppData();
   const t = useTranslations("today");
+  const tEyebrow = useTranslations("eyebrow");
   const labels = useLabels();
   const money = useMoney();
   const notificationText = useNotificationText();
@@ -32,7 +33,7 @@ export function TodayView() {
     <>
       {!data.projects.length && !data.contacts.length && (
         <section className="surface welcome-card">
-          <span>WELCOME TO YOUR WORKSPACE</span>
+          <span>{tEyebrow("welcome")}</span>
           <h2>{t("welcomeTitle")}</h2>
           <p>{t("welcomeBody")}</p>
           <div className="row-actions">
@@ -59,7 +60,7 @@ export function TodayView() {
         <section className="surface action-list">
           <div className="section-header">
             <div>
-              <span>Next actions</span>
+              <span>{tEyebrow("nextActions")}</span>
               <h2>{t("nextActions")}</h2>
             </div>
             <Link href="/calendar">{t("viewCalendar")}</Link>
@@ -85,7 +86,7 @@ export function TodayView() {
         <section className="surface pipeline-card">
           <div className="section-header">
             <div>
-              <span>Deal pipeline</span>
+              <span>{tEyebrow("pipeline")}</span>
               <h2>{t("pipeline")}</h2>
             </div>
             <Link href="/projects">{t("viewProjects")}</Link>

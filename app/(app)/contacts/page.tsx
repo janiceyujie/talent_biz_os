@@ -4,7 +4,7 @@ import { ContactsView } from "@/components/views/contacts";
 export default function Page() {
   return (
     <>
-      <PageHeader title="contacts" />
+      <PageHeader titleKey="contacts" />
       <ContactsView />
     </>
   );

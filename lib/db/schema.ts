@@ -354,3 +354,33 @@ export const todo = pgTable(
     check("todo_status_check", oneOf(t.status, todoStatuses)),
   ],
 ).enableRLS();
+
+// Reply library ------------------------------------------------------------------
+
+export const replyTemplateKinds = ["template", "past_reply"] as const;
+
+// A reusable reply template, or a past reply kept for reference. Bodies are
+// stored with language-neutral placeholders ({{counterparty}}); `language` is
+// the language the reply itself is written in.
+export const replyTemplate = pgTable(
+  "reply_template",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    projectType: text().notNull(), // registry key; templates are per type
+    kind: text({ enum: replyTemplateKinds }).notNull(),
+    language: text().notNull(), // validated against lib/i18n/config in code
+    title: text().notNull(),
+    body: text().notNull(),
+    tone: text(),
+    archivedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("reply_template_talent_type_idx").on(t.talentId, t.projectType),
+    check("reply_template_kind_check", oneOf(t.kind, replyTemplateKinds)),
+  ],
+).enableRLS();

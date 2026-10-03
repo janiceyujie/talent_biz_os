@@ -2,6 +2,7 @@
 // Pure functions over AppData so they run on the server or in the browser.
 import { projectTypes } from "@/lib/project-types";
 import { openStages } from "@/lib/labels";
+import { contentWords, displayName, placeholderKey, type PlaceholderKey } from "@/lib/templates/placeholders";
 import type { AppData, Payment, Project, ReplyTemplate } from "@/lib/types";
 import { dateInZone } from "./dates";
 import { minorUnits, quote } from "./money";
@@ -45,35 +46,31 @@ export function projectSettlement(data: AppData, project: Project) {
 export class PastReplyError extends Error {}
 
 /**
- * Fill a template's placeholders from one project. The wording around values
- * belongs to the template's language, so the caller supplies it: how a quote
- * reads, and the marker for a missing value (never guessed).
+ * Fill a template's placeholders from one project. Placeholders may be written
+ * in any language; the result reads in the template's own language, including
+ * the quote and the marker for a missing value (never guessed). `missing`
+ * lists placeholder keys, or the name as typed when it isn't one we fill.
  */
-export function renderTemplate(
-  template: ReplyTemplate,
-  source: string,
-  project: Project | undefined,
-  words: { quote: (amount: number, taxRate: number) => string; missing: (placeholder: string) => string },
-) {
+export function renderTemplate(template: ReplyTemplate, source: string, project: Project | undefined) {
   if (template.kind !== "template") throw new PastReplyError();
-  const values: Record<string, string> = {
-    邀約內容: source,
-    合作方: project?.counterparty || "",
-    藝人: project?.artist || "",
-    案件名稱: project?.title || "",
-    交付內容: project?.details.deliverables || "",
-    授權範圍: project?.details.rights || "",
-    下一步期限: project?.nextAction?.dueDate || "",
-    報價:
-      project && project.quotedAmount > 0
-        ? words.quote(projectQuoteTotal(project), project.taxRate)
-        : "",
+  const words = contentWords[template.language];
+  const values: Record<PlaceholderKey, string> = {
+    offer: source,
+    counterparty: project?.counterparty || "",
+    artist: project?.artist || "",
+    project: project?.title || "",
+    deliverables: project?.details.deliverables || "",
+    rights: project?.details.rights || "",
+    next_due: project?.nextAction?.dueDate || "",
+    quote: project && project.quotedAmount > 0 ? words.quote(projectQuoteTotal(project), project.taxRate) : "",
   };
   const missing = new Set<string>();
-  const body = template.body.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (_, key: string) => {
-    if (Object.hasOwn(values, key) && values[key]) return values[key];
-    missing.add(key);
-    return words.missing(key);
+  const body = template.body.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (_, name: string) => {
+    const key = placeholderKey(name);
+    if (key && values[key]) return values[key];
+    const shown = key ? displayName(key, template.language) : name;
+    missing.add(key ?? name);
+    return words.missing(shown);
   });
   return { body, missing: [...missing] };
 }

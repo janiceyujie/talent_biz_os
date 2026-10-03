@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
@@ -9,6 +9,9 @@ import { saveContact } from "@/lib/actions/contacts";
 import { saveCalendarItem } from "@/lib/actions/calendar";
 import { savePayment } from "@/lib/actions/payments";
 import { saveProject } from "@/lib/actions/projects";
+import { saveTemplate } from "@/lib/actions/templates";
+import { localeNames, locales, toLocale } from "@/lib/i18n/config";
+import { placeholderKeys, placeholderName, toDisplay } from "@/lib/templates/placeholders";
 import { calendarKinds, contactRoles, stages, type Project } from "@/lib/types";
 import { useAppData } from "./app-data";
 import { Modal } from "./modal";
@@ -45,6 +48,7 @@ const savers: Partial<Record<EditorKind, Saver>> = {
   contact: saveContact,
   payment: savePayment,
   calendar: saveCalendarItem,
+  template: saveTemplate,
 };
 
 // Kinds stored as to-dos; the rest are calendar events. Kept in step with lib/actions/calendar.
@@ -59,6 +63,7 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
   const t = useTranslations("editor");
   const tTone = useTranslations("tone");
   const labels = useLabels();
+  const uiLocale = toLocale(useLocale());
   const typeOptions = options(
     projectTypes.map((pt) => pt.key),
     labels.projectType,
@@ -110,12 +115,17 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
       taxIncluded: false,
       notes: "",
     },
-    template: { title: "", projectType: "gig", kind: "past_reply", tone: tTone("natural"), body: "" },
+    template: { title: "", projectType: "gig", kind: "past_reply", language: uiLocale, tone: tTone("natural"), body: "" },
     draft: { projectId: "", subject: "", recipient: "", projectType: "gig", source: "", body: "" },
   };
   const kind = editor.kind;
   const onSave = savers[kind];
-  const [data, setData] = useState<RecordData>(() => ({ ...defaults[kind], ...editor.item }));
+  const [data, setData] = useState<RecordData>(() => {
+    const initial = { ...defaults[kind], ...editor.item };
+    // Templates are stored with neutral placeholders; edit them in the reader's language.
+    if (kind === "template") initial.body = toDisplay(String(initial.body), uiLocale);
+    return initial;
+  });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -302,13 +312,20 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
                 ["past_reply", t("kind.pastReply")],
                 ["template", t("kind.template")],
               ])}
+              {field(
+                "language",
+                t("field.language"),
+                "text",
+                true,
+                locales.map((l) => [l, localeNames[l]] as const),
+              )}
             </div>
+            <p className="muted">{t("languageHelp")}</p>
             {field("tone", t("field.tone"))}
             {field("body", t("field.body"), "textarea", true)}
             <p className="muted">
               {t("templateHelp", {
-                // Language-neutral placeholder names arrive in i18n step 4; until then these are the stored tokens.
-                placeholders: "{{合作方}}、{{藝人}}、{{案件名稱}}、{{邀約內容}}、{{報價}}、{{交付內容}}、{{授權範圍}}、{{下一步期限}}",
+                placeholders: placeholderKeys.map((key) => placeholderName(key, uiLocale)).join(" "),
               })}
             </p>
           </>

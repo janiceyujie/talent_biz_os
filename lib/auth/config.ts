@@ -2,10 +2,11 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
 import { authAccount, authSession, authVerification, person } from "@/lib/db/schema";
 import { sendEmail } from "@/lib/email";
-import { defaultLocale, isLocale, LOCALE_COOKIE, matchLocale } from "@/lib/i18n/config";
+import { defaultLocale, isLocale, LOCALE_COOKIE, matchLocale, toLocale } from "@/lib/i18n/config";
 
 const google =
   process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
@@ -13,6 +14,12 @@ const google =
     : undefined;
 
 export const isGoogleEnabled = google !== undefined;
+
+/** Emails go out in the recipient's saved language, whatever browser asked for them. */
+async function emailText(user: object) {
+  const locale = toLocale("locale" in user ? user.locale : undefined);
+  return getTranslations({ locale, namespace: "emails" });
+}
 
 function signupLocale(headers: Headers | undefined) {
   const cookie = headers
@@ -49,11 +56,8 @@ export const auth = betterAuth({
     requireEmailVerification: true,
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
-      await sendEmail({
-        to: user.email,
-        subject: "重設 Talent Biz OS 密碼",
-        text: `請點擊以下連結重設密碼（1 小時內有效）：\n\n${url}\n\n如果你沒有要求重設密碼，請忽略這封信。`,
-      });
+      const t = await emailText(user);
+      await sendEmail({ to: user.email, subject: t("resetSubject"), text: t("resetBody", { url }) });
     },
   },
   emailVerification: {
@@ -61,11 +65,8 @@ export const auth = betterAuth({
     sendOnSignIn: true, // signing in unverified re-sends the link
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
-      await sendEmail({
-        to: user.email,
-        subject: "確認你的 Talent Biz OS 電子郵件",
-        text: `請點擊以下連結確認你的電子郵件（1 小時內有效）：\n\n${url}`,
-      });
+      const t = await emailText(user);
+      await sendEmail({ to: user.email, subject: t("verifySubject"), text: t("verifyBody", { url }) });
     },
   },
   socialProviders: google ? { google } : {},

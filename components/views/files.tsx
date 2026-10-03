@@ -8,6 +8,7 @@ import { useLabels } from "@/lib/i18n/labels";
 export function FilesView() {
   const data = useAppData();
   const t = useTranslations("files");
+  const tEyebrow = useTranslations("eyebrow");
   const labels = useLabels();
   const format = useFormatter();
   const [projectId, setProjectId] = useState("");
@@ -24,7 +25,7 @@ export function FilesView() {
     <section className="surface padded">
       <div className="section-header">
         <div>
-          <span>Files & assets</span>
+          <span>{tEyebrow("files")}</span>
           <h2>{t("title")}</h2>
         </div>
       </div>
@@ -66,7 +67,7 @@ export function FilesView() {
                   <small>{format.dateTime(new Date(f.createdAt), { dateStyle: "medium" })}</small>
                 </td>
                 <td>{data.projects.find((p) => p.id === f.projectId)?.title || labels.unlinked()}</td>
-                <td>{(f.sizeBytes / 1024).toFixed(1)} KB</td>
+                <td>{format.number(f.sizeBytes / 1024, { style: "unit", unit: "kilobyte", maximumFractionDigits: 1 })}</td>
               </tr>
             ))}
           </tbody>

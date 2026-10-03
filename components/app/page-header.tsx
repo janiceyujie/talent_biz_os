@@ -8,13 +8,13 @@ import type { NavKey } from "./nav";
 import { RecordEditor, type Editor } from "./record-editor";
 
 /** Page title (matches the nav label) plus the app-wide primary actions. */
-export function PageHeader({ title }: { title: NavKey }) {
+export function PageHeader({ titleKey }: { titleKey: NavKey }) {
   const t = useTranslations();
   const [editor, setEditor] = useState<Editor | null>(null);
   return (
     <>
       <header className="page-title">
-        <h1>{t(`nav.${title}`)}</h1>
+        <h1>{t(`nav.${titleKey}`)}</h1>
         <div className="page-actions">
           <Link className="secondary" href="/inbox">
             {t("shell.importOffer")}

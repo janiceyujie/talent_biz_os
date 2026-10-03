@@ -4,7 +4,7 @@ import { TodayView } from "@/components/views/today";
 export default function Page() {
   return (
     <>
-      <PageHeader title="today" />
+      <PageHeader titleKey="today" />
       <TodayView />
     </>
   );

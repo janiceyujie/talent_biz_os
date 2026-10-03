@@ -464,7 +464,8 @@
       "subject": "信件主旨",
       "recipient": "收件人",
       "source": "邀約內容",
-      "draftBody": "草稿內容"
+      "draftBody": "草稿內容",
+      "language": "回覆語言"
     },
     "unlinked": "未關聯",
     "typeIn": "自行輸入",
@@ -477,7 +478,8 @@
     "notWired": "此類資料尚未接上資料庫，儲存功能開發中。",
     "cancel": "取消",
     "saving": "儲存中…",
-    "save": "儲存"
+    "save": "儲存",
+    "languageHelp": "這則回覆使用的語言；替換欄位與報價會用這個語言填入。"
   },
   "tone": {
     "natural": "自然專業",
@@ -489,10 +491,7 @@
     "savedDraftMode": "已保存的草稿",
     "appliedMode": "已套用範本",
     "appliedMissingMode": "已套用範本 · 待確認：{fields}",
-    "listSeparator": "、",
     "pastReplyRefused": "過往回覆僅供參考，不能直接套用。請先另存為範本，將舊案的人名、金額與檔期改成替換欄位。",
-    "quoteValue": "{amount}（含稅，稅率 {rate}%）",
-    "missingValue": "【待確認：{field}】",
     "libraryTitle": "過往回覆與範本",
     "add": "＋新增",
     "type": "商案類型",
@@ -529,7 +528,9 @@
     "openGmail": "在 Gmail 開啟撰寫視窗",
     "openGmailHelp": "會開啟預先填好的 Gmail 撰寫視窗，由你確認後自行寄出。",
     "savedTitle": "已保存的草稿",
-    "savedEmpty": "儲存後可從這裡繼續編輯。"
+    "savedEmpty": "儲存後可從這裡繼續編輯。",
+    "archive": "歸檔",
+    "restore": "還原"
   },
   "auth": {
     "signIn": "登入",
@@ -581,5 +582,75 @@
     "type": "類型",
     "creating": "建立中…",
     "start": "開始使用"
+  },
+  "errors": {
+    "invalid": "資料格式不正確。",
+    "onlyOwner": "只有負責人可以修改工作區設定。",
+    "nameRequired": "請輸入名稱。",
+    "timeZoneInvalid": "時區無效，請使用 IANA 名稱，例如 Asia/Taipei。",
+    "verticalRequired": "請選擇類型。",
+    "memberNotFound": "找不到你的工作區成員資料。",
+    "kindRequired": "請選擇事項類型。",
+    "itemTitleRequired": "請填寫事項名稱。",
+    "dateInvalid": "日期格式不正確。",
+    "timeInvalid": "時間格式不正確。",
+    "kindSwitch": "已建立的待辦與行程不能互換類型，請另外新增。",
+    "projectNotFound": "找不到這個合作案。",
+    "todoNotFound": "找不到這個待辦。",
+    "eventNotFound": "找不到這個行程。",
+    "itemNotFound": "找不到這筆事項。",
+    "contactNameRequired": "請填寫名稱。",
+    "roleRequired": "請選擇身分。",
+    "emailInvalid": "Email 格式不正確。",
+    "contactNotFound": "找不到這位聯絡人。",
+    "amountNegative": "金額不能是負數。",
+    "amountDecimals": "金額最多兩位小數。",
+    "entryNameRequired": "請填寫紀錄名稱。",
+    "taxRateRange": "稅率需介於 0–100%。",
+    "settledDateRequired": "已收／已付的紀錄需要實際收付日期。",
+    "settledDateFuture": "實際收付日期不能晚於今天。",
+    "paymentNotFound": "找不到這筆紀錄。",
+    "balanceBeforeDeposit": "尾款期限不能早於訂金期限。",
+    "incomeExists": "這個合作案已有請款，請編輯既有款項，避免重複計入。",
+    "splitInvalid": "請設定正數報價與 0–100% 之間的訂金比例。",
+    "splitPartsPositive": "拆分後訂金與尾款都必須大於零。",
+    "projectTitleRequired": "請填寫合作案名稱。",
+    "typeRequired": "請選擇商案類型。",
+    "counterpartyRequired": "請填寫合作方，或從名單選擇。",
+    "counterpartyNotFound": "找不到這位合作方。",
+    "languageRequired": "請選擇回覆使用的語言。",
+    "templateTitleRequired": "請填寫範本名稱。",
+    "templateBodyRequired": "請填寫回覆內容。",
+    "templateNotFound": "找不到這個範本。"
+  },
+  "emails": {
+    "resetSubject": "重設 Talent Biz OS 密碼",
+    "resetBody": "請點擊以下連結重設密碼（1 小時內有效）：\n\n{url}\n\n如果你沒有要求重設密碼，請忽略這封信。",
+    "verifySubject": "確認你的 Talent Biz OS 電子郵件",
+    "verifyBody": "請點擊以下連結確認你的電子郵件（1 小時內有效）：\n\n{url}"
+  },
+  "meta": {
+    "description": "藝人與創作者的商務營運系統"
+  },
+  "eyebrow": {
+    "welcome": "WELCOME TO YOUR WORKSPACE",
+    "nextActions": "Next actions",
+    "revenueMix": "Revenue mix",
+    "pipeline": "Deal pipeline",
+    "replyLibrary": "Your reply library",
+    "draftComposer": "Draft composer",
+    "savedDrafts": "Saved drafts",
+    "quoteCalculator": "Quote calculator",
+    "ledger": "Ledger",
+    "workspace": "Workspace",
+    "language": "Language",
+    "google": "Google & Gmail",
+    "assistant": "Assistant",
+    "account": "Account",
+    "intake": "Intake",
+    "files": "Files & assets",
+    "talentAssistant": "Talent Assistant",
+    "calendar": "Calendar",
+    "workspaceTag": "Workspace"
   }
 }

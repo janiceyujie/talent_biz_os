@@ -13,8 +13,10 @@ async function requestLocale(): Promise<Locale> {
   return matchLocale((await headers()).get("accept-language")) ?? defaultLocale;
 }
 
-export default getRequestConfig(async () => {
-  const locale = await requestLocale();
+// An explicit locale (getTranslations({ locale })) wins: emails and the
+// calendar feed speak the recipient's language, not the request's.
+export default getRequestConfig(async ({ locale: explicit }) => {
+  const locale = isLocale(explicit) ? explicit : await requestLocale();
   return {
     locale,
     messages: await loadMessages(locale),

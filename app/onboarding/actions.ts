@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { errorText } from "@/lib/actions/validation";
 import { getCurrentTalent, requirePerson } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { membership, talent, verticals } from "@/lib/db/schema";
@@ -18,11 +19,12 @@ export async function createTalent(
 ): Promise<OnboardingState> {
   const person = await requirePerson();
   if (await getCurrentTalent(person.personId)) redirect("/");
+  const fail = await errorText();
 
   const name = String(formData.get("name") ?? "").trim();
   const vertical = formData.get("vertical");
-  if (!name) return { error: "請輸入名稱。" };
-  if (!isVertical(vertical)) return { error: "請選擇類型。" };
+  if (!name) return { error: fail("nameRequired") };
+  if (!isVertical(vertical)) return { error: fail("verticalRequired") };
 
   await db.transaction(async (tx) => {
     const [created] = await tx.insert(talent).values({ name, vertical }).returning({ id: talent.id });

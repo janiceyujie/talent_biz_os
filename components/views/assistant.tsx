@@ -6,12 +6,13 @@ import { useTranslations } from "next-intl";
 // prototype's layout so the dashboard reads right; input stays disabled.
 export function AssistantView({ compact = false }: { compact?: boolean }) {
   const t = useTranslations("assistant");
+  const tEyebrow = useTranslations("eyebrow");
   return (
     <section className={`assistant-panel ${compact ? "" : "assistant-expanded"}`}>
       <header>
         <div className="assistant-mark">✦</div>
         <div>
-          <span>Talent Assistant</span>
+          <span>{tEyebrow("talentAssistant")}</span>
           <small>{t("status")}</small>
         </div>
       </header>

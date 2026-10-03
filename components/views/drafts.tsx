@@ -1,13 +1,15 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
+import { archiveTemplate } from "@/lib/actions/templates";
 import { PastReplyError, renderTemplate } from "@/lib/domain/workflow";
-import { useMoney } from "@/lib/i18n/format";
+import { localeNames, toLocale } from "@/lib/i18n/config";
 import { useLabels } from "@/lib/i18n/labels";
 import { projectTypes, type ProjectType } from "@/lib/project-types";
+import { displayName, placeholderKeys, toDisplay, type PlaceholderKey } from "@/lib/templates/placeholders";
 import type { ReplyDraft } from "@/lib/types";
 
 const gmailComposeUrl = (to: string, subject: string, body: string) =>
@@ -16,9 +18,11 @@ const gmailComposeUrl = (to: string, subject: string, body: string) =>
 export function DraftsView({ initialProjectId = "" }: { initialProjectId?: string }) {
   const data = useAppData();
   const t = useTranslations("drafts");
+  const tEyebrow = useTranslations("eyebrow");
   const tTone = useTranslations("tone");
   const labels = useLabels();
-  const money = useMoney(); // the UI language stands in for the template's own until reply_template.language exists
+  const uiLocale = toLocale(useLocale());
+  const [pending, startTransition] = useTransition();
   const [editor, setEditor] = useState<Editor | null>(null);
   const [notice, setNotice] = useState("");
   const initial = data.projects.find((p) => p.id === initialProjectId && !p.archived);
@@ -54,32 +58,30 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
     const template = data.templates.find((x) => x.id === templateId);
     if (!template) return;
     try {
-      const result = renderTemplate(template, source, project, {
-        quote: (amount, rate) => t("quoteValue", { amount: money(amount), rate }),
-        missing: (field) => t("missingValue", { field }),
-      });
-      setBody(result.body);
-      setMode(
-        result.missing.length
-          ? t("appliedMissingMode", { fields: result.missing.join(t("listSeparator")) })
-          : t("appliedMode"),
+      // The reply is written in the template's language; this status line is in the reader's.
+      const result = renderTemplate(template, source, project);
+      const shown = result.missing.map((name) =>
+        placeholderKeys.includes(name as PlaceholderKey) ? displayName(name as PlaceholderKey, uiLocale) : name,
       );
+      setBody(result.body);
+      setMode(result.missing.length ? t("appliedMissingMode", { fields: shown.join(" · ") }) : t("appliedMode"));
     } catch (e) {
       if (e instanceof PastReplyError) setNotice(t("pastReplyRefused"));
       else throw e;
     }
   }
 
-  // The starter template's tokens stay as stored until language-neutral placeholders (i18n step 4).
+  // A starter template in the reader's language, with neutral placeholders (the editor shows them localized).
   const starterTemplate = (type: ProjectType) => ({
     title: t("starterTitle", { type: labels.projectType(type) }),
     projectType: type,
     kind: "template",
+    language: uiLocale,
     tone: tTone("natural"),
     body: t("starterBody", {
-      counterparty: "{{合作方}}",
-      artist: "{{藝人}}",
-      project: "{{案件名稱}}",
+      counterparty: "{{counterparty}}",
+      artist: "{{artist}}",
+      project: "{{project}}",
       questions: labels
         .projectQuestions(type)
         .map((q) => `• ${q}`)
@@ -93,7 +95,7 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
         <section className="surface draft-memory">
           <div className="section-header">
             <div>
-              <span>Your reply library</span>
+              <span>{tEyebrow("replyLibrary")}</span>
               <h2>{t("libraryTitle")}</h2>
             </div>
             <button onClick={() => setEditor({ kind: "template", item: { projectType: type } })}>{t("add")}</button>
@@ -129,9 +131,10 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
                 <strong>{tpl.title}</strong>
               </label>
               <small>
-                {tpl.kind === "template" ? t("kindTemplate") : t("kindPastReply")} · {tpl.tone}
+                {tpl.kind === "template" ? t("kindTemplate") : t("kindPastReply")} · {localeNames[tpl.language]}
+                {tpl.tone ? ` · ${tpl.tone}` : ""}
               </small>
-              <p>{tpl.body.slice(0, 200)}</p>
+              <p>{toDisplay(tpl.body, uiLocale).slice(0, 200)}</p>
               <div className="row-actions">
                 <button className="text-button" onClick={() => setEditor({ kind: "template", item: toRecord(tpl) })}>
                   {t("edit")}
@@ -149,6 +152,18 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
                     {t("saveAsTemplateAndEdit")}
                   </button>
                 )}
+                <button
+                  className="text-button"
+                  disabled={pending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      if (templateId === tpl.id) setTemplateId("");
+                      setNotice((await archiveTemplate(tpl.id, !tpl.archived)) ?? "");
+                    })
+                  }
+                >
+                  {tpl.archived ? t("restore") : t("archive")}
+                </button>
               </div>
             </article>
           ))}
@@ -176,7 +191,7 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
         <section className="surface draft-composer">
           <div className="section-header">
             <div>
-              <span>Draft composer</span>
+              <span>{tEyebrow("draftComposer")}</span>
               <h2>{t("composerTitle", { type: labels.projectType(type) })}</h2>
             </div>
             <button
@@ -297,7 +312,7 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
       <section className="surface padded section-gap">
         <div className="section-header">
           <div>
-            <span>Saved drafts</span>
+            <span>{tEyebrow("savedDrafts")}</span>
             <h2>{t("savedTitle")}</h2>
           </div>
         </div>

@@ -8,18 +8,18 @@ import { db } from "@/lib/db";
 import { auditLog, contact, project } from "@/lib/db/schema";
 import { projectTypeKeys } from "@/lib/project-types";
 import { stages, type Stage } from "@/lib/types";
-import { firstIssue, optionalId, optionalText } from "./validation";
+import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
 const projectInput = z
   .object({
     id: optionalId,
-    title: z.string().trim().min(1, "請填寫合作案名稱。").max(200),
+    title: z.string().trim().min(1, "projectTitleRequired").max(200),
     counterparty: z.string().trim().max(200).default(""),
     counterpartyId: optionalId,
-    type: z.enum(projectTypeKeys, "請選擇商案類型。"),
+    type: z.enum(projectTypeKeys, "typeRequired"),
     stage: z.enum(stages),
-    quotedAmount: z.coerce.number().min(0, "金額不能是負數。").max(9_999_999_999.99).multipleOf(0.01, "金額最多兩位小數。"),
-    taxRate: z.coerce.number().min(0).max(100, "稅率需介於 0–100%。").multipleOf(0.01),
+    quotedAmount: z.coerce.number().min(0, "amountNegative").max(9_999_999_999.99).multipleOf(0.01, "amountDecimals"),
+    taxRate: z.coerce.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
     taxIncluded: z.boolean(),
     deliverables: optionalText,
     rights: optionalText,
@@ -27,13 +27,14 @@ const projectInput = z
     contractNotes: optionalText,
     notes: optionalText,
   })
-  .refine((p) => p.counterpartyId || p.counterparty, { message: "請填寫合作方，或從名單選擇。" });
+  .refine((p) => p.counterpartyId || p.counterparty, { message: "counterpartyRequired" });
 
 /** Create or update a project. Returns an error message, or null on success. */
 export async function saveProject(data: Record<string, unknown>): Promise<string | null> {
   const { person, talent } = await requireTalent();
+  const fail = await errorText();
   const parsed = projectInput.safeParse(data);
-  if (!parsed.success) return firstIssue(parsed.error);
+  if (!parsed.success) return fail(firstIssue(parsed.error));
   const input = parsed.data;
 
   let counterparty = input.counterparty;
@@ -42,7 +43,7 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
       .select({ name: contact.name })
       .from(contact)
       .where(and(eq(contact.id, input.counterpartyId), eq(contact.talentId, talent.id)));
-    if (!linked) return "找不到這位合作方。";
+    if (!linked) return fail("counterpartyNotFound");
     counterparty = linked.name;
   }
 
@@ -83,7 +84,7 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
       .select({ stage: project.stage })
       .from(project)
       .where(and(eq(project.id, input.id), eq(project.talentId, talent.id)));
-    if (!existing) return "找不到這個合作案。";
+    if (!existing) return fail("projectNotFound");
     await tx.update(project).set(values).where(and(eq(project.id, input.id), eq(project.talentId, talent.id)));
     if (existing.stage !== input.stage)
       await logStageChange(tx, talent.id, person.personId, input.id, existing.stage, input.stage);
@@ -95,13 +96,14 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
 
 export async function setProjectStage(id: string, stage: Stage): Promise<string | null> {
   const { person, talent } = await requireTalent();
-  if (!z.uuid().safeParse(id).success || !stages.includes(stage)) return "資料格式不正確。";
+  const fail = await errorText();
+  if (!z.uuid().safeParse(id).success || !stages.includes(stage)) return fail("invalid");
   const failure = await db.transaction(async (tx) => {
     const [existing] = await tx
       .select({ stage: project.stage })
       .from(project)
       .where(and(eq(project.id, id), eq(project.talentId, talent.id)));
-    if (!existing) return "找不到這個合作案。";
+    if (!existing) return fail("projectNotFound");
     if (existing.stage === stage) return null;
     await tx.update(project).set({ stage }).where(and(eq(project.id, id), eq(project.talentId, talent.id)));
     await logStageChange(tx, talent.id, person.personId, id, existing.stage, stage);
@@ -113,13 +115,14 @@ export async function setProjectStage(id: string, stage: Stage): Promise<string 
 
 export async function archiveProject(id: string, archived: boolean): Promise<string | null> {
   const { talent } = await requireTalent();
-  if (!z.uuid().safeParse(id).success) return "資料格式不正確。";
+  const fail = await errorText();
+  if (!z.uuid().safeParse(id).success) return fail("invalid");
   const rows = await db
     .update(project)
     .set({ archivedAt: archived ? new Date() : null })
     .where(and(eq(project.id, id), eq(project.talentId, talent.id)))
     .returning({ id: project.id });
-  if (!rows.length) return "找不到這個合作案。";
+  if (!rows.length) return fail("projectNotFound");
   refresh();
   return null;
 }

@@ -5,7 +5,7 @@ export default async function Page({ searchParams }: PageProps<"/projects">) {
   const { id } = await searchParams;
   return (
     <>
-      <PageHeader title="projects" />
+      <PageHeader titleKey="projects" />
       <ProjectsView selectedId={typeof id === "string" ? id : ""} />
     </>
   );

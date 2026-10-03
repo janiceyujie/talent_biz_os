@@ -9,6 +9,7 @@ import { createCalendarFeed, disableCalendarFeed } from "@/lib/actions/calendar-
 export function CalendarFeedSettings() {
   const data = useAppData();
   const t = useTranslations("calendarFeed");
+  const tEyebrow = useTranslations("eyebrow");
   const [url, setUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +28,7 @@ export function CalendarFeedSettings() {
     <section className="surface padded">
       <div className="section-header">
         <div>
-          <span>Calendar</span>
+          <span>{tEyebrow("calendar")}</span>
           <h2>{t("title")}</h2>
         </div>
         <span className="mock-chip">{data.calendarFeed ? t("on") : t("off")}</span>

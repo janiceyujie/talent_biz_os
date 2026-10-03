@@ -7,7 +7,7 @@ import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { calendarEvent, project, todo } from "@/lib/db/schema";
 import { calendarKinds, type CalendarKind } from "@/lib/types";
-import { firstIssue, optionalId, optionalText } from "./validation";
+import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
 // Calendar kinds that are deadlines (to-dos) rather than things that happen
 // at a time (calendar events), and the to-do type each one maps to.
@@ -30,14 +30,14 @@ const isTimeZone = (value: string) => {
 const itemInput = z.object({
   id: optionalId,
   source: z.enum(["event", "todo"]).optional(),
-  kind: z.enum(calendarKinds, "請選擇事項類型。"),
-  title: z.string().trim().min(1, "請填寫事項名稱。").max(200),
-  date: z.iso.date("日期格式不正確。"),
+  kind: z.enum(calendarKinds, "kindRequired"),
+  title: z.string().trim().min(1, "itemTitleRequired").max(200),
+  date: z.iso.date("dateInvalid"),
   time: z
-    .union([z.literal(""), z.iso.time({ precision: -1, message: "時間格式不正確。" })])
+    .union([z.literal(""), z.iso.time({ precision: -1, message: "timeInvalid" })])
     .optional()
     .transform((v) => v || null),
-  timeZone: z.string().trim().refine(isTimeZone, "時區無效，請使用 IANA 名稱，例如 Asia/Taipei。"),
+  timeZone: z.string().trim().refine(isTimeZone, "timeZoneInvalid"),
   projectId: optionalId,
   location: optionalText,
   notes: optionalText,
@@ -47,18 +47,19 @@ const itemInput = z.object({
 /** Create or update a calendar item; its kind decides whether it's a to-do or an event. */
 export async function saveCalendarItem(data: Record<string, unknown>): Promise<string | null> {
   const { talent } = await requireTalent();
+  const fail = await errorText();
   const parsed = itemInput.safeParse(data);
-  if (!parsed.success) return firstIssue(parsed.error);
+  if (!parsed.success) return fail(firstIssue(parsed.error));
   const input = parsed.data;
   const target = sourceOf(input.kind);
-  if (input.id && input.source && input.source !== target) return "已建立的待辦與行程不能互換類型，請另外新增。";
+  if (input.id && input.source && input.source !== target) return fail("kindSwitch");
 
   if (input.projectId) {
     const [owned] = await db
       .select({ id: project.id })
       .from(project)
       .where(and(eq(project.id, input.projectId), eq(project.talentId, talent.id)));
-    if (!owned) return "找不到這個合作案。";
+    if (!owned) return fail("projectNotFound");
   }
 
   if (target === "todo") {
@@ -80,7 +81,7 @@ export async function saveCalendarItem(data: Record<string, unknown>): Promise<s
         .set(values)
         .where(and(eq(todo.id, input.id), eq(todo.talentId, talent.id)))
         .returning({ id: todo.id });
-      if (!rows.length) return "找不到這個待辦。";
+      if (!rows.length) return fail("todoNotFound");
     }
   } else {
     const values = {
@@ -100,7 +101,7 @@ export async function saveCalendarItem(data: Record<string, unknown>): Promise<s
         .set(values)
         .where(and(eq(calendarEvent.id, input.id), eq(calendarEvent.talentId, talent.id)))
         .returning({ id: calendarEvent.id });
-      if (!rows.length) return "找不到這個行程。";
+      if (!rows.length) return fail("eventNotFound");
     }
   }
   refresh();
@@ -109,13 +110,14 @@ export async function saveCalendarItem(data: Record<string, unknown>): Promise<s
 
 export async function setTodoDone(id: string, done: boolean): Promise<string | null> {
   const { talent } = await requireTalent();
-  if (!z.uuid().safeParse(id).success) return "資料格式不正確。";
+  const fail = await errorText();
+  if (!z.uuid().safeParse(id).success) return fail("invalid");
   const rows = await db
     .update(todo)
     .set({ status: done ? "done" : "open", completedAt: done ? new Date() : null })
     .where(and(eq(todo.id, id), eq(todo.talentId, talent.id)))
     .returning({ id: todo.id });
-  if (!rows.length) return "找不到這個待辦。";
+  if (!rows.length) return fail("todoNotFound");
   refresh();
   return null;
 }
@@ -123,7 +125,8 @@ export async function setTodoDone(id: string, done: boolean): Promise<string | n
 /** Archive or restore. A to-do is archived by dismissing it. */
 export async function archiveCalendarItem(id: string, source: "event" | "todo", archived: boolean): Promise<string | null> {
   const { talent } = await requireTalent();
-  if (!z.uuid().safeParse(id).success) return "資料格式不正確。";
+  const fail = await errorText();
+  if (!z.uuid().safeParse(id).success) return fail("invalid");
   const rows =
     source === "todo"
       ? await db
@@ -136,7 +139,7 @@ export async function archiveCalendarItem(id: string, source: "event" | "todo", 
           .set({ archivedAt: archived ? new Date() : null })
           .where(and(eq(calendarEvent.id, id), eq(calendarEvent.talentId, talent.id)))
           .returning({ id: calendarEvent.id });
-  if (!rows.length) return "找不到這筆事項。";
+  if (!rows.length) return fail("itemNotFound");
   refresh();
   return null;
 }

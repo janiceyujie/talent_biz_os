@@ -12,6 +12,7 @@ import { projectTypes } from "@/lib/project-types";
 export function InboxView() {
   const data = useAppData();
   const t = useTranslations("inbox");
+  const tEyebrow = useTranslations("eyebrow");
   const labels = useLabels();
   const format = useFormatter();
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -23,7 +24,7 @@ export function InboxView() {
       <section className="surface padded">
         <div className="section-header">
           <div>
-            <span>Intake</span>
+            <span>{tEyebrow("intake")}</span>
             <h2>{t("title")}</h2>
           </div>
           <span className="mock-chip">{t("gmailSoon")}</span>

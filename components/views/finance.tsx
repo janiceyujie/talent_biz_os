@@ -6,7 +6,7 @@ import { useAppData } from "@/components/app/app-data";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { archivePayment } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
-import { quote } from "@/lib/domain/money";
+import { quote, supportedCurrencies } from "@/lib/domain/money";
 import { useMoney } from "@/lib/i18n/format";
 import { paymentCash, paymentDate, paymentTotal, summarize } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
@@ -26,6 +26,7 @@ const donutColors = ["var(--lime)", "var(--orange)", "var(--blue)", "var(--viole
 
 export function Revenue({ data, from = "", to = "9999-12-31" }: { data: AppData; from?: string; to?: string }) {
   const t = useTranslations("finance");
+  const tEyebrow = useTranslations("eyebrow");
   const labels = useLabels();
   const money = useMoney();
   const s = summarize(data, from, to);
@@ -41,7 +42,7 @@ export function Revenue({ data, from = "", to = "9999-12-31" }: { data: AppData;
     <section className="surface revenue-card">
       <div className="section-header">
         <div>
-          <span>Revenue mix</span>
+          <span>{tEyebrow("revenueMix")}</span>
           <h2>{t("revenueTitle")}</h2>
         </div>
       </div>
@@ -91,6 +92,7 @@ function csvCell(v: unknown) {
 export function FinanceView() {
   const data = useAppData();
   const t = useTranslations("finance");
+  const tEyebrow = useTranslations("eyebrow");
   const labels = useLabels();
   const money = useMoney();
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -142,7 +144,9 @@ export function FinanceView() {
         <label>
           {t("currency")}
           <select value="TWD" disabled>
-            <option>TWD</option>
+            {supportedCurrencies.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
           </select>
         </label>
         <label>
@@ -168,7 +172,7 @@ export function FinanceView() {
         <section className="surface tax-card">
           <div className="section-header">
             <div>
-              <span>Quote calculator</span>
+              <span>{tEyebrow("quoteCalculator")}</span>
               <h2>{t("calculatorTitle")}</h2>
             </div>
           </div>
@@ -213,7 +217,7 @@ export function FinanceView() {
       <section className="surface ledger-card">
         <div className="section-header">
           <div>
-            <span>Ledger</span>
+            <span>{tEyebrow("ledger")}</span>
             <h2>{t("ledgerTitle")}</h2>
           </div>
           <button onClick={() => setEditor({ kind: "payment" })}>{t("newEntry")}</button>

@@ -1,6 +1,7 @@
 // What screens receive. Shapes follow the planned tables in
 // docs/architecture.md#schema; until a table is built, its list is empty
 // (see lib/data). Dates are local YYYY-MM-DD strings in the talent's time zone.
+import type { Locale } from "@/lib/i18n/config";
 import type { ProjectType } from "@/lib/project-types";
 
 export const stages = [
@@ -101,7 +102,9 @@ export type ReplyTemplate = {
   id: string;
   projectType: ProjectType;
   kind: "template" | "past_reply";
+  language: Locale; // the language the reply is written in, not the UI's
   title: string;
+  /** Stored with language-neutral placeholders ({{counterparty}}); see lib/templates/placeholders. */
   body: string;
   tone: string;
   archived: boolean;

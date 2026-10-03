@@ -11,6 +11,7 @@ import { CalendarFeedSettings } from "./calendar-feed-settings";
 export function SettingsView() {
   const data = useAppData();
   const t = useTranslations("settings");
+  const tEyebrow = useTranslations("eyebrow");
   const tLocale = useTranslations("locale");
   const [state, action, pending] = useActionState<SettingsState, FormData>(updateWorkspace, {});
 
@@ -19,7 +20,7 @@ export function SettingsView() {
       <section className="surface padded">
         <div className="section-header">
           <div>
-            <span>Workspace</span>
+            <span>{tEyebrow("workspace")}</span>
             <h2>{t("workspace")}</h2>
           </div>
         </div>
@@ -49,7 +50,7 @@ export function SettingsView() {
       <section className="surface padded">
         <div className="section-header">
           <div>
-            <span>Language</span>
+            <span>{tEyebrow("language")}</span>
             <h2>{tLocale("heading")}</h2>
           </div>
         </div>
@@ -62,7 +63,7 @@ export function SettingsView() {
       <section className="surface padded">
         <div className="section-header">
           <div>
-            <span>Google & Gmail</span>
+            <span>{tEyebrow("google")}</span>
             <h2>{t("gmailTitle")}</h2>
           </div>
           <span className="mock-chip">{t("comingSoon")}</span>
@@ -74,7 +75,7 @@ export function SettingsView() {
       <section className="surface padded">
         <div className="section-header">
           <div>
-            <span>Assistant</span>
+            <span>{tEyebrow("assistant")}</span>
             <h2>{t("aiTitle")}</h2>
           </div>
         </div>
@@ -85,7 +86,7 @@ export function SettingsView() {
       <section className="surface padded">
         <div className="section-header">
           <div>
-            <span>Account</span>
+            <span>{tEyebrow("account")}</span>
             <h2>{t("account")}</h2>
           </div>
         </div>

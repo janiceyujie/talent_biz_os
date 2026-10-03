@@ -3,7 +3,8 @@ import { and, desc, eq, getTableColumns } from "drizzle-orm";
 import { cache } from "react";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { calendarEvent, contact, membership, payment, project, talent, todo } from "@/lib/db/schema";
+import { calendarEvent, contact, membership, payment, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { toLocale } from "@/lib/i18n/config";
 import { isProjectType } from "@/lib/project-types";
 import { calendarKinds, type AppData, type CalendarItem, type CalendarKind } from "@/lib/types";
 
@@ -18,7 +19,7 @@ const eventKind = (k: string): CalendarKind => (calendarKinds.includes(k as Cale
  */
 export const getAppData = cache(async (): Promise<AppData> => {
   const { person, talent: current } = await requireTalent();
-  const [[talentRow], [memberRow], projectRows, contactRows, paymentRows, eventRows, todoRows] = await Promise.all([
+  const [[talentRow], [memberRow], projectRows, contactRows, paymentRows, eventRows, todoRows, templateRows] = await Promise.all([
     db
       .select({ id: talent.id, name: talent.name, timeZone: talent.timeZone })
       .from(talent)
@@ -37,6 +38,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       .orderBy(desc(payment.recordedOn), desc(payment.createdAt)),
     db.select().from(calendarEvent).where(eq(calendarEvent.talentId, current.id)),
     db.select().from(todo).where(eq(todo.talentId, current.id)).orderBy(todo.createdAt),
+    db.select().from(replyTemplate).where(eq(replyTemplate.talentId, current.id)).orderBy(desc(replyTemplate.updatedAt)),
   ]);
 
   const calendar: CalendarItem[] = [
@@ -133,7 +135,16 @@ export const getAppData = cache(async (): Promise<AppData> => {
       notes: p.notes ?? "",
       archived: p.archivedAt !== null,
     })),
-    templates: [],
+    templates: templateRows.map((t) => ({
+      id: t.id,
+      projectType: isProjectType(t.projectType) ? t.projectType : "other",
+      kind: t.kind,
+      language: toLocale(t.language),
+      title: t.title,
+      body: t.body,
+      tone: t.tone ?? "",
+      archived: t.archivedAt !== null,
+    })),
     drafts: [],
     files: [],
     inbox: [],

@@ -15,6 +15,9 @@ export const LOCALE_COOKIE = "NEXT_LOCALE";
 
 export const isLocale = (value: unknown): value is Locale => locales.includes(value as Locale);
 
+/** A stored or requested value as a supported locale, or the default. */
+export const toLocale = (value: unknown): Locale => (isLocale(value) ? value : defaultLocale);
+
 /** Best supported match for an Accept-Language header, by quality order. */
 export function matchLocale(acceptLanguage: string | null | undefined): Locale | null {
   const ranked = (acceptLanguage ?? "")

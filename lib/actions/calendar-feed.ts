@@ -2,6 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { refresh } from "next/cache";
+import { errorText } from "@/lib/actions/validation";
 import { requireTalent } from "@/lib/auth";
 import { feedUrl, hashFeedToken, newFeedToken } from "@/lib/calendar/feed";
 import { db } from "@/lib/db";
@@ -13,13 +14,14 @@ import { membership } from "@/lib/db/schema";
  */
 export async function createCalendarFeed(): Promise<{ url: string } | { error: string }> {
   const { person, talent } = await requireTalent();
+  const fail = await errorText();
   const token = newFeedToken();
   const rows = await db
     .update(membership)
     .set({ calendarFeedTokenHash: hashFeedToken(token) })
     .where(and(eq(membership.personId, person.personId), eq(membership.talentId, talent.id)))
     .returning({ id: membership.id });
-  if (!rows.length) return { error: "找不到你的工作區成員資料。" };
+  if (!rows.length) return { error: fail("memberNotFound") };
   refresh();
   return { url: feedUrl(token) };
 }

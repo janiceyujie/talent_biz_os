@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/api/calendar/ev
   const { id } = await ctx.params;
   if (!current || !z.uuid().safeParse(id).success) return new Response("Not found", { status: 404 });
 
-  const [event] = await feedEvents(current.id, id);
+  const [event] = await feedEvents(current.id, session.locale, id);
   if (!event) return new Response("Not found", { status: 404 });
   return new Response(buildCalendar([event], { name: current.name, host: new URL(appUrl()).host }), {
     headers: {

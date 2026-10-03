@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { SignOutButton } from "@/components/sign-out-button";
+import { PRODUCT_MONOGRAM, PRODUCT_NAME, SEARCH_SHORTCUT } from "@/lib/brand";
 import { notifications } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
 import { useNotificationText } from "./notification-text";
@@ -19,6 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const data = useAppData();
   const t = useTranslations("shell");
   const tNav = useTranslations("nav");
+  const tEyebrow = useTranslations("eyebrow");
   const notificationText = useNotificationText();
   const labels = useLabels();
   const pathname = usePathname();
@@ -125,10 +127,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         aria-label={tNav("menuLabel")}
       >
         <div className="brand">
-          <span>TB</span>
+          <span>{PRODUCT_MONOGRAM}</span>
           <div>
-            <strong>Talent Business OS</strong>
-            <small>Workspace</small>
+            <strong>{PRODUCT_NAME}</strong>
+            <small>{tEyebrow("workspaceTag")}</small>
           </div>
           <button className="close-nav" aria-label={tNav("closeMenu")} onClick={() => setMobile(false)}>
             <X size={20} />
@@ -198,7 +200,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button className="global-search" onClick={() => setShowSearch(true)}>
             <Search size={17} />
             <span>{t("searchPlaceholder")}</span>
-            <kbd>⌘ K</kbd>
+            <kbd>{SEARCH_SHORTCUT}</kbd>
           </button>
           <div className="top-actions">
             <button

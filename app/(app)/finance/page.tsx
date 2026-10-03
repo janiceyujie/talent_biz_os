@@ -4,7 +4,7 @@ import { FinanceView } from "@/components/views/finance";
 export default function Page() {
   return (
     <>
-      <PageHeader title="finance" />
+      <PageHeader titleKey="finance" />
       <FinanceView />
     </>
   );

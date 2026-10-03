@@ -464,7 +464,8 @@
       "subject": "Subject",
       "recipient": "Recipient",
       "source": "Offer text",
-      "draftBody": "Draft"
+      "draftBody": "Draft",
+      "language": "Reply language"
     },
     "unlinked": "Unlinked",
     "typeIn": "Type it in",
@@ -477,7 +478,8 @@
     "notWired": "This kind of record isn't connected to the database yet — saving is in development.",
     "cancel": "Cancel",
     "saving": "Saving…",
-    "save": "Save"
+    "save": "Save",
+    "languageHelp": "The language this reply is written in — placeholders and quotes fill in that language."
   },
   "tone": {
     "natural": "Natural and professional",
@@ -489,10 +491,7 @@
     "savedDraftMode": "Saved draft",
     "appliedMode": "Template applied",
     "appliedMissingMode": "Template applied · to confirm: {fields}",
-    "listSeparator": ", ",
     "pastReplyRefused": "A past reply is for reference only and can't be applied directly. Save it as a template first, replacing the old project's names, fees, and dates with placeholders.",
-    "quoteValue": "{amount} (incl. tax, {rate}%)",
-    "missingValue": "[to confirm: {field}]",
     "libraryTitle": "Past replies and templates",
     "add": "+ Add",
     "type": "Project type",
@@ -529,7 +528,9 @@
     "openGmail": "Open in Gmail compose",
     "openGmailHelp": "Opens a prefilled Gmail compose window; you review and send it yourself.",
     "savedTitle": "Saved drafts",
-    "savedEmpty": "Saved drafts show up here so you can pick them up again."
+    "savedEmpty": "Saved drafts show up here so you can pick them up again.",
+    "archive": "Archive",
+    "restore": "Restore"
   },
   "auth": {
     "signIn": "Sign in",
@@ -581,5 +582,75 @@
     "type": "Type",
     "creating": "Creating…",
     "start": "Get started"
+  },
+  "errors": {
+    "invalid": "That data isn't in a valid format.",
+    "onlyOwner": "Only the owner can change workspace settings.",
+    "nameRequired": "Enter a name.",
+    "timeZoneInvalid": "Invalid time zone — use an IANA name such as Asia/Taipei.",
+    "verticalRequired": "Choose a type.",
+    "memberNotFound": "Your workspace membership wasn't found.",
+    "kindRequired": "Choose a kind.",
+    "itemTitleRequired": "Enter a title.",
+    "dateInvalid": "That date isn't valid.",
+    "timeInvalid": "That time isn't valid.",
+    "kindSwitch": "An existing to-do can't become an event, or the other way round — add a new one instead.",
+    "projectNotFound": "Project not found.",
+    "todoNotFound": "To-do not found.",
+    "eventNotFound": "Event not found.",
+    "itemNotFound": "Item not found.",
+    "contactNameRequired": "Enter a name.",
+    "roleRequired": "Choose a role.",
+    "emailInvalid": "That email address isn't valid.",
+    "contactNotFound": "Contact not found.",
+    "amountNegative": "Amounts can't be negative.",
+    "amountDecimals": "Amounts can have at most two decimal places.",
+    "entryNameRequired": "Enter an entry name.",
+    "taxRateRange": "The tax rate must be between 0 and 100%.",
+    "settledDateRequired": "Received or paid entries need the date settled.",
+    "settledDateFuture": "The date settled can't be later than today.",
+    "paymentNotFound": "Entry not found.",
+    "balanceBeforeDeposit": "The balance can't be due before the deposit.",
+    "incomeExists": "This project already has payment requests — edit those so nothing is counted twice.",
+    "splitInvalid": "Set a positive quote and a deposit between 0 and 100%.",
+    "splitPartsPositive": "Both deposit and balance must be greater than zero.",
+    "projectTitleRequired": "Enter a project name.",
+    "typeRequired": "Choose a project type.",
+    "counterpartyRequired": "Enter a partner, or pick one from the list.",
+    "counterpartyNotFound": "Partner not found.",
+    "languageRequired": "Choose the language the reply is written in.",
+    "templateTitleRequired": "Enter a template name.",
+    "templateBodyRequired": "Enter the reply text.",
+    "templateNotFound": "Template not found."
+  },
+  "emails": {
+    "resetSubject": "Reset your Talent Biz OS password",
+    "resetBody": "Click this link to reset your password (valid for 1 hour):\n\n{url}\n\nIf you didn't ask to reset your password, you can ignore this email.",
+    "verifySubject": "Confirm your Talent Biz OS email",
+    "verifyBody": "Click this link to confirm your email (valid for 1 hour):\n\n{url}"
+  },
+  "meta": {
+    "description": "The business side of an independent career."
+  },
+  "eyebrow": {
+    "welcome": "WELCOME TO YOUR WORKSPACE",
+    "nextActions": "Next actions",
+    "revenueMix": "Revenue mix",
+    "pipeline": "Deal pipeline",
+    "replyLibrary": "Your reply library",
+    "draftComposer": "Draft composer",
+    "savedDrafts": "Saved drafts",
+    "quoteCalculator": "Quote calculator",
+    "ledger": "Ledger",
+    "workspace": "Workspace",
+    "language": "Language",
+    "google": "Google & Gmail",
+    "assistant": "Assistant",
+    "account": "Account",
+    "intake": "Intake",
+    "files": "Files & assets",
+    "talentAssistant": "Talent Assistant",
+    "calendar": "Calendar",
+    "workspaceTag": "Workspace"
   }
 }

@@ -156,14 +156,14 @@
     "metricReceivable": "Outstanding · TWD",
     "metricReceivableNote": "From recorded outstanding payments",
     "metricActive": "Active projects",
-    "metricActiveNote": "By saved project stage",
+    "metricActiveNote": "Signed · in execution or settlement",
     "metricToday": "Open items today",
     "metricNotices": "Notifications",
     "metricNoticesNote": "Deadlines, to-dos, and overdue payments",
     "nextActions": "Needs attention soon",
     "viewCalendar": "View calendar",
     "nextActionsEmpty": "Nothing due soon. New to-dos will show up here.",
-    "pipeline": "Projects by stage",
+    "pipeline": "Signed projects",
     "viewProjects": "View projects"
   },
   "finance": {
@@ -262,7 +262,33 @@
     "addPayment": "Add linked payment request",
     "paymentLabel": "{title} payment request",
     "archive": "Archive project",
-    "restore": "Restore project"
+    "restore": "Restore project",
+    "phases": "Project phases",
+    "phase": {
+      "negotiation": "Negotiation",
+      "execution": "Execution",
+      "settlement": "Settlement",
+      "ended": "Ended"
+    },
+    "phaseCaption": {
+      "negotiation": "Offers, quotes, and getting to a signature. Replies to messages stay in the inbox.",
+      "execution": "Signed work: track deliverables, schedule, and payment milestones.",
+      "settlement": "After delivery: invoicing, balances, and closed projects.",
+      "ended": "Declined or cancelled projects, kept for reference."
+    },
+    "stageProgress": "Project stages",
+    "stageNote": {
+      "offer": "Just received — confirm the type of work and the basics.",
+      "negotiating": "Replying and settling terms; no execution to-dos yet.",
+      "signed": "Signed — schedule deliverables, travel, and payment milestones.",
+      "in_progress": "Underway — deliverables, travel, and payment milestones are on the to-do list.",
+      "collecting_payment": "Delivered — track invoices, the balance, and costs.",
+      "closed": "Delivery and payments reconciled; the project is done.",
+      "declined": "You turned this offer down.",
+      "cancelled": "The project was cancelled. Handle any remaining payments on their own."
+    },
+    "notSignedNote": "Still in negotiation. Once it's signed (stage 已簽約 / Signed or later), you can add linked to-dos, events, and payments.",
+    "quoteNotSet": "Quote not set"
   },
   "workflow": {
     "section": "Project workflow and payments",
@@ -286,7 +312,8 @@
       "overbilled": "Billed {amount} more than quoted — check for duplicates or an outdated quote",
       "pending": "{amount} still outstanding",
       "shortfall": "Received {amount} less than billed (withholding or fees? please check)",
-      "unpaidCosts": "{count, plural, one {# cost not paid yet} other {# costs not paid yet}}"
+      "unpaidCosts": "{count, plural, one {# cost not paid yet} other {# costs not paid yet}}",
+      "quoteNotSet": "Quote not set yet"
     },
     "allClear": "Recorded to-dos and payments reconcile; still confirm deliverables and contract obligations yourself.",
     "stageNote": "You decide the stage — changing it doesn't record payments or complete to-dos.",
@@ -305,7 +332,9 @@
     "planInvalid": "Check the quote and percentage — both parts must be greater than zero.",
     "planNote": "The balance absorbs rounding. For three or more installments or uneven amounts, add linked payment requests one by one.",
     "cancel": "Cancel",
-    "confirmPlan": "Create two outstanding payments"
+    "confirmPlan": "Create two outstanding payments",
+    "planNeedsSigned": "Set up the deposit and balance once the project is signed.",
+    "planNeedsQuote": "Set the quote first, then split it into deposit and balance."
   },
   "inbox": {
     "title": "Offers to review",
@@ -481,7 +510,9 @@
     "cancel": "Cancel",
     "saving": "Saving…",
     "save": "Save",
-    "languageHelp": "The language this reply is written in — placeholders and quotes fill in that language."
+    "languageHelp": "The language this reply is written in — placeholders and quotes fill in that language.",
+    "quoteHelp": "Leave the amount blank if the fee isn't decided yet; 0 means unpaid.",
+    "signedOnly": "Only signed projects are listed. Linking is optional."
   },
   "tone": {
     "natural": "Natural and professional",
@@ -608,7 +639,10 @@
     "languageRequired": "Choose the language the reply is written in.",
     "templateTitleRequired": "Enter a template name.",
     "templateBodyRequired": "Enter the reply text.",
-    "templateNotFound": "Template not found."
+    "templateNotFound": "Template not found.",
+    "projectNotSigned": "Only signed projects can take new linked to-dos, events, and payments. Move the project to Signed first.",
+    "projectArchived": "This project is archived. Restore it before linking new items.",
+    "quoteNotSet": "Set the project's quote before splitting it."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",

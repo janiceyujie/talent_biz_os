@@ -9,6 +9,8 @@ import { db } from "@/lib/db";
 import { payment, project, talent } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
 import { quote, SplitError, splitPayments } from "@/lib/domain/money";
+import { isSigned } from "@/lib/domain/phases";
+import { checkProjectLink } from "./project-link";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
 const money = z.coerce.number().min(0, "amountNegative").max(9_999_999_999.99).multipleOf(0.01, "amountDecimals");
@@ -50,14 +52,6 @@ async function today(talentId: string) {
   return dateInZone(row.timeZone);
 }
 
-async function ownsProject(talentId: string, projectId: string) {
-  const [row] = await db
-    .select({ id: project.id })
-    .from(project)
-    .where(and(eq(project.id, projectId), eq(project.talentId, talentId)));
-  return Boolean(row);
-}
-
 /** Create or update a payment. Returns an error message, or null on success. */
 export async function savePayment(data: Record<string, unknown>): Promise<string | null> {
   const { talent: current } = await requireTalent();
@@ -66,7 +60,16 @@ export async function savePayment(data: Record<string, unknown>): Promise<string
   if (!parsed.success) return fail(firstIssue(parsed.error));
   const { id, ...input } = parsed.data;
 
-  if (input.projectId && !(await ownsProject(current.id, input.projectId))) return fail("projectNotFound");
+  let currentLink: string | null = null;
+  if (id) {
+    const [row] = await db
+      .select({ projectId: payment.projectId })
+      .from(payment)
+      .where(and(eq(payment.id, id), eq(payment.talentId, current.id)));
+    currentLink = row?.projectId ?? null;
+  }
+  const linkError = await checkProjectLink(current.id, input.projectId, currentLink);
+  if (linkError) return fail(linkError);
   const settled = input.status === "settled";
   if (settled && input.settledDate! > (await today(current.id))) return fail("settledDateFuture");
 
@@ -148,6 +151,9 @@ export async function createPaymentPlan(data: Record<string, unknown>): Promise<
       .where(and(eq(project.id, projectId), eq(project.talentId, current.id)))
       .for("update");
     if (!p) return fail("projectNotFound");
+    if (p.archivedAt) return fail("projectArchived");
+    if (!isSigned(p.stage)) return fail("projectNotSigned");
+    if (p.quotedAmount === null) return fail("quoteNotSet");
     const existing = await tx
       .select({ id: payment.id })
       .from(payment)
@@ -164,7 +170,7 @@ export async function createPaymentPlan(data: Record<string, unknown>): Promise<
 
     let split: ReturnType<typeof splitPayments>;
     try {
-      split = splitPayments(quote(p.quotedAmount ?? 0, p.taxRate, p.taxIncluded).total, percent);
+      split = splitPayments(quote(p.quotedAmount, p.taxRate, p.taxIncluded).total, percent);
     } catch (e) {
       if (e instanceof SplitError) return fail(e.code);
       throw e;

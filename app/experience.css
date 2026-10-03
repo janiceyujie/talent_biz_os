@@ -362,7 +362,7 @@ button:disabled {
 }
 .phase-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr)); /* 洽談, 執行, 結算, 已結束 */
   border-bottom: 1px solid var(--line);
   padding: 16px 18px 0;
   gap: 8px;

@@ -12,6 +12,7 @@ import { saveProject } from "@/lib/actions/projects";
 import { saveTemplate } from "@/lib/actions/templates";
 import { localeNames, locales, toLocale } from "@/lib/i18n/config";
 import { placeholderKeys, placeholderName, toDisplay } from "@/lib/templates/placeholders";
+import { isSigned } from "@/lib/domain/phases";
 import { calendarKinds, contactRoles, stages, type Project } from "@/lib/types";
 import { useAppData } from "./app-data";
 import { Modal } from "./modal";
@@ -58,7 +59,15 @@ const todoKinds: readonly string[] = ["todo", "deliverable", "payment"];
  * One add/edit dialog for every record kind. Saving goes through the kind's
  * server action; kinds without one open read-only with a note.
  */
-export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () => void }) {
+export function RecordEditor({
+  editor,
+  onClose,
+  onSaved,
+}: {
+  editor: Editor;
+  onClose: () => void;
+  onSaved?: (data: RecordData) => void;
+}) {
   const data$ = useAppData();
   const t = useTranslations("editor");
   const tTone = useTranslations("tone");
@@ -76,7 +85,7 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
       counterpartyId: "",
       type: "gig",
       stage: "offer",
-      quotedAmount: 0,
+      quotedAmount: "", // blank = 報價未定
       currency: "TWD",
       taxRate: 5,
       taxIncluded: false,
@@ -170,24 +179,33 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
             max={key === "taxRate" ? 100 : undefined}
             maxLength={200}
             value={String(data[key] ?? "")}
-            onChange={(e) => change(key, type === "number" ? Number(e.target.value) : e.target.value)}
+            // A cleared number stays "" (not set) rather than becoming 0.
+            onChange={(e) =>
+              change(key, type === "number" && e.target.value !== "" ? Number(e.target.value) : e.target.value)
+            }
           />
         )}
       </label>
     );
   }
 
-  const projectLink = () =>
-    field("projectId", t("field.project"), "text", false, [
-      ["", t("unlinked")],
-      ...data$.projects
-        .filter((p) => !p.archived || p.id === data.projectId)
-        .map((p) => [p.id, p.title] as const),
-    ]);
+  // New links go to live, signed projects only (the server checks too); an
+  // item keeps the link it already has.
+  const projectLink = () => (
+    <div>
+      {field("projectId", t("field.project"), "text", false, [
+        ["", t("unlinked")],
+        ...data$.projects
+          .filter((p) => (!p.archived && isSigned(p.stage)) || p.id === data.projectId)
+          .map((p) => [p.id, p.title] as const),
+      ])}
+      <small className="muted">{t("signedOnly")}</small>
+    </div>
+  );
 
-  const pricing = (amountKey: string) => (
+  const pricing = (amountKey: string, amountRequired = true) => (
     <div className="form-grid">
-      {field(amountKey, t("field.amount"), "number", true)}
+      {field(amountKey, t("field.amount"), "number", amountRequired)}
       {field("currency", t("field.currency"), "text", true, [["TWD", "TWD"]])}
       {field("taxRate", t("field.taxRate"), "number", true)}
       {field("taxIncluded", t("field.taxIncluded"), "checkbox")}
@@ -205,7 +223,10 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
           const failure = await onSave(data);
           setPending(false);
           if (failure) setError(failure);
-          else onClose();
+          else {
+            onSaved?.(data);
+            onClose();
+          }
         }}
       >
         {kind === "project" && (
@@ -224,7 +245,8 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
               {field("type", t("field.type"), "text", true, typeOptions)}
               {field("stage", t("field.stage"), "text", true, options(stages, labels.stage))}
             </div>
-            {pricing("quotedAmount")}
+            {pricing("quotedAmount", false)}
+            <p className="muted">{t("quoteHelp")}</p>
             {field("contractNotes", t("field.contractNotes"), "textarea")}
             {field("deliverables", t("field.deliverables"), "textarea")}
             {field("rights", t("field.rights"), "textarea")}

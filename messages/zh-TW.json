@@ -156,14 +156,14 @@
     "metricReceivable": "待收款 · TWD",
     "metricReceivableNote": "依已登錄的待收款計算",
     "metricActive": "進行中的合作案",
-    "metricActiveNote": "依保存的案件階段計算",
+    "metricActiveNote": "已簽約 · 執行與結算中",
     "metricToday": "今日未完成事項",
     "metricNotices": "通知",
     "metricNoticesNote": "期限、待辦與逾期款項",
     "nextActions": "近期需要處理",
     "viewCalendar": "查看行程",
     "nextActionsEmpty": "目前沒有近期到期事項。新增待辦後會出現在這裡。",
-    "pipeline": "案件分布",
+    "pipeline": "已簽約案件",
     "viewProjects": "查看案件"
   },
   "finance": {
@@ -262,7 +262,33 @@
     "addPayment": "新增關聯請款",
     "paymentLabel": "{title} 請款",
     "archive": "歸檔合作案",
-    "restore": "還原合作案"
+    "restore": "還原合作案",
+    "phases": "合作階段",
+    "phase": {
+      "negotiation": "洽談",
+      "execution": "執行",
+      "settlement": "結算",
+      "ended": "已結束"
+    },
+    "phaseCaption": {
+      "negotiation": "邀約、報價與簽約確認。郵件回覆留在進件分類。",
+      "execution": "已簽約的合作，追蹤交付、行程與付款節點。",
+      "settlement": "交付後的請款、尾款與已完成合作。",
+      "ended": "已婉拒或取消的合作，保留紀錄供日後參考。"
+    },
+    "stageProgress": "合作案階段",
+    "stageNote": {
+      "offer": "剛收到邀約，先確認合作類型與基本資訊。",
+      "negotiating": "回覆郵件並確認條件，暫不列入執行待辦。",
+      "signed": "合約完成，可以安排交付、行程與付款節點。",
+      "in_progress": "執行中，交付、行程與付款節點列入待辦。",
+      "collecting_payment": "交付已完成，追蹤請款、尾款與成本。",
+      "closed": "交付與收付均已核對，案件結束。",
+      "declined": "已婉拒這個邀約。",
+      "cancelled": "合作已取消。仍有款項時請另外處理。"
+    },
+    "notSignedNote": "目前仍在洽談階段。切換為「已簽約」之後，才能建立關聯待辦、行程與請款。",
+    "quoteNotSet": "報價未定"
   },
   "workflow": {
     "section": "案件流程與收款",
@@ -286,7 +312,8 @@
       "overbilled": "請款超過報價 {amount}，請確認是否重複或報價尚未更新",
       "pending": "尚有待收款 {amount}",
       "shortfall": "實收較請款少 {amount}（扣繳或手續費？請確認）",
-      "unpaidCosts": "{count} 筆成本尚未支付"
+      "unpaidCosts": "{count} 筆成本尚未支付",
+      "quoteNotSet": "報價未定"
     },
     "allClear": "已登錄的待辦與收付已核對；仍請人工確認交付驗收與合約義務。",
     "stageNote": "階段由你確認，變更階段不會自動記為收款或完成待辦。",
@@ -305,7 +332,9 @@
     "planInvalid": "請確認報價及比例，拆分後兩筆金額都必須大於零。",
     "planNote": "尾款承接四捨五入差額。需要三期以上或不等額付款，可改用新增關聯請款，逐筆登錄。",
     "cancel": "取消",
-    "confirmPlan": "確認建立兩筆待收款"
+    "confirmPlan": "確認建立兩筆待收款",
+    "planNeedsSigned": "簽約後，再安排訂金與尾款。",
+    "planNeedsQuote": "請先確定報價，再拆分訂金與尾款。"
   },
   "inbox": {
     "title": "待確認的邀約",
@@ -481,7 +510,9 @@
     "cancel": "取消",
     "saving": "儲存中…",
     "save": "儲存",
-    "languageHelp": "這則回覆使用的語言；替換欄位與報價會用這個語言填入。"
+    "languageHelp": "這則回覆使用的語言；替換欄位與報價會用這個語言填入。",
+    "quoteHelp": "報價未定可留白；填 0 代表無酬合作。",
+    "signedOnly": "僅列出已簽約的合作案，也可不關聯。"
   },
   "tone": {
     "natural": "自然專業",
@@ -608,7 +639,10 @@
     "languageRequired": "請選擇回覆使用的語言。",
     "templateTitleRequired": "請填寫範本名稱。",
     "templateBodyRequired": "請填寫回覆內容。",
-    "templateNotFound": "找不到這個範本。"
+    "templateNotFound": "找不到這個範本。",
+    "projectNotSigned": "合作案簽約後才能建立關聯的待辦、行程與款項，請先將階段改為「已簽約」。",
+    "projectArchived": "這個合作案已歸檔，請先還原再建立關聯項目。",
+    "quoteNotSet": "請先確定合作案報價，再拆分訂金與尾款。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",

@@ -105,7 +105,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       artist: talentRow.name,
       type: isProjectType(p.type) ? p.type : "other",
       stage: p.stage,
-      quotedAmount: p.quotedAmount ?? 0,
+      quotedAmount: p.quotedAmount,
       currency: "TWD",
       taxRate: p.taxRate,
       taxIncluded: p.taxIncluded,

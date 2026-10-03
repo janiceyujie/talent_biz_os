@@ -5,8 +5,9 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { calendarEvent, project, todo } from "@/lib/db/schema";
+import { calendarEvent, todo } from "@/lib/db/schema";
 import { calendarKinds, type CalendarKind } from "@/lib/types";
+import { checkProjectLink } from "./project-link";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
 // Calendar kinds that are deadlines (to-dos) rather than things that happen
@@ -54,13 +55,20 @@ export async function saveCalendarItem(data: Record<string, unknown>): Promise<s
   const target = sourceOf(input.kind);
   if (input.id && input.source && input.source !== target) return fail("kindSwitch");
 
-  if (input.projectId) {
-    const [owned] = await db
-      .select({ id: project.id })
-      .from(project)
-      .where(and(eq(project.id, input.projectId), eq(project.talentId, talent.id)));
-    if (!owned) return fail("projectNotFound");
+  // Every calendar kind is execution work (events, deliverables, payment due,
+  // custom to-dos), so a new project link needs a signed project. Reply and
+  // follow-up to-dos come from messages, not this form.
+  let currentLink: string | null = null;
+  if (input.id) {
+    const table = target === "todo" ? todo : calendarEvent;
+    const [row] = await db
+      .select({ projectId: table.projectId })
+      .from(table)
+      .where(and(eq(table.id, input.id), eq(table.talentId, talent.id)));
+    currentLink = row?.projectId ?? null;
   }
+  const linkError = await checkProjectLink(talent.id, input.projectId, currentLink);
+  if (linkError) return fail(linkError);
 
   if (target === "todo") {
     const values = {

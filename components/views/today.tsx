@@ -8,9 +8,9 @@ import { useAppData } from "@/components/app/app-data";
 import { RecordEditor, type Editor } from "@/components/app/record-editor";
 import { dateInZone } from "@/lib/domain/dates";
 import { useMoney } from "@/lib/i18n/format";
-import { isActiveProject, notifications, summarize } from "@/lib/domain/workflow";
+import { isSignedOpen, notifications, summarize } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
-import { openStages } from "@/lib/labels";
+import { mainStages } from "@/lib/domain/phases";
 import { useNotificationText } from "@/components/app/notification-text";
 import { AssistantView } from "./assistant";
 import { Metric, Revenue } from "./finance";
@@ -28,6 +28,8 @@ export function TodayView() {
   const alerts = notifications(data);
   const today = dateInZone(data.talent.timeZone);
   const live = data.projects.filter((p) => !p.archived);
+  const signedStages = mainStages.slice(mainStages.indexOf("signed"));
+  const signed = live.filter((p) => signedStages.includes(p.stage));
 
   return (
     <>
@@ -48,7 +50,7 @@ export function TodayView() {
       )}
       <section className="metrics-grid">
         <Metric label={t("metricReceivable")} value={money(summary.receivable)} note={t("metricReceivableNote")} tone="dark" />
-        <Metric label={t("metricActive")} value={String(live.filter(isActiveProject).length)} note={t("metricActiveNote")} />
+        <Metric label={t("metricActive")} value={String(live.filter(isSignedOpen).length)} note={t("metricActiveNote")} />
         <Metric
           label={t("metricToday")}
           value={String(data.calendar.filter((c) => !c.archived && !c.done && c.date === today).length)}
@@ -92,13 +94,13 @@ export function TodayView() {
             <Link href="/projects">{t("viewProjects")}</Link>
           </div>
           <div className="pipeline-bars">
-            {[...openStages, "closed" as const].map((stage) => {
-              const count = live.filter((p) => p.stage === stage).length;
+            {signedStages.map((stage) => {
+              const count = signed.filter((p) => p.stage === stage).length;
               return (
                 <div key={stage}>
                   <span>{labels.stage(stage)}</span>
                   <div>
-                    <i style={{ width: `${(count / Math.max(1, live.length)) * 100}%` }} />
+                    <i style={{ width: `${(count / Math.max(1, signed.length)) * 100}%` }} />
                   </div>
                   <strong>{count}</strong>
                 </div>

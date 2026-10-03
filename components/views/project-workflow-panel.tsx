@@ -9,6 +9,7 @@ import { createPaymentPlan } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
 import { splitPayments } from "@/lib/domain/money";
 import { useMoney } from "@/lib/i18n/format";
+import { isSigned } from "@/lib/domain/phases";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
 import type { Project } from "@/lib/types";
@@ -25,6 +26,7 @@ export function ProjectWorkflowPanel({
 }) {
   const data = useAppData();
   const t = useTranslations("workflow");
+  const tProjects = useTranslations("projects");
   const labels = useLabels();
   const money = useMoney();
   const today = dateInZone(data.talent.timeZone);
@@ -40,13 +42,16 @@ export function ProjectWorkflowPanel({
   const drafts = data.drafts.filter((d) => d.projectId === project.id && !d.archived);
   const files = data.files.filter((f) => f.projectId === project.id && !f.archived);
   const hasIncome = payments.some((p) => p.direction === "in");
+  const quoteSet = project.quotedAmount !== null;
+  const signed = isSigned(project.stage);
 
   let preview: ReturnType<typeof splitPayments> | undefined;
   try {
-    preview = splitPayments(projectQuoteTotal(project), percent);
+    if (quoteSet) preview = splitPayments(projectQuoteTotal(project)!, percent);
   } catch {}
 
   const warnings = [
+    !quoteSet && t("warn.quoteNotSet"),
     !project.details.contractNotes && t("warn.noContract"),
     !project.details.deliverables && t("warn.noDeliverables"),
     !items.length && t("warn.noItems"),
@@ -72,7 +77,7 @@ export function ProjectWorkflowPanel({
       <h3>{t("payments")}</h3>
       <dl>
         {[
-          [t("quoted"), settlement.quoted],
+          [t("quoted"), settlement.quoted ?? tProjects("quoteNotSet")],
           [t("billed"), settlement.billed],
           [t("received"), settlement.received],
           [t("outstanding"), settlement.pending],
@@ -80,18 +85,24 @@ export function ProjectWorkflowPanel({
         ].map(([label, value]) => (
           <div key={String(label)}>
             <dt>{label}</dt>
-            <dd>{money(Number(value))}</dd>
+            <dd>{typeof value === "number" ? money(value) : value}</dd>
           </div>
         ))}
       </dl>
       <button
         className="secondary full"
-        disabled={hasIncome || project.archived || project.quotedAmount <= 0}
+        disabled={hasIncome || project.archived || !signed || !quoteSet || project.quotedAmount! <= 0}
         onClick={() => setPlan(true)}
       >
         {t("createPlan")}
       </button>
-      {hasIncome && <p className="muted">{t("hasIncome")}</p>}
+      {hasIncome ? (
+        <p className="muted">{t("hasIncome")}</p>
+      ) : !signed ? (
+        <p className="muted">{t("planNeedsSigned")}</p>
+      ) : (
+        !quoteSet && <p className="muted">{t("planNeedsQuote")}</p>
+      )}
       <h3>{t("closingCheck")}</h3>
       {warnings.length ? (
         <ul>

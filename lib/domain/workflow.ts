@@ -1,10 +1,10 @@
 // Project workflow rules: settlement, reply templates, summaries, notifications.
 // Pure functions over AppData so they run on the server or in the browser.
 import { projectTypes } from "@/lib/project-types";
-import { openStages } from "@/lib/labels";
 import { contentWords, displayName, placeholderKey, type PlaceholderKey } from "@/lib/templates/placeholders";
 import type { AppData, Payment, Project, ReplyTemplate } from "@/lib/types";
 import { dateInZone } from "./dates";
+import { isSigned } from "./phases";
 import { minorUnits, quote } from "./money";
 
 export const paymentTotal = (p: Pick<Payment, "amount" | "taxRate" | "taxIncluded" | "currency">) =>
@@ -13,8 +13,9 @@ export const paymentTotal = (p: Pick<Payment, "amount" | "taxRate" | "taxInclude
 /** Cash that actually moved for a settled payment: the settled amount, or the full total. */
 export const paymentCash = (p: Payment) => (p.status === "settled" ? (p.settledAmount ?? paymentTotal(p)) : 0);
 
+/** The tax-inclusive quote, or null while the fee isn't decided (報價未定). */
 export const projectQuoteTotal = (p: Project) =>
-  quote(p.quotedAmount, p.taxRate, p.taxIncluded, p.currency).total;
+  p.quotedAmount === null ? null : quote(p.quotedAmount, p.taxRate, p.taxIncluded, p.currency).total;
 
 /**
  * Quoted vs. billed vs. received for one project, plus what still blocks
@@ -27,16 +28,17 @@ export function projectSettlement(data: AppData, project: Project) {
   const units = (n: number) => minorUnits(n, project.currency);
   const sum = (list: Payment[], value: (p: Payment) => number) => list.reduce((n, p) => n + units(value(p)), 0);
   const settled = income.filter((p) => p.status === "settled");
-  const quoted = units(projectQuoteTotal(project));
+  const quoteTotal = projectQuoteTotal(project);
+  const quoted = units(quoteTotal ?? 0);
   const billed = sum(income, paymentTotal);
   const received = sum(settled, paymentCash);
   return {
-    quoted: quoted / 100,
+    quoted: quoteTotal === null ? null : quoted / 100,
     billed: billed / 100,
     received: received / 100,
     pending: sum(income.filter((p) => p.status === "expected"), paymentTotal) / 100,
     shortfall: (sum(settled, paymentTotal) - received) / 100,
-    unbilled: (quoted - billed) / 100,
+    unbilled: quoteTotal === null ? 0 : (quoted - billed) / 100, // nothing to compare while the quote is unset
     openItems: data.calendar.filter((c) => c.projectId === project.id && c.source === "todo" && !c.archived && !c.done),
     unpaidCosts: rows.filter((p) => p.direction === "out" && p.status === "expected"),
   };
@@ -62,7 +64,7 @@ export function renderTemplate(template: ReplyTemplate, source: string, project:
     deliverables: project?.details.deliverables || "",
     rights: project?.details.rights || "",
     next_due: project?.nextAction?.dueDate || "",
-    quote: project && project.quotedAmount > 0 ? words.quote(projectQuoteTotal(project), project.taxRate) : "",
+    quote: project && project.quotedAmount !== null ? words.quote(projectQuoteTotal(project)!, project.taxRate) : "",
   };
   const missing = new Set<string>();
   const body = template.body.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (_, name: string) => {
@@ -99,7 +101,8 @@ export function summarize(data: AppData, from = "", to = "9999-12-31") {
   };
 }
 
-export const isActiveProject = (p: Project) => !p.archived && openStages.includes(p.stage);
+/** Signed and not finished: execution, or settlement still collecting. */
+export const isSignedOpen = (p: Project) => !p.archived && isSigned(p.stage) && p.stage !== "closed";
 
 /** Structured so each screen words it in the active language. */
 export type Notification =

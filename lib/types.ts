@@ -25,7 +25,7 @@ export type Project = {
   artist: string; // display only until manager accounts pick a talent per project
   type: ProjectType;
   stage: Stage;
-  quotedAmount: number;
+  quotedAmount: number | null; // null = 報價未定 (not decided yet), not zero
   currency: "TWD";
   taxRate: number;
   taxIncluded: boolean;

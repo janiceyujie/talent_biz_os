@@ -7,6 +7,7 @@ import { useAppData } from "@/components/app/app-data";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
 import { archiveProject, setProjectStage } from "@/lib/actions/projects";
 import { useMoney } from "@/lib/i18n/format";
+import { isSigned, mainStages, phaseOf, phases, type Phase } from "@/lib/domain/phases";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
 import { projectTypes } from "@/lib/project-types";
@@ -24,22 +25,55 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
   const [type, setType] = useState("all");
   const [archived, setArchived] = useState(false);
   const [selected, setSelected] = useState(selectedId);
+  const [phase, setPhase] = useState<Phase>(() => {
+    const linked = data.projects.find((p) => p.id === selectedId);
+    if (linked) return phaseOf(linked.stage);
+    // Signed work first; otherwise the first phase that has projects.
+    const live = data.projects.filter((p) => !p.archived);
+    const order: Phase[] = ["execution", "negotiation", "settlement", "ended"];
+    return order.find((ph) => live.some((p) => phaseOf(p.stage) === ph)) ?? "execution";
+  });
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const run = (action: () => Promise<string | null>) =>
     startTransition(async () => setError(await action()));
-  const visible = data.projects.filter(
+  const inView = data.projects.filter((p) => p.archived === archived);
+  const visible = inView.filter(
     (p) =>
-      p.archived === archived &&
+      phaseOf(p.stage) === phase &&
       (type === "all" || p.type === type) &&
       `${p.title} ${p.counterparty} ${p.artist}`.toLowerCase().includes(search.toLowerCase()),
   );
   const active = visible.find((p) => p.id === selected) || visible[0];
+  // New linked items need a live, signed project; the server enforces the same rule.
+  const signed = !!active && !active.archived && isSigned(active.stage);
   const compose = (id: string) => router.push(`/drafts?project=${id}`);
+  const quoteText = (p: (typeof data.projects)[number]) => {
+    const total = projectQuoteTotal(p);
+    return total === null ? t("quoteNotSet") : money(total);
+  };
 
   return (
     <div className="deals-layout">
       <section className="surface deals-table-wrap">
+        <div className="phase-tabs" role="group" aria-label={t("phases")}>
+          {phases.map((p, i) => (
+            <button
+              key={p}
+              aria-pressed={phase === p}
+              className={phase === p ? "active" : ""}
+              onClick={() => {
+                setPhase(p);
+                setSelected("");
+              }}
+            >
+              <small>{String(i + 1).padStart(2, "0")}</small>
+              <strong>{t(`phase.${p}`)}</strong>
+              <span>{inView.filter((x) => phaseOf(x.stage) === p).length}</span>
+            </button>
+          ))}
+        </div>
+        <p className="phase-caption">{t(`phaseCaption.${phase}`)}</p>
         <div className="toolbar wrap">
           <input aria-label={t("search")} placeholder={t("searchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} />
           <select aria-label={t("typeFilter")} value={type} onChange={(e) => setType(e.target.value)}>
@@ -83,7 +117,7 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
                     {labels.projectType(p.type)}
                     <small>{labels.stage(p.stage)}</small>
                   </td>
-                  <td>{money(projectQuoteTotal(p))}</td>
+                  <td>{quoteText(p)}</td>
                   <td>{p.nextAction?.dueDate || t("notSet")}</td>
                 </tr>
               ))}
@@ -108,7 +142,18 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
             <select
               value={active.stage}
               disabled={pending || active.archived}
-              onChange={(e) => run(() => setProjectStage(active.id, e.target.value as Stage))}
+              onChange={(e) => {
+                const stage = e.target.value as Stage;
+                run(async () => {
+                  const failure = await setProjectStage(active.id, stage);
+                  // Follow the project to its new phase tab.
+                  if (!failure) {
+                    setPhase(phaseOf(stage));
+                    setSelected(active.id);
+                  }
+                  return failure;
+                });
+              }}
             >
               {stages.map((s) => (
                 <option key={s} value={s}>
@@ -117,6 +162,21 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
               ))}
             </select>
           </label>
+          <ol className="stage-progress" aria-label={t("stageProgress")}>
+            {mainStages.map((stage, i) => {
+              const at = mainStages.indexOf(active.stage); // -1 for declined / cancelled
+              return (
+                <li
+                  key={stage}
+                  aria-current={stage === active.stage ? "step" : undefined}
+                  className={at >= 0 && i < at ? "complete" : stage === active.stage ? "current" : ""}
+                >
+                  {labels.stage(stage)}
+                </li>
+              );
+            })}
+          </ol>
+          <p className="stage-note">{t(`stageNote.${active.stage}`)}</p>
           <div className="deal-summary">
             {(
               [
@@ -141,6 +201,7 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
             </button>
             <button
               className="secondary"
+              disabled={!signed}
               onClick={() =>
                 setEditor({
                   kind: "calendar",
@@ -152,13 +213,14 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
             </button>
             <button
               className="secondary"
+              disabled={!signed}
               onClick={() =>
                 setEditor({
                   kind: "payment",
                   item: {
                     projectId: active.id,
                     label: t("paymentLabel", { title: active.title.slice(0, 190) }),
-                    amount: Math.max(0, projectSettlement(data, active).unbilled),
+                    amount: active.quotedAmount === null ? "" : Math.max(0, projectSettlement(data, active).unbilled),
                     taxRate: active.taxRate,
                     taxIncluded: true,
                   },
@@ -167,6 +229,9 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
             >
               {t("addPayment")}
             </button>
+            {!signed && phaseOf(active.stage) === "negotiation" && (
+              <p className="muted stage-action-note">{t("notSignedNote")}</p>
+            )}
             <button
               className="text-button"
               disabled={pending}
@@ -183,7 +248,14 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
           <ProjectWorkflowPanel key={active.id} project={active} edit={setEditor} compose={compose} />
         </aside>
       )}
-      {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
+      {editor && (
+        <RecordEditor
+          editor={editor}
+          onClose={() => setEditor(null)}
+          // Show a saved project under its phase tab.
+          onSaved={(saved) => editor.kind === "project" && setPhase(phaseOf(saved.stage as Stage))}
+        />
+      )}
     </div>
   );
 }

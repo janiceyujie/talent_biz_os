@@ -18,7 +18,16 @@ const projectInput = z
     counterpartyId: optionalId,
     type: z.enum(projectTypeKeys, "typeRequired"),
     stage: z.enum(stages),
-    quotedAmount: z.coerce.number().min(0, "amountNegative").max(9_999_999_999.99).multipleOf(0.01, "amountDecimals"),
+    // Blank is 報價未定 (not decided), stored as null; 0 is an explicit free project.
+    // "" must be tried first: z.coerce.number() would turn "" into 0.
+    quotedAmount: z
+      .union([
+        z.literal(""),
+        z.null(),
+        z.coerce.number().min(0, "amountNegative").max(9_999_999_999.99).multipleOf(0.01, "amountDecimals"),
+      ])
+      .optional()
+      .transform((v) => (v === "" || v === undefined ? null : v)),
     taxRate: z.coerce.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
     taxIncluded: z.boolean(),
     deliverables: optionalText,

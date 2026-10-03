@@ -10,6 +10,7 @@ import { RecordEditor, type Editor, type RecordData } from "@/components/app/rec
 import { dismissMessage, linkMessageToProject, reanalyzeMessage, submitPastedMessage } from "@/lib/actions/messages";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
+import { detailFieldKeys } from "@/lib/ai/analysis";
 import type { Contact, InboxMessage } from "@/lib/types";
 
 // The review queue: messages the person sent in, each with the model's
@@ -83,7 +84,9 @@ export function InboxView() {
             <div className="mail-item single" key={m.id}>
               <button className={`mail-summary ${message?.id === m.id ? "active" : ""}`} onClick={() => setActive(m.id)}>
                 <small>
-                  <StatusChip status={m.status} /> {t(`channel.${m.channel}`)} ·{" "}
+                  <StatusChip status={m.status} />
+                  {!!m.analysis?.flags.length && <em className="message-status status-flagged">{t("flagChip")}</em>}{" "}
+                  {t(`channel.${m.channel}`)} ·{" "}
                   {format.dateTime(new Date(m.receivedAt), { dateStyle: "medium", timeStyle: "short" })}
                 </small>
                 <strong>{m.analysis?.title || firstLine(m.body) || t("untitled")}</strong>
@@ -123,6 +126,7 @@ function StatusChip({ status }: { status: InboxMessage["status"] }) {
 
 function PasteDialog({ onClose, onSubmitted }: { onClose: () => void; onSubmitted: (id: string, duplicate: boolean) => void }) {
   const t = useTranslations("inbox");
+  const testDataOnly = useAppData().aiTestDataOnly;
   const [text, setText] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -153,6 +157,11 @@ function PasteDialog({ onClose, onSubmitted }: { onClose: () => void; onSubmitte
           />
         </label>
         <p className="muted">{t("pasteHint")}</p>
+        {testDataOnly && (
+          <p className="notice error" role="note">
+            {t("testDataOnly")}
+          </p>
+        )}
         {error && (
           <p className="notice error" role="alert">
             {error}
@@ -279,32 +288,48 @@ function AnalysisView({ analysis: a }: { analysis: NonNullable<InboxMessage["ana
       : `${a.money.currency === "TWD" || !a.money.currency ? money(a.money.amount) : `${a.money.currency} ${a.money.amount}`}${
           a.money.taxIncluded === null ? "" : ` (${a.money.taxIncluded ? t("taxIncluded") : t("taxExcluded")})`
         }`;
-  const rows: [string, string][] = [
-    [t("field.type"), labels.projectType(a.projectType)],
-    [t("field.counterparty"), [a.counterparty.name, a.counterparty.company].filter(Boolean).join(" · ")],
-    [t("field.contact"), [a.counterparty.email, a.counterparty.phone].filter(Boolean).join(" · ")],
-    [t("field.money"), fee || a.money.asStated],
-    [t("field.paymentTerms"), a.paymentTerms],
-    [t("field.replyBy"), a.replyBy],
-    [t("field.venue"), a.gig.venue],
-    [t("field.setLength"), a.gig.setLength],
-    [t("field.loadIn"), a.gig.loadIn],
-    [t("field.equipment"), a.gig.equipment],
-    [t("field.deliverables"), a.deliverables],
-    [t("field.rights"), a.rights],
+  // [label, value, the words it came from]
+  const rows: [string, string, string][] = [
+    [t("field.intent"), labels.intent(a.intent), ""],
+    [t("field.type"), labels.projectType(a.projectType), ""],
+    [t("field.counterparty"), [a.counterparty.name, a.counterparty.company].filter(Boolean).join(" · "), ""],
+    [t("field.contact"), [a.counterparty.email, a.counterparty.phone].filter(Boolean).join(" · "), ""],
+    [t("field.money"), fee || a.money.asStated, fee ? a.money.asStated : ""],
+    [t("field.paymentTerms"), a.paymentTerms, ""],
+    [t("field.replyBy"), a.replyBy, a.replyByStated],
+    ...detailFieldKeys(a)
+      .filter((key) => a.details[key])
+      .map((key): [string, string, string] => [labels.detailField(a.projectType, key), a.details[key].value, a.details[key].asStated]),
   ];
   return (
     <div className="message-analysis">
+      {a.flags.length > 0 && (
+        <div className="notice analysis-flags" role="alert">
+          <strong>{t("flagsTitle")}</strong>
+          <ul>
+            {a.flags.map((f, i) => (
+              <li key={i}>
+                {labels.flag(f.kind)}
+                {f.note && <span className="flag-note"> {f.note}</span>}
+                {f.asStated && <small className="muted stated">{t("statedAs", { text: f.asStated })}</small>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <h3>{t("summary")}</h3>
       <p>{a.summary}</p>
       <h3>{t("facts")}</h3>
       <dl>
         {rows
           .filter(([, value]) => value)
-          .map(([label, value]) => (
+          .map(([label, value, stated]) => (
             <div key={label}>
               <dt>{label}</dt>
-              <dd>{value}</dd>
+              <dd>
+                {value}
+                {stated && stated !== value && <small className="muted stated">{t("statedAs", { text: stated })}</small>}
+              </dd>
             </div>
           ))}
         {a.dates.length > 0 && (
@@ -315,7 +340,7 @@ function AnalysisView({ analysis: a }: { analysis: NonNullable<InboxMessage["ana
                 {a.dates.map((d, i) => (
                   <li key={i}>
                     {d.what}: {[d.date, d.time, d.timeZone].filter(Boolean).join(" ") || d.asStated}
-                    {d.date && d.asStated && <small className="muted"> ({d.asStated})</small>}
+                    {d.date && d.asStated && <small className="muted stated">{t("statedAs", { text: d.asStated })}</small>}
                   </li>
                 ))}
               </ul>
@@ -352,21 +377,25 @@ function AnalysisView({ analysis: a }: { analysis: NonNullable<InboxMessage["ana
 function useProjectPrefill() {
   const data = useAppData();
   const t = useTranslations("inbox");
+  const labels = useLabels();
   return (m: InboxMessage): RecordData => {
     const a = m.analysis!;
     const contact = matchContact(data.contacts, a.counterparty);
     const twd = a.money.amount !== null && (a.money.currency === "TWD" || !a.money.currency);
+    const detail = (key: string) => a.details[key]?.value ?? "";
+    // Fields with a home on the project go there; the rest are listed in the notes.
+    const placed = new Set(["deliverables", "usageRights", "travel"]);
     const notes = [
       t("notesHeading"),
       a.summary,
       a.dates.length ? `${t("field.dates")}: ${a.dates.map((d) => `${d.what} ${[d.date, d.time].filter(Boolean).join(" ") || d.asStated}`).join("; ")}` : "",
       a.paymentTerms && `${t("field.paymentTerms")}: ${a.paymentTerms}`,
       a.replyBy && `${t("field.replyBy")}: ${a.replyBy}`,
-      a.gig.venue && `${t("field.venue")}: ${a.gig.venue}`,
-      a.gig.setLength && `${t("field.setLength")}: ${a.gig.setLength}`,
-      a.gig.loadIn && `${t("field.loadIn")}: ${a.gig.loadIn}`,
-      a.gig.equipment && `${t("field.equipment")}: ${a.gig.equipment}`,
-      [a.counterparty.email, a.counterparty.phone].some(Boolean) && `${t("field.contact")}: ${[a.counterparty.name, a.counterparty.email, a.counterparty.phone].filter(Boolean).join(" · ")}`,
+      ...detailFieldKeys(a)
+        .filter((key) => !placed.has(key) && detail(key))
+        .map((key) => `${labels.detailField(a.projectType, key)}: ${detail(key)}`),
+      [a.counterparty.email, a.counterparty.phone].some(Boolean) &&
+        `${t("field.contact")}: ${[a.counterparty.name, a.counterparty.email, a.counterparty.phone].filter(Boolean).join(" · ")}`,
       !twd && a.money.amount !== null && t("foreignCurrency", { amount: `${a.money.currency} ${a.money.amount}` }),
     ]
       .filter(Boolean)
@@ -381,8 +410,9 @@ function useProjectPrefill() {
       stage: "offer",
       quotedAmount: twd ? a.money.amount! : "",
       taxIncluded: a.money.taxIncluded ?? false,
-      deliverables: a.deliverables,
-      rights: a.rights,
+      deliverables: detail("deliverables"),
+      rights: detail("usageRights"),
+      travel: detail("travel"),
       notes: notes.slice(0, 10_000),
     };
   };

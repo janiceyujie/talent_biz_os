@@ -159,7 +159,7 @@ export type InboxMessage = {
   status: "pending" | "analyzed" | "confirmed" | "dismissed" | "error";
   failure: string | null;
   projectId: string | null;
-  analysis: (MessageAnalysis & { modelVersion: string }) | null;
+  analysis: (MessageAnalysis & { modelVersion: string; promptVersion: string }) | null;
 };
 
 export type AppData = {
@@ -177,6 +177,8 @@ export type AppData = {
   notificationState: NotificationState; // this person's read and snooze marks
   // This person's sign-in methods; googleAccountId is our auth_account row id (what unlinking takes).
   signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };
+  // The model provider may keep what's sent (e.g. a free tier): paste made-up data only.
+  aiTestDataOnly: boolean;
 };
 
 /** Read and snooze marks by notification id (ISO timestamps). */

@@ -182,7 +182,7 @@ The first version never scans a mailbox in the background. Every message arrives
 - It also reopens a problem the per-message design avoids: a connected mailbox can receive mail addressed to more than one project or, for a manager, more than one talent, so it needs a routing step the add-on flow doesn't.
 - Continuous mailbox monitoring (polling or a maintained push subscription) is a standing background cost that runs even when nothing's happening, scaling with total user count — a real, durable difference from the add-on's zero-idle-cost model.
 
-> **Message content is untrusted input regardless of channel.** The extractor returns schema-validated data and has no tools of its own, so nothing inside a message can trigger an action by itself. Every write — a confirmed event, a saved contract — happens only after a person confirms it in the review queue.
+> **Message content is untrusted input regardless of channel.** The extractor returns schema-validated data and has no tools of its own, so nothing inside a message can trigger an action by itself. Invisible characters are stripped before analysis; the model and deterministic checks flag injected instructions, payment-detail requests, hidden text, and inconsistencies, shown as a warning in the inbox. Every write — a confirmed event, a saved contract — happens only after a person confirms it in the review queue. The layers, and the rules future features must keep (never act on model output without a person; drafts never carry payment details from the incoming message), are in [decision 0007](decisions/0007-untrusted-message-content.md).
 
 ## Understanding and project matching
 
@@ -190,7 +190,10 @@ Analysis turns a message into facts. Matching decides which project those facts 
 
 ### Analysis
 
-- One model call, forced into a schema rather than free text, labels the message type and pulls out the core fields, plus the project type's fields (`lib/ai/analysis.ts`). Classifying and extracting can split into two calls later if a cheap triage step pays off. The model sits behind one seam (`lib/ai/model.ts`): a free local model in development, Claude for production — see [decision 0006](decisions/0006-model-provider.md).
+- One model call, forced into a schema rather than free text, labels the message and pulls out the core fields plus the fields for its project type and intent (`lib/ai/analysis.ts`).
+- **Two labels, from registries.** The *intent* is what the message is doing — inquiry, negotiation, confirmation, contract, logistics, payment, cancellation, other (`lib/ai/extraction/intents.ts`) — and decides what filing it should do. The *project type* is what the work is (`lib/project-types`). Each defines its own fields; the prompt and the schema are generated from those definitions, so adding a type or a field is a definition plus its labels, checked by `npm run i18n:check`. Core fields (parties, dates, money, payment terms, reply-by, asks, missing) apply to every message. Each value carries the exact words it came from, shown under it in the inbox.
+- **Prompts are code** (`lib/ai/prompts.ts`): general rules plus the registry definitions, with the week's calendar written out for relative dates. A fingerprint of the prompt and definitions is stored with every analysis (`message_analysis.prompt_version`) beside the model, so results can be compared across changes.
+- **Evals** (`evals/`, `npm run eval:extraction`) score extraction against made-up cases with known answers, through the same function the app uses; run them before and after changing a prompt, field, or model. Classifying and extracting can split into two calls later if a cheap triage step pays off. The model sits behind one seam (`lib/ai/model.ts`): a free local model in development, Claude for production — see [decision 0006](decisions/0006-model-provider.md).
 - Beyond the facts, the analysis records a short summary, what the sender is asking for, and what's missing (no start time, no deposit terms) — the drafter uses the last two directly.
 - Images (screenshots, photos, rendered PDF pages) go through the same extractor using a vision-capable model call rather than a separate OCR step.
 - Every analysis is stored with the model version and a confidence score, versioned per message rather than overwritten — re-running it later doesn't lose the earlier attempt.
@@ -556,11 +559,12 @@ create table message_analysis (
   id             uuid primary key default gen_random_uuid(),
   message_id     uuid not null references message(id) on delete cascade,
   talent_id      uuid not null references talent(id) on delete cascade,
-  message_type   text not null
-                   check (message_type in ('gig_offer','contract','payment_note','other')),
+  intent         text not null                      -- what the message is doing; lib/ai/extraction/intents.ts
+                   check (intent in ('inquiry','negotiation','confirmation','contract','logistics','payment','cancellation','other')),
   analysis       jsonb not null,   -- { summary, facts: core + type fields, asks, missing }
   confidence     numeric(4,3) not null,
-  model_version  text not null,
+  model_version  text not null,                     -- provider and model, e.g. 'gemini:gemini-3.5-flash-lite'
+  prompt_version text not null,                     -- fingerprint of the prompt and field definitions
   created_at     timestamptz not null default now()   -- latest row wins
 );
 

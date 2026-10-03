@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { cache } from "react";
+import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { authAccount, calendarEvent, contact, membership, message, messageAnalysis, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
@@ -129,6 +130,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       appearance: memberRow.appearance,
     },
     calendarFeed: Boolean(memberRow?.feedHash),
+    aiTestDataOnly: process.env.AI_TEST_DATA_ONLY === "1",
     signIn: {
       password: accountRows.some((a) => a.providerId === "credential"),
       googleAccountId: accountRows.find((a) => a.providerId === "google")?.id ?? null,
@@ -211,7 +213,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
         status: m.status,
         failure: m.failure,
         projectId: m.projectId,
-        analysis: a ? { ...a.analysis, modelVersion: a.modelVersion } : null,
+        analysis: a ? { ...upgradeAnalysis(a.analysis), modelVersion: a.modelVersion, promptVersion: a.promptVersion } : null,
       };
     }),
   };

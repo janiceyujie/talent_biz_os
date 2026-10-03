@@ -1,4 +1,9 @@
+// Anything else (其他): only the core fields.
 export const other = {
   key: "other",
   fullSupport: false,
+  extraction: {
+    description: "Work that fits none of the other types: teaching, writing, judging, consulting, and so on.",
+    fields: [{ key: "workDescription", description: "What the work is" }],
+  },
 } as const;

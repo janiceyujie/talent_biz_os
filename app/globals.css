@@ -2831,3 +2831,24 @@ a.disabled {
 .inbox-layout .mail-item.single {
   grid-template-columns: minmax(0, 1fr);
 }
+.message-analysis .stated {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+}
+.notice.analysis-flags {
+  background: #fdecea;
+  border: 1px solid #f2b8b2;
+  color: #7a271f;
+}
+.analysis-flags ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.analysis-flags li + li {
+  margin-top: 6px;
+}
+.message-status.status-flagged {
+  background: #fdecea;
+  color: #a2332b;
+}

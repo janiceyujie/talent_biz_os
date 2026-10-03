@@ -120,6 +120,17 @@
           "q2": "演出長度、彩排與技術需求",
           "q3": "交通住宿由誰負責",
           "q4": "報酬、付款節點與取消安排"
+        },
+        "fields": {
+          "eventName": "活動名稱",
+          "venue": "場地",
+          "city": "城市",
+          "setLength": "演出長度",
+          "loadIn": "進場時間",
+          "soundcheck": "彩排／試音",
+          "equipment": "器材",
+          "hospitality": "餐飲與招待",
+          "travel": "交通住宿"
         }
       },
       "brand_deal": {
@@ -129,6 +140,16 @@
           "q2": "初稿、審稿與上線日期",
           "q3": "授權期間、地區、媒體與投放",
           "q4": "報價、付款節點與排他限制"
+        },
+        "fields": {
+          "brand": "品牌",
+          "campaign": "活動名稱",
+          "platforms": "平台",
+          "deliverables": "交付內容",
+          "schedule": "時程",
+          "usageRights": "使用授權",
+          "exclusivity": "競業限制",
+          "approvals": "審稿與修改"
         }
       },
       "sponsored_post": {
@@ -138,6 +159,16 @@
           "q2": "初稿、修改次數與上線日期",
           "q3": "素材授權、投放與競品限制",
           "q4": "報價、付款節點與產品寄送"
+        },
+        "fields": {
+          "brand": "品牌",
+          "product": "產品",
+          "platforms": "平台",
+          "deliverables": "交付內容",
+          "postingDate": "發布時間",
+          "productShipping": "產品寄送",
+          "revisions": "修改次數",
+          "disclosure": "揭露與折扣碼"
         }
       },
       "licensing": {
@@ -147,6 +178,15 @@
           "q2": "使用期間、地區與媒體",
           "q3": "是否包含改作、轉授權或廣告投放",
           "q4": "授權費與付款節點"
+        },
+        "fields": {
+          "work": "作品",
+          "use": "用途",
+          "media": "媒體",
+          "territory": "地區",
+          "term": "期間",
+          "exclusivity": "專屬性",
+          "credit": "署名"
         }
       },
       "other": {
@@ -156,6 +196,9 @@
           "q2": "日期與合作窗口",
           "q3": "使用範圍",
           "q4": "報價與付款節點"
+        },
+        "fields": {
+          "workDescription": "工作內容"
         }
       }
     },
@@ -167,6 +210,36 @@
       "flight": "飛機",
       "transfer": "接送",
       "other": "其他"
+    },
+    "intent": {
+      "inquiry": "詢問／邀約",
+      "negotiation": "條件討論",
+      "confirmation": "確認",
+      "contract": "合約",
+      "logistics": "行程與安排",
+      "payment": "款項",
+      "cancellation": "取消／延期",
+      "other": "其他"
+    },
+    "intentField": {
+      "proposedChanges": "提議變更",
+      "confirmedTerms": "確認事項",
+      "contractStage": "合約階段",
+      "keyTerms": "主要條款",
+      "changes": "安排與變更",
+      "invoiceRef": "發票／單號",
+      "paymentStatus": "付款狀態",
+      "amountDue": "金額",
+      "reason": "原因",
+      "cancellationFee": "取消費",
+      "newDate": "新日期"
+    },
+    "flag": {
+      "instructions_to_ai": "內含想指示 AI 的文字，已忽略。請對照原始內容自行核對。",
+      "payment_details": "要求付款或提供新的匯款／付款資訊，常見於詐騙。請用你原本就有的聯絡方式向對方確認。",
+      "inconsistency": "內容前後不一致，例如星期與日期不符。",
+      "hidden_text": "含有看不見的字元，可能藏有指示，分析前已移除。",
+      "other": "這則訊息有可疑之處，請多留意。"
     }
   },
   "today": {
@@ -425,12 +498,7 @@
       "money": "報價",
       "paymentTerms": "付款條件",
       "replyBy": "回覆期限",
-      "venue": "場地",
-      "setLength": "演出長度",
-      "loadIn": "進場時間",
-      "equipment": "器材",
-      "deliverables": "交付內容",
-      "rights": "授權"
+      "intent": "訊息性質"
     },
     "taxIncluded": "含稅",
     "taxExcluded": "未稅",
@@ -448,7 +516,11 @@
     "viewProject": "查看合作案",
     "untitled": "未命名訊息",
     "notesHeading": "來自邀約（AI 整理）",
-    "foreignCurrency": "報價為 {amount}，目前僅支援台幣，報價先留白。"
+    "foreignCurrency": "報價為 {amount}，目前僅支援台幣，報價先留白。",
+    "testDataOnly": "開發環境：這個 AI 服務可能保留你貼上的內容。請只貼虛構的測試訊息，不要貼真實的姓名、Email、電話或金額。",
+    "statedAs": "「{text}」",
+    "flagsTitle": "建檔前請留意",
+    "flagChip": "需注意"
   },
   "contacts": {
     "search": "搜尋聯絡人",

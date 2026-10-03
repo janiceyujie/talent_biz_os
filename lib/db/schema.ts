@@ -19,6 +19,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
+import { intentKeys } from "../ai/extraction/intents";
 import { contactRoles, stages as projectStages, transportModes } from "../types"; // relative: drizzle-kit loads this file too
 
 const id = () => uuid().primaryKey().defaultRandom();
@@ -359,7 +360,6 @@ export const calendarEvent = pgTable(
 
 export const messageChannels = ["paste", "upload", "gmail_addon", "forwarded_email"] as const;
 export const messageStatuses = ["pending", "analyzed", "confirmed", "dismissed", "error"] as const;
-export const messageTypes = ["gig_offer", "contract", "payment_note", "other"] as const;
 
 export const message = pgTable(
   "message",
@@ -401,15 +401,16 @@ export const messageAnalysis = pgTable(
     talentId: uuid()
       .notNull()
       .references(() => talent.id, { onDelete: "cascade" }),
-    messageType: text({ enum: messageTypes }).notNull(),
+    intent: text({ enum: intentKeys }).notNull(), // what the message is doing — lib/ai/extraction/intents.ts
     analysis: jsonb().$type<MessageAnalysis>().notNull(), // summary, facts, asks, missing — lib/ai/analysis.ts
     confidence: numeric({ precision: 4, scale: 3, mode: "number" }).notNull(),
-    modelVersion: text().notNull(), // provider and model, e.g. "ollama:qwen3:8b"
+    modelVersion: text().notNull(), // provider and model, e.g. "gemini:gemini-3.5-flash"
+    promptVersion: text().notNull(), // fingerprint of the prompt and field definitions — lib/ai/prompts.ts
     createdAt: createdAt(), // latest row wins
   },
   (t) => [
     index("message_analysis_message_idx").on(t.messageId, t.createdAt),
-    check("message_analysis_type_check", oneOf(t.messageType, messageTypes)),
+    check("message_analysis_intent_check", oneOf(t.intent, intentKeys)),
     check("message_analysis_confidence_check", sql`${t.confidence} between 0 and 1`),
   ],
 ).enableRLS();

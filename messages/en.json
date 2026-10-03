@@ -120,6 +120,17 @@
           "q2": "Set length, rehearsal, and tech requirements",
           "q3": "Who covers travel and accommodation",
           "q4": "Fee, payment schedule, and cancellation terms"
+        },
+        "fields": {
+          "eventName": "Event",
+          "venue": "Venue",
+          "city": "City",
+          "setLength": "Set length",
+          "loadIn": "Load-in",
+          "soundcheck": "Soundcheck",
+          "equipment": "Equipment",
+          "hospitality": "Hospitality",
+          "travel": "Travel & stay"
         }
       },
       "brand_deal": {
@@ -129,6 +140,16 @@
           "q2": "Drafts, review, and go-live dates",
           "q3": "Usage rights: duration, territory, media, and paid promotion",
           "q4": "Fee, payment schedule, and exclusivity"
+        },
+        "fields": {
+          "brand": "Brand",
+          "campaign": "Campaign",
+          "platforms": "Platforms",
+          "deliverables": "Deliverables",
+          "schedule": "Schedule",
+          "usageRights": "Usage rights",
+          "exclusivity": "Exclusivity",
+          "approvals": "Approvals"
         }
       },
       "sponsored_post": {
@@ -138,6 +159,16 @@
           "q2": "Drafts, revision rounds, and go-live date",
           "q3": "Content usage, paid promotion, and competitor restrictions",
           "q4": "Fee, payment schedule, and product shipping"
+        },
+        "fields": {
+          "brand": "Brand",
+          "product": "Product",
+          "platforms": "Platforms",
+          "deliverables": "Deliverables",
+          "postingDate": "Posting date",
+          "productShipping": "Product shipping",
+          "revisions": "Revisions",
+          "disclosure": "Disclosure & codes"
         }
       },
       "licensing": {
@@ -147,6 +178,15 @@
           "q2": "Duration, territory, and media",
           "q3": "Whether adaptation, sublicensing, or paid promotion is included",
           "q4": "License fee and payment schedule"
+        },
+        "fields": {
+          "work": "Work",
+          "use": "Use",
+          "media": "Media",
+          "territory": "Territory",
+          "term": "Term",
+          "exclusivity": "Exclusivity",
+          "credit": "Credit"
         }
       },
       "other": {
@@ -156,6 +196,9 @@
           "q2": "Dates and point of contact",
           "q3": "Usage scope",
           "q4": "Fee and payment schedule"
+        },
+        "fields": {
+          "workDescription": "Work"
         }
       }
     },
@@ -167,6 +210,36 @@
       "flight": "Flight",
       "transfer": "Transfer",
       "other": "Other"
+    },
+    "intent": {
+      "inquiry": "Inquiry / offer",
+      "negotiation": "Negotiation",
+      "confirmation": "Confirmation",
+      "contract": "Contract",
+      "logistics": "Logistics",
+      "payment": "Payment",
+      "cancellation": "Cancellation / postponement",
+      "other": "Other"
+    },
+    "intentField": {
+      "proposedChanges": "Proposed changes",
+      "confirmedTerms": "Confirmed terms",
+      "contractStage": "Contract stage",
+      "keyTerms": "Key terms",
+      "changes": "Arrangements / changes",
+      "invoiceRef": "Invoice / order no.",
+      "paymentStatus": "Payment status",
+      "amountDue": "Amount",
+      "reason": "Reason",
+      "cancellationFee": "Cancellation fee",
+      "newDate": "New date"
+    },
+    "flag": {
+      "instructions_to_ai": "Contains text aimed at an AI. It was ignored — check the details against the original yourself.",
+      "payment_details": "Asks for a payment or gives new payment details — a common fraud pattern. Confirm with the sender using contact details you already have.",
+      "inconsistency": "Something doesn't add up, such as a weekday that doesn't match the date.",
+      "hidden_text": "Contained invisible characters, which can hide instructions; they were removed before analysis.",
+      "other": "Something here looks off — take a closer look."
     }
   },
   "today": {
@@ -425,12 +498,7 @@
       "money": "Fee",
       "paymentTerms": "Payment terms",
       "replyBy": "Reply by",
-      "venue": "Venue",
-      "setLength": "Set length",
-      "loadIn": "Load-in",
-      "equipment": "Equipment",
-      "deliverables": "Deliverables",
-      "rights": "Rights"
+      "intent": "What it's about"
     },
     "taxIncluded": "incl. tax",
     "taxExcluded": "excl. tax",
@@ -448,7 +516,11 @@
     "viewProject": "Open project",
     "untitled": "Untitled message",
     "notesHeading": "From the offer (AI summary)",
-    "foreignCurrency": "Fee stated as {amount} — only TWD is supported for now, so the quote is left blank."
+    "foreignCurrency": "Fee stated as {amount} — only TWD is supported for now, so the quote is left blank.",
+    "testDataOnly": "Development setup: this AI service may keep what you paste. Paste made-up test messages only — no real names, emails, phone numbers, or fees.",
+    "statedAs": "“{text}”",
+    "flagsTitle": "Check before you file",
+    "flagChip": "Check"
   },
   "contacts": {
     "search": "Search contacts",

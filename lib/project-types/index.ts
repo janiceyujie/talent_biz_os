@@ -1,5 +1,6 @@
 // The project type registry: one file per type. Adding a type is adding a
 // file here, not a migration (docs/architecture.md, "Project types").
+import type { FieldDefinition } from "@/lib/ai/extraction/fields";
 import { brandDeal } from "./brand-deal";
 import { gig } from "./gig";
 import { licensing } from "./licensing";
@@ -12,6 +13,8 @@ export type ProjectTypeDefinition = {
   key: string;
   /** Full fields and AI extraction ship for this type in the MVP. */
   fullSupport: boolean;
+  /** What the model is told about this type, and the fields it extracts for it (lib/ai/extraction). */
+  extraction: { description: string; fields: readonly FieldDefinition[] };
 };
 
 export const projectTypes = [gig, brandDeal, sponsoredPost, licensing, other] as const;

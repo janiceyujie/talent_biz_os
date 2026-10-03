@@ -19,7 +19,16 @@ export function Modal({ title, children, onClose }: { title: string; children: R
     };
   }, []);
   return (
-    <dialog ref={ref} className="modal" aria-labelledby={titleId} onCancel={onClose}>
+    <dialog
+      ref={ref}
+      className="modal"
+      aria-labelledby={titleId}
+      // Escape asks the owner to close rather than closing natively, so a form can hold it open.
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
       <header>
         <h2 id={titleId}>{title}</h2>
         <button className="icon-button" aria-label={t("close")} onClick={onClose}>

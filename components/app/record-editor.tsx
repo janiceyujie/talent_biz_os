@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
 import { projectTypes } from "@/lib/project-types";
@@ -24,6 +24,7 @@ import {
   type TransportMode,
 } from "@/lib/types";
 import { useAppData } from "./app-data";
+import { ContactPicker } from "./contact-picker";
 import { Modal } from "./modal";
 
 export type RecordData = Record<string, string | number | boolean>;
@@ -157,6 +158,21 @@ export function RecordEditor({
     return initial;
   });
   const [pending, setPending] = useState(false);
+  // Unsaved-change protection: closing an edited form asks first.
+  const [initialData] = useState(data);
+  const dirty = JSON.stringify(data) !== JSON.stringify(initialData);
+  const [confirming, setConfirming] = useState(false);
+  const requestClose = () => {
+    if (pending) return; // a save in flight decides the outcome
+    if (dirty) setConfirming(true);
+    else onClose();
+  };
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
   const travel = kind === "calendar" && data.kind === "travel";
   const stay = kind === "calendar" && data.kind === "accommodation";
   const [error, setError] = useState<string | null>(null);
@@ -239,7 +255,7 @@ export function RecordEditor({
   );
 
   return (
-    <Modal title={t(editor.item?.id ? "titleEdit" : "titleNew", { kind })} onClose={onClose}>
+    <Modal title={t(editor.item?.id ? "titleEdit" : "titleNew", { kind })} onClose={requestClose}>
       <form
         className="editor-form"
         onSubmit={async (e) => {
@@ -255,204 +271,219 @@ export function RecordEditor({
           }
         }}
       >
-        {kind === "project" && (
-          <>
-            {field("title", t("field.projectTitle"), "text", true)}
-            <div className="form-grid">
-              <div>
-                {field("counterpartyId", t("field.counterpartyList"), "text", false, [
-                  ["", t("typeIn")],
-                  ...data$.contacts
-                    .filter((c) => !c.archived || c.id === data.counterpartyId)
-                    .map((c) => [c.id, c.name] as const),
-                ])}
-                {!data.counterpartyId && field("counterparty", t("field.counterparty"))}
+        {/* Locked while saving, so what's saved is what's on screen. */}
+        <fieldset className="editor-fields" disabled={pending}>
+          {kind === "project" && (
+            <>
+              {field("title", t("field.projectTitle"), "text", true)}
+              <div className="form-grid">
+                <div>
+                  <ContactPicker
+                    label={t("field.counterparty")}
+                    contacts={data$.contacts}
+                    name={String(data.counterparty ?? "")}
+                    contactId={String(data.counterpartyId ?? "")}
+                    onChange={({ name, contactId }) => setData((d) => ({ ...d, counterparty: name, counterpartyId: contactId }))}
+                  />
+                </div>
+                {field("type", t("field.type"), "text", true, typeOptions)}
+                {field("stage", t("field.stage"), "text", true, options(stages, labels.stage))}
               </div>
-              {field("type", t("field.type"), "text", true, typeOptions)}
-              {field("stage", t("field.stage"), "text", true, options(stages, labels.stage))}
-            </div>
-            {pricing("quotedAmount", false)}
-            <p className="muted">{t("quoteHelp")}</p>
-            {field("contractNotes", t("field.contractNotes"), "textarea")}
-            {field("deliverables", t("field.deliverables"), "textarea")}
-            {field("rights", t("field.rights"), "textarea")}
-            {field("travel", t("field.travel"), "textarea")}
-            {field("notes", t("field.notes"), "textarea")}
-          </>
-        )}
-        {kind === "contact" && (
-          <>
-            {field("name", t("field.name"), "text", true)}
-            {field("role", t("field.role"), "text", true, options(contactRoles, labels.contactRole))}
-            {field("company", t("field.company"))}
-            <div className="form-grid">
-              {field("email", t("field.email"), "email")}
-              {field("phone", t("field.phone"), "tel")}
-            </div>
-            {field("notes", t("field.notes"), "textarea")}
-          </>
-        )}
-        {kind === "calendar" && (
-          <>
-            {field("title", t("field.itemTitle"), "text", true)}
-            <div className="form-grid">
-              {field("date", t(travel ? "field.departDate" : stay ? "field.checkInDate" : "field.date"), "date", true)}
-              {field("time", t(travel ? "field.departTime" : stay ? "field.checkInTime" : "field.time"), "time", travel || stay)}
-              {field("timeZone", t("field.timeZone"), "text", true, undefined, "time-zones")}
-              {field(
-                "kind",
-                t("field.kind"),
-                "text",
-                true,
-                // An existing item can't move between to-dos and events.
-                options(calendarKinds, labels.calendarKind).filter(
-                  ([k]) => !data.source || todoKinds.includes(k) === (data.source === "todo"),
-                ),
-              )}
-            </div>
-            {projectLink()}
-            {travel && (
-              <>
-                <div className="form-grid">
-                  {field("transportMode", t("field.transportMode"), "text", true, options(transportModes, labels.transportMode))}
-                  {field("operator", t("field.operator"))}
-                  {field("serviceNumber", t("field.serviceNumber"))}
-                  {field("seat", t("field.seat"))}
-                </div>
-                {field("location", t("field.departFrom"), "text", false, undefined, "places")}
-                {field("destination", t("field.destination"), "text", false, undefined, "places")}
-              </>
-            )}
-            {stay && (
-              <>
-                {field("hotelName", t("field.hotelName"), "text", true)}
-                {field("location", t("field.hotelAddress"))}
-              </>
-            )}
-            {(travel || stay) && (
-              <>
-                <div className="form-grid">
-                  {field("endDate", t(stay ? "field.checkOutDate" : "field.arriveDate"), "date")}
-                  {field("endTime", t(stay ? "field.checkOutTime" : "field.arriveTime"), "time", !!data.endDate)}
-                  {field("endTimeZone", t("field.endTimeZone"), "text", !!data.endDate, undefined, "time-zones")}
-                </div>
-                {!!(data.endDate || data.endTime || data.endTimeZone) && (
-                  <button
-                    type="button"
-                    className="text-button left"
-                    onClick={() => setData((d) => ({ ...d, endDate: "", endTime: "", endTimeZone: "" }))}
-                  >
-                    {t("clearEnd")}
-                  </button>
+              {pricing("quotedAmount", false)}
+              <p className="muted">{t("quoteHelp")}</p>
+              {field("contractNotes", t("field.contractNotes"), "textarea")}
+              {field("deliverables", t("field.deliverables"), "textarea")}
+              {field("rights", t("field.rights"), "textarea")}
+              {field("travel", t("field.travel"), "textarea")}
+              {field("notes", t("field.notes"), "textarea")}
+            </>
+          )}
+          {kind === "contact" && (
+            <>
+              {field("name", t("field.name"), "text", true)}
+              {field("role", t("field.role"), "text", true, options(contactRoles, labels.contactRole))}
+              {field("company", t("field.company"))}
+              <div className="form-grid">
+                {field("email", t("field.email"), "email")}
+                {field("phone", t("field.phone"), "tel")}
+              </div>
+              {field("notes", t("field.notes"), "textarea")}
+            </>
+          )}
+          {kind === "calendar" && (
+            <>
+              {field("title", t("field.itemTitle"), "text", true)}
+              <div className="form-grid">
+                {field("date", t(travel ? "field.departDate" : stay ? "field.checkInDate" : "field.date"), "date", true)}
+                {field("time", t(travel ? "field.departTime" : stay ? "field.checkInTime" : "field.time"), "time", travel || stay)}
+                {field("timeZone", t("field.timeZone"), "text", true, undefined, "time-zones")}
+                {field(
+                  "kind",
+                  t("field.kind"),
+                  "text",
+                  true,
+                  // An existing item can't move between to-dos and events.
+                  options(calendarKinds, labels.calendarKind).filter(
+                    ([k]) => !data.source || todoKinds.includes(k) === (data.source === "todo"),
+                  ),
                 )}
-                <p className="muted">{t("travelHelp")}</p>
-                <datalist id="time-zones">
-                  {timeZoneSuggestions().map((z) => (
-                    <option key={z} value={z} />
-                  ))}
-                </datalist>
-                <datalist id="places">
-                  {placeSuggestions(
-                    (data.transportMode as TransportMode | "") || "",
-                    uiLocale,
-                    data$.calendar.flatMap((c) => (c.kind === "travel" ? [c.location, c.travel?.destination ?? ""] : [])),
-                  ).map((place) => (
-                    <option key={place} value={place} />
-                  ))}
-                </datalist>
-              </>
-            )}
-            {!todoKinds.includes(String(data.kind)) && !travel && !stay && field("location", t("field.location"))}
-            {field("notes", t("field.notes"), "textarea")}
-            {todoKinds.includes(String(data.kind)) && field("done", t("field.done"), "checkbox")}
-          </>
-        )}
-        {kind === "payment" && (
-          <>
-            {field("label", t("field.label"), "text", true)}
-            {projectLink()}
-            <div className="form-grid">
-              {field("direction", t("field.direction"), "text", true, options(["in", "out"] as const, labels.direction))}
-              {field("recordedDate", t("field.recordedDate"), "date", true)}
-              {field("dueDate", t("field.dueDate"), "date")}
-              {field(
-                "installment",
-                t("field.installment"),
-                "text",
-                true,
-                options(["regular", "deposit", "balance"] as const, labels.installment),
+              </div>
+              {projectLink()}
+              {travel && (
+                <>
+                  <div className="form-grid">
+                    {field("transportMode", t("field.transportMode"), "text", true, options(transportModes, labels.transportMode))}
+                    {field("operator", t("field.operator"))}
+                    {field("serviceNumber", t("field.serviceNumber"))}
+                    {field("seat", t("field.seat"))}
+                  </div>
+                  {field("location", t("field.departFrom"), "text", false, undefined, "places")}
+                  {field("destination", t("field.destination"), "text", false, undefined, "places")}
+                </>
               )}
-              {field(
-                "status",
-                t("field.status"),
-                "text",
-                true,
-                options(["expected", "settled"] as const, (status) =>
-                  labels.paymentStatus({ status, direction: data.direction === "out" ? "out" : "in" }),
-                ),
+              {stay && (
+                <>
+                  {field("hotelName", t("field.hotelName"), "text", true)}
+                  {field("location", t("field.hotelAddress"))}
+                </>
               )}
-              {field("invoiceRef", t("field.invoiceRef"))}
-              {data.status === "settled" && field("settledDate", t("field.settledDate"), "date", true)}
-              {data.status === "settled" && field("settledAmount", t("field.settledAmount"), "number")}
-            </div>
-            <p className="muted">
-              {t("paymentHelp")}
-            </p>
-            {pricing("amount")}
-            {field("notes", t("field.notes"), "textarea")}
-          </>
-        )}
-        {kind === "template" && (
-          <>
-            {field("title", t("field.templateTitle"), "text", true)}
-            <div className="form-grid">
+              {(travel || stay) && (
+                <>
+                  <div className="form-grid">
+                    {field("endDate", t(stay ? "field.checkOutDate" : "field.arriveDate"), "date")}
+                    {field("endTime", t(stay ? "field.checkOutTime" : "field.arriveTime"), "time", !!data.endDate)}
+                    {field("endTimeZone", t("field.endTimeZone"), "text", !!data.endDate, undefined, "time-zones")}
+                  </div>
+                  {!!(data.endDate || data.endTime || data.endTimeZone) && (
+                    <button
+                      type="button"
+                      className="text-button left"
+                      onClick={() => setData((d) => ({ ...d, endDate: "", endTime: "", endTimeZone: "" }))}
+                    >
+                      {t("clearEnd")}
+                    </button>
+                  )}
+                  <p className="muted">{t("travelHelp")}</p>
+                  <datalist id="time-zones">
+                    {timeZoneSuggestions().map((z) => (
+                      <option key={z} value={z} />
+                    ))}
+                  </datalist>
+                  <datalist id="places">
+                    {placeSuggestions(
+                      (data.transportMode as TransportMode | "") || "",
+                      uiLocale,
+                      data$.calendar.flatMap((c) => (c.kind === "travel" ? [c.location, c.travel?.destination ?? ""] : [])),
+                    ).map((place) => (
+                      <option key={place} value={place} />
+                    ))}
+                  </datalist>
+                </>
+              )}
+              {!todoKinds.includes(String(data.kind)) && !travel && !stay && field("location", t("field.location"))}
+              {field("notes", t("field.notes"), "textarea")}
+              {todoKinds.includes(String(data.kind)) && field("done", t("field.done"), "checkbox")}
+            </>
+          )}
+          {kind === "payment" && (
+            <>
+              {field("label", t("field.label"), "text", true)}
+              {projectLink()}
+              <div className="form-grid">
+                {field("direction", t("field.direction"), "text", true, options(["in", "out"] as const, labels.direction))}
+                {field("recordedDate", t("field.recordedDate"), "date", true)}
+                {field("dueDate", t("field.dueDate"), "date")}
+                {field(
+                  "installment",
+                  t("field.installment"),
+                  "text",
+                  true,
+                  options(["regular", "deposit", "balance"] as const, labels.installment),
+                )}
+                {field(
+                  "status",
+                  t("field.status"),
+                  "text",
+                  true,
+                  options(["expected", "settled"] as const, (status) =>
+                    labels.paymentStatus({ status, direction: data.direction === "out" ? "out" : "in" }),
+                  ),
+                )}
+                {field("invoiceRef", t("field.invoiceRef"))}
+                {data.status === "settled" && field("settledDate", t("field.settledDate"), "date", true)}
+                {data.status === "settled" && field("settledAmount", t("field.settledAmount"), "number")}
+              </div>
+              <p className="muted">
+                {t("paymentHelp")}
+              </p>
+              {pricing("amount")}
+              {field("notes", t("field.notes"), "textarea")}
+            </>
+          )}
+          {kind === "template" && (
+            <>
+              {field("title", t("field.templateTitle"), "text", true)}
+              <div className="form-grid">
+                {field("projectType", t("field.type"), "text", true, typeOptions)}
+                {field("kind", t("field.templateKind"), "text", true, [
+                  ["past_reply", t("kind.pastReply")],
+                  ["template", t("kind.template")],
+                ])}
+                {field(
+                  "language",
+                  t("field.language"),
+                  "text",
+                  true,
+                  locales.map((l) => [l, localeNames[l]] as const),
+                )}
+              </div>
+              <p className="muted">{t("languageHelp")}</p>
+              {field("tone", t("field.tone"))}
+              {field("body", t("field.body"), "textarea", true)}
+              <p className="muted">
+                {t("templateHelp", {
+                  placeholders: placeholderKeys.map((key) => placeholderName(key, uiLocale)).join(" "),
+                })}
+              </p>
+            </>
+          )}
+          {kind === "draft" && (
+            <>
+              {projectLink()}
+              {field("subject", t("field.subject"), "text", true)}
+              {field("recipient", t("field.recipient"), "email")}
               {field("projectType", t("field.type"), "text", true, typeOptions)}
-              {field("kind", t("field.templateKind"), "text", true, [
-                ["past_reply", t("kind.pastReply")],
-                ["template", t("kind.template")],
-              ])}
-              {field(
-                "language",
-                t("field.language"),
-                "text",
-                true,
-                locales.map((l) => [l, localeNames[l]] as const),
-              )}
-            </div>
-            <p className="muted">{t("languageHelp")}</p>
-            {field("tone", t("field.tone"))}
-            {field("body", t("field.body"), "textarea", true)}
-            <p className="muted">
-              {t("templateHelp", {
-                placeholders: placeholderKeys.map((key) => placeholderName(key, uiLocale)).join(" "),
-              })}
-            </p>
-          </>
-        )}
-        {kind === "draft" && (
-          <>
-            {projectLink()}
-            {field("subject", t("field.subject"), "text", true)}
-            {field("recipient", t("field.recipient"), "email")}
-            {field("projectType", t("field.type"), "text", true, typeOptions)}
-            {field("source", t("field.source"), "textarea")}
-            {field("body", t("field.draftBody"), "textarea", true)}
-          </>
-        )}
+              {field("source", t("field.source"), "textarea")}
+              {field("body", t("field.draftBody"), "textarea", true)}
+            </>
+          )}
+        </fieldset>
         {error && (
           <p className="notice error" role="alert">
             {error}
           </p>
         )}
         {!onSave && <p className="muted">{t("notWired")}</p>}
-        <footer className="modal-actions">
-          <button type="button" className="secondary" onClick={onClose}>
-            {t("cancel")}
-          </button>
-          <button disabled={!onSave || pending} type="submit" className="primary">
-            {pending ? t("saving") : t("save")}
-          </button>
-        </footer>
+        {confirming ? (
+          <footer className="modal-actions" role="alertdialog" aria-label={t("unsaved")}>
+            <p className="muted">{t("unsaved")}</p>
+            <button type="button" className="secondary" autoFocus onClick={() => setConfirming(false)}>
+              {t("keepEditing")}
+            </button>
+            <button type="button" className="primary" onClick={onClose}>
+              {t("discard")}
+            </button>
+          </footer>
+        ) : (
+          <footer className="modal-actions">
+            <button type="button" className="secondary" disabled={pending} onClick={requestClose}>
+              {t("cancel")}
+            </button>
+            <button disabled={!onSave || pending} type="submit" className="primary">
+              {pending ? t("saving") : t("save")}
+            </button>
+          </footer>
+        )}
       </form>
     </Modal>
   );

@@ -2668,3 +2668,26 @@ a.disabled {
   display: inline-flex;
   margin-top: 8px;
 }
+
+/* Record editor: the field group that locks while saving */
+.editor-fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: grid;
+  gap: inherit;
+}
+.searchable-menu small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+/* The contact picker's label wraps its input like every other field label. */
+.searchable-field > label:has(.searchable-input) {
+  display: grid;
+  margin-bottom: 0;
+}
+.editor-form .form-grid {
+  align-items: start; /* a field with a hint line doesn't stretch its neighbours */
+}

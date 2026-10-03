@@ -9,6 +9,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { LocaleSwitch } from "@/components/locale-switch";
 import { PRODUCT_MONOGRAM, PRODUCT_NAME, PRODUCT_TAGLINE, SEARCH_SHORTCUT } from "@/lib/brand";
 import { useLabels } from "@/lib/i18n/labels";
+import { Companion } from "./companion";
 import { NotificationList, ReminderToast, useNotifications } from "./notifications";
 import { useAppData } from "./app-data";
 import { Modal } from "./modal";
@@ -28,6 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [narrow, setNarrow] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [companionOpen, setCompanionOpen] = useState(false);
   const [query, setQuery] = useState("");
   const sidebar = useRef<HTMLElement>(null);
 
@@ -205,6 +207,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span>{t("searchPlaceholder")}</span>
             <kbd>{SEARCH_SHORTCUT}</kbd>
           </button>
+          <Companion
+            key={data.person.role}
+            open={companionOpen}
+            onOpenChange={setCompanionOpen}
+            blocked={mobile || showNotifications || showSearch}
+          />
           <div className="top-actions">
             <LocaleSwitch compact />
             <button
@@ -226,7 +234,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <NotificationList open={open} />
         </Modal>
       )}
-      <ReminderToast onOpen={() => setShowNotifications(true)} suppress={showNotifications || showSearch} />
+      <ReminderToast onOpen={() => setShowNotifications(true)} suppress={showNotifications || showSearch || companionOpen} />
       {showSearch && (
         <Modal title={t("searchTitle")} onClose={() => setShowSearch(false)}>
           <input

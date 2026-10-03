@@ -913,5 +913,10 @@
     "automatic": "Daily pep talk",
     "pause": "Pause assistant animation",
     "resume": "Resume assistant animation"
+  },
+  "timeZone": {
+    "clear": "Clear time zone",
+    "noMatch": "No matching time zone — try a city, a zone name such as Asia/Tokyo, or an offset such as UTC+9.",
+    "yourTime": "Your time: {when}"
   }
 }

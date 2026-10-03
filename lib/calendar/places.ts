@@ -1,4 +1,4 @@
-// Suggestions for travel form fields — common stations and airports, plus
+// Suggestions for travel place fields — common stations and airports, plus
 // places already entered. Suggestions only: any text is accepted, and nothing
 // here is a live timetable or flight lookup.
 import type { Locale } from "@/lib/i18n/config";
@@ -51,7 +51,3 @@ export function placeSuggestions(mode: TransportMode | "", locale: Locale, previ
   const listed = (mode ? (byMode[mode] ?? []) : []).map((name) => name[locale]);
   return [...new Set([...listed, ...previous.filter(Boolean)])];
 }
-
-/** IANA zone names, common ones first. */
-const common = ["Asia/Taipei", "Asia/Tokyo", "Asia/Seoul", "Asia/Hong_Kong", "Asia/Singapore", "Asia/Shanghai", "America/New_York", "America/Los_Angeles", "Europe/London", "Europe/Paris", "Australia/Sydney", "UTC"];
-export const timeZoneSuggestions = () => [...new Set([...common, ...Intl.supportedValuesOf("timeZone")])];

@@ -5,6 +5,7 @@ import { useOptimistic, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { calendarRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
 import { TravelSummary } from "@/components/app/travel-summary";
+import { YourTime } from "@/components/app/your-time";
 import { calendarPoints, pointKind } from "@/lib/calendar/points";
 import { archiveCalendarItem, setTodoDone } from "@/lib/actions/calendar";
 import { dateInZone } from "@/lib/domain/dates";
@@ -145,6 +146,7 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
                   {p.date} {p.time || t("noTime")} · {p.timeZone} · {labels.calendarKind(c.kind)}
                   {marker && ` · ${t(`point.${marker}`)}`}
                 </small>
+                <YourTime date={p.date} time={p.time} timeZone={p.timeZone} />
                 {c.travel ? (
                   <TravelSummary item={c} />
                 ) : (

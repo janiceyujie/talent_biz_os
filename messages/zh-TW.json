@@ -913,5 +913,10 @@
     "automatic": "自動打氣",
     "pause": "暫停助理動畫",
     "resume": "繼續助理動畫"
+  },
+  "timeZone": {
+    "clear": "清除時區",
+    "noMatch": "找不到符合的時區，可輸入城市、Asia/Tokyo 這類時區名稱，或 UTC+9 這類時差。",
+    "yourTime": "你的時間：{when}"
   }
 }

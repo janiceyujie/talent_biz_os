@@ -3,6 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { z } from "zod";
+import { canonicalZone, isTimeZone } from "@/lib/time-zones";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { calendarEvent, todo } from "@/lib/db/schema";
@@ -20,14 +21,6 @@ const todoKinds: Partial<Record<CalendarKind, "custom" | "deliverable" | "paymen
 };
 const sourceOf = (kind: CalendarKind) => (kind in todoKinds ? "todo" : "event");
 
-const isTimeZone = (value: string) => {
-  try {
-    new Intl.DateTimeFormat("en", { timeZone: value });
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 const optionalTime = z
   .union([z.literal(""), z.iso.time({ precision: -1, message: "timeInvalid" })])
@@ -42,7 +35,10 @@ const itemInput = z.object({
   title: z.string().trim().min(1, "itemTitleRequired").max(200),
   date: z.iso.date("dateInvalid"),
   time: optionalTime,
-  timeZone: z.string().trim().refine(isTimeZone, "timeZoneInvalid"),
+  timeZone: z
+    .string()
+    .refine(isTimeZone, "timeZoneInvalid")
+    .transform((v) => canonicalZone(v)!),
   // Travel and stays (see docs/architecture.md, "Travel and stays")
   endDate: z
     .union([z.literal(""), z.iso.date("dateInvalid")])
@@ -54,7 +50,8 @@ const itemInput = z.object({
     .trim()
     .optional()
     .transform((v) => v || null)
-    .refine((v) => !v || isTimeZone(v), "timeZoneInvalid"),
+    .refine((v) => !v || isTimeZone(v), "timeZoneInvalid")
+    .transform((v) => v && canonicalZone(v)),
   transportMode: z
     .union([z.literal(""), z.enum(transportModes)])
     .optional()

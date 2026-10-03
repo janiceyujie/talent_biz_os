@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { updateWorkspace, type SettingsState } from "@/app/(app)/settings/actions";
 import { useAppData } from "@/components/app/app-data";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -8,6 +8,7 @@ import { LocaleSwitch } from "@/components/locale-switch";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { RolePortrait } from "@/components/role/role-portrait";
+import { TimeZonePicker } from "@/components/app/time-zone-picker";
 import { CalendarFeedSettings } from "./calendar-feed-settings";
 
 export function SettingsView() {
@@ -17,6 +18,7 @@ export function SettingsView() {
   const tLocale = useTranslations("locale");
   const tRoles = useTranslations("roles");
   const [state, action, pending] = useActionState<SettingsState, FormData>(updateWorkspace, {});
+  const [timeZone, setTimeZone] = useState(data.talent.timeZone);
 
   return (
     <div className="settings-stack">
@@ -33,10 +35,7 @@ export function SettingsView() {
               {t("name")}
               <input name="name" required defaultValue={data.talent.name} />
             </label>
-            <label>
-              {t("timeZone")}
-              <input name="timeZone" required defaultValue={data.talent.timeZone} />
-            </label>
+            <TimeZonePicker label={t("timeZone")} required name="timeZone" value={timeZone} onChange={setTimeZone} />
           </div>
           <p className="muted">{t("timeZoneHelp")}</p>
           {state.error && (

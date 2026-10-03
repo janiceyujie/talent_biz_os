@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useAppData } from "@/components/app/app-data";
 import { calendarRecord, type Editor } from "@/components/app/record-editor";
 import { TravelSummary } from "@/components/app/travel-summary";
+import { YourTime } from "@/components/app/your-time";
 import { calendarPoints, pointKind, type CalendarPoint } from "@/lib/calendar/points";
 import { dateInZone } from "@/lib/domain/dates";
 import { isSigned } from "@/lib/domain/phases";
@@ -69,6 +70,7 @@ export function TravelItinerary({ project, edit }: { project: Project; edit: (e:
                 <p className="travel-time">
                   {p.date} · {p.time || tCalendar("noTime")} <span>{p.timeZone}</span>
                 </p>
+                <YourTime date={p.date} time={p.time} timeZone={p.timeZone} />
                 {p.item.travel ? (
                   <details>
                     <summary>{t("details")}</summary>

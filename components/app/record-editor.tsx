@@ -13,7 +13,7 @@ import { saveTemplate } from "@/lib/actions/templates";
 import { localeNames, locales, toLocale } from "@/lib/i18n/config";
 import { placeholderKeys, placeholderName, toDisplay } from "@/lib/templates/placeholders";
 import { isSigned } from "@/lib/domain/phases";
-import { placeSuggestions, timeZoneSuggestions } from "@/lib/calendar/places";
+import { placeSuggestions } from "@/lib/calendar/places";
 import {
   calendarKinds,
   contactRoles,
@@ -25,6 +25,7 @@ import {
 } from "@/lib/types";
 import { useAppData } from "./app-data";
 import { ContactPicker } from "./contact-picker";
+import { TimeZonePicker } from "./time-zone-picker";
 import { Modal } from "./modal";
 
 export type RecordData = Record<string, string | number | boolean>;
@@ -316,7 +317,12 @@ export function RecordEditor({
               <div className="form-grid">
                 {field("date", t(travel ? "field.departDate" : stay ? "field.checkInDate" : "field.date"), "date", true)}
                 {field("time", t(travel ? "field.departTime" : stay ? "field.checkInTime" : "field.time"), "time", travel || stay)}
-                {field("timeZone", t("field.timeZone"), "text", true, undefined, "time-zones")}
+                <TimeZonePicker
+                  label={t("field.timeZone")}
+                  required
+                  value={String(data.timeZone ?? "")}
+                  onChange={(zone) => change("timeZone", zone)}
+                />
                 {field(
                   "kind",
                   t("field.kind"),
@@ -352,7 +358,12 @@ export function RecordEditor({
                   <div className="form-grid">
                     {field("endDate", t(stay ? "field.checkOutDate" : "field.arriveDate"), "date")}
                     {field("endTime", t(stay ? "field.checkOutTime" : "field.arriveTime"), "time", !!data.endDate)}
-                    {field("endTimeZone", t("field.endTimeZone"), "text", !!data.endDate, undefined, "time-zones")}
+                    <TimeZonePicker
+                      label={t("field.endTimeZone")}
+                      required={!!data.endDate}
+                      value={String(data.endTimeZone ?? "")}
+                      onChange={(zone) => change("endTimeZone", zone)}
+                    />
                   </div>
                   {!!(data.endDate || data.endTime || data.endTimeZone) && (
                     <button
@@ -364,11 +375,6 @@ export function RecordEditor({
                     </button>
                   )}
                   <p className="muted">{t("travelHelp")}</p>
-                  <datalist id="time-zones">
-                    {timeZoneSuggestions().map((z) => (
-                      <option key={z} value={z} />
-                    ))}
-                  </datalist>
                   <datalist id="places">
                     {placeSuggestions(
                       (data.transportMode as TransportMode | "") || "",

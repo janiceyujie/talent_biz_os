@@ -2691,3 +2691,8 @@ a.disabled {
 .editor-form .form-grid {
   align-items: start; /* a field with a hint line doesn't stretch its neighbours */
 }
+.your-time {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}

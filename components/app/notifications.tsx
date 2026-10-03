@@ -13,6 +13,7 @@ import {
 } from "@/lib/domain/notifications";
 import { useAppData } from "./app-data";
 import { useNotificationText } from "./notification-text";
+import { YourTime } from "./your-time";
 
 /** The current time, refreshed every 30 s and when the tab comes back, so snoozes run out on screen. */
 function useNow() {
@@ -101,6 +102,7 @@ export function NotificationList({ open }: { open: (href: string) => void }) {
               <ReminderStatus urgency={n.urgency} />
               <strong>{title}</strong>
               <small>{detail}</small>
+              {n.kind === "calendar" && <YourTime date={n.date} time={n.time} timeZone={n.timeZone} />}
             </button>
             <ReminderControls n={n} />
           </article>

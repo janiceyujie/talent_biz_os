@@ -113,7 +113,8 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 ### Contacts
 
 - A contact list of artists, counterparties, and managers — name, company, email, phone, notes — linked to projects — **MVP**. A project keeps the counterparty's name as text too, so a project without a contact still works; a draft takes its recipient from the linked contact.
-- Partner history (合作紀錄): per counterparty contact, the number of signed projects, on-time payment rate, average days late, and overdue money still owed — **MVP**. Computed from projects linked to the contact and their income payments; same name never implies same contact. It's a record, not a credit score.
+- Partner history (合作紀錄): per counterparty contact, the number of signed projects, on-time payment rate, average days late, and overdue money still owed — **MVP**. Computed from projects linked to the contact and their income payments; same name never implies same contact. It's a record, not a credit score. Signed projects count even once archived (they're history); negotiations, voided entries, and costs don't; a deposit and a balance are two payments.
+- Finance additions — **MVP**: a to-pay card beside received / outstanding / paid; contract totals for live signed projects (independent of the date filter; unset quotes listed separately); outstanding income by age (not yet due, 1–30 days late, 31+, no due date); six months of cash in and out by settled date.
 
 ### Files
 

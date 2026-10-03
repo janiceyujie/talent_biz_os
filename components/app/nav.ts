@@ -5,6 +5,7 @@ import {
   CalendarDays,
   FilePenLine,
   FolderKanban,
+  Handshake,
   Inbox,
   LayoutDashboard,
   Settings,
@@ -13,7 +14,7 @@ import {
 } from "lucide-react";
 
 /** Keys under the "nav" message namespace; also each page's title. */
-export type NavKey = "today" | "inbox" | "projects" | "drafts" | "finance" | "assistant" | "contacts" | "files" | "calendar" | "settings";
+export type NavKey = "today" | "inbox" | "projects" | "drafts" | "finance" | "assistant" | "contacts" | "files" | "calendar" | "partners" | "settings";
 
 export type NavItem = { href: string; key: NavKey; icon: LucideIcon; group: "work" | "manage" };
 
@@ -27,6 +28,7 @@ export const nav: NavItem[] = [
   { href: "/contacts", key: "contacts", icon: Users, group: "manage" },
   { href: "/files", key: "files", icon: Archive, group: "manage" },
   { href: "/calendar", key: "calendar", icon: CalendarDays, group: "manage" },
+  { href: "/partners", key: "partners", icon: Handshake, group: "manage" },
   { href: "/settings", key: "settings", icon: Settings, group: "manage" },
 ];
 

@@ -24,7 +24,8 @@
     "menuLabel": "工作區選單",
     "openMenu": "開啟選單",
     "closeMenu": "關閉選單",
-    "closeBackdrop": "關閉背景選單"
+    "closeBackdrop": "關閉背景選單",
+    "partners": "合作紀錄"
   },
   "shell": {
     "searchPlaceholder": "搜尋案件、合作方、行程、範本…",
@@ -200,7 +201,7 @@
     "metricReceivable": "待收款（含稅）",
     "metricReceivableNote": "依登錄日期篩選的未收款",
     "metricPaid": "已付成本（含稅）",
-    "metricPaidNote": "另有待付 {amount}",
+    "metricPaidNote": "依實際付款日期篩選",
     "metricNet": "現金淨額",
     "metricNetNote": "已收減已付，不等於會計淨利",
     "calculatorTitle": "含稅／未稅報價 · TWD",
@@ -248,7 +249,32 @@
     "restore": "還原",
     "showVoided": "顯示已作廢",
     "void": "作廢",
-    "voidHelp": "作廢用於誤登或重複的紀錄：會從所有加總排除，但保留可查看、可還原。過去月份不需作廢，用日期篩選即可。"
+    "voidHelp": "作廢用於誤登或重複的紀錄：會從所有加總排除，但保留可查看、可還原。過去月份不需作廢，用日期篩選即可。",
+    "metricPayable": "待付款（含稅）",
+    "metricPayableNote": "依登錄日期篩選的未付款",
+    "insights": {
+      "contracted": "有效案件合約總額 · 含稅",
+      "unbilled": "尚未建立請款 · 含稅",
+      "contractNote": "此區依全部有效已簽約案件計算，不隨上方日期篩選；合約金額不等於已收收入。",
+      "unknownQuotes": "另有 {count} 筆已簽約案件報價未定，未計入合約總額。",
+      "cashTitle": "近六個月現金收支",
+      "keyIn": "收入",
+      "keyOut": "支出",
+      "barLabel": "{month} 收入 {received}，支出 {paid}",
+      "showValues": "查看數值",
+      "month": "月份",
+      "received": "已收",
+      "paid": "已付",
+      "agingTitle": "待收款帳齡",
+      "asOf": "截至 {date}",
+      "aging": {
+        "notDue": "未到期",
+        "late1to30": "逾期 1–30 天",
+        "late31plus": "逾期 31 天以上",
+        "noDueDate": "未填期限"
+      },
+      "agingNote": "依全部未作廢待收款的期限計算；未填期限單獨列出。"
+    }
   },
   "projects": {
     "search": "搜尋合作案",
@@ -796,5 +822,32 @@
     "empty": "尚未登錄交通或住宿。",
     "performance": "演出",
     "details": "行程詳情"
+  },
+  "partners": {
+    "intro": "依已簽約合作與內帳紀錄計算。準時率按已收款筆數計算，不是對公司的信用評分。",
+    "listLabel": "合作方紀錄",
+    "evidence": {
+      "tooFew": "資料不足",
+      "manyLate": "多次逾期紀錄",
+      "allOnTime": "已收款皆準時",
+      "someLate": "有逾期紀錄"
+    },
+    "summary": "{projects} 次合作 · {overdue} 筆待收逾期",
+    "empty": "新增合作方並關聯案件後，這裡會顯示合作紀錄。",
+    "statProjects": "合作次數",
+    "statOnTime": "已收款準時率",
+    "statAvgLate": "逾期款平均天數",
+    "statOverdue": "目前逾期待收",
+    "counts": "{paid} 筆已收款有完整日期，{late} 筆曾逾期。{unknown} 筆未填付款期限，不納入準時率。",
+    "fewSamples": "目前樣本少於 3 筆，先看個別付款紀錄。",
+    "colProject": "合作案／款項",
+    "colDue": "到期日",
+    "colSettled": "實際收款日",
+    "colStatus": "狀態",
+    "colLate": "逾期天數",
+    "colTotal": "含稅金額",
+    "noRows": "尚無有效收款紀錄。",
+    "method": "計算方式",
+    "methodBody": "合作次數包含已歸檔的已簽約案件，排除洽談。作廢內帳與成本不計。訂金、尾款各算一筆；平均逾期天數只看已收且逾期的款項。未到期款項不算逾期。"
   }
 }

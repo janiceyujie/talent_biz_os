@@ -24,7 +24,8 @@
     "menuLabel": "Workspace menu",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "closeBackdrop": "Close menu backdrop"
+    "closeBackdrop": "Close menu backdrop",
+    "partners": "Partner history"
   },
   "shell": {
     "searchPlaceholder": "Search projects, partners, calendar, templates…",
@@ -200,7 +201,7 @@
     "metricReceivable": "Outstanding (incl. tax)",
     "metricReceivableNote": "Unpaid, by date recorded",
     "metricPaid": "Costs paid (incl. tax)",
-    "metricPaidNote": "Plus {amount} still to pay",
+    "metricPaidNote": "By date paid",
     "metricNet": "Net cash",
     "metricNetNote": "Received minus paid — not accounting profit",
     "calculatorTitle": "Quote with / without tax · TWD",
@@ -248,7 +249,32 @@
     "restore": "Restore",
     "showVoided": "Show voided",
     "void": "Void",
-    "voidHelp": "Void an entry made by mistake or duplicated: it drops out of every total but stays here and can be restored. Past months don't need voiding — use the date filter."
+    "voidHelp": "Void an entry made by mistake or duplicated: it drops out of every total but stays here and can be restored. Past months don't need voiding — use the date filter.",
+    "metricPayable": "To pay (incl. tax)",
+    "metricPayableNote": "Unpaid costs, by date recorded",
+    "insights": {
+      "contracted": "Signed contracts · incl. tax",
+      "unbilled": "Not yet billed · incl. tax",
+      "contractNote": "From all live signed projects, not the date range above. A contract amount isn't income received.",
+      "unknownQuotes": "{count, plural, one {# more signed project has} other {# more signed projects have}} no quote yet and {count, plural, one {isn't} other {aren't}} in the total.",
+      "cashTitle": "Cash in and out, last six months",
+      "keyIn": "In",
+      "keyOut": "Out",
+      "barLabel": "{month}: in {received}, out {paid}",
+      "showValues": "Show values",
+      "month": "Month",
+      "received": "Received",
+      "paid": "Paid",
+      "agingTitle": "Outstanding income by age",
+      "asOf": "As of {date}",
+      "aging": {
+        "notDue": "Not yet due",
+        "late1to30": "1–30 days late",
+        "late31plus": "31+ days late",
+        "noDueDate": "No due date"
+      },
+      "agingNote": "From the due dates of all outstanding, non-voided income; entries without a due date are listed on their own."
+    }
   },
   "projects": {
     "search": "Search projects",
@@ -796,5 +822,32 @@
     "empty": "No travel or stays recorded.",
     "performance": "Performance",
     "details": "Details"
+  },
+  "partners": {
+    "intro": "Built from signed projects and their payments. The on-time rate counts received payments — it isn't a credit score for the company.",
+    "listLabel": "Partners",
+    "evidence": {
+      "tooFew": "Not enough data",
+      "manyLate": "Paid late several times",
+      "allOnTime": "Always paid on time",
+      "someLate": "Some late payments"
+    },
+    "summary": "{projects, plural, one {# project} other {# projects}} · {overdue} overdue",
+    "empty": "Add partners in Artists & partners and link them to projects to see their history here.",
+    "statProjects": "Projects",
+    "statOnTime": "Paid on time",
+    "statAvgLate": "Average days late",
+    "statOverdue": "Overdue now",
+    "counts": "{paid} received payments have full dates; {late} arrived late. {unknown} without a due date aren't in the on-time rate.",
+    "fewSamples": "Fewer than 3 payments so far — look at the individual payments for now.",
+    "colProject": "Project / payment",
+    "colDue": "Due",
+    "colSettled": "Received on",
+    "colStatus": "Status",
+    "colLate": "Days late",
+    "colTotal": "Amount incl. tax",
+    "noRows": "No payments recorded yet.",
+    "method": "How it's counted",
+    "methodBody": "Projects count signed ones, archived included, and leave out negotiations. Voided entries and costs don't count. A deposit and a balance count as two payments; average days late looks only at payments received late. A payment not yet due isn't late."
   }
 }

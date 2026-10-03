@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { FinanceInsights } from "./finance-insights";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { voidPayment } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
@@ -161,10 +162,11 @@ export function FinanceView() {
           {t("exportCsv")}
         </button>
       </div>
-      <section className="metrics-grid">
+      <section className="metrics-grid finance-metrics">
         <Metric label={t("metricReceived")} value={money(s.received)} note={t("metricReceivedNote")} tone="dark" />
         <Metric label={t("metricReceivable")} value={money(s.receivable)} note={t("metricReceivableNote")} />
-        <Metric label={t("metricPaid")} value={money(s.paid)} note={t("metricPaidNote", { amount: money(s.payable) })} />
+        <Metric label={t("metricPaid")} value={money(s.paid)} note={t("metricPaidNote")} />
+        <Metric label={t("metricPayable")} value={money(s.payable)} note={t("metricPayableNote")} />
         <Metric label={t("metricNet")} value={money(s.received - s.paid)} note={t("metricNetNote")} tone="lime" />
       </section>
       <div className="finance-grid">
@@ -214,6 +216,7 @@ export function FinanceView() {
           </button>
         </section>
       </div>
+      <FinanceInsights />
       <section className="surface ledger-card">
         <div className="section-header">
           <div>

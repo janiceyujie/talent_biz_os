@@ -37,8 +37,17 @@ export async function feedEvents(talentId: string, locale: unknown, eventId?: st
     date: e.startDate,
     time: e.startTime ? e.startTime.slice(0, 5) : null,
     timeZone: e.timeZone,
-    location: e.location,
-    description: [projectTitle && t("project", { title: projectTitle }), e.notes].filter(Boolean).join("\n") || null,
+    end: e.endDate && e.endTime && e.endTimeZone ? { date: e.endDate, time: e.endTime.slice(0, 5), timeZone: e.endTimeZone } : null,
+    // Travel reads "from → to"; a stay gives the hotel and its address.
+    location: [e.hotelName, [e.location, e.destination].filter(Boolean).join(" → ")].filter(Boolean).join(", ") || null,
+    description:
+      [
+        projectTitle && t("project", { title: projectTitle }),
+        [e.operator, e.serviceNumber, e.seat].filter(Boolean).join(" · "),
+        e.notes,
+      ]
+        .filter(Boolean)
+        .join("\n") || null,
     updatedAt: e.updatedAt,
   }));
 }

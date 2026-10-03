@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import type { ProjectType } from "@/lib/project-types";
-import type { CalendarKind, ContactRole, Payment, Stage } from "@/lib/types";
+import type { CalendarKind, ContactRole, Payment, Stage, TransportMode } from "@/lib/types";
 
 const questionKeys = ["q1", "q2", "q3", "q4"] as const;
 
@@ -13,6 +13,7 @@ export function useLabels() {
     stage: (s: Stage) => t(`stage.${s}`),
     contactRole: (r: ContactRole) => t(`contactRole.${r}`),
     calendarKind: (k: CalendarKind) => t(`calendarKind.${k}`),
+    transportMode: (m: TransportMode) => t(`transportMode.${m}`),
     direction: (d: Payment["direction"]) => t(`direction.${d}`),
     installment: (i: Payment["installment"]) => t(`installment.${i}`),
     paymentStatus: (p: Pick<Payment, "direction" | "status">) =>

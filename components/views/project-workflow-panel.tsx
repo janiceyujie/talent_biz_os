@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
-import { toRecord, type Editor } from "@/components/app/record-editor";
+import { calendarRecord, toRecord, type Editor } from "@/components/app/record-editor";
 import { createPaymentPlan } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
 import { splitPayments } from "@/lib/domain/money";
@@ -117,7 +117,7 @@ export function ProjectWorkflowPanel({
       <h3>{t("related")}</h3>
       <div className="stack-buttons">
         {items.map((c) => (
-          <button key={c.id} className="text-button left" onClick={() => edit({ kind: "calendar", item: toRecord(c) })}>
+          <button key={c.id} className="text-button left" onClick={() => edit({ kind: "calendar", item: calendarRecord(c) })}>
             {c.source === "todo" ? (c.done ? t("todoDone") : t("todoOpen")) : labels.calendarKind(c.kind)} · {c.date} · {c.title}
           </button>
         ))}

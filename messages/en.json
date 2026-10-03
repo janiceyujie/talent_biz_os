@@ -146,7 +146,14 @@
       }
     },
     "unlinked": "Unlinked",
-    "unconfirmed": "Unconfirmed"
+    "unconfirmed": "Unconfirmed",
+    "transportMode": {
+      "high_speed_rail": "High-speed rail",
+      "train": "Train",
+      "flight": "Flight",
+      "transfer": "Transfer",
+      "other": "Other"
+    }
   },
   "today": {
     "welcomeTitle": "Start with your first offer.",
@@ -413,7 +420,21 @@
     "downloadIcs": "Download .ics",
     "archive": "Archive",
     "restore": "Restore",
-    "empty": "Nothing scheduled for these dates."
+    "empty": "Nothing scheduled for these dates.",
+    "point": {
+      "depart": "Departure",
+      "arrive": "Arrival",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out"
+    },
+    "travel": {
+      "checkIn": "Check-in {when}",
+      "checkOut": "Check-out {when}",
+      "noCheckOut": "Check-out not recorded",
+      "arrives": "Arrives {when}",
+      "noArrival": "Arrival not recorded",
+      "seat": "Seat {seat}"
+    }
   },
   "calendarFeed": {
     "title": "Calendar subscription",
@@ -496,7 +517,24 @@
       "recipient": "Recipient",
       "source": "Offer text",
       "draftBody": "Draft",
-      "language": "Reply language"
+      "language": "Reply language",
+      "departDate": "Departure date",
+      "departTime": "Departure time",
+      "departFrom": "From (station / airport / place)",
+      "destination": "To (station / airport / place)",
+      "arriveDate": "Arrival date",
+      "arriveTime": "Arrival time",
+      "checkInDate": "Check-in date",
+      "checkInTime": "Check-in time",
+      "checkOutDate": "Check-out date",
+      "checkOutTime": "Check-out time",
+      "endTimeZone": "Arrival / check-out time zone",
+      "hotelAddress": "Hotel address",
+      "hotelName": "Hotel name",
+      "transportMode": "Transport",
+      "operator": "Airline / operator",
+      "serviceNumber": "Flight / train number",
+      "seat": "Seat / carriage"
     },
     "unlinked": "Unlinked",
     "typeIn": "Type it in",
@@ -512,7 +550,9 @@
     "save": "Save",
     "languageHelp": "The language this reply is written in — placeholders and quotes fill in that language.",
     "quoteHelp": "Leave the amount blank if the fee isn't decided yet; 0 means unpaid.",
-    "signedOnly": "Only signed projects are listed. Linking is optional."
+    "signedOnly": "Only signed projects are listed. Linking is optional.",
+    "clearEnd": "Clear arrival / check-out",
+    "travelHelp": "Times are local, in each place's own time zone (e.g. Asia/Taipei, Asia/Tokyo). Not connected to live flight, rail, or hotel booking data."
   },
   "tone": {
     "natural": "Natural and professional",
@@ -642,7 +682,13 @@
     "templateNotFound": "Template not found.",
     "projectNotSigned": "Only signed projects can take new linked to-dos, events, and payments. Move the project to Signed first.",
     "projectArchived": "This project is archived. Restore it before linking new items.",
-    "quoteNotSet": "Set the project's quote before splitting it."
+    "quoteNotSet": "Set the project's quote before splitting it.",
+    "travelTimeRequired": "Travel and stays need a time.",
+    "wallTimeInvalid": "That local time doesn't exist or happens twice (a daylight-saving change). Enter it in UTC instead.",
+    "endIncomplete": "Enter the arrival / check-out date, time, and time zone together — or leave all three blank.",
+    "endBeforeStart": "Arrival / check-out must be after departure / check-in (time zones included).",
+    "transportModeRequired": "Choose how you're travelling.",
+    "hotelNameRequired": "Enter the hotel name."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",
@@ -729,5 +775,13 @@
     "change": "Change role",
     "settingsTitle": "Role and assistant",
     "settingsBody": "Your role shapes wording and suggestions, never what you can access. Change it, or the assistant's look, any time."
+  },
+  "itinerary": {
+    "title": "Travel, stays & performances",
+    "addTravel": "Add travel",
+    "addStay": "Add stay",
+    "empty": "No travel or stays recorded.",
+    "performance": "Performance",
+    "details": "Details"
   }
 }

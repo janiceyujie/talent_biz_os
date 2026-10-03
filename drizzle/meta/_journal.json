@@ -71,6 +71,13 @@
       "when": 1790992907931,
       "tag": "0009_roles_and_avatar",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791005031194,
+      "tag": "0010_travel_and_stays",
+      "breakpoints": true
     }
   ]
 }

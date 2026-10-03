@@ -7,7 +7,7 @@ import { calendarEvent, contact, membership, payment, person as personTable, pro
 import { toLocale } from "@/lib/i18n/config";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
-import { calendarKinds, type AppData, type CalendarItem, type CalendarKind } from "@/lib/types";
+import { calendarKinds, type AppData, type CalendarItem, type CalendarKind, type TravelDetails } from "@/lib/types";
 
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : "");
 const todoKind: Record<string, CalendarKind> = { deliverable: "deliverable", payment_due: "payment" };
@@ -61,6 +61,20 @@ export const getAppData = cache(async (): Promise<AppData> => {
       notes: e.notes ?? "",
       done: false,
       archived: e.archivedAt !== null,
+      travel:
+        e.kind === "travel" || e.kind === "accommodation"
+          ? ({
+              endDate: e.endDate ?? "",
+              endTime: hhmm(e.endTime),
+              endTimeZone: e.endTimeZone ?? "",
+              transportMode: e.transportMode ?? "",
+              operator: e.operator ?? "",
+              serviceNumber: e.serviceNumber ?? "",
+              destination: e.destination ?? "",
+              seat: e.seat ?? "",
+              hotelName: e.hotelName ?? "",
+            } satisfies TravelDetails)
+          : null,
     })),
     ...todoRows
       .filter((t) => t.dueDate) // undated to-dos have no place on a calendar
@@ -77,6 +91,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
         notes: t.notes ?? "",
         done: t.status === "done",
         archived: t.status === "dismissed",
+        travel: null,
       })),
   ];
 

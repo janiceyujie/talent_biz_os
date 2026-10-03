@@ -6,7 +6,8 @@ import { z } from "zod";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { calendarEvent, todo } from "@/lib/db/schema";
-import { calendarKinds, type CalendarKind } from "@/lib/types";
+import { exactInstant } from "@/lib/domain/dates";
+import { calendarKinds, transportModes, type CalendarKind } from "@/lib/types";
 import { checkProjectLink } from "./project-link";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
@@ -28,21 +29,61 @@ const isTimeZone = (value: string) => {
   }
 };
 
+const optionalTime = z
+  .union([z.literal(""), z.iso.time({ precision: -1, message: "timeInvalid" })])
+  .optional()
+  .transform((v) => v || null);
+const short = (max: number) => z.string().trim().max(max).optional().transform((v) => v || null);
+
 const itemInput = z.object({
   id: optionalId,
   source: z.enum(["event", "todo"]).optional(),
   kind: z.enum(calendarKinds, "kindRequired"),
   title: z.string().trim().min(1, "itemTitleRequired").max(200),
   date: z.iso.date("dateInvalid"),
-  time: z
-    .union([z.literal(""), z.iso.time({ precision: -1, message: "timeInvalid" })])
+  time: optionalTime,
+  timeZone: z.string().trim().refine(isTimeZone, "timeZoneInvalid"),
+  // Travel and stays (see docs/architecture.md, "Travel and stays")
+  endDate: z
+    .union([z.literal(""), z.iso.date("dateInvalid")])
     .optional()
     .transform((v) => v || null),
-  timeZone: z.string().trim().refine(isTimeZone, "timeZoneInvalid"),
+  endTime: optionalTime,
+  endTimeZone: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => v || null)
+    .refine((v) => !v || isTimeZone(v), "timeZoneInvalid"),
+  transportMode: z
+    .union([z.literal(""), z.enum(transportModes)])
+    .optional()
+    .transform((v) => v || null),
+  operator: short(200),
+  serviceNumber: short(100),
+  destination: short(500),
+  seat: short(100),
+  hotelName: short(200),
   projectId: optionalId,
   location: optionalText,
   notes: optionalText,
   done: z.boolean().optional().default(false),
+}).superRefine((e, ctx) => {
+  if (e.kind !== "travel" && e.kind !== "accommodation") return;
+  const issue = (message: string) => ctx.addIssue({ code: "custom", message });
+  if (e.kind === "travel" && !e.transportMode) issue("transportModeRequired");
+  if (e.kind === "accommodation" && !e.hotelName) issue("hotelNameRequired");
+  if (!e.time) return issue("travelTimeRequired");
+  // Compared as instants, so overnight and cross-date-line trips work; a wall
+  // time skipped or repeated by daylight saving is refused, never guessed.
+  const start = exactInstant(e.date, e.time, e.timeZone);
+  if (start === null) return issue("wallTimeInvalid");
+  const ends = [e.endDate, e.endTime, e.endTimeZone].filter(Boolean).length;
+  if (ends === 0) return;
+  if (ends < 3) return issue("endIncomplete");
+  const end = exactInstant(e.endDate!, e.endTime!, e.endTimeZone!);
+  if (end === null) return issue("wallTimeInvalid");
+  if (end <= start) issue("endBeforeStart");
 });
 
 /** Create or update a calendar item; its kind decides whether it's a to-do or an event. */
@@ -101,6 +142,7 @@ export async function saveCalendarItem(data: Record<string, unknown>): Promise<s
       timeZone: input.timeZone,
       location: input.location,
       notes: input.notes,
+      ...travelColumns(input),
     };
     if (!input.id) await db.insert(calendarEvent).values({ ...values, talentId: talent.id });
     else {
@@ -114,6 +156,24 @@ export async function saveCalendarItem(data: Record<string, unknown>): Promise<s
   }
   refresh();
   return null;
+}
+
+/** Travel and stay columns; other kinds store none. */
+function travelColumns(input: z.infer<typeof itemInput>) {
+  const travel = input.kind === "travel";
+  const stay = input.kind === "accommodation";
+  const keep = <T,>(on: boolean, v: T) => (on ? v : null);
+  return {
+    endDate: keep(travel || stay, input.endDate),
+    endTime: keep(travel || stay, input.endTime),
+    endTimeZone: keep(travel || stay, input.endTimeZone),
+    transportMode: keep(travel, input.transportMode),
+    operator: keep(travel, input.operator),
+    serviceNumber: keep(travel, input.serviceNumber),
+    destination: keep(travel, input.destination),
+    seat: keep(travel, input.seat),
+    hotelName: keep(stay, input.hotelName),
+  };
 }
 
 export async function setTodoDone(id: string, done: boolean): Promise<string | null> {

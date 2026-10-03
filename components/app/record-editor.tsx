@@ -13,7 +13,16 @@ import { saveTemplate } from "@/lib/actions/templates";
 import { localeNames, locales, toLocale } from "@/lib/i18n/config";
 import { placeholderKeys, placeholderName, toDisplay } from "@/lib/templates/placeholders";
 import { isSigned } from "@/lib/domain/phases";
-import { calendarKinds, contactRoles, stages, type Project } from "@/lib/types";
+import { placeSuggestions, timeZoneSuggestions } from "@/lib/calendar/places";
+import {
+  calendarKinds,
+  contactRoles,
+  stages,
+  transportModes,
+  type CalendarItem,
+  type Project,
+  type TransportMode,
+} from "@/lib/types";
 import { useAppData } from "./app-data";
 import { Modal } from "./modal";
 
@@ -29,6 +38,9 @@ export function toRecord(o: object): RecordData {
       .filter((e): e is [string, string | number | boolean] => ["string", "number", "boolean"].includes(typeof e[1])),
   );
 }
+
+/** A calendar item as form values, travel details flattened in. */
+export const calendarRecord = (c: CalendarItem): RecordData => ({ ...toRecord(c), ...(c.travel ?? {}) });
 
 export const projectRecord = (p: Project): RecordData => ({
   ...toRecord(p),
@@ -106,6 +118,15 @@ export function RecordEditor({
       projectId: "",
       notes: "",
       done: false,
+      endDate: "",
+      endTime: "",
+      endTimeZone: "",
+      transportMode: "high_speed_rail",
+      operator: "",
+      serviceNumber: "",
+      destination: "",
+      seat: "",
+      hotelName: "",
     },
     payment: {
       label: "",
@@ -136,6 +157,8 @@ export function RecordEditor({
     return initial;
   });
   const [pending, setPending] = useState(false);
+  const travel = kind === "calendar" && data.kind === "travel";
+  const stay = kind === "calendar" && data.kind === "accommodation";
   const [error, setError] = useState<string | null>(null);
 
   const change = (key: string, value: string | number | boolean) =>
@@ -143,9 +166,11 @@ export function RecordEditor({
       ...d,
       [key]: value,
       ...(key === "status" ? { settledDate: value === "settled" ? d.settledDate || today : "" } : {}),
+      // An arrival or check-out usually happens in the same zone; start from it.
+      ...(key === "endDate" && value ? { endTimeZone: d.endTimeZone || d.timeZone } : {}),
     }));
 
-  function field(key: string, label: string, type = "text", required = false, options?: Option[]) {
+  function field(key: string, label: string, type = "text", required = false, options?: Option[], list?: string) {
     return (
       <label key={key}>
         {label}
@@ -178,6 +203,7 @@ export function RecordEditor({
             min={type === "number" ? 0 : undefined}
             max={key === "taxRate" ? 100 : undefined}
             maxLength={200}
+            list={list}
             value={String(data[key] ?? "")}
             // A cleared number stays "" (not set) rather than becoming 0.
             onChange={(e) =>
@@ -270,9 +296,9 @@ export function RecordEditor({
           <>
             {field("title", t("field.itemTitle"), "text", true)}
             <div className="form-grid">
-              {field("date", t("field.date"), "date", true)}
-              {field("time", t("field.time"), "time")}
-              {field("timeZone", t("field.timeZone"), "text", true)}
+              {field("date", t(travel ? "field.departDate" : stay ? "field.checkInDate" : "field.date"), "date", true)}
+              {field("time", t(travel ? "field.departTime" : stay ? "field.checkInTime" : "field.time"), "time", travel || stay)}
+              {field("timeZone", t("field.timeZone"), "text", true, undefined, "time-zones")}
               {field(
                 "kind",
                 t("field.kind"),
@@ -285,7 +311,58 @@ export function RecordEditor({
               )}
             </div>
             {projectLink()}
-            {!todoKinds.includes(String(data.kind)) && field("location", t("field.location"))}
+            {travel && (
+              <>
+                <div className="form-grid">
+                  {field("transportMode", t("field.transportMode"), "text", true, options(transportModes, labels.transportMode))}
+                  {field("operator", t("field.operator"))}
+                  {field("serviceNumber", t("field.serviceNumber"))}
+                  {field("seat", t("field.seat"))}
+                </div>
+                {field("location", t("field.departFrom"), "text", false, undefined, "places")}
+                {field("destination", t("field.destination"), "text", false, undefined, "places")}
+              </>
+            )}
+            {stay && (
+              <>
+                {field("hotelName", t("field.hotelName"), "text", true)}
+                {field("location", t("field.hotelAddress"))}
+              </>
+            )}
+            {(travel || stay) && (
+              <>
+                <div className="form-grid">
+                  {field("endDate", t(stay ? "field.checkOutDate" : "field.arriveDate"), "date")}
+                  {field("endTime", t(stay ? "field.checkOutTime" : "field.arriveTime"), "time", !!data.endDate)}
+                  {field("endTimeZone", t("field.endTimeZone"), "text", !!data.endDate, undefined, "time-zones")}
+                </div>
+                {!!(data.endDate || data.endTime || data.endTimeZone) && (
+                  <button
+                    type="button"
+                    className="text-button left"
+                    onClick={() => setData((d) => ({ ...d, endDate: "", endTime: "", endTimeZone: "" }))}
+                  >
+                    {t("clearEnd")}
+                  </button>
+                )}
+                <p className="muted">{t("travelHelp")}</p>
+                <datalist id="time-zones">
+                  {timeZoneSuggestions().map((z) => (
+                    <option key={z} value={z} />
+                  ))}
+                </datalist>
+                <datalist id="places">
+                  {placeSuggestions(
+                    (data.transportMode as TransportMode | "") || "",
+                    uiLocale,
+                    data$.calendar.flatMap((c) => (c.kind === "travel" ? [c.location, c.travel?.destination ?? ""] : [])),
+                  ).map((place) => (
+                    <option key={place} value={place} />
+                  ))}
+                </datalist>
+              </>
+            )}
+            {!todoKinds.includes(String(data.kind)) && !travel && !stay && field("location", t("field.location"))}
             {field("notes", t("field.notes"), "textarea")}
             {todoKinds.includes(String(data.kind)) && field("done", t("field.done"), "checkbox")}
           </>

@@ -76,6 +76,23 @@ export type CalendarItem = {
   notes: string;
   done: boolean;
   archived: boolean;
+  travel: TravelDetails | null; // travel and accommodation events only
+};
+
+export const transportModes = ["high_speed_rail", "train", "flight", "transfer", "other"] as const;
+export type TransportMode = (typeof transportModes)[number];
+
+/** Arrival or check-out (in its own zone) and the ticket details. "" = not recorded. */
+export type TravelDetails = {
+  endDate: string;
+  endTime: string;
+  endTimeZone: string;
+  transportMode: TransportMode | "";
+  operator: string;
+  serviceNumber: string;
+  destination: string;
+  seat: string;
+  hotelName: string;
 };
 
 export type Payment = {

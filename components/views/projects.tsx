@@ -13,6 +13,7 @@ import { useLabels } from "@/lib/i18n/labels";
 import { projectTypes } from "@/lib/project-types";
 import { stages, type Stage } from "@/lib/types";
 import { ProjectWorkflowPanel } from "./project-workflow-panel";
+import { TravelItinerary } from "./travel-itinerary";
 
 export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
   const data = useAppData();
@@ -177,6 +178,7 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
             })}
           </ol>
           <p className="stage-note">{t(`stageNote.${active.stage}`)}</p>
+          <TravelItinerary project={active} edit={setEditor} />
           <div className="deal-summary">
             {(
               [

@@ -3,7 +3,9 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useOptimistic, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
-import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
+import { calendarRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
+import { TravelSummary } from "@/components/app/travel-summary";
+import { calendarPoints, pointKind } from "@/lib/calendar/points";
 import { archiveCalendarItem, setTodoDone } from "@/lib/actions/calendar";
 import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
@@ -37,9 +39,11 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
   const start = new Date(`${month}-01T12:00:00Z`);
   const pad = start.getUTCDay();
   const count = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)).getUTCDate();
-  const items = calendar
-    .filter((c) => c.archived === archived && (showDone || !c.done) && c.date.startsWith(month) && (!day || c.date === day))
-    .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
+  // Each marker sits on its own local date: a stay can start in one month and end in the next.
+  const points = calendarPoints(calendar);
+  const items = points
+    .filter((p) => p.item.archived === archived && (showDone || !p.item.done) && p.date.startsWith(month) && (!day || p.date === day))
+    .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`) || a.key.localeCompare(b.key));
   const move = (n: number) => {
     const d = new Date(start);
     d.setUTCMonth(d.getUTCMonth() + n);
@@ -96,7 +100,7 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
         ))}
         {Array.from({ length: count }, (_, i) => {
           const date = `${month}-${String(i + 1).padStart(2, "0")}`;
-          const n = calendar.filter((c) => !c.archived && !c.done && c.date === date).length;
+          const n = points.filter((p) => !p.item.archived && !p.item.done && p.date === date).length;
           return (
             <button
               className={`${date === day ? "selected" : ""} ${date === today ? "today" : ""}`}
@@ -111,50 +115,59 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
       </div>
       <section className="surface padded section-gap">
         <h2>{t("itemsFor", { period: day || month })}</h2>
-        {items.map((c) => (
-          <article className="event-row" key={c.id}>
-            {c.source === "todo" ? (
-              <input
-                type="checkbox"
-                aria-label={t("complete", { title: c.title })}
-                checked={c.done}
-                disabled={pending || c.archived}
-                onChange={(e) => {
-                  const done = e.target.checked;
-                  startTransition(async () => {
-                    markDone({ id: c.id, done });
-                    setError(await setTodoDone(c.id, done));
-                  });
-                }}
-              />
-            ) : (
-              <span aria-hidden="true" />
-            )}
-            <div>
-              <button className="text-button left" onClick={() => setEditor({ kind: "calendar", item: toRecord(c) })}>
-                <strong>{c.title}</strong>
+        {items.map((p) => {
+          const c = p.item;
+          const marker = pointKind(p);
+          return (
+            <article className="event-row" key={p.key}>
+              {c.source === "todo" ? (
+                <input
+                  type="checkbox"
+                  aria-label={t("complete", { title: c.title })}
+                  checked={c.done}
+                  disabled={pending || c.archived}
+                  onChange={(e) => {
+                    const done = e.target.checked;
+                    startTransition(async () => {
+                      markDone({ id: c.id, done });
+                      setError(await setTodoDone(c.id, done));
+                    });
+                  }}
+                />
+              ) : (
+                <span aria-hidden="true" />
+              )}
+              <div>
+                <button className="text-button left" onClick={() => setEditor({ kind: "calendar", item: calendarRecord(c) })}>
+                  <strong>{c.title}</strong>
+                </button>
+                <small>
+                  {p.date} {p.time || t("noTime")} · {p.timeZone} · {labels.calendarKind(c.kind)}
+                  {marker && ` · ${t(`point.${marker}`)}`}
+                </small>
+                {c.travel ? (
+                  <TravelSummary item={c} />
+                ) : (
+                  <p>
+                    {c.location}
+                    {c.notes ? ` · ${c.notes}` : ""}
+                  </p>
+                )}
+                {c.projectId && (
+                  <small>{t("project", { title: data.projects.find((x) => x.id === c.projectId)?.title || t("notFound") })}</small>
+                )}
+                {c.source === "event" && !c.archived && !p.end && (
+                  <a className="text-button" href={`/api/calendar/events/${c.id}`} download>
+                    {t("downloadIcs")}
+                  </a>
+                )}
+              </div>
+              <button className="text-button" disabled={pending} onClick={() => run(() => archiveCalendarItem(c.id, c.source, !c.archived))}>
+                {c.archived ? t("restore") : t("archive")}
               </button>
-              <small>
-                {c.date} {c.time || t("noTime")} · {c.timeZone} · {labels.calendarKind(c.kind)}
-              </small>
-              <p>
-                {c.location}
-                {c.notes ? ` · ${c.notes}` : ""}
-              </p>
-              {c.projectId && (
-                <small>{t("project", { title: data.projects.find((p) => p.id === c.projectId)?.title || t("notFound") })}</small>
-              )}
-              {c.source === "event" && !c.archived && (
-                <a className="text-button" href={`/api/calendar/events/${c.id}`} download>
-                  {t("downloadIcs")}
-                </a>
-              )}
-            </div>
-            <button className="text-button" disabled={pending} onClick={() => run(() => archiveCalendarItem(c.id, c.source, !c.archived))}>
-              {c.archived ? t("restore") : t("archive")}
-            </button>
-          </article>
-        ))}
+            </article>
+          );
+        })}
         {!items.length && <p className="empty">{t("empty")}</p>}
       </section>
       {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}

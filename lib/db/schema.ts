@@ -17,7 +17,7 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
-import { contactRoles, stages as projectStages } from "../types"; // relative: drizzle-kit loads this file too
+import { contactRoles, stages as projectStages, transportModes } from "../types"; // relative: drizzle-kit loads this file too
 
 const id = () => uuid().primaryKey().defaultRandom();
 const createdAt = () => timestamp({ withTimezone: true }).notNull().defaultNow();
@@ -304,6 +304,17 @@ export const calendarEvent = pgTable(
     startDate: date().notNull(),
     startTime: time({ precision: 0 }),
     timeZone: text().notNull(),
+    // Travel and stays: arrival or check-out, in its own zone.
+    endDate: date(),
+    endTime: time({ precision: 0 }),
+    endTimeZone: text(),
+    transportMode: text({ enum: transportModes }),
+    operator: text(), // airline, rail operator
+    serviceNumber: text(), // flight or train number
+    destination: text(),
+    seat: text(),
+    hotelName: text(),
+    // ticket_file_id arrives with the file table.
     status: text({ enum: calendarEventStatuses }).notNull().default("confirmed"),
     notes: text(),
     archivedAt: timestamp({ withTimezone: true }),
@@ -314,6 +325,12 @@ export const calendarEvent = pgTable(
     index("calendar_event_talent_start_idx").on(t.talentId, t.startDate),
     index("calendar_event_project_idx").on(t.projectId),
     check("calendar_event_status_check", oneOf(t.status, calendarEventStatuses)),
+    check("calendar_event_transport_mode_check", oneOf(t.transportMode, transportModes)),
+    // An end is all three parts or none.
+    check(
+      "calendar_event_end_check",
+      sql`(${t.endDate} is null) = (${t.endTime} is null) and (${t.endDate} is null) = (${t.endTimeZone} is null)`,
+    ),
   ],
 ).enableRLS();
 

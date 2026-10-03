@@ -146,7 +146,14 @@
       }
     },
     "unlinked": "未關聯",
-    "unconfirmed": "待確認"
+    "unconfirmed": "待確認",
+    "transportMode": {
+      "high_speed_rail": "高鐵",
+      "train": "火車",
+      "flight": "飛機",
+      "transfer": "接送",
+      "other": "其他"
+    }
   },
   "today": {
     "welcomeTitle": "從第一個邀約開始。",
@@ -413,7 +420,21 @@
     "downloadIcs": "下載 .ics",
     "archive": "歸檔",
     "restore": "還原",
-    "empty": "這段日期沒有符合條件的行程。"
+    "empty": "這段日期沒有符合條件的行程。",
+    "point": {
+      "depart": "出發",
+      "arrive": "抵達",
+      "checkIn": "入住",
+      "checkOut": "退房"
+    },
+    "travel": {
+      "checkIn": "入住 {when}",
+      "checkOut": "退房 {when}",
+      "noCheckOut": "退房時間尚未登錄",
+      "arrives": "抵達 {when}",
+      "noArrival": "抵達時間尚未登錄",
+      "seat": "座位 {seat}"
+    }
   },
   "calendarFeed": {
     "title": "行事曆訂閱",
@@ -496,7 +517,24 @@
       "recipient": "收件人",
       "source": "邀約內容",
       "draftBody": "草稿內容",
-      "language": "回覆語言"
+      "language": "回覆語言",
+      "departDate": "出發日期",
+      "departTime": "出發時間",
+      "departFrom": "出發站／機場／地點",
+      "destination": "抵達站／機場／地點",
+      "arriveDate": "抵達日期",
+      "arriveTime": "抵達時間",
+      "checkInDate": "入住日期",
+      "checkInTime": "入住時間",
+      "checkOutDate": "退房日期",
+      "checkOutTime": "退房時間",
+      "endTimeZone": "抵達／退房時區",
+      "hotelAddress": "飯店地址",
+      "hotelName": "飯店名稱",
+      "transportMode": "交通方式",
+      "operator": "航空公司／營運單位",
+      "serviceNumber": "班次／航班號碼",
+      "seat": "座位／車廂"
     },
     "unlinked": "未關聯",
     "typeIn": "自行輸入",
@@ -512,7 +550,9 @@
     "save": "儲存",
     "languageHelp": "這則回覆使用的語言；替換欄位與報價會用這個語言填入。",
     "quoteHelp": "報價未定可留白；填 0 代表無酬合作。",
-    "signedOnly": "僅列出已簽約的合作案，也可不關聯。"
+    "signedOnly": "僅列出已簽約的合作案，也可不關聯。",
+    "clearEnd": "清除抵達／退房時間",
+    "travelHelp": "時間使用各地當地時區，例如 Asia/Taipei、Asia/Tokyo。尚未串接即時航班、列車動態或訂房。"
   },
   "tone": {
     "natural": "自然專業",
@@ -642,7 +682,13 @@
     "templateNotFound": "找不到這個範本。",
     "projectNotSigned": "合作案簽約後才能建立關聯的待辦、行程與款項，請先將階段改為「已簽約」。",
     "projectArchived": "這個合作案已歸檔，請先還原再建立關聯項目。",
-    "quoteNotSet": "請先確定合作案報價，再拆分訂金與尾款。"
+    "quoteNotSet": "請先確定合作案報價，再拆分訂金與尾款。",
+    "travelTimeRequired": "交通與住宿需要填寫時間。",
+    "wallTimeInvalid": "這個當地時間因夏令時間而不存在或重複，請改用 UTC 登錄。",
+    "endIncomplete": "抵達／退房的日期、時間與時區請一起填寫，或全部留白。",
+    "endBeforeStart": "抵達／退房須晚於出發／入住（已考慮時差）。",
+    "transportModeRequired": "請選擇交通方式。",
+    "hotelNameRequired": "請填寫飯店名稱。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",
@@ -729,5 +775,13 @@
     "change": "變更角色",
     "settingsTitle": "角色與助理",
     "settingsBody": "角色只影響介面用語與建議，不會限制任何功能或權限。可隨時變更角色或助理造型。"
+  },
+  "itinerary": {
+    "title": "交通住宿與演出",
+    "addTravel": "新增交通",
+    "addStay": "新增住宿",
+    "empty": "尚未登錄交通或住宿。",
+    "performance": "演出",
+    "details": "行程詳情"
   }
 }

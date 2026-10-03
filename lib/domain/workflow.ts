@@ -1,5 +1,6 @@
 // Project workflow rules: settlement, reply templates, summaries, notifications.
 // Pure functions over AppData so they run on the server or in the browser.
+import { calendarPoints } from "@/lib/calendar/points";
 import { projectTypes } from "@/lib/project-types";
 import { contentWords, displayName, placeholderKey, type PlaceholderKey } from "@/lib/templates/placeholders";
 import type { AppData, Payment, Project, ReplyTemplate } from "@/lib/types";
@@ -117,16 +118,17 @@ export function notifications(data: AppData, now = new Date()): Notification[] {
   const today = dateInZone(data.talent.timeZone, 0, now);
   const soon = dateInZone(data.talent.timeZone, 7, now);
   return [
-    ...data.calendar
-      .filter((c) => !c.archived && !c.done && c.date <= soon && (c.source === "todo" || c.date >= today))
-      .map((c) => ({
-        id: `calendar:${c.id}:${c.date}:${c.time}`,
+    // Arrival and check-out are markers of their own, with their own IDs.
+    ...calendarPoints(data.calendar)
+      .filter(({ item: c, date }) => !c.archived && !c.done && date <= soon && (c.source === "todo" || date >= today))
+      .map(({ item: c, end, date, time }) => ({
+        id: `calendar:${c.id}:${end ? "end:" : ""}${date}:${time}`,
         kind: "calendar" as const,
         title: c.title,
-        date: c.date,
-        time: c.time,
-        overdue: c.date < today,
-        href: `/calendar?day=${c.date}`,
+        date,
+        time,
+        overdue: date < today,
+        href: `/calendar?day=${date}`,
       })),
     ...data.payments
       .filter((p) => !p.voided && p.direction === "in" && p.status === "expected" && p.dueDate && p.dueDate < today)

@@ -64,6 +64,13 @@
       "when": 1790992683281,
       "tag": "0008_payment_voided_at",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790992907931,
+      "tag": "0009_roles_and_avatar",
+      "breakpoints": true
     }
   ]
 }

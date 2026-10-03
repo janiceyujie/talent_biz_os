@@ -95,7 +95,8 @@
       "music": "Musician",
       "influencer": "Influencer / creator",
       "model": "Model",
-      "other": "Other"
+      "other": "Other",
+      "video": "Videographer / filmmaker"
     },
     "projectType": {
       "gig": {
@@ -569,21 +570,6 @@
       "unknown": "Something went wrong. Please try again."
     }
   },
-  "onboarding": {
-    "welcome": "Welcome, {name}",
-    "intro": "Tell us what you run — you can change it later.",
-    "youAre": "You are…",
-    "account": {
-      "individual": "Running my own career",
-      "manager": "A manager with several artists",
-      "agency": "An agency"
-    },
-    "comingSoon": "Coming soon",
-    "name": "Artist or brand name",
-    "type": "Type",
-    "creating": "Creating…",
-    "start": "Get started"
-  },
   "errors": {
     "invalid": "That data isn't in a valid format.",
     "onlyOwner": "Only the owner can change workspace settings.",
@@ -651,6 +637,63 @@
     "intake": "Intake",
     "files": "Files & assets",
     "talentAssistant": "Talent Assistant",
-    "calendar": "Calendar"
+    "calendar": "Calendar",
+    "yourWorkspace": "YOUR WORKSPACE",
+    "role": "Role"
+  },
+  "roles": {
+    "musician": {
+      "label": "Musician",
+      "description": "Gigs and music collaborations"
+    },
+    "manager": {
+      "label": "Manager",
+      "description": "Managing artists and their projects"
+    },
+    "video": {
+      "label": "Videographer / filmmaker",
+      "description": "Shoots and production projects"
+    },
+    "influencer": {
+      "label": "Influencer",
+      "description": "Content and brand partnerships"
+    },
+    "model": {
+      "label": "Model",
+      "description": "Shoots and endorsements"
+    },
+    "other": {
+      "label": "Other",
+      "description": "Shape it around how you work"
+    },
+    "step": "{step} / 2",
+    "chooseTitle": "Choose your role",
+    "changeTitle": "Change your role",
+    "workspaceTitle": "Your workspace",
+    "workspaceIntro": "Offers, projects, and payments, all in one place.",
+    "primaryRole": "Primary role",
+    "previewManager": "Artist roster, intake, delivery, and settlement",
+    "previewTalent": "Offer intake, project delivery, money, and reply templates",
+    "noLimit": "Your role doesn't limit any feature.",
+    "continue": "Continue",
+    "name": "Artist or brand name",
+    "managedName": "Name of the artist you manage",
+    "managedVertical": "What they do",
+    "managerNote": "You'll be able to add more artists once multi-artist accounts arrive.",
+    "assistantLook": "Assistant look",
+    "appearance": {
+      "female": "Female",
+      "male": "Male",
+      "non_binary": "Non-binary"
+    },
+    "start": "Get started",
+    "save": "Save",
+    "saving": "Saving…",
+    "back": "Back to roles",
+    "avatarWave": "{role} assistant: wave",
+    "avatarHint": "Click to say hi",
+    "change": "Change role",
+    "settingsTitle": "Role and assistant",
+    "settingsBody": "Your role shapes wording and suggestions, never what you can access. Change it, or the assistant's look, any time."
   }
 }

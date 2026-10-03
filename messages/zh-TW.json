@@ -95,7 +95,8 @@
       "music": "音樂人",
       "influencer": "網紅・創作者",
       "model": "模特兒",
-      "other": "其他"
+      "other": "其他",
+      "video": "影像工作者"
     },
     "projectType": {
       "gig": {
@@ -569,21 +570,6 @@
       "unknown": "發生錯誤，請稍後再試。"
     }
   },
-  "onboarding": {
-    "welcome": "歡迎，{name}",
-    "intro": "先告訴我們你經營的是什麼，之後可以再修改。",
-    "youAre": "你是…",
-    "account": {
-      "individual": "經營自己的事業",
-      "manager": "經紀人，管理多位藝人",
-      "agency": "經紀公司"
-    },
-    "comingSoon": "即將推出",
-    "name": "藝名或品牌名稱",
-    "type": "類型",
-    "creating": "建立中…",
-    "start": "開始使用"
-  },
   "errors": {
     "invalid": "資料格式不正確。",
     "onlyOwner": "只有負責人可以修改工作區設定。",
@@ -651,6 +637,63 @@
     "intake": "Intake",
     "files": "Files & assets",
     "talentAssistant": "Talent Assistant",
-    "calendar": "Calendar"
+    "calendar": "Calendar",
+    "yourWorkspace": "YOUR WORKSPACE",
+    "role": "Role"
+  },
+  "roles": {
+    "musician": {
+      "label": "音樂人",
+      "description": "演出與音樂合作"
+    },
+    "manager": {
+      "label": "經紀人",
+      "description": "管理藝人與合作案"
+    },
+    "video": {
+      "label": "影像工作者",
+      "description": "拍攝與製作專案"
+    },
+    "influencer": {
+      "label": "Influencer",
+      "description": "內容與品牌合作"
+    },
+    "model": {
+      "label": "Model",
+      "description": "拍攝與代言工作"
+    },
+    "other": {
+      "label": "其他",
+      "description": "自訂你的工作方式"
+    },
+    "step": "{step} / 2",
+    "chooseTitle": "選擇你的角色",
+    "changeTitle": "變更角色",
+    "workspaceTitle": "工作區",
+    "workspaceIntro": "邀約、合作與款項，放在同一個地方。",
+    "primaryRole": "主要角色",
+    "previewManager": "多人名單、進件洽談、履約與結算",
+    "previewTalent": "邀約分類、合作執行、收支與回覆範本",
+    "noLimit": "角色不會限制你使用任何功能。",
+    "continue": "繼續",
+    "name": "藝名或品牌名稱",
+    "managedName": "你負責的藝人名稱",
+    "managedVertical": "這位藝人的類型",
+    "managerNote": "多位藝人管理功能推出後，即可加入更多藝人。",
+    "assistantLook": "助理造型",
+    "appearance": {
+      "female": "女性",
+      "male": "男性",
+      "non_binary": "非二元"
+    },
+    "start": "開始使用",
+    "save": "儲存",
+    "saving": "儲存中…",
+    "back": "返回角色選擇",
+    "avatarWave": "{role}助理：揮手",
+    "avatarHint": "點一下，打個招呼",
+    "change": "變更角色",
+    "settingsTitle": "角色與助理",
+    "settingsBody": "角色只影響介面用語與建議，不會限制任何功能或權限。可隨時變更角色或助理造型。"
   }
 }

@@ -3,9 +3,10 @@ import { and, desc, eq, getTableColumns } from "drizzle-orm";
 import { cache } from "react";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { calendarEvent, contact, membership, payment, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { calendarEvent, contact, membership, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { isProjectType } from "@/lib/project-types";
+import { roleOf } from "@/lib/roles";
 import { calendarKinds, type AppData, type CalendarItem, type CalendarKind } from "@/lib/types";
 
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : "");
@@ -21,12 +22,17 @@ export const getAppData = cache(async (): Promise<AppData> => {
   const { person, talent: current } = await requireTalent();
   const [[talentRow], [memberRow], projectRows, contactRows, paymentRows, eventRows, todoRows, templateRows] = await Promise.all([
     db
-      .select({ id: talent.id, name: talent.name, timeZone: talent.timeZone })
+      .select({ id: talent.id, name: talent.name, timeZone: talent.timeZone, vertical: talent.vertical })
       .from(talent)
       .where(eq(talent.id, current.id)),
     db
-      .select({ feedHash: membership.calendarFeedTokenHash })
+      .select({
+        feedHash: membership.calendarFeedTokenHash,
+        accountType: personTable.accountType,
+        appearance: personTable.avatarAppearance,
+      })
       .from(membership)
+      .innerJoin(personTable, eq(personTable.id, membership.personId))
       .where(and(eq(membership.personId, person.personId), eq(membership.talentId, current.id))),
     db.select().from(project).where(eq(project.talentId, current.id)).orderBy(desc(project.updatedAt)),
     db.select().from(contact).where(eq(contact.talentId, current.id)).orderBy(contact.name),
@@ -83,8 +89,13 @@ export const getAppData = cache(async (): Promise<AppData> => {
   }
 
   return {
-    talent: talentRow,
-    person: { displayName: person.displayName, email: person.email },
+    talent: { id: talentRow.id, name: talentRow.name, timeZone: talentRow.timeZone },
+    person: {
+      displayName: person.displayName,
+      email: person.email,
+      role: roleOf(memberRow.accountType, talentRow.vertical),
+      appearance: memberRow.appearance,
+    },
     calendarFeed: Boolean(memberRow?.feedHash),
     projects: projectRows.map((p) => ({
       id: p.id,

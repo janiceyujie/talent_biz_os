@@ -6,6 +6,8 @@ import { useAppData } from "@/components/app/app-data";
 import { SignOutButton } from "@/components/sign-out-button";
 import { LocaleSwitch } from "@/components/locale-switch";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { RolePortrait } from "@/components/role/role-portrait";
 import { CalendarFeedSettings } from "./calendar-feed-settings";
 
 export function SettingsView() {
@@ -13,6 +15,7 @@ export function SettingsView() {
   const t = useTranslations("settings");
   const tEyebrow = useTranslations("eyebrow");
   const tLocale = useTranslations("locale");
+  const tRoles = useTranslations("roles");
   const [state, action, pending] = useActionState<SettingsState, FormData>(updateWorkspace, {});
 
   return (
@@ -57,6 +60,24 @@ export function SettingsView() {
         <p className="muted">{tLocale("help")}</p>
         <div className="form-grid">
           <LocaleSwitch />
+        </div>
+      </section>
+      <section className="surface padded">
+        <div className="section-header">
+          <div>
+            <span>{tEyebrow("role")}</span>
+            <h2>{tRoles("settingsTitle")}</h2>
+          </div>
+        </div>
+        <div className="role-settings">
+          <RolePortrait role={data.person.role} appearance={data.person.appearance} />
+          <div>
+            <strong>{tRoles(`${data.person.role}.label`)}</strong>
+            <p className="muted">{tRoles("settingsBody")}</p>
+            <Link className="secondary" href="/role">
+              {tRoles("change")}
+            </Link>
+          </div>
         </div>
       </section>
       <CalendarFeedSettings />

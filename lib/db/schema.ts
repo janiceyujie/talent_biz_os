@@ -34,6 +34,7 @@ const oneOf = (column: AnyPgColumn, values: readonly string[]): SQL =>
 // Identity ---------------------------------------------------------------------
 
 export const accountTypes = ["individual", "manager", "agency"] as const;
+export const avatarAppearances = ["female", "male", "non_binary"] as const;
 
 // A login. Doubles as Better Auth's `user` model (renamed); Better Auth
 // lowercases emails itself, so plain unique text is enough.
@@ -47,10 +48,14 @@ export const person = pgTable(
     image: text(),
     accountType: text({ enum: accountTypes }).notNull().default("individual"),
     locale: text().notNull().default("zh-TW"), // UI language; supported list in lib/i18n/config
+    avatarAppearance: text({ enum: avatarAppearances }).notNull().default("non_binary"), // assistant character's look
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [check("person_account_type_check", oneOf(t.accountType, accountTypes))],
+  (t) => [
+    check("person_account_type_check", oneOf(t.accountType, accountTypes)),
+    check("person_avatar_appearance_check", oneOf(t.avatarAppearance, avatarAppearances)),
+  ],
 ).enableRLS();
 
 // Better Auth internals. Column set follows Better Auth's core schema;
@@ -109,7 +114,7 @@ export const authVerification = pgTable(
   (t) => [index("auth_verification_identifier_idx").on(t.identifier)],
 ).enableRLS();
 
-export const verticals = ["music", "influencer", "model", "other"] as const;
+export const verticals = ["music", "influencer", "model", "video", "other"] as const;
 
 // The artist or creator whose business is tracked.
 export const talent = pgTable(

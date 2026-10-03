@@ -2652,3 +2652,19 @@ a.disabled {
 .auth-locale select {
   margin-top: 4px;
 }
+.role-switch {
+  text-decoration: none;
+}
+.role-settings {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.role-settings svg {
+  width: 96px;
+  flex: none;
+}
+.role-settings .secondary {
+  display: inline-flex;
+  margin-top: 8px;
+}

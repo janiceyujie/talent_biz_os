@@ -21,6 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const data = useAppData();
   const t = useTranslations("shell");
   const tNav = useTranslations("nav");
+  const tRoles = useTranslations("roles");
   const notificationText = useNotificationText();
   const labels = useLabels();
   const pathname = usePathname();
@@ -142,6 +143,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <strong>{data.talent.name}</strong>
             <small>{data.person.email}</small>
           </div>
+        </Link>
+        <Link className="role-switch" href="/role" onClick={() => setMobile(false)}>
+          <strong>{tRoles(`${data.person.role}.label`)}</strong>
+          <span>{tRoles("change")} ↗</span>
         </Link>
         <nav>
           <small>{tNav("groupWork")}</small>

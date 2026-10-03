@@ -4,38 +4,32 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import type { RolePickerState } from "@/components/role/role-picker";
 import { errorText } from "@/lib/actions/validation";
-import { getCurrentTalent, requirePerson } from "@/lib/auth";
+import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { membership, person, talent, verticals } from "@/lib/db/schema";
+import { person, talent, verticals } from "@/lib/db/schema";
 import { isAppearance, isRole, roleSettings, type Vertical } from "@/lib/roles";
 
 const isVertical = (value: unknown): value is Vertical => verticals.includes(value as Vertical);
 
-/**
- * First-run setup: the chosen role is saved onto person.account_type and
- * talent.vertical (see lib/roles), the assistant's look onto the person, and
- * the person becomes owner of their first talent.
- */
-export async function createTalent(_prev: RolePickerState, formData: FormData): Promise<RolePickerState> {
-  const current = await requirePerson();
-  if (await getCurrentTalent(current.personId)) redirect("/");
+/** Change role and assistant look. The role is a preference; it changes no one's access. */
+export async function updateRole(_prev: RolePickerState, formData: FormData): Promise<RolePickerState> {
+  const { person: current, talent: currentTalent } = await requireTalent();
   const fail = await errorText();
 
   const role = formData.get("role");
   const appearance = formData.get("appearance");
   const vertical = formData.get("vertical");
-  const name = String(formData.get("name") ?? "").trim();
   if (!isRole(role) || !isAppearance(appearance) || !isVertical(vertical)) return { error: fail("invalid") };
-  if (!name) return { error: fail("nameRequired") };
   const settings = roleSettings(role, vertical);
+  // The vertical belongs to the talent, so only its owner changes it.
+  if (currentTalent.role !== "owner" && settings.vertical !== currentTalent.vertical) return { error: fail("onlyOwner") };
 
   await db.transaction(async (tx) => {
     await tx
       .update(person)
       .set({ accountType: settings.accountType, avatarAppearance: appearance })
       .where(eq(person.id, current.personId));
-    const [created] = await tx.insert(talent).values({ name, vertical: settings.vertical }).returning({ id: talent.id });
-    await tx.insert(membership).values({ talentId: created.id, personId: current.personId, role: "owner" });
+    await tx.update(talent).set({ vertical: settings.vertical }).where(eq(talent.id, currentTalent.id));
   });
   redirect("/");
 }

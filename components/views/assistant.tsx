@@ -1,16 +1,19 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useAppData } from "@/components/app/app-data";
+import { RoleAvatar } from "@/components/role/role-portrait";
 
 // The assistant is a Later feature (docs/architecture.md). The panel keeps the
 // prototype's layout so the dashboard reads right; input stays disabled.
 export function AssistantView({ compact = false }: { compact?: boolean }) {
   const t = useTranslations("assistant");
+  const { person } = useAppData();
   const tEyebrow = useTranslations("eyebrow");
   return (
     <section className={`assistant-panel ${compact ? "" : "assistant-expanded"}`}>
       <header>
-        <div className="assistant-mark">✦</div>
+        <RoleAvatar role={person.role} appearance={person.appearance} />
         <div>
           <span>{tEyebrow("talentAssistant")}</span>
           <small>{t("status")}</small>

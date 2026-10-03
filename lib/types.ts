@@ -2,6 +2,7 @@
 // docs/architecture.md#schema; until a table is built, its list is empty
 // (see lib/data). Dates are local YYYY-MM-DD strings in the talent's time zone.
 import type { Locale } from "@/lib/i18n/config";
+import type { Appearance, Role } from "@/lib/roles";
 import type { ProjectType } from "@/lib/project-types";
 
 export const stages = [
@@ -144,7 +145,7 @@ export type InboxMessage = {
 
 export type AppData = {
   talent: { id: string; name: string; timeZone: string };
-  person: { displayName: string; email: string };
+  person: { displayName: string; email: string; role: Role; appearance: Appearance };
   calendarFeed: boolean; // a subscription link exists (the URL itself is only shown once)
   projects: Project[];
   contacts: Contact[];

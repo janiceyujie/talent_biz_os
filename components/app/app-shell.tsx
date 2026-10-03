@@ -8,9 +8,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { SignOutButton } from "@/components/sign-out-button";
 import { LocaleSwitch } from "@/components/locale-switch";
 import { PRODUCT_MONOGRAM, PRODUCT_NAME, PRODUCT_TAGLINE, SEARCH_SHORTCUT } from "@/lib/brand";
-import { notifications } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
-import { useNotificationText } from "./notification-text";
+import { NotificationList, ReminderToast, useNotifications } from "./notifications";
 import { useAppData } from "./app-data";
 import { Modal } from "./modal";
 import { isActive, nav } from "./nav";
@@ -22,7 +21,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const t = useTranslations("shell");
   const tNav = useTranslations("nav");
   const tRoles = useTranslations("roles");
-  const notificationText = useNotificationText();
   const labels = useLabels();
   const pathname = usePathname();
   const router = useRouter();
@@ -92,7 +90,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", keys);
   }, []);
 
-  const alerts = notifications(data);
+  const { unread } = useNotifications();
   const results = [
     ...data.projects
       .filter((p) => !p.archived)
@@ -210,11 +208,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="top-actions">
             <LocaleSwitch compact />
             <button
-              aria-label={t("notifications", { count: alerts.length })}
+              aria-label={t("notifications", { count: unread.length })}
               onClick={() => setShowNotifications(true)}
             >
               <Bell size={19} />
-              {alerts.length > 0 && <i />}
+              {unread.length > 0 && <i />}
             </button>
             <Link href="/settings" aria-label={t("openSettings")}>
               <Settings size={18} />
@@ -224,21 +222,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="page-content">{children}</div>
       </main>
       {showNotifications && (
-        <Modal title={t("notifications", { count: alerts.length })} onClose={() => setShowNotifications(false)}>
-          {alerts.map((n) => {
-            const text = notificationText(n);
-            return (
-              <article className="notification-row" key={n.id}>
-                <button className="text-button left" onClick={() => open(n.href)}>
-                  <strong>{text.title}</strong>
-                  <small>{text.detail}</small>
-                </button>
-              </article>
-            );
-          })}
-          {!alerts.length && <p className="empty">{t("notificationsEmpty")}</p>}
+        <Modal title={t("notifications", { count: unread.length })} onClose={() => setShowNotifications(false)}>
+          <NotificationList open={open} />
         </Modal>
       )}
+      <ReminderToast onOpen={() => setShowNotifications(true)} suppress={showNotifications || showSearch} />
       {showSearch && (
         <Modal title={t("searchTitle")} onClose={() => setShowSearch(false)}>
           <input

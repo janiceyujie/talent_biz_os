@@ -78,6 +78,13 @@
       "when": 1791005031194,
       "tag": "0010_travel_and_stays",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791005638085,
+      "tag": "0011_notification_state",
+      "breakpoints": true
     }
   ]
 }

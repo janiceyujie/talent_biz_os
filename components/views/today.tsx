@@ -8,10 +8,11 @@ import { useAppData } from "@/components/app/app-data";
 import { RecordEditor, type Editor } from "@/components/app/record-editor";
 import { dateInZone } from "@/lib/domain/dates";
 import { useMoney } from "@/lib/i18n/format";
-import { isSignedOpen, notifications, summarize } from "@/lib/domain/workflow";
+import { isSignedOpen, summarize } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
 import { mainStages } from "@/lib/domain/phases";
 import { useNotificationText } from "@/components/app/notification-text";
+import { ReminderStatus, useNotifications } from "@/components/app/notifications";
 import { AssistantView } from "./assistant";
 import { Metric, Revenue } from "./finance";
 
@@ -25,7 +26,8 @@ export function TodayView() {
   const router = useRouter();
   const [editor, setEditor] = useState<Editor | null>(null);
   const summary = summarize(data);
-  const alerts = notifications(data);
+  const { list, unread } = useNotifications();
+  const alerts = list.filter((n) => !n.snoozedUntil);
   const today = dateInZone(data.talent.timeZone);
   const live = data.projects.filter((p) => !p.archived);
   const signedStages = mainStages.slice(mainStages.indexOf("signed"));
@@ -56,7 +58,7 @@ export function TodayView() {
           value={String(data.calendar.filter((c) => !c.archived && !c.done && c.date === today).length)}
           note={`${today} · ${data.talent.timeZone}`}
         />
-        <Metric label={t("metricNotices")} value={String(alerts.length)} note={t("metricNoticesNote")} tone="lime" />
+        <Metric label={t("metricNotices")} value={String(unread.length)} note={t("metricNoticesNote")} tone="lime" />
       </section>
       <div className="dashboard-grid">
         <section className="surface action-list">
@@ -73,6 +75,7 @@ export function TodayView() {
               <button className="action-row" key={n.id} onClick={() => router.push(n.href)}>
                 <span className={`priority p-${i + 1}`}>{String(i + 1).padStart(2, "0")}</span>
                 <div>
+                  <ReminderStatus urgency={n.urgency} />
                   <strong>{text.title}</strong>
                   <small>{text.detail}</small>
                 </div>

@@ -11,6 +11,7 @@ import {
   jsonb,
   numeric,
   pgTable,
+  primaryKey,
   text,
   time,
   timestamp,
@@ -216,6 +217,22 @@ export const project = pgTable(
 ).enableRLS();
 
 // Who confirmed or changed what, and when.
+// Per-person read and snooze state of derived notifications. Notifications
+// themselves are computed on read, never stored; their ids are stable
+// (e.g. 'calendar:{id}:{date}:{time}'). A snooze never moves the item itself.
+export const notificationState = pgTable(
+  "notification_state",
+  {
+    personId: uuid()
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    notificationId: text().notNull(),
+    readAt: timestamp({ withTimezone: true }),
+    snoozedUntil: timestamp({ withTimezone: true }), // set by the server ("remind me in an hour")
+  },
+  (t) => [primaryKey({ columns: [t.personId, t.notificationId] })],
+).enableRLS();
+
 export const auditLog = pgTable(
   "audit_log",
   {

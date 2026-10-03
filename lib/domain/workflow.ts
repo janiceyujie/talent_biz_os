@@ -1,6 +1,5 @@
 // Project workflow rules: settlement, reply templates, summaries, notifications.
 // Pure functions over AppData so they run on the server or in the browser.
-import { calendarPoints } from "@/lib/calendar/points";
 import { projectTypes } from "@/lib/project-types";
 import { contentWords, displayName, placeholderKey, type PlaceholderKey } from "@/lib/templates/placeholders";
 import type { AppData, Payment, Project, ReplyTemplate } from "@/lib/types";
@@ -104,41 +103,3 @@ export function summarize(data: AppData, from = "", to = "9999-12-31") {
 
 /** Signed and not finished: execution, or settlement still collecting. */
 export const isSignedOpen = (p: Project) => !p.archived && isSigned(p.stage) && p.stage !== "closed";
-
-/** Structured so each screen words it in the active language. */
-export type Notification =
-  | { id: string; kind: "calendar"; title: string; date: string; time: string; overdue: boolean; href: string }
-  | { id: string; kind: "overduePayment"; title: string; date: string; amount: number; href: string };
-
-/**
- * In-app notifications: open to-dos due within a week (overdue ones stay),
- * events in the coming week, and overdue income. A past event isn't overdue.
- */
-export function notifications(data: AppData, now = new Date()): Notification[] {
-  const today = dateInZone(data.talent.timeZone, 0, now);
-  const soon = dateInZone(data.talent.timeZone, 7, now);
-  return [
-    // Arrival and check-out are markers of their own, with their own IDs.
-    ...calendarPoints(data.calendar)
-      .filter(({ item: c, date }) => !c.archived && !c.done && date <= soon && (c.source === "todo" || date >= today))
-      .map(({ item: c, end, date, time }) => ({
-        id: `calendar:${c.id}:${end ? "end:" : ""}${date}:${time}`,
-        kind: "calendar" as const,
-        title: c.title,
-        date,
-        time,
-        overdue: date < today,
-        href: `/calendar?day=${date}`,
-      })),
-    ...data.payments
-      .filter((p) => !p.voided && p.direction === "in" && p.status === "expected" && p.dueDate && p.dueDate < today)
-      .map((p) => ({
-        id: `payment:${p.id}:${p.dueDate}`,
-        kind: "overduePayment" as const,
-        title: p.label,
-        date: p.dueDate!,
-        amount: paymentTotal(p),
-        href: "/finance",
-      })),
-  ];
-}

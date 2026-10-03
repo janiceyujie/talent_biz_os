@@ -172,4 +172,8 @@ export type AppData = {
   drafts: ReplyDraft[];
   files: StoredFile[];
   inbox: InboxMessage[];
+  notificationState: NotificationState; // this person's read and snooze marks
 };
+
+/** Read and snooze marks by notification id (ISO timestamps). */
+export type NotificationState = Record<string, { readAt: string | null; snoozedUntil: string | null }>;

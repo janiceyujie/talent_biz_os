@@ -4,7 +4,8 @@ import { useState } from "react";
 import { secondaryButtonClass } from "@/components/form";
 import { authClient } from "@/lib/auth/client";
 
-export function GoogleButton({ label }: { label: string }) {
+/** "Continue with Google". A failure comes back to `returnTo` with ?error=…; a new person goes to onboarding. */
+export function GoogleButton({ label, returnTo }: { label: string; returnTo: string }) {
   const [pending, setPending] = useState(false);
   return (
     <button
@@ -13,7 +14,12 @@ export function GoogleButton({ label }: { label: string }) {
       disabled={pending}
       onClick={async () => {
         setPending(true);
-        await authClient.signIn.social({ provider: "google", callbackURL: "/" });
+        await authClient.signIn.social({
+          provider: "google",
+          callbackURL: "/",
+          newUserCallbackURL: "/onboarding",
+          errorCallbackURL: returnTo,
+        });
       }}
     >
       {label}

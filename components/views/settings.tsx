@@ -10,6 +10,7 @@ import Link from "next/link";
 import { RolePortrait } from "@/components/role/role-portrait";
 import { TimeZonePicker } from "@/components/app/time-zone-picker";
 import { CalendarFeedSettings } from "./calendar-feed-settings";
+import { SignInMethods } from "./sign-in-methods";
 
 export function SettingsView() {
   const data = useAppData();
@@ -113,6 +114,7 @@ export function SettingsView() {
         <p>
           {data.person.displayName} · {data.person.email}
         </p>
+        <SignInMethods />
         <SignOutButton />
       </section>
     </div>

@@ -506,7 +506,23 @@
     "gmailBody": "安裝 Gmail 外掛後，打開一封邀約信按一下就能送進系統。外掛只會讀取你送出的那一封信，不會讀取整個信箱。",
     "aiTitle": "AI 分析與擬稿",
     "aiBody": "邀約分析與擬稿由系統提供的 AI 服務處理，你不需要自行設定金鑰。送給模型的內容不會被用來訓練模型；所有結果都要經過你確認才會保存。",
-    "account": "帳號"
+    "account": "帳號",
+    "signIn": {
+      "title": "登入方式",
+      "password": "密碼",
+      "passwordSet": "已設定",
+      "passwordNone": "尚未設定",
+      "setPassword": "寄送設定密碼的連結",
+      "passwordSent": "設定密碼的連結已寄到 {email}。",
+      "googleLinked": "已連結",
+      "googleNotLinked": "未連結",
+      "connect": "連結 Google 帳號",
+      "disconnect": "取消連結",
+      "lastMethod": "這是你唯一的登入方式，請先設定密碼再取消連結 Google。",
+      "googleUnavailable": "這個環境尚未啟用 Google 登入。",
+      "help": "連結的 Google 帳號可以使用和本帳號不同的電子郵件。登入方式只用來登入，不會讀取你的郵件。",
+      "google": "Google"
+    }
   },
   "editor": {
     "titleNew": "新增{kind, select, project {合作案} contact {藝人與合作方} calendar {行程／待辦} payment {內帳紀錄} template {回覆範本} other {回覆草稿}}",
@@ -683,7 +699,14 @@
       "USER_ALREADY_EXISTS": "這個電子郵件已經註冊過了。",
       "INVALID_TOKEN": "連結無效或已過期，請重新申請。",
       "unknown": "發生錯誤，請稍後再試。"
-    }
+    },
+    "googleError": {
+      "account_not_linked": "這個電子郵件已經有帳號，但還沒完成驗證。請點確認信中的連結，或用密碼登入。",
+      "account_already_linked_to_different_user": "這個 Google 帳號已連結到另一個帳號。",
+      "email_not_found": "Google 沒有提供電子郵件，無法用它登入。",
+      "generic": "Google 登入沒有完成，請再試一次。"
+    },
+    "or": "或"
   },
   "errors": {
     "invalid": "資料格式不正確。",

@@ -1,9 +1,9 @@
 import "server-only";
 import { and, desc, eq, getTableColumns } from "drizzle-orm";
 import { cache } from "react";
-import { requireTalent } from "@/lib/auth";
+import { isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { calendarEvent, contact, membership, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { authAccount, calendarEvent, contact, membership, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
@@ -20,7 +20,7 @@ const eventKind = (k: string): CalendarKind => (calendarKinds.includes(k as Cale
  */
 export const getAppData = cache(async (): Promise<AppData> => {
   const { person, talent: current } = await requireTalent();
-  const [[talentRow], [memberRow], projectRows, contactRows, paymentRows, eventRows, todoRows, templateRows, stateRows] = await Promise.all([
+  const [[talentRow], [memberRow], projectRows, contactRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows] = await Promise.all([
     db
       .select({ id: talent.id, name: talent.name, timeZone: talent.timeZone, vertical: talent.vertical })
       .from(talent)
@@ -46,6 +46,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     db.select().from(todo).where(eq(todo.talentId, current.id)).orderBy(todo.createdAt),
     db.select().from(replyTemplate).where(eq(replyTemplate.talentId, current.id)).orderBy(desc(replyTemplate.updatedAt)),
     db.select().from(notificationState).where(eq(notificationState.personId, person.personId)),
+    db.select({ id: authAccount.id, providerId: authAccount.providerId }).from(authAccount).where(eq(authAccount.personId, person.personId)),
   ]);
 
   const calendar: CalendarItem[] = [
@@ -113,6 +114,11 @@ export const getAppData = cache(async (): Promise<AppData> => {
       appearance: memberRow.appearance,
     },
     calendarFeed: Boolean(memberRow?.feedHash),
+    signIn: {
+      password: accountRows.some((a) => a.providerId === "credential"),
+      googleAccountId: accountRows.find((a) => a.providerId === "google")?.id ?? null,
+      googleAvailable: isGoogleEnabled,
+    },
     notificationState: Object.fromEntries(
       stateRows.map((r) => [
         r.notificationId,

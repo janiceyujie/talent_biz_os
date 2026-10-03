@@ -173,6 +173,8 @@ export type AppData = {
   files: StoredFile[];
   inbox: InboxMessage[];
   notificationState: NotificationState; // this person's read and snooze marks
+  // This person's sign-in methods; googleAccountId is our auth_account row id (what unlinking takes).
+  signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };
 };
 
 /** Read and snooze marks by notification id (ISO timestamps). */

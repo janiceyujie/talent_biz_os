@@ -41,7 +41,8 @@ Signing in with Google is not the same as reading someone's Gmail. Sign-in asks 
 - One extra state to explain: "this email has an account that isn't verified yet". It needs clear copy on the sign-in page and in both languages.
 - People with two email addresses can still create two persons by accident if they never use settings. Merging persons isn't supported; if that shows up in practice, it needs its own decision (moving memberships and data between persons).
 - Behavior depends on Better Auth's account-linking options; an upgrade that changes defaults (`requireLocalEmailVerified` is marked to become unconditional, which matches this decision) must be checked against this record.
-- Tests can't drive real Google sign-in; linking is tested against a stubbed provider, and Google itself is checked by hand.
+- Tests can't drive real Google sign-in. With no real keys, outside production, and `GOOGLE_TEST_STUB=1`, a stand-in provider accepts unsigned ID tokens through the same linking code; real Google is checked by hand. Real Google sign-in uses the redirect only (`disableIdTokenSignIn`).
+- Setting up the Google side: [Google sign-in setup](../setup/google-sign-in.md).
 
 ## References
 

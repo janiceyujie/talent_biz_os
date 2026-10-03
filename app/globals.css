@@ -2696,3 +2696,36 @@ a.disabled {
   color: var(--muted);
   font-size: 13px;
 }
+
+/* Settings: sign-in methods */
+.sign-in-methods {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+.sign-in-methods h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.sign-in-methods dl {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.sign-in-methods dl > div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.sign-in-methods dt {
+  color: var(--muted);
+}
+.sign-in-methods dd {
+  margin: 0;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}

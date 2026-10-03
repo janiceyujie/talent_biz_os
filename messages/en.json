@@ -506,7 +506,23 @@
     "gmailBody": "With the Gmail add-on installed, open an offer email and send it in with one click. The add-on reads only the email you send, never your whole inbox.",
     "aiTitle": "AI analysis and drafting",
     "aiBody": "Offer analysis and drafting run on an AI service we provide — there's no key to set up. What's sent to the model is never used to train it, and every result needs your confirmation before it's saved.",
-    "account": "Account"
+    "account": "Account",
+    "signIn": {
+      "title": "Sign-in methods",
+      "password": "Password",
+      "passwordSet": "Set",
+      "passwordNone": "Not set",
+      "setPassword": "Email me a link to set a password",
+      "passwordSent": "We sent a link to {email}.",
+      "googleLinked": "Linked",
+      "googleNotLinked": "Not linked",
+      "connect": "Connect Google",
+      "disconnect": "Disconnect",
+      "lastMethod": "This is your only way to sign in — set a password before disconnecting Google.",
+      "googleUnavailable": "Google sign-in isn't set up on this server yet.",
+      "help": "The Google account you connect can use a different email from this account. Sign-in methods only sign you in; they never read your mail.",
+      "google": "Google"
+    }
   },
   "editor": {
     "titleNew": "New {kind, select, project {project} contact {artist / partner} calendar {event / to-do} payment {ledger entry} template {reply template} other {reply draft}}",
@@ -683,7 +699,14 @@
       "USER_ALREADY_EXISTS": "That email already has an account.",
       "INVALID_TOKEN": "This link is invalid or has expired. Please request a new one.",
       "unknown": "Something went wrong. Please try again."
-    }
+    },
+    "googleError": {
+      "account_not_linked": "An account with this email already exists, but its email isn't verified yet. Use the link in the confirmation email, or sign in with your password.",
+      "account_already_linked_to_different_user": "This Google account is already linked to a different account.",
+      "email_not_found": "Google didn't share an email address, so we can't sign you in with it.",
+      "generic": "Google sign-in didn't finish. Please try again."
+    },
+    "or": "or"
   },
   "errors": {
     "invalid": "That data isn't in a valid format.",

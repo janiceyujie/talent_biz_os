@@ -1,10 +1,15 @@
 "use client";
 
+import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { useLabels } from "@/lib/i18n/labels";
 
 export function FilesView() {
   const data = useAppData();
+  const t = useTranslations("files");
+  const labels = useLabels();
+  const format = useFormatter();
   const [projectId, setProjectId] = useState("");
   const [q, setQ] = useState("");
   const [archived, setArchived] = useState(false);
@@ -20,14 +25,14 @@ export function FilesView() {
       <div className="section-header">
         <div>
           <span>Files & assets</span>
-          <h2>保存每個合作案的檔案</h2>
+          <h2>{t("title")}</h2>
         </div>
       </div>
-      <p className="muted">上傳 Offer、合約、素材或發票，與合作案一起保存。歸檔後仍可還原。檔案上傳功能開發中。</p>
+      <p className="muted">{t("intro")}</p>
       <div className="toolbar wrap">
-        <input aria-label="搜尋素材" value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜尋檔名" />
-        <select aria-label="素材關聯合作案" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-          <option value="">全部／未關聯</option>
+        <input aria-label={t("search")} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchPlaceholder")} />
+        <select aria-label={t("projectFilter")} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+          <option value="">{t("allOrUnlinked")}</option>
           {data.projects
             .filter((p) => !p.archived)
             .map((p) => (
@@ -37,20 +42,20 @@ export function FilesView() {
             ))}
         </select>
         <button className="primary" disabled>
-          上傳檔案
+          {t("upload")}
         </button>
         <label className="check-line">
           <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
-          已歸檔
+          {t("archivedOnly")}
         </label>
       </div>
       <div className="table-scroll">
         <table>
           <thead>
             <tr>
-              <th>檔案</th>
-              <th>合作案</th>
-              <th>大小</th>
+              <th>{t("colFile")}</th>
+              <th>{t("colProject")}</th>
+              <th>{t("colSize")}</th>
             </tr>
           </thead>
           <tbody>
@@ -58,16 +63,16 @@ export function FilesView() {
               <tr key={f.id}>
                 <td>
                   <strong>{f.filename}</strong>
-                  <small>{new Date(f.createdAt).toLocaleDateString("zh-TW")}</small>
+                  <small>{format.dateTime(new Date(f.createdAt), { dateStyle: "medium" })}</small>
                 </td>
-                <td>{data.projects.find((p) => p.id === f.projectId)?.title || "未關聯"}</td>
+                <td>{data.projects.find((p) => p.id === f.projectId)?.title || labels.unlinked()}</td>
                 <td>{(f.sizeBytes / 1024).toFixed(1)} KB</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {!files.length && <p className="empty">還沒有檔案。可上傳 Offer、合約、素材或發票。</p>}
+      {!files.length && <p className="empty">{t("empty")}</p>}
     </section>
   );
 }

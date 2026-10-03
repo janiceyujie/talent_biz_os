@@ -1,14 +1,17 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { projectRecord, RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { archiveContact } from "@/lib/actions/contacts";
-import { contactRoleLabels } from "@/lib/labels";
+import { useLabels } from "@/lib/i18n/labels";
 import { contactRoles } from "@/lib/types";
 
 export function ContactsView() {
   const data = useAppData();
+  const t = useTranslations("contacts");
+  const labels = useLabels();
   const [editor, setEditor] = useState<Editor | null>(null);
   const [q, setQ] = useState("");
   const [role, setRole] = useState("all");
@@ -25,21 +28,21 @@ export function ContactsView() {
   return (
     <>
       <div className="toolbar wrap">
-        <input aria-label="搜尋聯絡人" placeholder="搜尋名稱、公司或 Email" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select aria-label="聯絡人類型" value={role} onChange={(e) => setRole(e.target.value)}>
-          <option value="all">全部</option>
+        <input aria-label={t("search")} placeholder={t("searchPlaceholder")} value={q} onChange={(e) => setQ(e.target.value)} />
+        <select aria-label={t("roleFilter")} value={role} onChange={(e) => setRole(e.target.value)}>
+          <option value="all">{t("all")}</option>
           {contactRoles.map((r) => (
             <option key={r} value={r}>
-              {contactRoleLabels[r]}
+              {labels.contactRole(r)}
             </option>
           ))}
         </select>
         <button className="primary" onClick={() => setEditor({ kind: "contact" })}>
-          ＋新增藝人／合作方
+          {t("new")}
         </button>
         <label className="check-line">
           <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
-          已歸檔
+          {t("archivedOnly")}
         </label>
       </div>
       {error && (
@@ -51,14 +54,14 @@ export function ContactsView() {
         {visible.map((c) => (
           <article className="surface contact-card" key={c.id}>
             <div className="contact-avatar">{c.name.slice(0, 1)}</div>
-            <span className="category">{contactRoleLabels[c.role]}</span>
+            <span className="category">{labels.contactRole(c.role)}</span>
             <h2>{c.name}</h2>
-            <p className="muted">{c.company || "尚未填寫公司"}</p>
-            <p>{c.email ? <a href={`mailto:${c.email}`}>{c.email}</a> : "尚未填寫 Email"}</p>
-            <p>{c.phone || "尚未填寫電話"}</p>
+            <p className="muted">{c.company || t("noCompany")}</p>
+            <p>{c.email ? <a href={`mailto:${c.email}`}>{c.email}</a> : t("noEmail")}</p>
+            <p>{c.phone || t("noPhone")}</p>
             <p className="prewrap">{c.notes}</p>
             <div className="related-deals">
-              <small>相關合作案</small>
+              <small>{t("related")}</small>
               {data.projects
                 .filter((p) => !p.archived && p.counterpartyId === c.id)
                 .map((p) => (
@@ -69,14 +72,14 @@ export function ContactsView() {
             </div>
             <div className="row-actions">
               <button className="secondary" onClick={() => setEditor({ kind: "contact", item: toRecord(c) })}>
-                編輯資料
+                {t("edit")}
               </button>
               <button
                 className="text-button"
                 disabled={pending}
                 onClick={() => startTransition(async () => setError(await archiveContact(c.id, !c.archived)))}
               >
-                {c.archived ? "還原" : "歸檔"}
+                {c.archived ? t("restore") : t("archive")}
               </button>
             </div>
           </article>
@@ -84,10 +87,10 @@ export function ContactsView() {
       </div>
       {!visible.length && (
         <div className="surface empty">
-          <h2>建立你的合作名單</h2>
-          <p>藝人、品牌窗口與經紀人的資料都可以在這裡保存。</p>
+          <h2>{t("emptyTitle")}</h2>
+          <p>{t("emptyBody")}</p>
           <button className="primary" onClick={() => setEditor({ kind: "contact" })}>
-            新增第一位聯絡人
+            {t("addFirst")}
           </button>
         </div>
       )}

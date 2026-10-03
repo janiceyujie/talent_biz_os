@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
@@ -7,8 +8,8 @@ import { projectRecord, RecordEditor, type Editor } from "@/components/app/recor
 import { archiveProject, setProjectStage } from "@/lib/actions/projects";
 import { useMoney } from "@/lib/i18n/format";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
-import { stageLabels } from "@/lib/labels";
-import { projectType, projectTypes } from "@/lib/project-types";
+import { useLabels } from "@/lib/i18n/labels";
+import { projectTypes } from "@/lib/project-types";
 import { stages, type Stage } from "@/lib/types";
 import { ProjectWorkflowPanel } from "./project-workflow-panel";
 
@@ -16,6 +17,8 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
   const data = useAppData();
   const money = useMoney();
   const router = useRouter();
+  const t = useTranslations("projects");
+  const labels = useLabels();
   const [editor, setEditor] = useState<Editor | null>(null);
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
@@ -38,31 +41,31 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
     <div className="deals-layout">
       <section className="surface deals-table-wrap">
         <div className="toolbar wrap">
-          <input aria-label="搜尋合作案" placeholder="搜尋案件、公司或藝人" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <select aria-label="商案分類篩選" value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="all">全部</option>
-            {projectTypes.map((t) => (
-              <option key={t.key} value={t.key}>
-                {t.label}
+          <input aria-label={t("search")} placeholder={t("searchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} />
+          <select aria-label={t("typeFilter")} value={type} onChange={(e) => setType(e.target.value)}>
+            <option value="all">{t("all")}</option>
+            {projectTypes.map((pt) => (
+              <option key={pt.key} value={pt.key}>
+                {labels.projectType(pt.key)}
               </option>
             ))}
           </select>
           <button className="primary" onClick={() => setEditor({ kind: "project" })}>
-            新增合作案
+            {t("newProject")}
           </button>
         </div>
         <label className="check-line">
           <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
-          已歸檔合作案
+          {t("archivedOnly")}
         </label>
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>合作案</th>
-                <th>類型／階段</th>
-                <th>含稅報價</th>
-                <th>期限</th>
+                <th>{t("colProject")}</th>
+                <th>{t("colTypeStage")}</th>
+                <th>{t("colQuote")}</th>
+                <th>{t("colDue")}</th>
               </tr>
             </thead>
             <tbody>
@@ -77,31 +80,31 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
                     </button>
                   </td>
                   <td>
-                    {projectType(p.type).label}
-                    <small>{stageLabels[p.stage]}</small>
+                    {labels.projectType(p.type)}
+                    <small>{labels.stage(p.stage)}</small>
                   </td>
                   <td>{money(projectQuoteTotal(p))}</td>
-                  <td>{p.nextAction?.dueDate || "未設定"}</td>
+                  <td>{p.nextAction?.dueDate || t("notSet")}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {!visible.length && <p className="empty">沒有符合條件的案件。新增第一筆合作或調整篩選。</p>}
+        {!visible.length && <p className="empty">{t("empty")}</p>}
       </section>
       {active && (
         <aside className="surface deal-detail">
-          <span className={`category c-${projectType(active.type).label}`}>{projectType(active.type).label}</span>
+          <span className={`category c-${active.type}`}>{labels.projectType(active.type)}</span>
           <h2>{active.title}</h2>
           <p>
             {active.counterparty} · {active.artist}
           </p>
           <div className="detail-next">
-            <small>下一步 · {active.nextAction?.dueDate || "未設定期限"}</small>
-            <strong>{active.nextAction?.title || "尚未設定"}</strong>
+            <small>{t("nextStep", { due: active.nextAction?.dueDate || t("noDue") })}</small>
+            <strong>{active.nextAction?.title || t("noNextStep")}</strong>
           </div>
           <label>
-            案件階段
+            {t("stage")}
             <select
               value={active.stage}
               disabled={pending || active.archived}
@@ -109,30 +112,32 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
             >
               {stages.map((s) => (
                 <option key={s} value={s}>
-                  {stageLabels[s]}
+                  {labels.stage(s)}
                 </option>
               ))}
             </select>
           </label>
           <div className="deal-summary">
-            {[
-              ["Offer", active.offerText],
-              ["合約", active.details.contractNotes],
-              ["交付", active.details.deliverables],
-              ["授權", active.details.rights],
-              ["交通住宿", active.details.travel],
-            ].map(([label, value]) => (
+            {(
+              [
+                [t("detail.offer"), active.offerText],
+                [t("detail.contract"), active.details.contractNotes],
+                [t("detail.deliverables"), active.details.deliverables],
+                [t("detail.rights"), active.details.rights],
+                [t("detail.travel"), active.details.travel],
+              ] as [string, string | undefined][]
+            ).map(([label, value]) => (
               <details key={label}>
                 <summary>
-                  {label} · {value ? "已填寫" : "待補充"}
+                  {value ? t("filled", { label }) : t("missing", { label })}
                 </summary>
-                <p className="prewrap">{value || "尚未填寫"}</p>
+                <p className="prewrap">{value || t("notFilled")}</p>
               </details>
             ))}
           </div>
           <div className="stack-buttons">
             <button className="primary" onClick={() => setEditor({ kind: "project", item: projectRecord(active) })}>
-              編輯完整合作案
+              {t("editFull")}
             </button>
             <button
               className="secondary"
@@ -143,7 +148,7 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
                 })
               }
             >
-              新增關聯待辦
+              {t("addTodo")}
             </button>
             <button
               className="secondary"
@@ -152,7 +157,7 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
                   kind: "payment",
                   item: {
                     projectId: active.id,
-                    label: `${active.title.slice(0, 190)} 請款`,
+                    label: t("paymentLabel", { title: active.title.slice(0, 190) }),
                     amount: Math.max(0, projectSettlement(data, active).unbilled),
                     taxRate: active.taxRate,
                     taxIncluded: true,
@@ -160,14 +165,14 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
                 })
               }
             >
-              新增關聯請款
+              {t("addPayment")}
             </button>
             <button
               className="text-button"
               disabled={pending}
               onClick={() => run(() => archiveProject(active.id, !active.archived))}
             >
-              {active.archived ? "還原合作案" : "歸檔合作案"}
+              {active.archived ? t("restore") : t("archive")}
             </button>
           </div>
           {error && (

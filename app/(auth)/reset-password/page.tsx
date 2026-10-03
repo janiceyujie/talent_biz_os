@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { FormMessage } from "@/components/form";
 import { ResetPasswordForm } from "./reset-password-form";
@@ -6,17 +7,18 @@ import { ResetPasswordForm } from "./reset-password-form";
 // redirects here with ?token=… (or ?error=INVALID_TOKEN).
 export default async function ResetPasswordPage({ searchParams }: PageProps<"/reset-password">) {
   const { token } = await searchParams;
+  const t = await getTranslations("auth");
 
   return (
     <div className="auth-stack">
-      <h1>設定新密碼</h1>
+      <h1>{t("resetTitle")}</h1>
       {typeof token === "string" ? (
         <ResetPasswordForm token={token} />
       ) : (
         <>
-          <FormMessage tone="error">連結無效或已過期，請重新申請。</FormMessage>
+          <FormMessage tone="error">{t("linkInvalid")}</FormMessage>
           <Link href="/forgot-password">
-            重新申請重設連結
+            {t("requestNewLink")}
           </Link>
         </>
       )}

@@ -830,19 +830,19 @@ select:focus-visible {
   font-weight: 800;
   white-space: nowrap;
 }
-.c-演出 {
+.c-gig {
   color: #3e4e08;
   background: var(--lime-soft);
 }
-.c-品牌合作 {
+.c-brand_deal {
   color: #984229;
   background: var(--orange-soft);
 }
-.c-業配 {
+.c-sponsored_post {
   color: #36599b;
   background: var(--blue-soft);
 }
-.c-授權 {
+.c-licensing {
   color: #6547a5;
   background: var(--violet-soft);
 }

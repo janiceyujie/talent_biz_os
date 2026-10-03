@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { getCurrentTalent, requirePerson } from "@/lib/auth";
 import { OnboardingForm } from "./onboarding-form";
@@ -5,6 +6,7 @@ import { OnboardingForm } from "./onboarding-form";
 export default async function OnboardingPage() {
   const person = await requirePerson();
   if (await getCurrentTalent(person.personId)) redirect("/");
+  const t = await getTranslations("onboarding");
 
   return (
     <main className="auth-page">
@@ -15,8 +17,8 @@ export default async function OnboardingPage() {
         </div>
         <div className="auth-stack">
           <div>
-            <h1>歡迎，{person.displayName}</h1>
-            <p className="muted">先告訴我們你經營的是什麼，之後可以再修改。</p>
+            <h1>{t("welcome", { name: person.displayName })}</h1>
+            <p className="muted">{t("intro")}</p>
           </div>
           <OnboardingForm defaultName={person.displayName} />
         </div>

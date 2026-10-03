@@ -1,12 +1,15 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { authErrorMessage, buttonClass, Field, FormMessage } from "@/components/form";
+import { buttonClass, Field, FormMessage, useAuthErrorMessage } from "@/components/form";
 import { authClient } from "@/lib/auth/client";
 
 export function SignInForm() {
   const router = useRouter();
+  const t = useTranslations("auth");
+  const authErrorMessage = useAuthErrorMessage();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,11 +33,11 @@ export function SignInForm() {
 
   return (
     <form onSubmit={onSubmit}>
-      <Field label="電子郵件" name="email" type="email" autoComplete="email" required />
-      <Field label="密碼" name="password" type="password" autoComplete="current-password" required />
+      <Field label={t("email")} name="email" type="email" autoComplete="email" required />
+      <Field label={t("password")} name="password" type="password" autoComplete="current-password" required />
       {error && <FormMessage tone="error">{error}</FormMessage>}
       <button type="submit" className={buttonClass} disabled={pending}>
-        {pending ? "登入中…" : "登入"}
+        {pending ? t("signingIn") : t("signIn")}
       </button>
     </form>
   );

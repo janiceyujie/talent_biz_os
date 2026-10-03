@@ -1,10 +1,13 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { authErrorMessage, buttonClass, Field, FormMessage } from "@/components/form";
+import { buttonClass, Field, FormMessage, useAuthErrorMessage } from "@/components/form";
 import { authClient } from "@/lib/auth/client";
 
 export function SignUpForm() {
+  const t = useTranslations("auth");
+  const authErrorMessage = useAuthErrorMessage();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -29,17 +32,17 @@ export function SignUpForm() {
   if (sentTo) {
     return (
       <FormMessage tone="info">
-        確認信已寄到 {sentTo}。請點擊信中的連結完成註冊。
+        {t("sentVerification", { email: sentTo })}
       </FormMessage>
     );
   }
 
   return (
     <form onSubmit={onSubmit}>
-      <Field label="你的名字" name="name" autoComplete="name" required />
-      <Field label="電子郵件" name="email" type="email" autoComplete="email" required />
+      <Field label={t("yourName")} name="name" autoComplete="name" required />
+      <Field label={t("email")} name="email" type="email" autoComplete="email" required />
       <Field
-        label="密碼（至少 8 個字元）"
+        label={t("newPasswordHint")}
         name="password"
         type="password"
         autoComplete="new-password"
@@ -48,7 +51,7 @@ export function SignUpForm() {
       />
       {error && <FormMessage tone="error">{error}</FormMessage>}
       <button type="submit" className={buttonClass} disabled={pending}>
-        {pending ? "建立中…" : "建立帳號"}
+        {pending ? t("creating") : t("createAccount")}
       </button>
     </form>
   );

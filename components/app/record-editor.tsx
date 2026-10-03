@@ -1,14 +1,9 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { dateInZone } from "@/lib/domain/dates";
-import {
-  calendarKindLabels,
-  contactRoleLabels,
-  directionLabels,
-  installmentLabels,
-  stageLabels,
-} from "@/lib/labels";
+import { useLabels } from "@/lib/i18n/labels";
 import { projectTypes } from "@/lib/project-types";
 import { saveContact } from "@/lib/actions/contacts";
 import { saveCalendarItem } from "@/lib/actions/calendar";
@@ -39,9 +34,8 @@ export const projectRecord = (p: Project): RecordData => ({
 });
 
 type Option = readonly [value: string, label: string];
-const entries = <K extends string>(labels: Record<K, string>, keys: readonly K[]): Option[] =>
-  keys.map((k) => [k, labels[k]] as const);
-const typeOptions: Option[] = projectTypes.map((t) => [t.key, t.label] as const);
+const options = <K extends string>(keys: readonly K[], label: (k: K) => string): Option[] =>
+  keys.map((k) => [k, label(k)] as const);
 
 type Saver = (data: RecordData) => Promise<string | null>;
 
@@ -56,21 +50,19 @@ const savers: Partial<Record<EditorKind, Saver>> = {
 // Kinds stored as to-dos; the rest are calendar events. Kept in step with lib/actions/calendar.
 const todoKinds: readonly string[] = ["todo", "deliverable", "payment"];
 
-const names: Record<EditorKind, string> = {
-  project: "合作案",
-  contact: "藝人與合作方",
-  calendar: "行程／待辦",
-  payment: "內帳紀錄",
-  template: "回覆範本",
-  draft: "回覆草稿",
-};
-
 /**
  * One add/edit dialog for every record kind. Saving goes through the kind's
  * server action; kinds without one open read-only with a note.
  */
 export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () => void }) {
   const data$ = useAppData();
+  const t = useTranslations("editor");
+  const tTone = useTranslations("tone");
+  const labels = useLabels();
+  const typeOptions = options(
+    projectTypes.map((pt) => pt.key),
+    labels.projectType,
+  );
   const today = dateInZone(data$.talent.timeZone);
   const defaults: Record<EditorKind, RecordData> = {
     project: {
@@ -118,7 +110,7 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
       taxIncluded: false,
       notes: "",
     },
-    template: { title: "", projectType: "gig", kind: "past_reply", tone: "自然專業", body: "" },
+    template: { title: "", projectType: "gig", kind: "past_reply", tone: tTone("natural"), body: "" },
     draft: { projectId: "", subject: "", recipient: "", projectType: "gig", source: "", body: "" },
   };
   const kind = editor.kind;
@@ -176,8 +168,8 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
   }
 
   const projectLink = () =>
-    field("projectId", "關聯合作案", "text", false, [
-      ["", "未關聯"],
+    field("projectId", t("field.project"), "text", false, [
+      ["", t("unlinked")],
       ...data$.projects
         .filter((p) => !p.archived || p.id === data.projectId)
         .map((p) => [p.id, p.title] as const),
@@ -185,15 +177,15 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
 
   const pricing = (amountKey: string) => (
     <div className="form-grid">
-      {field(amountKey, "金額", "number", true)}
-      {field("currency", "幣別", "text", true, [["TWD", "TWD"]])}
-      {field("taxRate", "稅率 %", "number", true)}
-      {field("taxIncluded", "輸入金額已含稅", "checkbox")}
+      {field(amountKey, t("field.amount"), "number", true)}
+      {field("currency", t("field.currency"), "text", true, [["TWD", "TWD"]])}
+      {field("taxRate", t("field.taxRate"), "number", true)}
+      {field("taxIncluded", t("field.taxIncluded"), "checkbox")}
     </div>
   );
 
   return (
-    <Modal title={`${editor.item?.id ? "編輯" : "新增"}${names[kind]}`} onClose={onClose}>
+    <Modal title={t(editor.item?.id ? "titleEdit" : "titleNew", { kind })} onClose={onClose}>
       <form
         className="editor-form"
         onSubmit={async (e) => {
@@ -208,114 +200,127 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
       >
         {kind === "project" && (
           <>
-            {field("title", "合作案名稱", "text", true)}
+            {field("title", t("field.projectTitle"), "text", true)}
             <div className="form-grid">
               <div>
-                {field("counterpartyId", "合作方名單", "text", false, [
-                  ["", "自行輸入"],
+                {field("counterpartyId", t("field.counterpartyList"), "text", false, [
+                  ["", t("typeIn")],
                   ...data$.contacts
                     .filter((c) => !c.archived || c.id === data.counterpartyId)
                     .map((c) => [c.id, c.name] as const),
                 ])}
-                {!data.counterpartyId && field("counterparty", "合作方")}
+                {!data.counterpartyId && field("counterparty", t("field.counterparty"))}
               </div>
-              {field("type", "商案類型", "text", true, typeOptions)}
-              {field("stage", "階段", "text", true, entries(stageLabels, stages))}
+              {field("type", t("field.type"), "text", true, typeOptions)}
+              {field("stage", t("field.stage"), "text", true, options(stages, labels.stage))}
             </div>
             {pricing("quotedAmount")}
-            {field("contractNotes", "合約內容與待確認事項", "textarea")}
-            {field("deliverables", "交付項目", "textarea")}
-            {field("rights", "素材授權範圍／期限", "textarea")}
-            {field("travel", "交通與住宿安排", "textarea")}
-            {field("notes", "備註", "textarea")}
+            {field("contractNotes", t("field.contractNotes"), "textarea")}
+            {field("deliverables", t("field.deliverables"), "textarea")}
+            {field("rights", t("field.rights"), "textarea")}
+            {field("travel", t("field.travel"), "textarea")}
+            {field("notes", t("field.notes"), "textarea")}
           </>
         )}
         {kind === "contact" && (
           <>
-            {field("name", "名稱", "text", true)}
-            {field("role", "身分", "text", true, entries(contactRoleLabels, contactRoles))}
-            {field("company", "公司／團隊")}
+            {field("name", t("field.name"), "text", true)}
+            {field("role", t("field.role"), "text", true, options(contactRoles, labels.contactRole))}
+            {field("company", t("field.company"))}
             <div className="form-grid">
-              {field("email", "Email", "email")}
-              {field("phone", "電話", "tel")}
+              {field("email", t("field.email"), "email")}
+              {field("phone", t("field.phone"), "tel")}
             </div>
-            {field("notes", "備註", "textarea")}
+            {field("notes", t("field.notes"), "textarea")}
           </>
         )}
         {kind === "calendar" && (
           <>
-            {field("title", "事項名稱", "text", true)}
+            {field("title", t("field.itemTitle"), "text", true)}
             <div className="form-grid">
-              {field("date", "日期", "date", true)}
-              {field("time", "時間", "time")}
-              {field("timeZone", "時區", "text", true)}
+              {field("date", t("field.date"), "date", true)}
+              {field("time", t("field.time"), "time")}
+              {field("timeZone", t("field.timeZone"), "text", true)}
               {field(
                 "kind",
-                "事項類型",
+                t("field.kind"),
                 "text",
                 true,
                 // An existing item can't move between to-dos and events.
-                entries(calendarKindLabels, calendarKinds).filter(
+                options(calendarKinds, labels.calendarKind).filter(
                   ([k]) => !data.source || todoKinds.includes(k) === (data.source === "todo"),
                 ),
               )}
             </div>
             {projectLink()}
-            {!todoKinds.includes(String(data.kind)) && field("location", "地點／會議網址")}
-            {field("notes", "備註", "textarea")}
-            {todoKinds.includes(String(data.kind)) && field("done", "已完成", "checkbox")}
+            {!todoKinds.includes(String(data.kind)) && field("location", t("field.location"))}
+            {field("notes", t("field.notes"), "textarea")}
+            {todoKinds.includes(String(data.kind)) && field("done", t("field.done"), "checkbox")}
           </>
         )}
         {kind === "payment" && (
           <>
-            {field("label", "紀錄名稱", "text", true)}
+            {field("label", t("field.label"), "text", true)}
             {projectLink()}
             <div className="form-grid">
-              {field("direction", "收支類型", "text", true, entries(directionLabels, ["in", "out"]))}
-              {field("recordedDate", "登錄日期", "date", true)}
-              {field("dueDate", "付款期限", "date")}
-              {field("installment", "款項階段", "text", true, entries(installmentLabels, ["regular", "deposit", "balance"]))}
-              {field("status", "付款狀態", "text", true, [
-                ["expected", data.direction === "in" ? "待收" : "待付"],
-                ["settled", data.direction === "in" ? "已收" : "已付"],
-              ])}
-              {field("invoiceRef", "發票／請款編號")}
-              {data.status === "settled" && field("settledDate", "實際收付日期", "date", true)}
-              {data.status === "settled" && field("settledAmount", "實收／實付金額（留空＝全額）", "number")}
+              {field("direction", t("field.direction"), "text", true, options(["in", "out"] as const, labels.direction))}
+              {field("recordedDate", t("field.recordedDate"), "date", true)}
+              {field("dueDate", t("field.dueDate"), "date")}
+              {field(
+                "installment",
+                t("field.installment"),
+                "text",
+                true,
+                options(["regular", "deposit", "balance"] as const, labels.installment),
+              )}
+              {field(
+                "status",
+                t("field.status"),
+                "text",
+                true,
+                options(["expected", "settled"] as const, (status) =>
+                  labels.paymentStatus({ status, direction: data.direction === "out" ? "out" : "in" }),
+                ),
+              )}
+              {field("invoiceRef", t("field.invoiceRef"))}
+              {data.status === "settled" && field("settledDate", t("field.settledDate"), "date", true)}
+              {data.status === "settled" && field("settledAmount", t("field.settledAmount"), "number")}
             </div>
             <p className="muted">
-              一筆紀錄代表一筆完整收付。分次收款請拆成訂金與尾款；尚未收到款項時保持「待收」。已收／已付的報表依實際收付日期計算。實際入帳少於應收（例如扣繳、二代健保）時，填寫實收金額，差額會另外顯示。
+              {t("paymentHelp")}
             </p>
             {pricing("amount")}
-            {field("notes", "備註", "textarea")}
+            {field("notes", t("field.notes"), "textarea")}
           </>
         )}
         {kind === "template" && (
           <>
-            {field("title", "範本名稱", "text", true)}
+            {field("title", t("field.templateTitle"), "text", true)}
             <div className="form-grid">
-              {field("projectType", "商案類型", "text", true, typeOptions)}
-              {field("kind", "來源類型", "text", true, [
-                ["past_reply", "過往回覆"],
-                ["template", "回覆範本"],
+              {field("projectType", t("field.type"), "text", true, typeOptions)}
+              {field("kind", t("field.templateKind"), "text", true, [
+                ["past_reply", t("kind.pastReply")],
+                ["template", t("kind.template")],
               ])}
             </div>
-            {field("tone", "語氣說明")}
-            {field("body", "回覆內容", "textarea", true)}
+            {field("tone", t("field.tone"))}
+            {field("body", t("field.body"), "textarea", true)}
             <p className="muted">
-              可使用 {"{{合作方}}、{{藝人}}、{{案件名稱}}、{{邀約內容}}、{{報價}}、{{交付內容}}、{{授權範圍}}、{{下一步期限}}"}
-              。缺少資料會標記待確認。過往回覆不能直接套用；另存範本前請移除舊案的固定人名、金額與檔期。
+              {t("templateHelp", {
+                // Language-neutral placeholder names arrive in i18n step 4; until then these are the stored tokens.
+                placeholders: "{{合作方}}、{{藝人}}、{{案件名稱}}、{{邀約內容}}、{{報價}}、{{交付內容}}、{{授權範圍}}、{{下一步期限}}",
+              })}
             </p>
           </>
         )}
         {kind === "draft" && (
           <>
             {projectLink()}
-            {field("subject", "信件主旨", "text", true)}
-            {field("recipient", "收件人", "email")}
-            {field("projectType", "商案類型", "text", true, typeOptions)}
-            {field("source", "邀約內容", "textarea")}
-            {field("body", "草稿內容", "textarea", true)}
+            {field("subject", t("field.subject"), "text", true)}
+            {field("recipient", t("field.recipient"), "email")}
+            {field("projectType", t("field.type"), "text", true, typeOptions)}
+            {field("source", t("field.source"), "textarea")}
+            {field("body", t("field.draftBody"), "textarea", true)}
           </>
         )}
         {error && (
@@ -323,13 +328,13 @@ export function RecordEditor({ editor, onClose }: { editor: Editor; onClose: () 
             {error}
           </p>
         )}
-        {!onSave && <p className="muted">此類資料尚未接上資料庫，儲存功能開發中。</p>}
+        {!onSave && <p className="muted">{t("notWired")}</p>}
         <footer className="modal-actions">
           <button type="button" className="secondary" onClick={onClose}>
-            取消
+            {t("cancel")}
           </button>
           <button disabled={!onSave || pending} type="submit" className="primary">
-            {pending ? "儲存中…" : "儲存"}
+            {pending ? t("saving") : t("save")}
           </button>
         </footer>
       </form>

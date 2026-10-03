@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
@@ -9,8 +10,7 @@ import { dateInZone } from "@/lib/domain/dates";
 import { splitPayments } from "@/lib/domain/money";
 import { useMoney } from "@/lib/i18n/format";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
-import { calendarKindLabels, paymentStatusLabel } from "@/lib/labels";
-import { projectType } from "@/lib/project-types";
+import { useLabels } from "@/lib/i18n/labels";
 import type { Project } from "@/lib/types";
 
 /** What to confirm, settlement, the deposit/balance split, and the closing check for one project. */
@@ -24,6 +24,8 @@ export function ProjectWorkflowPanel({
   compose: (id: string) => void;
 }) {
   const data = useAppData();
+  const t = useTranslations("workflow");
+  const labels = useLabels();
   const money = useMoney();
   const today = dateInZone(data.talent.timeZone);
   const [plan, setPlan] = useState(false);
@@ -45,36 +47,36 @@ export function ProjectWorkflowPanel({
   } catch {}
 
   const warnings = [
-    !project.details.contractNotes && "尚未登錄合約內容",
-    !project.details.deliverables && "尚未登錄交付項目",
-    !items.length && "尚未登錄行程／交付待辦",
-    settlement.openItems.length > 0 && `${settlement.openItems.length} 筆待辦尚未完成`,
-    settlement.unbilled > 0 && `尚未建立請款 ${money(settlement.unbilled)}`,
-    settlement.unbilled < 0 && `請款超過報價 ${money(-settlement.unbilled)}，請確認是否重複或報價尚未更新`,
-    settlement.pending > 0 && `尚有待收款 ${money(settlement.pending)}`,
-    settlement.shortfall > 0 && `實收較請款少 ${money(settlement.shortfall)}（扣繳或手續費？請確認）`,
-    settlement.unpaidCosts.length > 0 && `${settlement.unpaidCosts.length} 筆成本尚未支付`,
+    !project.details.contractNotes && t("warn.noContract"),
+    !project.details.deliverables && t("warn.noDeliverables"),
+    !items.length && t("warn.noItems"),
+    settlement.openItems.length > 0 && t("warn.openTodos", { count: settlement.openItems.length }),
+    settlement.unbilled > 0 && t("warn.unbilled", { amount: money(settlement.unbilled) }),
+    settlement.unbilled < 0 && t("warn.overbilled", { amount: money(-settlement.unbilled) }),
+    settlement.pending > 0 && t("warn.pending", { amount: money(settlement.pending) }),
+    settlement.shortfall > 0 && t("warn.shortfall", { amount: money(settlement.shortfall) }),
+    settlement.unpaidCosts.length > 0 && t("warn.unpaidCosts", { count: settlement.unpaidCosts.length }),
   ].filter(Boolean);
 
   return (
-    <section aria-label="案件流程與收款">
-      <h3>本案要確認的資訊</h3>
+    <section aria-label={t("section")}>
+      <h3>{t("toConfirm")}</h3>
       <ul>
-        {projectType(project.type).questions.map((q) => (
+        {labels.projectQuestions(project.type).map((q) => (
           <li key={q}>{q}</li>
         ))}
       </ul>
       <button className="secondary full" disabled={project.archived} onClick={() => compose(project.id)}>
-        帶入本案擬稿
+        {t("draftForProject")}
       </button>
-      <h3>本案收款 · TWD</h3>
+      <h3>{t("payments")}</h3>
       <dl>
         {[
-          ["含稅報價", settlement.quoted],
-          ["已建立請款", settlement.billed],
-          ["已收款", settlement.received],
-          ["待收款", settlement.pending],
-          ...(settlement.shortfall > 0 ? [["實收差額", settlement.shortfall] as const] : []),
+          [t("quoted"), settlement.quoted],
+          [t("billed"), settlement.billed],
+          [t("received"), settlement.received],
+          [t("outstanding"), settlement.pending],
+          ...(settlement.shortfall > 0 ? [[t("shortfall"), settlement.shortfall] as const] : []),
         ].map(([label, value]) => (
           <div key={String(label)}>
             <dt>{label}</dt>
@@ -87,10 +89,10 @@ export function ProjectWorkflowPanel({
         disabled={hasIncome || project.archived || project.quotedAmount <= 0}
         onClick={() => setPlan(true)}
       >
-        建立訂金與尾款
+        {t("createPlan")}
       </button>
-      {hasIncome && <p className="muted">已有請款；請在下方編輯既有款項，避免重複計入。</p>}
-      <h3>結案前檢查</h3>
+      {hasIncome && <p className="muted">{t("hasIncome")}</p>}
+      <h3>{t("closingCheck")}</h3>
       {warnings.length ? (
         <ul>
           {warnings.map((w) => (
@@ -98,33 +100,33 @@ export function ProjectWorkflowPanel({
           ))}
         </ul>
       ) : (
-        <p>已登錄的待辦與收付已核對；仍請人工確認交付驗收與合約義務。</p>
+        <p>{t("allClear")}</p>
       )}
-      <p className="muted">階段由你確認，變更階段不會自動記為收款或完成待辦。</p>
-      <h3>相關紀錄</h3>
+      <p className="muted">{t("stageNote")}</p>
+      <h3>{t("related")}</h3>
       <div className="stack-buttons">
         {items.map((c) => (
           <button key={c.id} className="text-button left" onClick={() => edit({ kind: "calendar", item: toRecord(c) })}>
-            {c.source === "todo" ? (c.done ? "已完成" : "待辦") : calendarKindLabels[c.kind]} · {c.date} · {c.title}
+            {c.source === "todo" ? (c.done ? t("todoDone") : t("todoOpen")) : labels.calendarKind(c.kind)} · {c.date} · {c.title}
           </button>
         ))}
         {payments.map((p) => (
           <button key={p.id} className="text-button left" onClick={() => edit({ kind: "payment", item: toRecord(p) })}>
-            {paymentStatusLabel(p)} · {p.label}
+            {labels.paymentStatus(p)} · {p.label}
           </button>
         ))}
         {drafts.map((d) => (
           <button key={d.id} className="text-button left" onClick={() => edit({ kind: "draft", item: toRecord(d) })}>
-            草稿 · {d.subject}
+            {t("draftItem", { subject: d.subject })}
           </button>
         ))}
         {files.map((f) => (
-          <span key={f.id}>檔案 · {f.filename}</span>
+          <span key={f.id}>{t("fileItem", { name: f.filename })}</span>
         ))}
-        {!items.length && !payments.length && !drafts.length && !files.length && <p className="muted">尚無關聯紀錄。</p>}
+        {!items.length && !payments.length && !drafts.length && !files.length && <p className="muted">{t("noRelated")}</p>}
       </div>
       {plan && (
-        <Modal title="確認訂金與尾款" onClose={() => setPlan(false)}>
+        <Modal title={t("planTitle")} onClose={() => setPlan(false)}>
           <form
             className="editor-form"
             onSubmit={(e) => {
@@ -136,9 +138,9 @@ export function ProjectWorkflowPanel({
               });
             }}
           >
-            <p>依本案含稅報價建立兩筆待收款；此操作不代表款項已收到。</p>
+            <p>{t("planIntro")}</p>
             <label>
-              訂金比例 %
+              {t("depositPercent")}
               <input
                 type="number"
                 min="0.01"
@@ -150,21 +152,21 @@ export function ProjectWorkflowPanel({
               />
             </label>
             <label>
-              訂金付款期限
+              {t("depositDue")}
               <input type="date" required value={depositDue} onChange={(e) => setDepositDue(e.target.value)} />
             </label>
             <label>
-              尾款付款期限
+              {t("balanceDue")}
               <input type="date" required min={depositDue} value={balanceDue} onChange={(e) => setBalanceDue(e.target.value)} />
             </label>
             {preview ? (
               <p>
-                訂金 {money(preview.deposit)} ＋ 尾款 {money(preview.balance)} ＝ {money(preview.total)}（含稅）
+                {t("planPreview", { deposit: money(preview.deposit), balance: money(preview.balance), total: money(preview.total) })}
               </p>
             ) : (
-              <p role="alert">請確認報價及比例，拆分後兩筆金額都必須大於零。</p>
+              <p role="alert">{t("planInvalid")}</p>
             )}
-            <p className="muted">尾款承接四捨五入差額。需要三期以上或不等額付款，可改用新增關聯請款，逐筆登錄。</p>
+            <p className="muted">{t("planNote")}</p>
             {planError && (
               <p className="notice error" role="alert">
                 {planError}
@@ -172,10 +174,10 @@ export function ProjectWorkflowPanel({
             )}
             <footer className="modal-actions">
               <button type="button" className="secondary" onClick={() => setPlan(false)}>
-                取消
+                {t("cancel")}
               </button>
               <button type="submit" className="primary" disabled={pending || !preview}>
-                確認建立兩筆待收款
+                {t("confirmPlan")}
               </button>
             </footer>
           </form>

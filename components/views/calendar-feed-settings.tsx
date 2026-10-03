@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { createCalendarFeed, disableCalendarFeed } from "@/lib/actions/calendar-feed";
@@ -7,6 +8,7 @@ import { createCalendarFeed, disableCalendarFeed } from "@/lib/actions/calendar-
 /** Create, reset, or turn off the private calendar subscription link. */
 export function CalendarFeedSettings() {
   const data = useAppData();
+  const t = useTranslations("calendarFeed");
   const [url, setUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,20 +28,19 @@ export function CalendarFeedSettings() {
       <div className="section-header">
         <div>
           <span>Calendar</span>
-          <h2>行事曆訂閱</h2>
+          <h2>{t("title")}</h2>
         </div>
-        <span className="mock-chip">{data.calendarFeed ? "已啟用" : "未啟用"}</span>
+        <span className="mock-chip">{data.calendarFeed ? t("on") : t("off")}</span>
       </div>
       <p>
-        在 Google 或 Apple 行事曆加入這個私人連結後，已確認的行程會自動出現，不需要連接你的行事曆帳號。行事曆 App
-        會定期更新（Google 可能需要數小時）。
+        {t("intro")}
       </p>
       {url && (
         <div className="notice">
           <p>
-            <strong>請現在複製這個連結。</strong>為了安全，它只會顯示這一次；之後若遺失，請重設連結。
+            <strong>{t("copyNow")}</strong> {t("copyNowDetail")}
           </p>
-          <input aria-label="行事曆訂閱連結" readOnly value={url} onFocus={(e) => e.target.select()} />
+          <input aria-label={t("linkLabel")} readOnly value={url} onFocus={(e) => e.target.select()} />
           <div className="row-actions">
             <button
               className="secondary"
@@ -48,22 +49,22 @@ export function CalendarFeedSettings() {
                 setCopied(true);
               }}
             >
-              {copied ? "已複製" : "複製連結"}
+              {copied ? t("copied") : t("copy")}
             </button>
             {/* Apple Calendar fetches webcal:// over HTTPS, so the shortcut only works once the app is on HTTPS. */}
             {url.startsWith("https:") && (
               <a className="secondary" href={url.replace(/^https:/, "webcal:")}>
-                在 Apple 行事曆開啟
+                {t("openApple")}
               </a>
             )}
           </div>
           {!url.startsWith("https:") && (
             <p className="muted">
-              目前是本機開發網址（http），無法用 webcal 開啟。Apple 行事曆：選單「檔案」→「新增行事曆訂閱」，貼上上方連結。
+              {t("localHint")}
             </p>
           )}
           <p className="muted">
-            Google 行事曆：在電腦版左側「其他日曆」按＋，選「透過網址新增」，貼上連結。任何拿到連結的人都能看到你的行程，請勿公開分享。
+            {t("googleHint")}
           </p>
         </div>
       )}
@@ -74,7 +75,7 @@ export function CalendarFeedSettings() {
       )}
       <div className="row-actions">
         <button className="primary" disabled={pending} onClick={create}>
-          {data.calendarFeed ? "重設連結" : "建立訂閱連結"}
+          {data.calendarFeed ? t("reset") : t("create")}
         </button>
         {data.calendarFeed && (
           <button
@@ -87,11 +88,11 @@ export function CalendarFeedSettings() {
               })
             }
           >
-            停用訂閱
+            {t("disable")}
           </button>
         )}
       </div>
-      {data.calendarFeed && !url && <p className="muted">重設後舊連結會立即失效。</p>}
+      {data.calendarFeed && !url && <p className="muted">{t("resetNote")}</p>}
     </section>
   );
 }

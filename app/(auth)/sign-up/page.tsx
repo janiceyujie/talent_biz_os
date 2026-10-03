@@ -1,18 +1,20 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { GoogleButton } from "@/components/google-button";
 import { isGoogleEnabled } from "@/lib/auth";
 import { SignUpForm } from "./sign-up-form";
 
-export default function SignUpPage() {
+export default async function SignUpPage() {
+  const t = await getTranslations("auth");
   return (
     <div className="auth-stack">
-      <h1>建立帳號</h1>
-      {isGoogleEnabled && <GoogleButton label="使用 Google 註冊" />}
+      <h1>{t("createAccount")}</h1>
+      {isGoogleEnabled && <GoogleButton label={t("googleSignUp")} />}
       <SignUpForm />
       <p className="muted">
-        已經有帳號了？{" "}
+        {t("haveAccount")}{" "}
         <Link href="/sign-in">
-          登入
+          {t("signIn")}
         </Link>
       </p>
     </div>

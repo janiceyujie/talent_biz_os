@@ -1,16 +1,26 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useOptimistic, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { archiveCalendarItem, setTodoDone } from "@/lib/actions/calendar";
 import { dateInZone } from "@/lib/domain/dates";
-import { calendarKindLabels } from "@/lib/labels";
+import { useLabels } from "@/lib/i18n/labels";
+
+// Weekday headers from the locale itself, Sunday first (2024-01-07 was a Sunday).
+const weekdays = (locale: string) =>
+  Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2024, 0, 7 + i))),
+  );
 
 // Calendar events and to-dos in one month view. Each item shows in its own
 // local date and time zone; cross-zone items aren't converted to one timeline.
 export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
   const data = useAppData();
+  const t = useTranslations("calendar");
+  const labels = useLabels();
+  const locale = useLocale();
   const today = dateInZone(data.talent.timeZone);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [month, setMonth] = useState((initialDay || today).slice(0, 7));
@@ -40,11 +50,11 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
   return (
     <>
       <div className="toolbar wrap">
-        <button className="secondary" aria-label="上個月" onClick={() => move(-1)}>
+        <button className="secondary" aria-label={t("prevMonth")} onClick={() => move(-1)}>
           ←
         </button>
         <strong>{month}</strong>
-        <button className="secondary" aria-label="下個月" onClick={() => move(1)}>
+        <button className="secondary" aria-label={t("nextMonth")} onClick={() => move(1)}>
           →
         </button>
         <button
@@ -54,31 +64,31 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
             setDay(today);
           }}
         >
-          今天
+          {t("today")}
         </button>
         <button className="secondary" onClick={() => setDay("")}>
-          整月
+          {t("wholeMonth")}
         </button>
         <button className="primary" onClick={() => setEditor({ kind: "calendar", item: day ? { date: day } : undefined })}>
-          ＋新增行程／待辦
+          {t("new")}
         </button>
         <label className="check-line">
           <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} />
-          包含已完成
+          {t("showDone")}
         </label>
         <label className="check-line">
           <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
-          已歸檔
+          {t("archivedOnly")}
         </label>
       </div>
-      <p className="muted">日期按各筆行程登錄的當地日期排列，時間旁保留時區。</p>
+      <p className="muted">{t("note")}</p>
       {error && (
         <p className="notice error" role="alert">
           {error}
         </p>
       )}
       <div className="surface calendar-grid">
-        {["日", "一", "二", "三", "四", "五", "六"].map((d) => (
+        {weekdays(locale).map((d) => (
           <small key={d}>{d}</small>
         ))}
         {Array.from({ length: pad }, (_, i) => (
@@ -94,19 +104,19 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
               onClick={() => setDay(date)}
             >
               <strong>{i + 1}</strong>
-              {!!n && <span>{n} 件</span>}
+              {!!n && <span>{t("count", { count: n })}</span>}
             </button>
           );
         })}
       </div>
       <section className="surface padded section-gap">
-        <h2>{day || month} 的行程</h2>
+        <h2>{t("itemsFor", { period: day || month })}</h2>
         {items.map((c) => (
           <article className="event-row" key={c.id}>
             {c.source === "todo" ? (
               <input
                 type="checkbox"
-                aria-label={`完成 ${c.title}`}
+                aria-label={t("complete", { title: c.title })}
                 checked={c.done}
                 disabled={pending || c.archived}
                 onChange={(e) => {
@@ -125,25 +135,27 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
                 <strong>{c.title}</strong>
               </button>
               <small>
-                {c.date} {c.time || "未定時間"} · {c.timeZone} · {calendarKindLabels[c.kind]}
+                {c.date} {c.time || t("noTime")} · {c.timeZone} · {labels.calendarKind(c.kind)}
               </small>
               <p>
                 {c.location}
                 {c.notes ? ` · ${c.notes}` : ""}
               </p>
-              {c.projectId && <small>合作案：{data.projects.find((p) => p.id === c.projectId)?.title || "未找到"}</small>}
+              {c.projectId && (
+                <small>{t("project", { title: data.projects.find((p) => p.id === c.projectId)?.title || t("notFound") })}</small>
+              )}
               {c.source === "event" && !c.archived && (
                 <a className="text-button" href={`/api/calendar/events/${c.id}`} download>
-                  下載 .ics
+                  {t("downloadIcs")}
                 </a>
               )}
             </div>
             <button className="text-button" disabled={pending} onClick={() => run(() => archiveCalendarItem(c.id, c.source, !c.archived))}>
-              {c.archived ? "還原" : "歸檔"}
+              {c.archived ? t("restore") : t("archive")}
             </button>
           </article>
         ))}
-        {!items.length && <p className="empty">這段日期沒有符合條件的行程。</p>}
+        {!items.length && <p className="empty">{t("empty")}</p>}
       </section>
       {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
     </>

@@ -6,11 +6,10 @@ import { licensing } from "./licensing";
 import { other } from "./other";
 import { sponsoredPost } from "./sponsored-post";
 
+// Each type's label and "what to confirm" checklist are in the message
+// catalogs (labels.projectType.<key>); behavior stays here.
 export type ProjectTypeDefinition = {
   key: string;
-  label: string;
-  /** What to confirm with the counterparty — drives the checklist and starter template. */
-  questions: readonly string[];
   /** Full fields and AI extraction ship for this type in the MVP. */
   fullSupport: boolean;
 };

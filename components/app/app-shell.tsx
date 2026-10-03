@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { SignOutButton } from "@/components/sign-out-button";
 import { notifications } from "@/lib/domain/workflow";
-import { contactRoleLabels } from "@/lib/labels";
+import { useLabels } from "@/lib/i18n/labels";
 import { useNotificationText } from "./notification-text";
 import { useAppData } from "./app-data";
 import { Modal } from "./modal";
@@ -20,6 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const t = useTranslations("shell");
   const tNav = useTranslations("nav");
   const notificationText = useNotificationText();
+  const labels = useLabels();
   const pathname = usePathname();
   const router = useRouter();
   const [mobile, setMobile] = useState(false);
@@ -95,7 +96,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       .map((p) => ({ id: p.id, label: p.title, detail: t("resultProject", { counterparty: p.counterparty }), href: `/projects?id=${p.id}` })),
     ...data.contacts
       .filter((c) => !c.archived)
-      .map((c) => ({ id: c.id, label: c.name, detail: `${contactRoleLabels[c.role]} · ${c.company}`, href: "/contacts" })),
+      .map((c) => ({ id: c.id, label: c.name, detail: `${labels.contactRole(c.role)} · ${c.company}`, href: "/contacts" })),
     ...data.calendar
       .filter((c) => !c.archived)
       .map((c) => ({ id: c.id, label: c.title, detail: t("resultCalendar", { date: c.date }), href: `/calendar?day=${c.date}` })),

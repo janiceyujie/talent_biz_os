@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import type { ComponentProps, ReactNode } from "react";
 
 // Auth and onboarding forms, styled by the app's global CSS (app/globals.css).
@@ -21,15 +24,18 @@ export function FormMessage({ tone, children }: { tone: "error" | "info"; childr
   );
 }
 
-// Better Auth error codes → what the person sees.
-const authErrors: Record<string, string> = {
-  INVALID_EMAIL_OR_PASSWORD: "電子郵件或密碼錯誤。",
-  EMAIL_NOT_VERIFIED: "這個電子郵件還沒確認。我們剛重新寄出確認信，請查看信箱。",
-  PASSWORD_TOO_SHORT: "密碼至少需要 8 個字元。",
-  USER_ALREADY_EXISTS: "這個電子郵件已經註冊過了。",
-  INVALID_TOKEN: "連結無效或已過期，請重新申請。",
-};
+// Better Auth error codes → messages in the active language.
+const authErrorCodes = [
+  "INVALID_EMAIL_OR_PASSWORD",
+  "EMAIL_NOT_VERIFIED",
+  "PASSWORD_TOO_SHORT",
+  "USER_ALREADY_EXISTS",
+  "INVALID_TOKEN",
+] as const;
+type AuthErrorCode = (typeof authErrorCodes)[number];
 
-export function authErrorMessage(error: { code?: string } | null | undefined) {
-  return (error?.code && authErrors[error.code]) || "發生錯誤，請稍後再試。";
+export function useAuthErrorMessage() {
+  const t = useTranslations("auth.errors");
+  return (error: { code?: string } | null | undefined) =>
+    authErrorCodes.includes(error?.code as AuthErrorCode) ? t(error!.code as AuthErrorCode) : t("unknown");
 }

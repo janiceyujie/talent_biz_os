@@ -1,11 +1,13 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
-import { renderTemplate, starterTemplate } from "@/lib/domain/workflow";
-import { projectType, projectTypes, type ProjectType } from "@/lib/project-types";
+import { PastReplyError, renderTemplate } from "@/lib/domain/workflow";
+import { useMoney } from "@/lib/i18n/format";
+import { useLabels } from "@/lib/i18n/labels";
+import { projectTypes, type ProjectType } from "@/lib/project-types";
 import type { ReplyDraft } from "@/lib/types";
 
 const gmailComposeUrl = (to: string, subject: string, body: string) =>
@@ -13,7 +15,10 @@ const gmailComposeUrl = (to: string, subject: string, body: string) =>
 
 export function DraftsView({ initialProjectId = "" }: { initialProjectId?: string }) {
   const data = useAppData();
-  const locale = useLocale(); // stands in for the template's own language until reply_template.language exists
+  const t = useTranslations("drafts");
+  const tTone = useTranslations("tone");
+  const labels = useLabels();
+  const money = useMoney(); // the UI language stands in for the template's own until reply_template.language exists
   const [editor, setEditor] = useState<Editor | null>(null);
   const [notice, setNotice] = useState("");
   const initial = data.projects.find((p) => p.id === initialProjectId && !p.archived);
@@ -23,15 +28,15 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
   const [type, setType] = useState<ProjectType>(initial?.type || "gig");
   const [projectId, setProjectId] = useState(initial?.id || "");
   const [templateId, setTemplateId] = useState("");
-  const [tone, setTone] = useState("自然專業");
+  const [tone, setTone] = useState(tTone("natural"));
   const [source, setSource] = useState(initial?.offerText || "");
   const [body, setBody] = useState("");
-  const [subject, setSubject] = useState(initial ? `Re: ${initial.title}`.slice(0, 200) : "商案合作回覆");
+  const [subject, setSubject] = useState(initial ? `Re: ${initial.title}`.slice(0, 200) : t("defaultSubject"));
   const [recipient, setRecipient] = useState(recipientFor(initial?.counterpartyId));
   const [mode, setMode] = useState("");
   const [showArchive, setShowArchive] = useState(false);
   const file = useRef<HTMLInputElement>(null);
-  const templates = data.templates.filter((t) => t.projectType === type && t.archived === showArchive);
+  const templates = data.templates.filter((tpl) => tpl.projectType === type && tpl.archived === showArchive);
   const project = data.projects.find((p) => p.id === projectId);
 
   function load(d: ReplyDraft) {
@@ -42,20 +47,45 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
     setBody(d.body);
     setSubject(d.subject);
     setRecipient(d.recipient);
-    setMode("已保存的草稿");
+    setMode(t("savedDraftMode"));
   }
 
   function applyTemplate() {
-    const template = data.templates.find((t) => t.id === templateId);
+    const template = data.templates.find((x) => x.id === templateId);
     if (!template) return;
     try {
-      const result = renderTemplate(template, source, project, locale);
+      const result = renderTemplate(template, source, project, {
+        quote: (amount, rate) => t("quoteValue", { amount: money(amount), rate }),
+        missing: (field) => t("missingValue", { field }),
+      });
       setBody(result.body);
-      setMode(result.missing.length ? `已套用範本 · 待確認：${result.missing.join("、")}` : "已套用範本");
+      setMode(
+        result.missing.length
+          ? t("appliedMissingMode", { fields: result.missing.join(t("listSeparator")) })
+          : t("appliedMode"),
+      );
     } catch (e) {
-      setNotice((e as Error).message);
+      if (e instanceof PastReplyError) setNotice(t("pastReplyRefused"));
+      else throw e;
     }
   }
+
+  // The starter template's tokens stay as stored until language-neutral placeholders (i18n step 4).
+  const starterTemplate = (type: ProjectType) => ({
+    title: t("starterTitle", { type: labels.projectType(type) }),
+    projectType: type,
+    kind: "template",
+    tone: tTone("natural"),
+    body: t("starterBody", {
+      counterparty: "{{合作方}}",
+      artist: "{{藝人}}",
+      project: "{{案件名稱}}",
+      questions: labels
+        .projectQuestions(type)
+        .map((q) => `• ${q}`)
+        .join("\n"),
+    }),
+  });
 
   return (
     <>
@@ -64,65 +94,65 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
           <div className="section-header">
             <div>
               <span>Your reply library</span>
-              <h2>過往回覆與範本</h2>
+              <h2>{t("libraryTitle")}</h2>
             </div>
-            <button onClick={() => setEditor({ kind: "template", item: { projectType: type } })}>＋新增</button>
+            <button onClick={() => setEditor({ kind: "template", item: { projectType: type } })}>{t("add")}</button>
           </div>
           <label>
-            商案類型
+            {t("type")}
             <select value={type} disabled={!!projectId} onChange={(e) => (setType(e.target.value as ProjectType), setTemplateId(""))}>
-              {projectTypes.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.label}
+              {projectTypes.map((pt) => (
+                <option key={pt.key} value={pt.key}>
+                  {labels.projectType(pt.key)}
                 </option>
               ))}
             </select>
           </label>
-          <p className="muted">每一類商案分開保存。回覆範本會替換當次案件欄位；過往回覆僅供參考，先移除舊案資料再另存範本。</p>
+          <p className="muted">{t("libraryHelp")}</p>
           <button className="secondary" onClick={() => setEditor({ kind: "template", item: starterTemplate(type) })}>
-            使用{projectType(type).label}起始範本
+            {t("useStarter", { type: labels.projectType(type) })}
           </button>
           <label className="check-line">
             <input type="checkbox" checked={showArchive} onChange={(e) => setShowArchive(e.target.checked)} />
-            已歸檔範本
+            {t("archivedTemplates")}
           </label>
-          {templates.map((t) => (
-            <article className="template-card" key={t.id}>
+          {templates.map((tpl) => (
+            <article className="template-card" key={tpl.id}>
               <label className="check-line">
                 <input
                   type="radio"
                   name="template"
-                  checked={templateId === t.id}
-                  disabled={t.archived}
-                  onChange={() => setTemplateId(t.id)}
+                  checked={templateId === tpl.id}
+                  disabled={tpl.archived}
+                  onChange={() => setTemplateId(tpl.id)}
                 />
-                <strong>{t.title}</strong>
+                <strong>{tpl.title}</strong>
               </label>
               <small>
-                {t.kind === "template" ? "回覆範本" : "過往回覆"} · {t.tone}
+                {tpl.kind === "template" ? t("kindTemplate") : t("kindPastReply")} · {tpl.tone}
               </small>
-              <p>{t.body.slice(0, 200)}</p>
+              <p>{tpl.body.slice(0, 200)}</p>
               <div className="row-actions">
-                <button className="text-button" onClick={() => setEditor({ kind: "template", item: toRecord(t) })}>
-                  編輯
+                <button className="text-button" onClick={() => setEditor({ kind: "template", item: toRecord(tpl) })}>
+                  {t("edit")}
                 </button>
-                {t.kind === "past_reply" && (
+                {tpl.kind === "past_reply" && (
                   <button
                     className="text-button"
                     onClick={() =>
                       setEditor({
                         kind: "template",
-                        item: { ...toRecord(t), id: "", title: `${t.title.slice(0, 190)}（範本）`, kind: "template" },
+                        item: { ...toRecord(tpl), id: "", title: t("templateCopyTitle", { title: tpl.title.slice(0, 190) }), kind: "template" },
                       })
                     }
                   >
-                    另存為範本並調整
+                    {t("saveAsTemplateAndEdit")}
                   </button>
                 )}
               </div>
             </article>
           ))}
-          {!templates.length && <p className="empty">尚無這一類的範本，先新增或匯入。</p>}
+          {!templates.length && <p className="empty">{t("noTemplates")}</p>}
           <input
             ref={file}
             type="file"
@@ -132,7 +162,7 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
               const f = e.target.files?.[0];
               e.target.value = "";
               if (!f) return;
-              if (f.size > 30000) return setNotice("範例請控制在 30 KB 以內。");
+              if (f.size > 30000) return setNotice(t("importTooBig"));
               setEditor({
                 kind: "template",
                 item: { title: f.name, projectType: type, body: (await f.text()).slice(0, 10000), kind: "past_reply" },
@@ -140,14 +170,14 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
             }}
           />
           <button className="secondary" onClick={() => file.current?.click()}>
-            匯入 TXT／Markdown／EML 回覆
+            {t("import")}
           </button>
         </section>
         <section className="surface draft-composer">
           <div className="section-header">
             <div>
               <span>Draft composer</span>
-              <h2>{projectType(type).label}回覆草稿</h2>
+              <h2>{t("composerTitle", { type: labels.projectType(type) })}</h2>
             </div>
             <button
               onClick={() => {
@@ -155,15 +185,15 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
                 setBody("");
                 setSource("");
                 setRecipient("");
-                setSubject("商案合作回覆");
+                setSubject(t("defaultSubject"));
                 setMode("");
               }}
             >
-              清空編輯器
+              {t("clear")}
             </button>
           </div>
           <label>
-            關聯合作案
+            {t("project")}
             <select
               value={projectId}
               onChange={(e) => {
@@ -173,12 +203,12 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
                 setBody("");
                 setMode("");
                 setSource(p?.offerText || "");
-                setSubject(p ? `Re: ${p.title}`.slice(0, 200) : "商案合作回覆");
+                setSubject(p ? `Re: ${p.title}`.slice(0, 200) : t("defaultSubject"));
                 setRecipient(recipientFor(p?.counterpartyId));
                 if (p) setType(p.type);
               }}
             >
-              <option value="">未關聯</option>
+              <option value="">{t("unlinked")}</option>
               {data.projects
                 .filter((p) => !p.archived || p.id === projectId)
                 .map((p) => (
@@ -189,45 +219,45 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
             </select>
           </label>
           <details>
-            <summary>這類合作要確認什麼？</summary>
+            <summary>{t("whatToConfirm")}</summary>
             <ul>
-              {projectType(type).questions.map((q) => (
+              {labels.projectQuestions(type).map((q) => (
                 <li key={q}>{q}</li>
               ))}
             </ul>
           </details>
           <label>
-            主旨
+            {t("subject")}
             <input value={subject} onChange={(e) => setSubject(e.target.value)} />
           </label>
           <label>
-            收件人
+            {t("recipient")}
             <input type="email" value={recipient} onChange={(e) => setRecipient(e.target.value)} />
           </label>
           <label>
-            語氣
+            {t("tone")}
             <select value={tone} onChange={(e) => setTone(e.target.value)}>
-              {["自然專業", "簡短直接", "親切熱情"].map((t) => (
-                <option key={t}>{t}</option>
+              {(["natural", "brief", "warm"] as const).map((key) => (
+                <option key={key}>{tTone(key)}</option>
               ))}
             </select>
           </label>
           <label>
-            這次邀約內容
+            {t("source")}
             <textarea rows={5} value={source} onChange={(e) => setSource(e.target.value)} maxLength={20000} />
           </label>
           <button className="primary generate" disabled={!source.trim() || !templateId} onClick={applyTemplate}>
-            套用選取範本
+            {t("apply")}
           </button>
-          <p className="muted">AI 擬稿（一次產生多個版本）開發中；目前可先套用範本。</p>
+          <p className="muted">{t("aiSoon")}</p>
           {notice && (
             <p className="notice error" role="alert">
               {notice}
             </p>
           )}
           <div className="draft-output">
-            <span>{mode || "可編輯草稿"}</span>
-            <textarea aria-label="可編輯草稿" rows={12} value={body} onChange={(e) => setBody(e.target.value)} />
+            <span>{mode || t("editableDraft")}</span>
+            <textarea aria-label={t("editableDraft")} rows={12} value={body} onChange={(e) => setBody(e.target.value)} />
           </div>
           <div className="draft-actions">
             <button
@@ -235,7 +265,7 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
               disabled={!body.trim()}
               onClick={() => setEditor({ kind: "template", item: { title: subject, projectType: type, body, tone, kind: "template" } })}
             >
-              另存為範本
+              {t("saveAsTemplate")}
             </button>
             <button
               className="secondary"
@@ -243,13 +273,13 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
               onClick={async () => {
                 await navigator.clipboard.writeText(body);
                 setNotice("");
-                setMode("已複製草稿");
+                setMode(t("copied"));
               }}
             >
-              複製
+              {t("copy")}
             </button>
-            <button className="primary" disabled title="草稿尚未接上資料庫">
-              儲存草稿
+            <button className="primary" disabled title={t("saveSoon")}>
+              {t("save")}
             </button>
           </div>
           <a
@@ -259,16 +289,16 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
             target="_blank"
             rel="noreferrer"
           >
-            在 Gmail 開啟撰寫視窗
+            {t("openGmail")}
           </a>
-          <p className="muted">會開啟預先填好的 Gmail 撰寫視窗，由你確認後自行寄出。</p>
+          <p className="muted">{t("openGmailHelp")}</p>
         </section>
       </div>
       <section className="surface padded section-gap">
         <div className="section-header">
           <div>
             <span>Saved drafts</span>
-            <h2>已保存的草稿</h2>
+            <h2>{t("savedTitle")}</h2>
           </div>
         </div>
         {data.drafts
@@ -276,11 +306,11 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
           .map((d) => (
             <div className="saved-row" key={d.id}>
               <button className="text-button" onClick={() => load(d)}>
-                {d.subject} · {projectType(d.projectType).label}
+                {d.subject} · {labels.projectType(d.projectType)}
               </button>
             </div>
           ))}
-        {!data.drafts.filter((d) => !d.archived).length && <p className="empty">儲存後可從這裡繼續編輯。</p>}
+        {!data.drafts.filter((d) => !d.archived).length && <p className="empty">{t("savedEmpty")}</p>}
       </section>
       {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
     </>

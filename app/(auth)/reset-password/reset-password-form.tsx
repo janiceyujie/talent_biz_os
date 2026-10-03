@@ -1,11 +1,14 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
-import { authErrorMessage, buttonClass, Field, FormMessage } from "@/components/form";
+import { buttonClass, Field, FormMessage, useAuthErrorMessage } from "@/components/form";
 import { authClient } from "@/lib/auth/client";
 
 export function ResetPasswordForm({ token }: { token: string }) {
+  const t = useTranslations("auth");
+  const authErrorMessage = useAuthErrorMessage();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -27,9 +30,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
   if (done) {
     return (
       <>
-        <FormMessage tone="info">密碼已更新，其他裝置上的登入也已登出。</FormMessage>
+        <FormMessage tone="info">{t("passwordUpdated")}</FormMessage>
         <Link href="/sign-in">
-          前往登入
+          {t("goToSignIn")}
         </Link>
       </>
     );
@@ -38,7 +41,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   return (
     <form onSubmit={onSubmit}>
       <Field
-        label="新密碼（至少 8 個字元）"
+        label={t("newPassword")}
         name="password"
         type="password"
         autoComplete="new-password"
@@ -47,7 +50,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       />
       {error && <FormMessage tone="error">{error}</FormMessage>}
       <button type="submit" className={buttonClass} disabled={pending}>
-        {pending ? "更新中…" : "更新密碼"}
+        {pending ? t("updating") : t("updatePassword")}
       </button>
     </form>
   );

@@ -1,10 +1,10 @@
 // Project workflow rules: settlement, reply templates, summaries, notifications.
 // Pure functions over AppData so they run on the server or in the browser.
-import { projectType, projectTypes, type ProjectType } from "@/lib/project-types";
+import { projectTypes } from "@/lib/project-types";
 import { openStages } from "@/lib/labels";
 import type { AppData, Payment, Project, ReplyTemplate } from "@/lib/types";
 import { dateInZone } from "./dates";
-import { minorUnits, money, quote } from "./money";
+import { minorUnits, quote } from "./money";
 
 export const paymentTotal = (p: Pick<Payment, "amount" | "taxRate" | "taxIncluded" | "currency">) =>
   quote(p.amount, p.taxRate, p.taxIncluded, p.currency).total;
@@ -41,25 +41,21 @@ export function projectSettlement(data: AppData, project: Project) {
   };
 }
 
-export function starterTemplate(type: ProjectType) {
-  const def = projectType(type);
-  return {
-    title: `${def.label}｜初次確認`,
-    projectType: type,
-    kind: "template" as const,
-    tone: "自然專業",
-    body: `{{合作方}} 您好，\n\n謝謝邀請 {{藝人}} 參與「{{案件名稱}}」。為了確認合作安排，想請您補充：\n${def.questions.map((q) => `• ${q}`).join("\n")}\n\n收到後我們會再確認檔期與合作條件，謝謝！`,
-  };
-}
+/** Thrown for a past reply: it carries an old project's names and fees, so it's never applied directly. */
+export class PastReplyError extends Error {}
 
 /**
- * Fill a template's placeholders from one project. Missing values render as
- * 【待確認：欄位】, never guessed. Past replies are refused — they carry an old
- * project's names and fees.
+ * Fill a template's placeholders from one project. The wording around values
+ * belongs to the template's language, so the caller supplies it: how a quote
+ * reads, and the marker for a missing value (never guessed).
  */
-export function renderTemplate(template: ReplyTemplate, source: string, project: Project | undefined, language: string) {
-  if (template.kind !== "template")
-    throw new Error("過往回覆僅供參考，不能直接套用。請先另存為範本，將舊案的人名、金額與檔期改成替換欄位。");
+export function renderTemplate(
+  template: ReplyTemplate,
+  source: string,
+  project: Project | undefined,
+  words: { quote: (amount: number, taxRate: number) => string; missing: (placeholder: string) => string },
+) {
+  if (template.kind !== "template") throw new PastReplyError();
   const values: Record<string, string> = {
     邀約內容: source,
     合作方: project?.counterparty || "",
@@ -70,14 +66,14 @@ export function renderTemplate(template: ReplyTemplate, source: string, project:
     下一步期限: project?.nextAction?.dueDate || "",
     報價:
       project && project.quotedAmount > 0
-        ? `${money(projectQuoteTotal(project), language, project.currency)}（含稅，稅率 ${project.taxRate}%）`
+        ? words.quote(projectQuoteTotal(project), project.taxRate)
         : "",
   };
   const missing = new Set<string>();
   const body = template.body.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (_, key: string) => {
     if (Object.hasOwn(values, key) && values[key]) return values[key];
     missing.add(key);
-    return `【待確認：${key}】`;
+    return words.missing(key);
   });
   return { body, missing: [...missing] };
 }
@@ -100,7 +96,7 @@ export function summarize(data: AppData, from = "", to = "9999-12-31") {
     paid: sum((p) => p.direction === "out" && p.status === "settled"),
     payable: sum((p) => p.direction === "out" && p.status === "expected"),
     split: projectTypes.map((t) => ({
-      label: t.label,
+      type: t.key,
       amount: sum((p) => p.direction === "in" && p.status === "settled" && p.projectType === t.key),
     })),
   };

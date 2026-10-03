@@ -1,14 +1,19 @@
 "use client";
 
+import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
-import { projectType, projectTypes } from "@/lib/project-types";
+import { useLabels } from "@/lib/i18n/labels";
+import { projectTypes } from "@/lib/project-types";
 
 // The review queue: messages the person sent in (upload, paste, and the Gmail
 // add-on in M3), each with the system's suggested type, waiting to be filed.
 export function InboxView() {
   const data = useAppData();
+  const t = useTranslations("inbox");
+  const labels = useLabels();
+  const format = useFormatter();
   const [editor, setEditor] = useState<Editor | null>(null);
   const [active, setActive] = useState("");
   const message = data.inbox.find((m) => m.id === active);
@@ -19,17 +24,17 @@ export function InboxView() {
         <div className="section-header">
           <div>
             <span>Intake</span>
-            <h2>待確認的邀約</h2>
+            <h2>{t("title")}</h2>
           </div>
-          <span className="mock-chip">Gmail 外掛即將推出</span>
+          <span className="mock-chip">{t("gmailSoon")}</span>
         </div>
-        <p className="muted">上傳截圖、PDF，或貼上邀約文字。系統會整理重點並建議分類，由你確認後才建立合作案。上傳與貼上功能開發中；目前可直接「新增合作案」。</p>
+        <p className="muted">{t("intro")}</p>
         <div className="row-actions">
           <button className="primary" disabled>
-            上傳截圖／PDF
+            {t("upload")}
           </button>
           <button className="secondary" disabled>
-            貼上邀約文字
+            {t("paste")}
           </button>
         </div>
       </section>
@@ -37,22 +42,22 @@ export function InboxView() {
         <section className="surface padded">
           {!data.inbox.length && (
             <div className="empty">
-              <h3>這裡還沒有邀約</h3>
-              <p>邀約進件功能開發中，目前可直接新增合作案。</p>
+              <h3>{t("emptyTitle")}</h3>
+              <p>{t("emptyBody")}</p>
             </div>
           )}
           {data.inbox.map((m) => (
             <div className="mail-item" key={m.id}>
               <button className={`mail-summary ${active === m.id ? "active" : ""}`} onClick={() => setActive(m.id)}>
                 <small>{m.sender}</small>
-                <strong>{m.subject || "（無主旨）"}</strong>
+                <strong>{m.subject || t("noSubject")}</strong>
                 <span>{m.body.slice(0, 110)}</span>
               </button>
-              <select aria-label={`${m.subject}分類`} value={m.suggestedType ?? ""} disabled>
-                <option value="">待確認</option>
-                {projectTypes.map((t) => (
-                  <option key={t.key} value={t.key}>
-                    {t.label}
+              <select aria-label={t("typeOf", { subject: m.subject })} value={m.suggestedType ?? ""} disabled>
+                <option value="">{labels.unconfirmed()}</option>
+                {projectTypes.map((pt) => (
+                  <option key={pt.key} value={pt.key}>
+                    {labels.projectType(pt.key)}
                   </option>
                 ))}
               </select>
@@ -62,10 +67,10 @@ export function InboxView() {
         <section className="surface padded">
           {message ? (
             <>
-              <span className="category">{message.suggestedType ? projectType(message.suggestedType).label : "待確認"}</span>
+              <span className="category">{message.suggestedType ? labels.projectType(message.suggestedType) : labels.unconfirmed()}</span>
               <h2>{message.subject}</h2>
               <p className="muted">
-                {message.sender} · {new Date(message.receivedAt).toLocaleString("zh-TW")}
+                {message.sender} · {format.dateTime(new Date(message.receivedAt), { dateStyle: "medium", timeStyle: "short" })}
               </p>
               <p className="prewrap mail-body">{message.body}</p>
               <small className="muted">{message.analysisNote}</small>
@@ -80,7 +85,7 @@ export function InboxView() {
                         : {
                             kind: "project",
                             item: {
-                              title: (message.subject || "新邀約").slice(0, 200),
+                              title: (message.subject || t("newOffer")).slice(0, 200),
                               offerText: message.body,
                               counterparty: message.sender,
                               type: message.suggestedType ?? "other",
@@ -89,7 +94,7 @@ export function InboxView() {
                     );
                   }}
                 >
-                  建立／開啟合作案
+                  {t("openProject")}
                 </button>
                 <button
                   className="secondary"
@@ -105,12 +110,12 @@ export function InboxView() {
                     })
                   }
                 >
-                  建立回覆草稿
+                  {t("draftReply")}
                 </button>
               </div>
             </>
           ) : (
-            <p className="empty">選擇一封邀約查看內容。</p>
+            <p className="empty">{t("pick")}</p>
           )}
         </section>
       </div>

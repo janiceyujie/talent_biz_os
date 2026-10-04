@@ -13,12 +13,13 @@ import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { requireTalent } from "@/lib/auth";
 import { getAppData } from "@/lib/data";
 import { db } from "@/lib/db";
-import { auditLog, calendarEvent, message, messageAnalysis, payment, person as personTable, project, todo } from "@/lib/db/schema";
+import { auditLog, calendarEvent, contact, message, messageAnalysis, payment, person as personTable, project, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
-import { proposeChanges, withField, type Change, type IntakeContext } from "@/lib/domain/intake";
+import { keptFields, proposeChanges, withField, type Change, type IntakeContext } from "@/lib/domain/intake";
 import { isSigned } from "@/lib/domain/phases";
 import { paymentTotal } from "@/lib/domain/workflow";
-import { stages, type ProjectDate, type Stage } from "@/lib/types";
+import { projectTypeKeys } from "@/lib/project-types";
+import { stages, type ProjectDate, type ProjectDetails, type Stage } from "@/lib/types";
 import { errorText } from "./validation";
 
 const day = z.iso.date();
@@ -272,6 +273,138 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
   });
   if (!failure) refresh();
   return failure;
+}
+
+const optional = (max: number) => z.string().trim().max(max).default("");
+const projectDate = z.object({
+  what: optional(200),
+  date: day,
+  time: z.union([z.literal(""), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)]),
+  timeZone: optional(64),
+});
+
+const newProjectInput = z.object({
+  messageId: z.uuid(),
+  project: z.object({
+    title: z.string().trim().min(1, "projectTitleRequired").max(200),
+    type: z.enum(projectTypeKeys, "typeRequired"),
+    counterparty: optional(200),
+    quotedAmount: z.number().min(0).max(1e10).multipleOf(0.01).nullable(),
+    taxRate: z.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
+    taxIncluded: z.boolean(),
+    fields: z.record(z.string(), z.string().trim().max(1000)),
+    dates: z.array(projectDate).max(20),
+    notes: optional(10000),
+  }),
+  /** Link an existing contact, create one from the sender, or neither. */
+  contact: z
+    .discriminatedUnion("mode", [
+      z.object({ mode: z.literal("link"), id: z.uuid() }),
+      z.object({
+        mode: z.literal("create"),
+        name: z.string().trim().min(1, "nameRequired").max(200),
+        company: optional(200),
+        email: z.union([z.literal(""), z.email("emailInvalid")]),
+        phone: optional(60),
+      }),
+    ])
+    .nullable(),
+  replyBy: z.union([z.literal(""), day]),
+  toConfirm: z.array(z.string().trim().min(1).max(300)).max(20),
+});
+export type NewProjectInput = z.input<typeof newProjectInput>;
+
+/**
+ * Create a project from a message (建立新合作案): the project as the person
+ * edited it, its contact, a reply to-do, and the to-confirm list, together.
+ * Returns the new project's id, or an error.
+ */
+export async function createProjectFromMessage(raw: NewProjectInput): Promise<{ id: string } | { error: string }> {
+  const { person, talent } = await requireTalent();
+  const fail = await errorText();
+  const parsed = newProjectInput.safeParse(raw);
+  if (!parsed.success) {
+    const key = parsed.error.issues[0]?.message;
+    return { error: fail(key === "projectTitleRequired" || key === "nameRequired" || key === "emailInvalid" || key === "taxRateRange" ? key : "invalid") };
+  }
+  const input = parsed.data;
+  const p = input.project;
+  // Only the type's own fields are kept; a field from another type would have no label or home.
+  const allowed = new Set(keptFields(p.type));
+  let details: ProjectDetails = { dates: p.dates, toConfirm: input.toConfirm };
+  for (const [key, value] of Object.entries(p.fields)) if (allowed.has(key) && value) details = withField(details, key, value);
+
+  const t = await getTranslations("intake");
+  const result = await db.transaction(async (tx): Promise<{ id: string } | { error: string }> => {
+    const filed = await tx
+      .select({ id: message.id })
+      .from(message)
+      .where(and(eq(message.id, input.messageId), eq(message.talentId, talent.id), eq(message.status, "analyzed")))
+      .for("update");
+    if (!filed.length) return { error: fail("messageNotFound") };
+
+    let counterpartyId: string | null = null;
+    let counterparty = p.counterparty;
+    if (input.contact?.mode === "link") {
+      const [linked] = await tx
+        .select({ id: contact.id, name: contact.name })
+        .from(contact)
+        .where(and(eq(contact.id, input.contact.id), eq(contact.talentId, talent.id)));
+      if (!linked) return { error: fail("counterpartyNotFound") };
+      counterpartyId = linked.id;
+      counterparty ||= linked.name;
+    } else if (input.contact?.mode === "create") {
+      const { name, company, email, phone } = input.contact;
+      const [created] = await tx
+        .insert(contact)
+        .values({ talentId: talent.id, role: "counterparty", name, company: company || null, email: email || null, phone: phone || null })
+        .returning({ id: contact.id });
+      counterpartyId = created.id;
+      counterparty ||= company || name;
+    }
+
+    const [created] = await tx
+      .insert(project)
+      .values({
+        talentId: talent.id,
+        title: p.title,
+        counterparty,
+        counterpartyId,
+        type: p.type,
+        stage: "offer",
+        quotedAmount: p.quotedAmount,
+        taxRate: p.taxRate,
+        taxIncluded: p.taxIncluded,
+        details,
+        notes: p.notes || null,
+      })
+      .returning({ id: project.id });
+    await tx.update(message).set({ projectId: created.id, status: "confirmed" }).where(eq(message.id, input.messageId));
+    if (input.replyBy)
+      await tx.insert(todo).values({
+        talentId: talent.id,
+        projectId: created.id,
+        messageId: input.messageId,
+        type: "reply",
+        title: t("todo.reply", { title: p.title }).slice(0, 200),
+        dueDate: input.replyBy,
+        timeZone: (await getAppData()).talent.timeZone,
+      });
+    await tx.insert(auditLog).values([
+      { talentId: talent.id, actorPersonId: person.personId, action: "project.created", targetType: "project", targetId: created.id },
+      {
+        talentId: talent.id,
+        actorPersonId: person.personId,
+        action: "message.applied",
+        targetType: "message",
+        targetId: input.messageId,
+        details: { projectId: created.id, created: true, contact: input.contact?.mode ?? null, replyBy: input.replyBy || null },
+      },
+    ]);
+    return { id: created.id };
+  });
+  if (!("error" in result)) refresh();
+  return result;
 }
 
 /** The reply-by default for messages that state none: N days after receiving (設定). */

@@ -7,14 +7,12 @@ import { useEffect, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { DataNotice } from "./data-notice";
 import { Modal } from "@/components/app/modal";
-import { RecordEditor, type Editor, type RecordData } from "@/components/app/record-editor";
 import { FileText } from "lucide-react";
 import { dismissMessage, reanalyzeMessage, submitPastedMessage } from "@/lib/actions/messages";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { detailFieldKeys, type AssumptionTopic } from "@/lib/ai/analysis";
 import { isFailureCode } from "@/lib/ai/errors";
-import { matchContact } from "@/lib/domain/intake";
 import type { InboxMessage } from "@/lib/types";
 import { MessageReview } from "./message-review";
 import { UploadDialog } from "./upload-dialog";
@@ -33,7 +31,6 @@ export function InboxView() {
   const router = useRouter();
   const params = useSearchParams();
   const format = useFormatter();
-  const [editor, setEditor] = useState<Editor | null>(null);
   const [pasting, setPasting] = useState(params.get("paste") === "1");
   const [uploading, setUploading] = useState(params.get("upload") === "1");
   const [active, setActive] = useState("");
@@ -113,7 +110,7 @@ export function InboxView() {
         </section>
         <section className="surface padded">
           {message ? (
-            <MessageDetail key={message.id} message={message} edit={setEditor} />
+            <MessageDetail key={message.id} message={message} />
           ) : (
             <p className="empty">{t("pick")}</p>
           )}
@@ -141,7 +138,6 @@ export function InboxView() {
           }}
         />
       )}
-      {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
     </>
   );
 }
@@ -212,13 +208,12 @@ function PasteDialog({ onClose, onSubmitted }: { onClose: () => void; onSubmitte
   );
 }
 
-function MessageDetail({ message, edit }: { message: InboxMessage; edit: (e: Editor) => void }) {
+function MessageDetail({ message }: { message: InboxMessage }) {
   const t = useTranslations("inbox");
   const format = useFormatter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const run = (action: () => Promise<string | null>) => startTransition(async () => setError(await action()));
-  const prefill = useProjectPrefill();
   const a = message.analysis;
 
   return (
@@ -303,7 +298,7 @@ function MessageDetail({ message, edit }: { message: InboxMessage; edit: (e: Edi
         )}
       </div>
       {message.status === "analyzed" && a && (
-        <MessageReview key={a.promptVersion + a.modelVersion} message={message} onNewProject={() => edit({ kind: "project", item: prefill(message) })} />
+        <MessageReview key={a.promptVersion + a.modelVersion} message={message} />
       )}
     </>
   );
@@ -431,49 +426,4 @@ function AnalysisView({ analysis: a }: { analysis: NonNullable<InboxMessage["ana
       <p className="muted ai-note">{t("aiNote", { confidence: Math.round(a.confidence * 100), model: a.modelVersion })}</p>
     </div>
   );
-}
-
-/** The project form, filled from a message's analysis — every field still editable before saving. */
-function useProjectPrefill() {
-  const data = useAppData();
-  const t = useTranslations("inbox");
-  const labels = useLabels();
-  return (m: InboxMessage): RecordData => {
-    const a = m.analysis!;
-    const contact = matchContact(data.contacts, a.counterparty);
-    const twd = a.money.amount !== null && (a.money.currency === "TWD" || !a.money.currency);
-    const detail = (key: string) => a.details[key]?.value ?? "";
-    // Fields with a home on the project go there; the rest are listed in the notes.
-    const placed = new Set(["deliverables", "usageRights", "travel"]);
-    const notes = [
-      t("notesHeading"),
-      a.summary,
-      a.dates.length ? `${t("field.dates")}: ${a.dates.map((d) => `${d.what} ${[d.date, d.time].filter(Boolean).join(" ") || d.asStated}`).join("; ")}` : "",
-      a.paymentTerms && `${t("field.paymentTerms")}: ${a.paymentTerms}`,
-      a.replyBy && `${t("field.replyBy")}: ${a.replyBy}`,
-      ...detailFieldKeys(a)
-        .filter((key) => !placed.has(key) && detail(key))
-        .map((key) => `${labels.detailField(a.projectType, key)}: ${detail(key)}`),
-      [a.counterparty.email, a.counterparty.phone].some(Boolean) &&
-        `${t("field.contact")}: ${[a.counterparty.name, a.counterparty.email, a.counterparty.phone].filter(Boolean).join(" · ")}`,
-      !twd && a.money.amount !== null && t("foreignCurrency", { amount: `${a.money.currency} ${a.money.amount}` }),
-    ]
-      .filter(Boolean)
-      .join("\n");
-    return {
-      messageId: m.id,
-      replyBy: a.replyBy, // shown in the form to confirm or change; becomes the reply to-do
-      title: (a.title || firstLine(m.body) || m.files[0]?.filename || "").slice(0, 200),
-      counterparty: contact?.name ?? (a.counterparty.company || a.counterparty.name),
-      counterpartyId: contact?.id ?? "",
-      type: a.projectType,
-      stage: "offer",
-      quotedAmount: twd ? a.money.amount! : "",
-      taxIncluded: a.money.taxIncluded ?? false,
-      deliverables: detail("deliverables"),
-      rights: detail("usageRights"),
-      travel: detail("travel"),
-      notes: notes.slice(0, 10_000),
-    };
-  };
 }

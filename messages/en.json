@@ -506,7 +506,6 @@
     "missing": "To confirm with them",
     "aiNote": "An AI suggestion and may be wrong — check before filing. Confidence {confidence}% · {model}",
     "original": "Original message",
-    "createProject": "Create a project",
     "pickProject": "Project",
     "dismiss": "Dismiss",
     "restore": "Restore",
@@ -612,6 +611,22 @@
     "payment": {
       "received": "Payment: {title}",
       "cancellationFee": "Cancellation fee: {title}"
+    },
+    "new": {
+      "heading": "Proposed project",
+      "hint": "Everything is editable, here and after it's created.",
+      "together": "Also create",
+      "contactLink": "Link contact",
+      "contactCreate": "Add contact",
+      "contactHint": "Later messages from this contact will be matched to this project.",
+      "toConfirmHint": "Kept on the project; a reply draft will ask about them.",
+      "addDate": "Add a date",
+      "removeDate": "Remove",
+      "dateWhat": "What (e.g. show, rehearsal)",
+      "datesHint": "Dates stay on the project; they go on the calendar once it's signed.",
+      "create": "Create project",
+      "creating": "Creating…",
+      "moreFields": "More fields ({count})"
     }
   },
   "contacts": {
@@ -834,8 +849,7 @@
     "contactLinked": "Linked to contact {name}",
     "contactUnlinked": "Not linked to a contact — saved on this project only",
     "contactHint": "Search your partners by name or company, or type a new name",
-    "contactClear": "Clear partner",
-    "replyByHelp": "Adds a reply to-do on this date. Check it — the AI may have guessed it."
+    "contactClear": "Clear partner"
   },
   "tone": {
     "natural": "Natural and professional",

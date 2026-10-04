@@ -506,7 +506,6 @@
     "missing": "需向對方確認",
     "aiNote": "AI 建議，可能有誤，建檔前請核對。信心 {confidence}% · {model}",
     "original": "原始內容",
-    "createProject": "建立新合作案",
     "pickProject": "選擇合作案",
     "dismiss": "略過",
     "restore": "還原",
@@ -612,6 +611,22 @@
     "payment": {
       "received": "收款：{title}",
       "cancellationFee": "取消費：{title}"
+    },
+    "new": {
+      "heading": "建議建立的合作案",
+      "hint": "都可以修改；建立後還能再編輯。",
+      "together": "一起建立",
+      "contactLink": "連結聯絡人",
+      "contactCreate": "新增聯絡人",
+      "contactHint": "之後的訊息會用這位聯絡人對應到這個合作案。",
+      "toConfirmHint": "存在合作案上，擬回覆時會一併詢問。",
+      "addDate": "新增日期",
+      "removeDate": "移除",
+      "dateWhat": "內容（例如：演出、彩排）",
+      "datesHint": "日期先存在合作案上；簽約後再加入行程。",
+      "create": "建立合作案",
+      "creating": "建立中…",
+      "moreFields": "其他欄位（{count}）"
     }
   },
   "contacts": {
@@ -834,8 +849,7 @@
     "contactLinked": "已連結聯絡人：{name}",
     "contactUnlinked": "未連結聯絡人，只存在這個合作案",
     "contactHint": "搜尋合作方姓名或公司，或直接輸入新名稱",
-    "contactClear": "清除合作方",
-    "replyByHelp": "會在這天建立回覆待辦。請核對，日期可能是 AI 推測的。"
+    "contactClear": "清除合作方"
   },
   "tone": {
     "natural": "自然專業",

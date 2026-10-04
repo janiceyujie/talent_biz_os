@@ -157,7 +157,7 @@ export function withField(details: ProjectDetails, key: string, value: string): 
 }
 
 /** The fields a project of this type keeps: its registry fields. Intent fields (proposedChanges…) are about the message, not the deal. */
-const keptFields = (type: string) => projectType(type).extraction.fields.map((f) => f.key);
+export const keptFields = (type: string): string[] => projectType(type).extraction.fields.map((f) => f.key);
 
 // ---------------------------------------------------------------------------
 // Changes: what the message would change on an existing project.

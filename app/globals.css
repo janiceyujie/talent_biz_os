@@ -3091,3 +3091,53 @@ a.disabled {
   border-color: var(--ink-soft);
   color: #fff;
 }
+.new-project h4 {
+  margin: 12px 0 0;
+  font-size: 15px;
+}
+.new-project .editor-form .stated {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+}
+.new-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.new-date {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 8px;
+  align-items: center;
+}
+@media (max-width: 640px) {
+  .new-date {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.new-dates > .text-button {
+  align-self: flex-start;
+}
+.new-project .inline-check {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+  align-self: end;
+  padding-bottom: 10px;
+}
+.new-project .inline-check input {
+  width: 18px;
+  height: 18px;
+}
+.more-fields > summary {
+  cursor: pointer;
+  font-size: var(--text-meta);
+  color: var(--muted);
+  margin-bottom: 8px;
+}

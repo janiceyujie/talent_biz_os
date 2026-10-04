@@ -116,7 +116,7 @@ The facts table goes away; the summary stays short. Flags (decision 0007) stay a
 ## Build order
 
 1. Target suggestion and the per-intent change rules, as pure functions with tests (no model calls). **Done**: `lib/domain/intake.ts`, tests in `intake.test.ts` (`npm test`).
-2. The review screen for existing projects (negotiation, confirmation, logistics, payment), then new projects (contact and to-confirm list). **Existing projects done**: `components/views/message-review.tsx`, applied by `lib/actions/intake.ts`; the reply-by default is in 設定. New projects still use the project form, which now also keeps the message's dates, type fields, and to-confirm list.
+2. The review screen for existing projects (negotiation, confirmation, logistics, payment), then new projects (contact and to-confirm list). **Done**: `components/views/message-review.tsx`, applied by `lib/actions/intake.ts` (`applyMessage`, `createProjectFromMessage`); the reply-by default is in 設定. A new project is reviewed on the same screen — the type fields the message states first, the rest under "more" — and replaces the project form for messages. Not yet: "套用並擬回覆" (needs reply drafting).
 3. The project timeline.
 4. Contract versions and their comparison.
 5. Then reply drafting, which reads all of the above.

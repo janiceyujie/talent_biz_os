@@ -452,6 +452,37 @@ export const file = pgTable(
   ],
 ).enableRLS();
 
+// One model call: what it was for, which model and prompt version, what it
+// cost, and how it ended. Feeds cost tracking, usage limits, and debugging
+// (docs/decisions/0008). Replayed calls (recorded answers) are logged too, marked.
+export const aiCallStatuses = ["ok", "error"] as const;
+
+export const aiCall = pgTable(
+  "ai_call",
+  {
+    id: id(),
+    talentId: uuid().references(() => talent.id, { onDelete: "cascade" }), // null for evals and scripts
+    personId: uuid().references(() => person.id, { onDelete: "set null" }),
+    messageId: uuid().references(() => message.id, { onDelete: "set null" }),
+    task: text().notNull(), // 'extract', 'eval', later 'draft'
+    provider: text().notNull(),
+    model: text().notNull(),
+    promptVersion: text(),
+    status: text({ enum: aiCallStatuses }).notNull(),
+    failureCode: text(), // lib/ai/errors.ts
+    inputTokens: integer(),
+    outputTokens: integer(),
+    latencyMs: integer().notNull(),
+    replayed: boolean().notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("ai_call_talent_created_idx").on(t.talentId, t.createdAt),
+    index("ai_call_message_idx").on(t.messageId),
+    check("ai_call_status_check", oneOf(t.status, aiCallStatuses)),
+  ],
+).enableRLS();
+
 export const todoTypes = [
   "reply",
   "follow_up",

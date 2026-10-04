@@ -24,6 +24,7 @@ Every case also checks that what the model writes for the person — title, summ
 - Check what matters, loosely where wording can vary: a detail passes if it contains the expected text; `true` only needs it filled; `"a|b"` accepts either field when a value fits more than one.
 - A miss is either a model or prompt problem, or a too-narrow expectation. Fix the latter in the case; fix the former in the prompt or registry, in general terms rather than for that one message, and re-run everything.
 - Models vary between runs even at temperature 0; run twice before trusting a one-check difference.
+- Eval calls are logged in `ai_call` with task `eval` and no talent, so they don't count toward anyone's usage limit.
 
 ### Files
 

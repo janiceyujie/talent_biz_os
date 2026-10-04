@@ -547,13 +547,17 @@
       "invalid_output": "AI 的回覆無法使用，請按「重新分析」。",
       "not_configured": "這個環境尚未設定 AI 服務。",
       "unsupported_file": "目前的 AI 模型無法讀取這種檔案。",
-      "unexpected": "分析時發生未預期的錯誤，請按「重新分析」。"
+      "unexpected": "分析時發生未預期的錯誤，請按「重新分析」。",
+      "replay_missing": "這個環境只使用錄製的 AI 回覆（AI_REPLAY=only），而這則訊息沒有錄製檔。",
+      "usage_limit": "這個帳號今天的 AI 分析次數已用完，24 小時內重置後可按「重新分析」。"
     },
     "transcriptWithheld": "AI 服務不提供這份檔案的文字轉錄（看起來像已發表的內容），因此沒有轉錄。",
     "notWork": "這看起來不是工作上的訊息。如果不需要，可以按「略過」。",
     "dataNotice": "內容會交由 {service} 分析。目前使用的是它的免費方案：依其條款，送出的內容可能被保留、用於改善服務，也可能由審查人員閱讀。請避免放入密碼、驗證碼、身分證字號或銀行帳號等資料。",
     "assumptions": "AI 的推定",
-    "assumed": "AI 推定：{note}"
+    "assumed": "AI 推定：{note}",
+    "usageRemaining": "今日剩餘 AI 分析：{remaining}／{limit} 次",
+    "usageExhausted": "今天的 {limit} 次 AI 分析已用完。新訊息仍會保存，重置後可再分析。"
   },
   "contacts": {
     "search": "搜尋聯絡人",
@@ -921,7 +925,9 @@
     "messageNotFound": "找不到這則訊息，或已經處理過了。",
     "uploadInvalid": "最多可傳 {files} 個檔案，限截圖、照片（PNG、JPEG、WebP、HEIC）或 PDF。",
     "uploadTooLarge": "檔案太大，最多 {files} 個、總共 {megabytes} MB。",
-    "uploadMissing": "有檔案沒有上傳完成，請再試一次。"
+    "uploadMissing": "有檔案沒有上傳完成，請再試一次。",
+    "aiDailyLimit": "這個帳號今天的 AI 分析次數已用完，24 小時內會重置。",
+    "aiMessageLimit": "這則訊息已達重新分析的次數上限。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",

@@ -96,7 +96,7 @@ for (const c of selected) {
       mimeType: name.endsWith(".pdf") ? "application/pdf" : name.endsWith(".jpg") ? "image/jpeg" : "image/png",
       data: readFileSync(new URL(`../evals/extraction/files/${name}`, import.meta.url)),
     }));
-    const out = await extractMessage({ body: c.message, files, today: RECEIVED.today, timeZone: RECEIVED.timeZone, outputLocale: locale });
+    const out = await extractMessage({ body: c.message, files, today: RECEIVED.today, timeZone: RECEIVED.timeZone, outputLocale: locale, trace: { task: "eval" } });
     promptVersion = out.promptVersion;
     const checks = score(c, out.analysis);
     results.push({ id: c.id, seconds: (Date.now() - t0) / 1000, modelVersion: out.modelVersion, checks, analysis: out.analysis });

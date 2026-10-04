@@ -12,6 +12,8 @@ export const failureCodes = [
   "invalid_output", // the answer didn't fit the schema
   "not_configured", // no key or provider set
   "unsupported_file", // this model can't read this kind of file
+  "replay_missing", // tests run on recordings only (AI_REPLAY=only) and this request has none
+  "usage_limit", // the account reached its AI usage limit
   "unexpected", // anything else (details in the server log)
 ] as const;
 export type FailureCode = (typeof failureCodes)[number];

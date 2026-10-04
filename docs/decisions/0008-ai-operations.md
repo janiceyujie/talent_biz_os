@@ -17,7 +17,7 @@ The AI features work end to end on a free model tier, and that has exposed how t
 | Layer | Calls a model? | Runs | Checks |
 |---|---|---|---|
 | **Plain-code tests** | No | Every change | Safety checks, date fixes, clean-up, prompt assembly, and the change rules of the intake flow (docs/design/intake-to-project.md) |
-| **End-to-end with recorded responses** | No | Every change | A `replay` provider (`AI_PROVIDER=replay`) returns saved model answers keyed by the prompt version and the input; a record mode fills them from one live run. End-to-end suites test our flow, not the model. |
+| **End-to-end with recorded responses** | No | Every change | Recorded responses (`AI_REPLAY=only`) return saved model answers keyed by the prompt version and the input; `AI_REPLAY=record` fills them from one live run. End-to-end suites test our flow, not the model. |
 | **Live evals** | Yes | When a prompt, field, or model changes | Model quality, against `evals/` |
 
 Live evals:
@@ -54,8 +54,9 @@ Live evals:
 | Signed in, email verified, before any AI call | Done |
 | File types, sizes, counts, signatures; duplicate detection | Done |
 | A cap on PDF pages and on the model's output length | Before real users |
-| Per-account limits — analyses per day and per month, plus a short burst limit — counted from `ai_call`, shown in the UI | Before real users |
-| A re-analysis cap per message | Before real users |
+| Per-account analyses per day, counted from `ai_call`, shown in the UI | Done |
+| A re-analysis cap per message | Done |
+| Per-month and short-burst limits | Before real users |
 | Rate limits on server actions and the upload and file routes | Before real users |
 | A switch to pause AI app-wide (messages wait as "paused" instead of failing) | Before real users |
 | Alerts on unusual accounts; a CAPTCHA on sign-up if bots appear | When needed |
@@ -71,6 +72,11 @@ Live evals:
 ## Consequences
 
 - The replay provider and `ai_call` log come before the intake-flow work, so its tests don't spend quota.
-- Recorded responses must be re-recorded when the prompt version changes; the replay provider fails loudly when a recording is missing rather than calling a live model.
+- Recorded responses must be re-recorded when the prompt version changes; replay fails loudly when a recording is missing rather than calling a live model.
 - Costs become measurable per task, per person, and per prompt version.
 - The job queue ties to the hosting decision; until it's made, development keeps `after()`.
+
+## Implementation notes (2026-10-03)
+
+- `ai_call` logs task, provider, model, prompt version, tokens, latency, status, and failure code. Estimated cost and finish reason are not stored yet; cost comes with the paid-model price table.
+- Recording keys leave out the system prompt, which carries today's date and calendar, so a recording stays valid across days; the prompt version still changes it whenever the rules change.

@@ -1,7 +1,7 @@
 import "server-only";
 import type { Locale } from "@/lib/i18n/config";
 import { modelOutput, modelOutputForFiles, normalize, type MessageAnalysis } from "./analysis";
-import { generateObject, ModelError } from "./model";
+import { generateObject, ModelError, type CallTrace } from "./model";
 import { messagePrompt, PROMPT_VERSION, systemPrompt } from "./prompts";
 import { findInstructions, rollForwardYearless, stripInvisible, weekdayMismatches, type Flag } from "./safety";
 
@@ -17,17 +17,23 @@ export async function extractMessage({
   today,
   timeZone,
   outputLocale,
+  trace,
 }: {
   body: string;
   files?: { name: string; mimeType: string; data: Uint8Array }[]; // screenshots, photos, PDFs, in order
   today: string; // YYYY-MM-DD in timeZone — the day the message was received
   timeZone: string;
   outputLocale: Locale;
+  trace: Omit<CallTrace, "promptVersion">; // what the call is for and whom (ai_call log)
 }) {
   // Invisible characters can hide instructions a person can't see: remove them
   // before the model reads the text, and say so.
   const visible = stripInvisible(body);
-  const request = { system: systemPrompt({ today, timeZone, outputLocale }), prompt: messagePrompt(visible.text, outputLocale, files) };
+  const request = {
+    system: systemPrompt({ today, timeZone, outputLocale }),
+    prompt: messagePrompt(visible.text, outputLocale, files),
+    trace: { ...trace, promptVersion: PROMPT_VERSION },
+  };
   let transcriptWithheld = false;
   let result;
   if (!files.length) result = await generateObject({ ...request, schema: modelOutput });

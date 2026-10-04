@@ -2948,3 +2948,6 @@ a.disabled {
 .message-analysis .assumption-list {
   color: #8a5a00;
 }
+.ai-usage {
+  font-size: 13px;
+}

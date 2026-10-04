@@ -65,6 +65,9 @@ export function InboxView() {
           <span className="mock-chip">{t("gmailSoon")}</span>
         </div>
         <p className="muted">{t("intro")}</p>
+        <p className={data.aiUsage.remaining === 0 ? "notice error" : "muted ai-usage"}>
+          {data.aiUsage.remaining === 0 ? t("usageExhausted", { limit: data.aiUsage.limit }) : t("usageRemaining", data.aiUsage)}
+        </p>
         <div className="row-actions">
           <button className="primary" onClick={() => setPasting(true)}>
             {t("paste")}

@@ -547,13 +547,17 @@
       "invalid_output": "The AI's answer wasn't usable. Try “Analyze again”.",
       "not_configured": "The AI service isn't set up on this server.",
       "unsupported_file": "The current AI model can't read this kind of file.",
-      "unexpected": "Something unexpected went wrong. Try “Analyze again”."
+      "unexpected": "Something unexpected went wrong. Try “Analyze again”.",
+      "replay_missing": "No recorded answer for this message, and this environment only replays recordings (AI_REPLAY=only).",
+      "usage_limit": "Today's AI analyses for this account are used up. Try “Analyze again” once it resets (within 24 hours)."
     },
     "transcriptWithheld": "The AI service wouldn't write out this file's text (it looks like published material), so there's no transcript.",
     "notWork": "This doesn't look like a work message. If you don't need it, dismiss it.",
     "dataNotice": "What you send is analyzed by {service}. This setup uses its free tier: under its terms, content may be kept, used to improve its services, and read by reviewers. Avoid including passwords, verification codes, ID numbers, or bank account numbers.",
     "assumptions": "What the AI assumed",
-    "assumed": "AI assumed: {note}"
+    "assumed": "AI assumed: {note}",
+    "usageRemaining": "AI analyses left today: {remaining} of {limit}",
+    "usageExhausted": "Today's {limit} AI analyses are used up. New messages are saved and can be analyzed once it resets."
   },
   "contacts": {
     "search": "Search contacts",
@@ -921,7 +925,9 @@
     "messageNotFound": "Message not found, or it has already been handled.",
     "uploadInvalid": "Send up to {files} screenshots, photos (PNG, JPEG, WebP, HEIC), or PDFs.",
     "uploadTooLarge": "That's too large — up to {files} files and {megabytes} MB in total.",
-    "uploadMissing": "An upload didn't finish. Please try again."
+    "uploadMissing": "An upload didn't finish. Please try again.",
+    "aiDailyLimit": "Today's AI analyses for this account are used up. It resets within 24 hours.",
+    "aiMessageLimit": "This message has been analyzed the maximum number of times."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",

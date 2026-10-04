@@ -43,3 +43,6 @@ next-env.d.ts
 
 # extraction eval runs (scripts/eval-extraction.mts)
 /evals/results/
+
+# recorded model answers (AI_REPLAY)
+/.ai-recordings/

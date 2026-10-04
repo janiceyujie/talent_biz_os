@@ -6,6 +6,7 @@ import { refresh } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
 import { analyzeMessage } from "@/lib/ai/analyze-message";
+import { canAnalyze } from "@/lib/ai/usage";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { message, messageAnalysis, project } from "@/lib/db/schema";
@@ -62,6 +63,8 @@ export async function reanalyzeMessage(id: string): Promise<string | null> {
   const { person, talent } = await requireTalent();
   const fail = await errorText();
   if (!z.uuid().safeParse(id).success) return fail("invalid");
+  const allowed = await canAnalyze(talent.id, id);
+  if (!allowed.ok) return fail(allowed.reason === "daily" ? "aiDailyLimit" : "aiMessageLimit");
   const rows = await db
     .update(message)
     .set({ status: "pending", failure: null })

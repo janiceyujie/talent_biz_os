@@ -198,6 +198,9 @@ Analysis turns a message into facts. Matching decides which project those facts 
 - Beyond the facts, the analysis records a short summary, what the sender is asking for, and what's missing (no start time, no deposit terms) — the drafter uses the last two directly.
 - Images (screenshots, photos, rendered PDF pages) go through the same extractor using a vision-capable model call rather than a separate OCR step.
 - Every analysis is stored with the model version and a confidence score, versioned per message rather than overwritten — re-running it later doesn't lose the earlier attempt.
+- **Every model call is logged** in `ai_call` (task, provider and model, prompt version, tokens, latency, status or failure code, and the talent, person, and message it ran for). It feeds usage limits, cost tracking, and debugging — [decision 0008](decisions/0008-ai-operations.md).
+- **Usage limits** count real calls in `ai_call` over the last 24 hours: analyses per account per day (`AI_DAILY_ANALYSES`) and per message (`AI_MAX_ANALYSES_PER_MESSAGE`). Over a limit, a message is saved but not sent to the model (failure `usage_limit`); the inbox shows what's left today.
+- **Recorded responses** for tests: `AI_REPLAY=record` saves each model answer under a key of the prompt version, the input, the schema, and the files; `AI_REPLAY=only` answers from recordings and fails (`replay_missing`) rather than calling a live model. Recordings live in `AI_RECORDINGS_DIR` (not committed), are marked `replayed` in `ai_call`, and don't count toward limits. Off in production.
 - **Pasted offers (built).** 匯入邀約 stores the text as a `message` (channel `paste`, duplicate pastes return the existing message), analyzes it in the background (`after()`, status `pending` → `analyzed` or `error` with a retry), and shows the proposal in the inbox beside the original text. Filing it either creates a project — the form prefilled from the analysis, stage 待確認 — or adds it to an existing project; either way the reply-by date is shown for the person to confirm before it becomes a `reply` to-do linked to the message (`todo.message_id`). The project's Offer section shows the earliest message filed under it.
 
 ### Matching a message to a project
@@ -309,6 +312,7 @@ erDiagram
 | `message` | One submission — an email, a batch of screenshots of one conversation, or pasted text | M2 |
 | `file` | One stored file: part of a message (email body, attachment, screenshot, in order) or uploaded to a project's archive | M2 |
 | `message_analysis` | One AI reading of a message — facts, summary, asks, what's missing. Versioned | M2 |
+| `ai_call` | One model call: task, model, prompt version, tokens, latency, outcome. Feeds limits and costs | M2 |
 | `reply_template` | A reusable reply template with placeholders, or a past reply kept for reference | M2 |
 | `reply_draft` | One drafted reply — from AI, a template, or by hand — with whether it was used and how it was edited | M2 |
 | `project` (UI: 專案) | One ongoing deal with one counterparty, with a type and a stage | M2 (one project per confirmed message); matching in M4 |
@@ -568,6 +572,25 @@ create table message_analysis (
   prompt_version text not null,                     -- fingerprint of the prompt and field definitions
   created_at     timestamptz not null default now()   -- latest row wins
 );
+
+create table ai_call (                              -- one row per model call; decision 0008
+  id             uuid primary key default gen_random_uuid(),
+  talent_id      uuid references talent(id) on delete cascade,
+  person_id      uuid references person(id) on delete set null,
+  message_id     uuid references message(id) on delete set null,
+  task           text not null,                     -- 'extract', 'eval'; later 'draft'
+  provider       text not null,
+  model          text not null,
+  prompt_version text,
+  status         text not null check (status in ('ok','error')),
+  failure_code   text,                              -- lib/ai/errors.ts
+  input_tokens   int,
+  output_tokens  int,
+  latency_ms     int not null,
+  replayed       boolean not null default false,    -- answered from a recording; not counted toward limits
+  created_at     timestamptz not null default now()
+);
+create index ai_call_talent_created_idx on ai_call (talent_id, created_at);
 
 -- Contracts ------------------------------------------------------------------
 

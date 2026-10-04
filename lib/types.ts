@@ -180,6 +180,7 @@ export type AppData = {
   signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };
   // The AI service's name when it may keep what's sent (e.g. a free tier) — shown as a notice; null otherwise.
   aiDataNotice: string | null;
+  aiUsage: { used: number; limit: number; remaining: number }; // AI analyses in the last 24 hours (docs/decisions/0008)
 };
 
 /** Read and snooze marks by notification id (ISO timestamps). */

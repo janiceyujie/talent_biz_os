@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { cache } from "react";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
+import { dailyUsage } from "@/lib/ai/usage";
 import { isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { authAccount, calendarEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
@@ -138,6 +139,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     },
     calendarFeed: Boolean(memberRow?.feedHash),
     aiDataNotice: process.env.AI_PROVIDER_KEEPS_DATA === "1" ? aiServiceName(process.env.AI_PROVIDER) : null,
+    aiUsage: await dailyUsage(current.id),
     signIn: {
       password: accountRows.some((a) => a.providerId === "credential"),
       googleAccountId: accountRows.find((a) => a.providerId === "google")?.id ?? null,

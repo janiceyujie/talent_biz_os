@@ -2,8 +2,8 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { MessageAnalysis } from "@/lib/ai/analysis";
-import type { CalendarItem, Contact, Payment, Project } from "@/lib/types";
-import { parseAmount, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext } from "./intake";
+import type { CalendarItem, Contact, ContractTerms, Payment, Project } from "@/lib/types";
+import { diffTerms, parseAmount, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext } from "./intake";
 
 const analysis = (over: Partial<MessageAnalysis> = {}): MessageAnalysis => ({
   intent: "inquiry",
@@ -107,6 +107,7 @@ const ctx = (over: Partial<IntakeContext> = {}): IntakeContext => ({
   receivedOn: "2026-10-04",
   replyWithinDays: 2,
   filed: [],
+  contracts: [],
   ...over,
 });
 
@@ -354,6 +355,69 @@ describe("proposeNewProject", () => {
     assert.deepEqual(p.contact, { create: { name: "Ken", company: "Tokyo Live", email: "", phone: "" } });
     assert.equal(p.project.quotedAmount, null);
     assert.deepEqual(p.foreignAmount, { amount: 200000, currency: "JPY" });
+  });
+});
+
+describe("contracts", () => {
+  const terms = (over: Partial<ContractTerms> = {}): ContractTerms => ({
+    fee: 30000,
+    taxIncluded: true,
+    paymentTerms: "訂金三成",
+    keyTerms: "",
+    fields: { setLength: "60 分鐘" },
+    dates: [{ what: "演出", date: "2026-11-14", time: "20:00", timeZone: "" }],
+    ...over,
+  });
+
+  test("between versions: changed, added, and removed terms", () => {
+    const diff = diffTerms(terms(), terms({ fee: 35000, fields: { venue: "Blue Room" }, dates: [{ what: "演出", date: "2026-11-15", time: "20:00", timeZone: "" }] }));
+    assert.deepEqual(diff, [
+      { key: "fee", before: "30000", after: "35000" },
+      { key: "field:setLength", before: "60 分鐘", after: "" },
+      { key: "field:venue", before: "", after: "Blue Room" },
+      { key: "date:演出", before: "2026-11-14 20:00", after: "2026-11-15 20:00" },
+    ]);
+  });
+
+  test("against the project, only conflicts: a contract silent on a term doesn't contradict it", () => {
+    const diff = diffTerms(terms({ paymentTerms: "" }), terms({ fee: 35000, paymentTerms: "簽約後付清", fields: {} }), true);
+    assert.deepEqual(diff, [{ key: "fee", before: "30000", after: "35000" }]);
+  });
+
+  const contractMessage = (over: Partial<MessageAnalysis> = {}) =>
+    analysis({
+      intent: "contract",
+      money: { amount: 35000, currency: "TWD", taxIncluded: true, asStated: "" },
+      details: { contractStage: { value: "draft", asStated: "合約草稿" }, setLength: { value: "60 分鐘", asStated: "" } },
+      ...over,
+    });
+
+  test("a first contract is v1, compared with the project's agreed terms", () => {
+    const v = one(proposeChanges(contractMessage(), project({ details: { fields: { setLength: "60 分鐘" } } }), ctx()).changes, "contractVersion");
+    assert.deepEqual([v.version, v.against, v.status, v.ticked, v.supersedesId], [1, "project", "received", true, null]);
+    assert.deepEqual(v.diff, [{ key: "fee", before: "30000", after: "35000" }]);
+  });
+
+  test("a later contract compares with the previous version; a signed one moves the stage; a duplicate starts unticked", () => {
+    const previous = {
+      id: "k1",
+      projectId: "p1",
+      messageId: null,
+      version: 1,
+      status: "received" as const,
+      terms: { fee: 35000, taxIncluded: true, paymentTerms: "", keyTerms: "", fields: { setLength: "60 分鐘" }, dates: [] },
+      diff: [],
+      against: "project" as const,
+      createdAt: "",
+    };
+    const signed = contractMessage({ details: { contractStage: { value: "signed", asStated: "雙方已簽" }, setLength: { value: "45 分鐘", asStated: "" } } });
+    const { changes } = proposeChanges(signed, project(), ctx({ contracts: [previous] }));
+    const v2 = one(changes, "contractVersion");
+    assert.deepEqual([v2.version, v2.against, v2.status, v2.supersedesId], [2, "version", "signed", "k1"]);
+    assert.deepEqual(v2.diff, [{ key: "field:setLength", before: "60 分鐘", after: "45 分鐘" }]);
+    assert.equal(one(changes, "stage").to, "signed");
+    const dup = one(proposeChanges(contractMessage(), project(), ctx({ contracts: [previous] })).changes, "contractVersion");
+    assert.deepEqual([dup.same, dup.ticked], [true, false]);
   });
 });
 

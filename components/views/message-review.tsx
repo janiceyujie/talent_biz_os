@@ -12,7 +12,7 @@ import { filedMessages, keptFields, proposeChanges, proposeNewProject, suggestTa
 import { projectTypes, type ProjectType } from "@/lib/project-types";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
-import type { InboxMessage, Project, Stage } from "@/lib/types";
+import type { InboxMessage, Project, Stage, TermChange } from "@/lib/types";
 
 type Analysis = NonNullable<InboxMessage["analysis"]>;
 type Edit = Record<string, unknown>;
@@ -53,6 +53,7 @@ export function MessageReview({ message }: { message: InboxMessage }) {
       receivedOn: dateInZone(data.talent.timeZone, 0, new Date(message.receivedAt)),
       replyWithinDays: data.person.replyWithinDays,
       filed: filedMessages(data.inbox, message.id),
+      contracts: data.contracts,
     }),
     [data, message.id, message.receivedAt],
   );
@@ -312,6 +313,15 @@ function ChangeRow({
         </>
       );
       break;
+    case "contractVersion":
+      label = t("change.contractVersion", { version: c.version });
+      body = (
+        <>
+          {c.status === "signed" && <strong>{t("contractSigned")}</strong>}
+          <TermDiff diff={c.diff} against={c.against} same={c.same} type={project.type} />
+        </>
+      );
+      break;
     case "toConfirm":
       label = t("change.toConfirm");
       body = (
@@ -549,4 +559,37 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
       </div>
     </div>
   );
+}
+
+/** How a contract differs from the previous version, or where a first contract conflicts with what was agreed. */
+export function TermDiff({ diff, against, same, type }: { diff: TermChange[]; against: "version" | "project"; same: boolean; type: ProjectType }) {
+  const t = useTranslations("intake");
+  const describe = useDescribeTerm(type);
+  if (same) return <span className="change-hint">{t("contractSame")}</span>;
+  if (!diff.length) return <span className="muted">{against === "project" ? t("contractMatches") : t("contractNoDiff")}</span>;
+  return (
+    <div className="term-diff">
+      <span className={against === "project" ? "change-hint" : "muted"}>{against === "project" ? t("contractConflicts") : t("contractChanges")}</span>
+      <ul>
+        {diff.map((d) => (
+          <li key={d.key}>{describe(d)}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** "報價 $30,000 → $35,000", "演出長度 60 分鐘 → （刪除）". */
+export function useDescribeTerm(type: ProjectType) {
+  const t = useTranslations("intake");
+  const labels = useLabels();
+  const money = useMoney();
+  return (d: TermChange) => {
+    const [kind, rest] = d.key.includes(":") ? [d.key.slice(0, d.key.indexOf(":")), d.key.slice(d.key.indexOf(":") + 1)] : [d.key, ""];
+    const value = (v: string) =>
+      !v ? t("removed") : kind === "fee" ? money(Number(v)) : kind === "taxIncluded" ? (v === "yes" ? t("taxIncluded") : t("taxExcluded")) : v;
+    const label =
+      kind === "field" ? labels.detailField(type, rest) : kind === "date" ? rest || t("change.date") : t(`term.${kind as "fee" | "taxIncluded" | "paymentTerms" | "keyTerms"}`);
+    return d.before ? `${label} ${value(d.before)} → ${value(d.after)}` : `${label} ${t("added")} ${value(d.after)}`;
+  };
 }

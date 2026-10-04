@@ -22,7 +22,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
-import { contactRoles, stages as projectStages, transportModes, type ProjectDetails } from "../types"; // relative: drizzle-kit loads this file too
+import { contactRoles, stages as projectStages, transportModes, type ContractTerms, type ProjectDetails, type TermChange } from "../types"; // relative: drizzle-kit loads this file too
 
 const id = () => uuid().primaryKey().defaultRandom();
 const createdAt = () => timestamp({ withTimezone: true }).notNull().defaultNow();
@@ -448,6 +448,38 @@ export const file = pgTable(
     check("file_role_check", oneOf(t.role, fileRoles)),
     check("file_category_check", oneOf(t.category, fileCategories)),
     check("file_size_check", sql`${t.sizeBytes} > 0`),
+  ],
+).enableRLS();
+
+export const contractStatuses = ["received", "changes_requested", "signed", "void"] as const;
+
+// One version of a project's contract, from the message that brought it. Terms are
+// as extracted and confirmed; the diff is against the previous version, or for
+// the first, the project's agreed terms (docs/design/intake-to-project.md).
+export const contract = pgTable(
+  "contract",
+  {
+    id: id(),
+    projectId: uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    messageId: uuid().references(() => message.id, { onDelete: "set null" }),
+    versionNumber: integer().notNull().default(1),
+    supersedesId: uuid().references((): AnyPgColumn => contract.id),
+    status: text({ enum: contractStatuses }).notNull().default("received"),
+    terms: jsonb().$type<ContractTerms>().notNull(),
+    diff: jsonb().$type<TermChange[]>(),
+    signedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique("contract_project_version").on(t.projectId, t.versionNumber),
+    index("contract_talent_idx").on(t.talentId),
+    check("contract_status_check", oneOf(t.status, contractStatuses)),
   ],
 ).enableRLS();
 

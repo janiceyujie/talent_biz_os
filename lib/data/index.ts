@@ -5,7 +5,7 @@ import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { dailyUsage } from "@/lib/ai/usage";
 import { isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { auditLog, authAccount, calendarEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { auditLog, authAccount, calendarEvent, contract, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
@@ -58,6 +58,12 @@ export const getAppData = cache(async (): Promise<AppData> => {
     db.select({ id: authAccount.id, providerId: authAccount.providerId }).from(authAccount).where(eq(authAccount.personId, person.personId)),
     db.select().from(message).where(eq(message.talentId, current.id)).orderBy(desc(message.receivedAt)).limit(200),
   ]);
+
+  const contractRows = await db
+    .select()
+    .from(contract)
+    .where(eq(contract.talentId, current.id))
+    .orderBy(desc(contract.versionNumber));
 
   // What applying each message changed, for project timelines (latest entry per message).
   const appliedRows = await db
@@ -247,6 +253,17 @@ export const getAppData = cache(async (): Promise<AppData> => {
           recorded: !!applied,
         };
       }),
+    contracts: contractRows.map((c) => ({
+      id: c.id,
+      projectId: c.projectId,
+      messageId: c.messageId,
+      version: c.versionNumber,
+      status: c.status,
+      terms: c.terms,
+      diff: c.diff ?? [],
+      against: c.supersedesId ? ("version" as const) : ("project" as const),
+      createdAt: c.createdAt.toISOString(),
+    })),
     inbox: messageRows.map((m) => {
       const a = latestAnalysis.get(m.id);
       return {

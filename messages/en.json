@@ -584,7 +584,8 @@
       "todoReply": "Add to-do: reply",
       "todoAwaitContract": "Add to-do: wait for the contract",
       "todoSendInvoice": "Add to-do: send the invoice",
-      "toConfirm": "Add to “to confirm”"
+      "toConfirm": "Add to “to confirm”",
+      "contractVersion": "Add contract version v{version}"
     },
     "expected": "Expected {amount}",
     "received": "Received",
@@ -629,7 +630,21 @@
       "creating": "Creating…",
       "moreFields": "More fields ({count})"
     },
-    "earlierDate": "An earlier message gave this date, but the project doesn't have it yet; applying adds it."
+    "earlierDate": "An earlier message gave this date, but the project doesn't have it yet; applying adds it.",
+    "contractSigned": "Signed",
+    "contractSame": "Same as the previous version, likely a duplicate; unticked, it's kept as an attachment only.",
+    "contractMatches": "No conflicts with the terms agreed so far.",
+    "contractNoDiff": "No comparable differences from the previous version.",
+    "contractConflicts": "Differs from the terms agreed so far:",
+    "contractChanges": "Compared with the previous version:",
+    "removed": "(removed)",
+    "added": "added",
+    "term": {
+      "fee": "Fee",
+      "taxIncluded": "Tax",
+      "paymentTerms": "Payment terms",
+      "keyTerms": "Key terms"
+    }
   },
   "timeline": {
     "heading": "Timeline",
@@ -641,7 +656,15 @@
     "original": "Original message",
     "facts": "Project details",
     "date": "Date",
-    "toConfirm": "To confirm with them"
+    "toConfirm": "To confirm with them",
+    "contracts": "Contract",
+    "contractStatus": {
+      "received": "Received",
+      "changes_requested": "Changes requested",
+      "signed": "Signed",
+      "void": "Void"
+    },
+    "version": "v{version}"
   },
   "contacts": {
     "search": "Search contacts",

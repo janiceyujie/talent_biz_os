@@ -9,6 +9,7 @@ import { useAppData } from "@/components/app/app-data";
 import type { ChangeRecord } from "@/lib/domain/intake";
 import { projectField, keptFields } from "@/lib/domain/intake";
 import { useMoney } from "@/lib/i18n/format";
+import { TermDiff } from "./message-review";
 import { useLabels } from "@/lib/i18n/labels";
 import type { Project, ProjectDate } from "@/lib/types";
 
@@ -42,6 +43,8 @@ function useDescribe(project: Project) {
         return `${t(c.purpose === "reply" ? "change.todoReply" : c.purpose === "awaitContract" ? "change.todoAwaitContract" : "change.todoSendInvoice")} ${c.dueDate}`;
       case "toConfirm":
         return `${t("change.toConfirm")}：${c.items.join("、")}`;
+      case "contractVersion":
+        return t("change.contractVersion", { version: c.version }) + (c.status === "signed" ? ` · ${t("contractSigned")}` : "");
     }
   };
 }
@@ -136,6 +139,30 @@ export function ProjectFacts({ project }: { project: Project }) {
           </ul>
         </div>
       )}
+    </section>
+  );
+}
+
+/** The project's contract versions, newest first, each with what changed. */
+export function ContractVersions({ project }: { project: Project }) {
+  const data = useAppData();
+  const t = useTranslations("timeline");
+  const format = useFormatter();
+  const versions = data.contracts.filter((c) => c.projectId === project.id);
+  if (!versions.length) return null;
+  return (
+    <section className="contract-versions" aria-label={t("contracts")}>
+      <h3>{t("contracts")}</h3>
+      <ol>
+        {versions.map((c) => (
+          <li key={c.id} className={c.status === "void" ? "void" : ""}>
+            <strong>{t("version", { version: c.version })}</strong> · {t(`contractStatus.${c.status}`)} ·{" "}
+            <time dateTime={c.createdAt}>{format.dateTime(new Date(c.createdAt), { dateStyle: "medium" })}</time>
+            <TermDiff diff={c.diff} against={c.against} same={false} type={project.type} />
+            {c.messageId && <Link href={`/inbox?message=${c.messageId}`}>{t("original")}</Link>}
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

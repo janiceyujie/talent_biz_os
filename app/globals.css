@@ -3249,3 +3249,30 @@ a.disabled {
 .project-timeline {
   margin: 16px 0;
 }
+.term-diff ul,
+.contract-versions ol {
+  margin: 2px 0 0;
+  padding-left: 18px;
+}
+.contract-versions {
+  margin: 16px 0;
+  font-size: var(--text-meta);
+}
+.contract-versions h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.contract-versions ol {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.contract-versions li.void {
+  opacity: 0.55;
+}
+.contract-versions a {
+  color: #2c5c50;
+  font-size: 13px;
+}

@@ -220,6 +220,7 @@ A deal is rarely one message. A venue's first offer, the signed contract, and a 
 - Each contract version has a status — received, changes requested, signed, or void. "Superseded" isn't stored; a newer version implies it.
 - Offer-stage terms stay on the offer message's analysis; comparing them against the contract is what surfaces "this contract doesn't match its offer."
 - The diff is computed over the structured fields, not the raw document — "fee changed from $500 to $650," "deposit deadline moved from Oct 1 to Oct 15" — because that's what a person needs to see at a glance. The raw attachments for both versions stay available underneath.
+- **Built**: a contract message proposes "add contract version vN" (`lib/domain/intake.ts`). Its terms — fee, tax, payment terms, key terms, the type's fields, dates — are compared with the previous version (added, removed, changed), or for v1 with the project's agreed terms (conflicts only: a contract silent on a term doesn't contradict it). A version identical to the previous one starts unticked (likely a duplicate). A signed contract is stored as `signed` and proposes the stage move. The project page lists versions newest first with their differences. Not yet: changing a version's status by hand (changes requested, void).
 
 ### Drafting
 

@@ -56,6 +56,32 @@ export type ProjectDetails = {
   toConfirm?: string[]; // 需向對方確認: open questions for the other side
 };
 
+/** A contract's terms as extracted from it, for comparing versions. Empty or null = not stated. */
+export type ContractTerms = {
+  fee: number | null;
+  taxIncluded: boolean | null;
+  paymentTerms: string;
+  keyTerms: string;
+  fields: Record<string, string>; // the project type's registry fields
+  dates: ProjectDate[];
+};
+
+/** One difference between two sets of terms. `key`: "fee", "taxIncluded", "paymentTerms", "keyTerms", "field:<key>", "date:<what>". */
+export type TermChange = { key: string; before: string; after: string };
+
+export type Contract = {
+  id: string;
+  projectId: string;
+  messageId: string | null;
+  version: number;
+  status: "received" | "changes_requested" | "signed" | "void";
+  terms: ContractTerms;
+  diff: TermChange[];
+  /** What the diff compares against: the previous version, or for the first version, the project's agreed terms. */
+  against: "version" | "project";
+  createdAt: string;
+};
+
 export const contactRoles = ["artist", "counterparty", "manager"] as const;
 export type ContactRole = (typeof contactRoles)[number];
 
@@ -213,6 +239,7 @@ export type AppData = {
   files: StoredFile[];
   inbox: InboxMessage[];
   timeline: TimelineEntry[]; // newest first
+  contracts: Contract[]; // newest version first
   notificationState: NotificationState; // this person's read and snooze marks
   // This person's sign-in methods; googleAccountId is our auth_account row id (what unlinking takes).
   signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };

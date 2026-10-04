@@ -584,7 +584,8 @@
       "todoReply": "新增待辦：回覆對方",
       "todoAwaitContract": "新增待辦：等合約寄來",
       "todoSendInvoice": "新增待辦：開發票給對方",
-      "toConfirm": "加入「需向對方確認」"
+      "toConfirm": "加入「需向對方確認」",
+      "contractVersion": "新增合約版本 v{version}"
     },
     "expected": "待收 {amount}",
     "received": "已收",
@@ -629,7 +630,21 @@
       "creating": "建立中…",
       "moreFields": "其他欄位（{count}）"
     },
-    "earlierDate": "先前的訊息提過這個日期，但合作案上還沒記；套用後會記在合作案上。"
+    "earlierDate": "先前的訊息提過這個日期，但合作案上還沒記；套用後會記在合作案上。",
+    "contractSigned": "已簽署",
+    "contractSame": "和前一版內容相同，可能是重複的檔案；不勾選就只當作附件。",
+    "contractMatches": "和目前談定的條件沒有衝突。",
+    "contractNoDiff": "和前一版沒有可比對的差異。",
+    "contractConflicts": "和目前談定的條件不同：",
+    "contractChanges": "和前一版相比：",
+    "removed": "（刪除）",
+    "added": "新增",
+    "term": {
+      "fee": "報價",
+      "taxIncluded": "稅",
+      "paymentTerms": "付款條件",
+      "keyTerms": "主要條款"
+    }
   },
   "timeline": {
     "heading": "時間軸",
@@ -641,7 +656,15 @@
     "original": "原始訊息",
     "facts": "合作案資料",
     "date": "日期",
-    "toConfirm": "需向對方確認"
+    "toConfirm": "需向對方確認",
+    "contracts": "合約",
+    "contractStatus": {
+      "received": "已收到",
+      "changes_requested": "已要求修改",
+      "signed": "已簽署",
+      "void": "作廢"
+    },
+    "version": "v{version}"
   },
   "contacts": {
     "search": "搜尋聯絡人",

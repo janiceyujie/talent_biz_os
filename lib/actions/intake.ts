@@ -13,7 +13,7 @@ import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { requireTalent } from "@/lib/auth";
 import { getAppData } from "@/lib/data";
 import { db } from "@/lib/db";
-import { auditLog, calendarEvent, contact, message, messageAnalysis, payment, person as personTable, project, todo } from "@/lib/db/schema";
+import { auditLog, calendarEvent, contact, contract, message, messageAnalysis, payment, person as personTable, project, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
 import { filedMessages, keptFields, proposeChanges, withField, type Change, type ChangeRecord, type IntakeContext } from "@/lib/domain/intake";
 import { isSigned } from "@/lib/domain/phases";
@@ -38,6 +38,7 @@ const edits = {
   paymentNote: z.object({}),
   todo: z.object({ dueDate: day }),
   toConfirm: z.object({ items: z.array(text(300)).max(10) }),
+  contractVersion: z.object({}),
 } satisfies Record<Change["kind"], z.ZodType>;
 
 const applyInput = z.object({
@@ -83,6 +84,7 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
     receivedOn: receivedOn(row.receivedAt, timeZone),
     replyWithinDays: data.person.replyWithinDays,
     filed: filedMessages(data.inbox, input.messageId),
+    contracts: data.contracts,
   };
   const { changes, question } = proposeChanges(upgradeAnalysis(row.analysis), target, ctx);
 
@@ -225,6 +227,30 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
             timeZone,
           });
           break;
+        case "contractVersion": {
+          // The latest version must still be the one this compared against; a newer one means re-check.
+          const [latest] = await tx
+            .select({ id: contract.id, version: contract.versionNumber, status: contract.status })
+            .from(contract)
+            .where(and(eq(contract.projectId, target.id), eq(contract.talentId, talent.id)))
+            .orderBy(desc(contract.versionNumber))
+            .limit(1)
+            .for("update");
+          const supersedes = latest && latest.status !== "void" ? latest.id : null;
+          if ((latest?.version ?? 0) + 1 !== c.version || (c.supersedesId !== null && supersedes !== c.supersedesId)) return fail("proposalChanged");
+          await tx.insert(contract).values({
+            projectId: target.id,
+            talentId: talent.id,
+            messageId: input.messageId,
+            versionNumber: c.version,
+            supersedesId: c.supersedesId,
+            status: c.status,
+            terms: c.terms,
+            diff: c.diff,
+            signedAt: c.status === "signed" ? new Date() : null,
+          });
+          break;
+        }
         case "toConfirm": {
           const items = [...(details.toConfirm ?? []), ...c.items.filter((i) => !details.toConfirm?.includes(i))];
           details = { ...details, toConfirm: items.slice(0, 50) };

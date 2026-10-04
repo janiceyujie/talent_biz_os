@@ -4,7 +4,7 @@
 // person confirms every item. See docs/design/intake-to-project.md.
 import type { MessageAnalysis } from "@/lib/ai/analysis";
 import { projectType } from "@/lib/project-types";
-import type { CalendarItem, Contact, Payment, Project, ProjectDate, ProjectDetails, Stage } from "@/lib/types";
+import type { CalendarItem, Contact, Contract, ContractTerms, Payment, Project, ProjectDate, ProjectDetails, Stage, TermChange } from "@/lib/types";
 import { isSigned } from "./phases";
 import { paymentTotal } from "./workflow";
 
@@ -19,6 +19,7 @@ export type IntakeContext = {
   replyWithinDays: number;
   /** Messages already filed on projects: who sent them and the dates they gave. */
   filed: FiledMessage[];
+  contracts: Contract[];
 };
 
 export type FiledMessage = {
@@ -237,6 +238,21 @@ export type Change = Base &
     | { kind: "paymentNote"; paymentId: string; note: string }
     | { kind: "todo"; purpose: TodoPurpose; dueDate: string }
     | { kind: "toConfirm"; items: string[] }
+    /**
+     * A new contract version: its terms, and how they differ from the previous version (or, for
+     * the first, where they conflict with the project's agreed terms). `same`: nothing differs from
+     * the previous version — likely a duplicate, so it starts unticked.
+     */
+    | {
+        kind: "contractVersion";
+        version: number;
+        status: "received" | "signed";
+        terms: ContractTerms;
+        diff: TermChange[];
+        against: "version" | "project";
+        supersedesId: string | null;
+        same: boolean;
+      }
   );
 
 /** An item as recorded in the audit log and shown on the project timeline: what was (or would have been) changed. */
@@ -458,12 +474,13 @@ export function proposeChanges(a: MessageAnalysis, project: Project, ctx: Intake
       break;
     }
     case "contract": {
+      changes.push(contractVersion(a, project, ctx));
       const terms = a.details.keyTerms;
       if (terms && !same(terms.value, project.details.contractNotes ?? ""))
         changes.push({ id: "contractNotes", kind: "contractNotes", ticked: true, asStated: terms.asStated, from: project.details.contractNotes ?? "", to: terms.value });
       changes.push(...feeChange(a, project, true), ...fieldChanges(a, project, true), ...dateChanges(a, project, ctx, true));
       const stage = a.details.contractStage;
-      if (stage && /signed|已簽|簽署完成|雙方簽/i.test(stage.value) && !isSigned(project.stage))
+      if (stage && signedStage(a) && !isSigned(project.stage))
         changes.push(...stageChange(project, "signed", true, stage.asStated));
       else changes.push(...towardNegotiating);
       break;
@@ -519,6 +536,89 @@ function commonChanges(a: MessageAnalysis, toConfirm: string[], ctx: IntakeConte
   const items = a.missing.filter((m) => !toConfirm.some((t) => same(t, m)));
   if (items.length) out.push({ id: "toConfirm", kind: "toConfirm", ticked: true, asStated: "", items });
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Contracts: each version's terms, compared with the one before.
+
+const signedStage = (a: MessageAnalysis) => /signed|已簽|簽署完成|雙方簽/i.test(a.details.contractStage?.value ?? "");
+
+/** A contract's terms as the message states them. */
+export function contractTerms(a: MessageAnalysis, type: string): ContractTerms {
+  const twd = a.money.amount !== null && (a.money.currency === "TWD" || !a.money.currency);
+  return {
+    fee: twd ? a.money.amount : null,
+    taxIncluded: a.money.taxIncluded,
+    paymentTerms: a.paymentTerms,
+    keyTerms: a.details.keyTerms?.value ?? "",
+    fields: proposedProject({ ...a, projectType: type as MessageAnalysis["projectType"] }).fields,
+    dates: proposedProject(a).dates,
+  };
+}
+
+/** The project's agreed terms, in the same shape, for comparing a first contract with what was agreed. */
+export function projectTerms(project: Project): ContractTerms {
+  return {
+    fee: project.quotedAmount,
+    taxIncluded: project.quotedAmount === null ? null : project.taxIncluded,
+    paymentTerms: "",
+    keyTerms: "",
+    fields: Object.fromEntries(keptFields(project.type).map((k) => [k, projectField(project, k)]).filter(([, v]) => v)),
+    dates: project.details.dates ?? [],
+  };
+}
+
+const showDate = (d: ProjectDate) => [d.date, d.time].filter(Boolean).join(" ");
+
+/**
+ * Field-by-field differences. Between versions, anything added, removed, or changed; against the
+ * project (`conflictsOnly`), only values both state and that differ — a contract silent on a term
+ * doesn't contradict it.
+ */
+export function diffTerms(before: ContractTerms, after: ContractTerms, conflictsOnly = false): TermChange[] {
+  const out: TermChange[] = [];
+  const add = (key: string, b: string, x: string) => {
+    if (same(b, x) || (!b && !x) || (conflictsOnly && (!b || !x))) return;
+    out.push({ key, before: b, after: x });
+  };
+  const yesNo = (v: boolean | null) => (v === null ? "" : v ? "yes" : "no");
+  add("fee", before.fee === null ? "" : String(before.fee), after.fee === null ? "" : String(after.fee));
+  if (before.taxIncluded !== null && after.taxIncluded !== null) add("taxIncluded", yesNo(before.taxIncluded), yesNo(after.taxIncluded));
+  add("paymentTerms", before.paymentTerms, after.paymentTerms);
+  add("keyTerms", before.keyTerms, after.keyTerms);
+  for (const key of new Set([...Object.keys(before.fields), ...Object.keys(after.fields)]))
+    add(`field:${key}`, before.fields[key] ?? "", after.fields[key] ?? "");
+  // Dates pair up by occasion, or by day; unpaired ones were added or removed.
+  const paired = new Set<ProjectDate>();
+  for (const d of after.dates) {
+    const match = before.dates.find((b) => !paired.has(b) && (overlaps(b.what, d.what) || b.date === d.date));
+    if (match) paired.add(match);
+    add(`date:${match?.what || d.what}`, match ? showDate(match) : "", showDate(d));
+  }
+  for (const b of before.dates) if (!paired.has(b)) add(`date:${b.what}`, showDate(b), "");
+  return out;
+}
+
+/** The contract version a contract message would add. */
+function contractVersion(a: MessageAnalysis, project: Project, ctx: IntakeContext): Change {
+  const versions = ctx.contracts.filter((c) => c.projectId === project.id);
+  const previous = versions.filter((c) => c.status !== "void").sort((x, y) => y.version - x.version)[0];
+  const terms = contractTerms(a, project.type);
+  const diff = previous ? diffTerms(previous.terms, terms) : diffTerms(projectTerms(project), terms, true);
+  const same = !!previous && diff.length === 0;
+  return {
+    id: "contractVersion",
+    kind: "contractVersion",
+    ticked: !same,
+    asStated: a.details.contractStage?.asStated ?? "",
+    version: Math.max(0, ...versions.map((c) => c.version)) + 1,
+    status: signedStage(a) ? "signed" : "received",
+    terms,
+    diff,
+    against: previous ? "version" : "project",
+    supersedesId: previous?.id ?? null,
+    same,
+  };
 }
 
 // ---------------------------------------------------------------------------

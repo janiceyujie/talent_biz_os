@@ -86,7 +86,7 @@ The facts table goes away; the summary stays short. Flags (decision 0007) stay a
 ## Data
 
 - **Proposals aren't stored.** They're computed when the screen opens, from the latest analysis and the project's current state, so they're never stale: if the project changed after the analysis, the proposal reflects it.
-- **What was applied is stored** in `audit_log` (action `message.applied`, details: the message, each changed field with before and after, items left unticked). The timeline reads the project's messages plus these entries.
+- **What was applied is stored** in `audit_log` (action `message.applied`, details: the project, the applied items with their before and after values as edited, the items left unticked, and the stage change). The timeline reads the project's messages plus these entries; messages filed before this show as filed only.
 - **On the project's `details`** (JSON, no migration): the type's registry fields by key (`fields`; deliverables, usage rights, and travel keep their existing homes), dates kept before signing (`dates`), and the to-confirm list (`toConfirm`). The project form edits only its own keys and keeps the rest.
 - **New**: a contract version table when contracts arrive (designed in the architecture doc); a reply-by default in settings (`person.reply_within_days`, editable per message); the payment fields already exist (`settled_amount`, `settled_on`).
 - **Matching** reads contacts, projects, and payments for the talent only.
@@ -118,6 +118,6 @@ The facts table goes away; the summary stays short. Flags (decision 0007) stay a
 
 1. Target suggestion and the per-intent change rules, as pure functions with tests (no model calls). **Done**: `lib/domain/intake.ts`, tests in `intake.test.ts` (`npm test`).
 2. The review screen for existing projects (negotiation, confirmation, logistics, payment), then new projects (contact and to-confirm list). **Done**: `components/views/message-review.tsx`, applied by `lib/actions/intake.ts` (`applyMessage`, `createProjectFromMessage`); the reply-by default is in 設定. A new project is reviewed on the same screen — the type fields the message states first, the rest under "more" — and replaces the project form for messages. Not yet: "套用並擬回覆" (needs reply drafting).
-3. The project timeline.
+3. The project timeline. **Done**: `components/views/project-timeline.tsx` — each filed message, newest first, with what applying it changed (including an answered stage question) and what was left as a proposal, linking back to the message; plus the fields, dates, and to-confirm list messages filled in. `message.applied` stores the items themselves, not just their ids.
 4. Contract versions and their comparison.
 5. Then reply drafting, which reads all of the above.

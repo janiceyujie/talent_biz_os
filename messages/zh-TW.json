@@ -488,8 +488,7 @@
     },
     "pendingBody": "AI 正在整理這則訊息，完成後會自動顯示。本機模型約需半分鐘。",
     "failed": "分析沒有完成：{reason}",
-    "summary": "摘要",
-    "facts": "整理出的資訊",
+    "facts": "AI 整理的資訊",
     "field": {
       "type": "合作類型",
       "counterparty": "合作方",
@@ -554,7 +553,8 @@
     "assumptions": "AI 的推定",
     "assumed": "AI 推定：{note}",
     "usageRemaining": "今日剩餘 AI 分析：{remaining}／{limit} 次",
-    "usageExhausted": "今天的 {limit} 次 AI 分析已用完。新訊息仍會保存，重置後可再分析。"
+    "usageExhausted": "今天的 {limit} 次 AI 分析已用完。新訊息仍會保存，重置後可再分析。",
+    "factsWithAssumptions": "AI 整理的資訊（含 {count} 項推定）"
   },
   "intake": {
     "targetHeading": "這則訊息屬於哪個合作案？",
@@ -630,6 +630,18 @@
       "moreFields": "其他欄位（{count}）"
     },
     "earlierDate": "先前的訊息提過這個日期，但合作案上還沒記；套用後會記在合作案上。"
+  },
+  "timeline": {
+    "heading": "時間軸",
+    "empty": "還沒有訊息歸入這個合作案。",
+    "created": "由這則訊息建立合作案",
+    "applied": "已套用",
+    "left": "未套用（對方提議或未勾選）",
+    "filedOnly": "已歸入這個合作案。",
+    "original": "原始訊息",
+    "facts": "合作案資料",
+    "date": "日期",
+    "toConfirm": "需向對方確認"
   },
   "contacts": {
     "search": "搜尋聯絡人",

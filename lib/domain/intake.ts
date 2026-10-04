@@ -239,6 +239,9 @@ export type Change = Base &
     | { kind: "toConfirm"; items: string[] }
   );
 
+/** An item as recorded in the audit log and shown on the project timeline: what was (or would have been) changed. */
+export type ChangeRecord = Change;
+
 /**
  * A judgment call the person answers rather than ticks: a confirmation with no
  * contract doesn't move the stage by itself (many gigs never have one).

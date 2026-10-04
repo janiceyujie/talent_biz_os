@@ -14,6 +14,7 @@ import { projectTypes } from "@/lib/project-types";
 import { stages, type Stage } from "@/lib/types";
 import { ProjectWorkflowPanel } from "./project-workflow-panel";
 import { TravelItinerary } from "./travel-itinerary";
+import { ProjectFacts, ProjectTimeline } from "./project-timeline";
 
 export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
   const data = useAppData();
@@ -178,6 +179,8 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
             })}
           </ol>
           <p className="stage-note">{t(`stageNote.${active.stage}`)}</p>
+          <ProjectFacts project={active} />
+          <ProjectTimeline project={active} />
           <TravelItinerary project={active} edit={setEditor} />
           <div className="deal-summary">
             {(

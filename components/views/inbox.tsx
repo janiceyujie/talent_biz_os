@@ -33,7 +33,7 @@ export function InboxView() {
   const format = useFormatter();
   const [pasting, setPasting] = useState(params.get("paste") === "1");
   const [uploading, setUploading] = useState(params.get("upload") === "1");
-  const [active, setActive] = useState("");
+  const [active, setActive] = useState(params.get("message") ?? ""); // ?message= from a project timeline
   const [showDismissed, setShowDismissed] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const visible = data.inbox.filter((m) => showDismissed || m.status !== "dismissed");
@@ -210,16 +210,22 @@ function PasteDialog({ onClose, onSubmitted }: { onClose: () => void; onSubmitte
 
 function MessageDetail({ message }: { message: InboxMessage }) {
   const t = useTranslations("inbox");
+  const labels = useLabels();
   const format = useFormatter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const run = (action: () => Promise<string | null>) => startTransition(async () => setError(await action()));
   const a = message.analysis;
+  const analyzed = !!a && message.status !== "pending";
 
+  // Read, then decide (docs/design/intake-to-project.md, screen 1): a short summary and the files up
+  // top, then which project it belongs to and what it changes; the AI's full reading and the original
+  // text are one click away.
   return (
     <>
       <div className="mail-tags">
         <StatusChip status={message.status} />
+        {analyzed && <em className="message-status intent-chip">{labels.intent(a.intent)}</em>}
       </div>
       <h2>{a?.title || fallbackTitle(message, t)}</h2>
       <p className="muted">
@@ -237,7 +243,8 @@ function MessageDetail({ message }: { message: InboxMessage }) {
           {t("notWork")}
         </p>
       )}
-      {a && message.status !== "pending" && <AnalysisView analysis={a} />}
+      {analyzed && <Flags analysis={a} />}
+      {analyzed && a.summary && <p className="message-summary">{a.summary}</p>}
 
       {message.files.length > 0 && (
         <div className="message-files" aria-label={t("files")}>
@@ -256,19 +263,37 @@ function MessageDetail({ message }: { message: InboxMessage }) {
           ))}
         </div>
       )}
-      {a?.transcriptWithheld && <p className="muted">{t("transcriptWithheld")}</p>}
-      {a?.transcript && (
-        <details className="original-message">
-          <summary>{t("transcript")}</summary>
-          <p className="prewrap mail-body">{a.transcript}</p>
-        </details>
+
+      {message.status === "analyzed" && a && <MessageReview key={a.promptVersion + a.modelVersion} message={message} />}
+      {message.status === "confirmed" && message.projectId && (
+        <div className="row-actions section-gap">
+          <Link className="primary" href={`/projects?id=${message.projectId}`}>
+            {t("viewProject")}
+          </Link>
+        </div>
       )}
-      {message.body && (
-        <details className="original-message" open={!a}>
-          <summary>{t("original")}</summary>
-          <p className="prewrap mail-body">{message.body}</p>
-        </details>
-      )}
+
+      <div className="message-more">
+        {analyzed && (
+          <details className="original-message">
+            <summary>{a.assumptions.length ? t("factsWithAssumptions", { count: a.assumptions.length }) : t("facts")}</summary>
+            <AnalysisView analysis={a} />
+          </details>
+        )}
+        {a?.transcriptWithheld && <p className="muted">{t("transcriptWithheld")}</p>}
+        {a?.transcript && (
+          <details className="original-message">
+            <summary>{t("transcript")}</summary>
+            <p className="prewrap mail-body">{a.transcript}</p>
+          </details>
+        )}
+        {message.body && (
+          <details className="original-message" open={!a}>
+            <summary>{t("original")}</summary>
+            <p className="prewrap mail-body">{message.body}</p>
+          </details>
+        )}
+      </div>
 
       {error && (
         <p className="notice error" role="alert">
@@ -276,11 +301,6 @@ function MessageDetail({ message }: { message: InboxMessage }) {
         </p>
       )}
       <div className="row-actions section-gap">
-        {message.status === "confirmed" && message.projectId && (
-          <Link className="primary" href={`/projects?id=${message.projectId}`}>
-            {t("viewProject")}
-          </Link>
-        )}
         {(message.status === "analyzed" || message.status === "error") && (
           <button className="secondary" disabled={pending} onClick={() => run(() => reanalyzeMessage(message.id))}>
             {t("reanalyze")}
@@ -297,10 +317,28 @@ function MessageDetail({ message }: { message: InboxMessage }) {
           </button>
         )}
       </div>
-      {message.status === "analyzed" && a && (
-        <MessageReview key={a.promptVersion + a.modelVersion} message={message} />
-      )}
     </>
+  );
+}
+
+/** Warnings stay at the top, above anything the person might act on (decision 0007). */
+function Flags({ analysis: a }: { analysis: NonNullable<InboxMessage["analysis"]> }) {
+  const t = useTranslations("inbox");
+  const labels = useLabels();
+  if (!a.flags.length) return null;
+  return (
+    <div className="notice analysis-flags" role="alert">
+      <strong>{t("flagsTitle")}</strong>
+      <ul>
+        {a.flags.map((f, i) => (
+          <li key={i}>
+            {labels.flag(f.kind)}
+            {f.note && <span className="flag-note"> {f.note}</span>}
+            {f.asStated && <small className="muted stated">{t("statedAs", { text: f.asStated })}</small>}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -346,23 +384,6 @@ function AnalysisView({ analysis: a }: { analysis: NonNullable<InboxMessage["ana
   const otherAssumptions = a.assumptions.filter((x) => !shown.has(x.about));
   return (
     <div className="message-analysis">
-      {a.flags.length > 0 && (
-        <div className="notice analysis-flags" role="alert">
-          <strong>{t("flagsTitle")}</strong>
-          <ul>
-            {a.flags.map((f, i) => (
-              <li key={i}>
-                {labels.flag(f.kind)}
-                {f.note && <span className="flag-note"> {f.note}</span>}
-                {f.asStated && <small className="muted stated">{t("statedAs", { text: f.asStated })}</small>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <h3>{t("summary")}</h3>
-      <p>{a.summary}</p>
-      <h3>{t("facts")}</h3>
       <dl>
         {rows
           .filter(([, value]) => value)

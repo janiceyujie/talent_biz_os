@@ -3141,3 +3141,111 @@ a.disabled {
   color: var(--muted);
   margin-bottom: 8px;
 }
+
+/* Project timeline and message-filled details (components/views/project-timeline.tsx) */
+.project-timeline {
+  margin-top: 20px;
+}
+.project-timeline h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+.project-timeline ol {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.project-timeline ol > li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: var(--text-meta);
+  line-height: 1.6;
+}
+.project-timeline ol > li::before {
+  content: "";
+  position: absolute;
+  left: -20px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+}
+.project-timeline time {
+  color: var(--muted);
+  font-size: 12px;
+}
+.project-timeline p {
+  margin: 0;
+}
+.timeline-applied {
+  color: #2c5c50;
+}
+.timeline-applied ul,
+.timeline-left ul {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+.project-timeline a {
+  color: #2c5c50;
+  font-size: 13px;
+}
+.timeline-left {
+  color: #7a4f00;
+}
+.project-facts {
+  margin: 12px 0;
+  font-size: var(--text-meta);
+}
+.project-facts dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 4px 12px;
+  margin: 0;
+}
+.project-facts dl > div {
+  display: contents;
+}
+.project-facts dt {
+  color: var(--muted);
+}
+.project-facts dd {
+  margin: 0;
+}
+.project-facts h4 {
+  margin: 10px 0 4px;
+  font-size: var(--text-meta);
+}
+.project-facts ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.message-status.intent-chip {
+  font-style: normal;
+  background: #e3ece6;
+  color: #2c5c50;
+}
+.message-summary {
+  margin: 10px 0 4px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+.message-more {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.message-more .message-analysis {
+  margin-top: 8px;
+}
+.project-timeline {
+  margin: 16px 0;
+}

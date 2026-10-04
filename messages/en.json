@@ -488,8 +488,7 @@
     },
     "pendingBody": "The AI is reading this message; the result appears here on its own. The local model takes about half a minute.",
     "failed": "The analysis didn't finish: {reason}",
-    "summary": "Summary",
-    "facts": "What it says",
+    "facts": "What the AI read",
     "field": {
       "type": "Type",
       "counterparty": "From",
@@ -554,7 +553,8 @@
     "assumptions": "What the AI assumed",
     "assumed": "AI assumed: {note}",
     "usageRemaining": "AI analyses left today: {remaining} of {limit}",
-    "usageExhausted": "Today's {limit} AI analyses are used up. New messages are saved and can be analyzed once it resets."
+    "usageExhausted": "Today's {limit} AI analyses are used up. New messages are saved and can be analyzed once it resets.",
+    "factsWithAssumptions": "What the AI read (with {count} assumptions)"
   },
   "intake": {
     "targetHeading": "Which project is this message about?",
@@ -630,6 +630,18 @@
       "moreFields": "More fields ({count})"
     },
     "earlierDate": "An earlier message gave this date, but the project doesn't have it yet; applying adds it."
+  },
+  "timeline": {
+    "heading": "Timeline",
+    "empty": "No messages filed on this project yet.",
+    "created": "Created the project from this message",
+    "applied": "Applied",
+    "left": "Not applied (their proposal, or unticked)",
+    "filedOnly": "Filed on this project.",
+    "original": "Original message",
+    "facts": "Project details",
+    "date": "Date",
+    "toConfirm": "To confirm with them"
   },
   "contacts": {
     "search": "Search contacts",

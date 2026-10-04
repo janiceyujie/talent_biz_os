@@ -15,7 +15,7 @@ import { getAppData } from "@/lib/data";
 import { db } from "@/lib/db";
 import { auditLog, calendarEvent, contact, message, messageAnalysis, payment, person as personTable, project, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
-import { filedMessages, keptFields, proposeChanges, withField, type Change, type IntakeContext } from "@/lib/domain/intake";
+import { filedMessages, keptFields, proposeChanges, withField, type Change, type ChangeRecord, type IntakeContext } from "@/lib/domain/intake";
 import { isSigned } from "@/lib/domain/phases";
 import { paymentTotal } from "@/lib/domain/workflow";
 import { projectTypeKeys } from "@/lib/project-types";
@@ -131,22 +131,20 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
     let details = current.details;
     const kept: (ProjectDate | null)[] = [...(details.dates ?? [])];
     const projectSet: Partial<typeof project.$inferInsert> = {};
-    const applied: Record<string, unknown>[] = [];
+    const applied: ChangeRecord[] = [];
 
     for (const c of ticked) {
+      applied.push({ ...c, ticked: true });
       switch (c.kind) {
         case "fee":
           projectSet.quotedAmount = c.to;
           if (c.taxIncluded !== null) projectSet.taxIncluded = c.taxIncluded;
-          applied.push({ id: c.id, from: c.from, to: c.to });
           break;
         case "field":
           details = withField(details, c.key, c.to);
-          applied.push({ id: c.id, from: c.from, to: c.to });
           break;
         case "contractNotes":
           details = { ...details, contractNotes: c.to };
-          applied.push({ id: c.id, to: c.to });
           break;
         case "date": {
           const to = c.to;
@@ -168,11 +166,9 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
             if (c.index !== null) kept[c.index] = null; // now on the calendar
           } else if (c.index !== null) kept[c.index] = to;
           else kept.push(to);
-          applied.push({ id: c.id, from: c.from, to });
           break;
         }
         case "stage":
-          applied.push({ id: c.id, from: c.from, to: c.to });
           break;
         case "settlePayment": {
           const [p] = await tx
@@ -191,7 +187,6 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
               invoiceRef: p.invoiceRef || c.invoiceRef || null,
             })
             .where(eq(payment.id, p.id));
-          applied.push({ id: c.id, paymentId: p.id, expected: total, amount: c.amount, settledOn: c.settledOn });
           break;
         }
         case "newPayment": {
@@ -207,7 +202,6 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
             status: settled ? "settled" : "expected",
             settledOn: settled ? c.date : null,
           });
-          applied.push({ id: c.id, amount: c.amount, date: c.date });
           break;
         }
         case "paymentNote": {
@@ -218,7 +212,6 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
           if (!p) return fail("proposalChanged");
           const notes = [p.notes, `${ctx.receivedOn} ${c.note}`].filter(Boolean).join("\n").slice(0, 10000);
           await tx.update(payment).set({ notes }).where(eq(payment.id, c.paymentId));
-          applied.push({ id: c.id, paymentId: c.paymentId });
           break;
         }
         case "todo":
@@ -231,12 +224,10 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
             dueDate: c.dueDate,
             timeZone,
           });
-          applied.push({ id: c.id, dueDate: c.dueDate });
           break;
         case "toConfirm": {
           const items = [...(details.toConfirm ?? []), ...c.items.filter((i) => !details.toConfirm?.includes(i))];
           details = { ...details, toConfirm: items.slice(0, 50) };
-          applied.push({ id: c.id, items: c.items });
           break;
         }
       }
@@ -266,7 +257,7 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
       details: {
         projectId: target.id,
         applied,
-        left: offered.filter((c) => !input.items[c.id]).map((c) => c.id),
+        left: offered.filter((c) => !input.items[c.id]),
         stage: finalStage !== target.stage ? { from: target.stage, to: finalStage } : null,
       },
     });

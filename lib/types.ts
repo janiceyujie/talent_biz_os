@@ -4,6 +4,7 @@
 import type { Locale } from "@/lib/i18n/config";
 import type { Appearance, Role } from "@/lib/roles";
 import type { MessageAnalysis } from "@/lib/ai/analysis";
+import type { ChangeRecord } from "@/lib/domain/intake";
 import type { ProjectType } from "@/lib/project-types";
 
 export const stages = [
@@ -181,6 +182,24 @@ export type InboxMessage = {
   files: { id: string; contentType: string; filename: string; sizeBytes: number }[]; // screenshots, photos, PDFs, in order
 };
 
+/** One message on a project's timeline, with what applying it changed (audit_log `message.applied`). */
+export type TimelineEntry = {
+  messageId: string;
+  projectId: string;
+  receivedAt: string; // ISO instant
+  title: string;
+  summary: string;
+  /** Created this project, rather than updating it. */
+  created: boolean;
+  applied: ChangeRecord[];
+  /** Proposed but not applied (e.g. a counter-offer's terms). */
+  left: ChangeRecord[];
+  /** The stage as changed by applying it, ticked or answered (the stage question). */
+  stage: { from: Stage; to: Stage } | null;
+  /** Filed before applying was recorded: nothing to show beyond the message. */
+  recorded: boolean;
+};
+
 export type AppData = {
   talent: { id: string; name: string; timeZone: string };
   person: { displayName: string; email: string; role: Role; appearance: Appearance; replyWithinDays: number };
@@ -193,6 +212,7 @@ export type AppData = {
   drafts: ReplyDraft[];
   files: StoredFile[];
   inbox: InboxMessage[];
+  timeline: TimelineEntry[]; // newest first
   notificationState: NotificationState; // this person's read and snooze marks
   // This person's sign-in methods; googleAccountId is our auth_account row id (what unlinking takes).
   signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };

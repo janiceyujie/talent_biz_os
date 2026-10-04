@@ -111,12 +111,12 @@ The facts table goes away; the summary stays short. Flags (decision 0007) stay a
 
 1. How strongly should the AI suggest other stage changes? Proposed: only the moves in the table; judgment calls (signing) are asked, not ticked.
 2. Should accepting a counter-offer from this screen also start a reply ("套用並擬回覆")? Likely yes, once drafting exists.
-3. Where the reply-by default lives: per person, or per workspace (a manager's team)?
+3. Where the reply-by default lives: per person, or per workspace (a manager's team)? Built per person (`person.reply_within_days`, default 2).
 
 ## Build order
 
 1. Target suggestion and the per-intent change rules, as pure functions with tests (no model calls). **Done**: `lib/domain/intake.ts`, tests in `intake.test.ts` (`npm test`).
-2. The review screen for existing projects (negotiation, confirmation, logistics, payment), then new projects (contact and to-confirm list).
+2. The review screen for existing projects (negotiation, confirmation, logistics, payment), then new projects (contact and to-confirm list). **Existing projects done**: `components/views/message-review.tsx`, applied by `lib/actions/intake.ts`; the reply-by default is in 設定. New projects still use the project form, which now also keeps the message's dates, type fields, and to-confirm list.
 3. The project timeline.
 4. Contract versions and their comparison.
 5. Then reply drafting, which reads all of the above.

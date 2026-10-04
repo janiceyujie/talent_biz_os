@@ -9,13 +9,14 @@ import { DataNotice } from "./data-notice";
 import { Modal } from "@/components/app/modal";
 import { RecordEditor, type Editor, type RecordData } from "@/components/app/record-editor";
 import { FileText } from "lucide-react";
-import { dismissMessage, linkMessageToProject, reanalyzeMessage, submitPastedMessage } from "@/lib/actions/messages";
+import { dismissMessage, reanalyzeMessage, submitPastedMessage } from "@/lib/actions/messages";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { detailFieldKeys, type AssumptionTopic } from "@/lib/ai/analysis";
 import { isFailureCode } from "@/lib/ai/errors";
 import { matchContact } from "@/lib/domain/intake";
 import type { InboxMessage } from "@/lib/types";
+import { MessageReview } from "./message-review";
 import { UploadDialog } from "./upload-dialog";
 
 // The review queue: messages the person sent in, each with the model's
@@ -212,17 +213,13 @@ function PasteDialog({ onClose, onSubmitted }: { onClose: () => void; onSubmitte
 }
 
 function MessageDetail({ message, edit }: { message: InboxMessage; edit: (e: Editor) => void }) {
-  const data = useAppData();
   const t = useTranslations("inbox");
   const format = useFormatter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [linkTo, setLinkTo] = useState("");
-  const [replyBy, setReplyBy] = useState(message.analysis?.replyBy ?? "");
   const run = (action: () => Promise<string | null>) => startTransition(async () => setError(await action()));
   const prefill = useProjectPrefill();
   const a = message.analysis;
-  const liveProjects = data.projects.filter((p) => !p.archived);
 
   return (
     <>
@@ -284,11 +281,6 @@ function MessageDetail({ message, edit }: { message: InboxMessage; edit: (e: Edi
         </p>
       )}
       <div className="row-actions section-gap">
-        {message.status === "analyzed" && a && (
-          <button className="primary" disabled={pending} onClick={() => edit({ kind: "project", item: prefill(message) })}>
-            {t("createProject")}
-          </button>
-        )}
         {message.status === "confirmed" && message.projectId && (
           <Link className="primary" href={`/projects?id=${message.projectId}`}>
             {t("viewProject")}
@@ -310,31 +302,8 @@ function MessageDetail({ message, edit }: { message: InboxMessage; edit: (e: Edi
           </button>
         )}
       </div>
-      {message.status === "analyzed" && liveProjects.length > 0 && (
-        <div className="link-project">
-          <label>
-            {t("linkProject")}
-            <select aria-label={t("pickProject")} value={linkTo} onChange={(e) => setLinkTo(e.target.value)}>
-              <option value="">{t("pickProject")}</option>
-              {liveProjects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t("field.replyBy")}
-            <input type="date" aria-label={t("field.replyBy")} value={replyBy} onChange={(e) => setReplyBy(e.target.value)} />
-          </label>
-          <button
-            className="secondary"
-            disabled={pending || !linkTo}
-            onClick={() => run(() => linkMessageToProject(message.id, linkTo, replyBy))}
-          >
-            {t("link")}
-          </button>
-        </div>
+      {message.status === "analyzed" && a && (
+        <MessageReview key={a.promptVersion + a.modelVersion} message={message} onNewProject={() => edit({ kind: "project", item: prefill(message) })} />
       )}
     </>
   );

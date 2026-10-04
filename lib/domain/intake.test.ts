@@ -157,7 +157,7 @@ describe("suggestTargets", () => {
   test("a payment notice matches an expected payment of that amount", () => {
     const c = ctx({ contacts: [], projects: [project({ counterpartyId: null, counterparty: "X", stage: "collecting_payment" })], payments: [payment()] });
     const a = analysis({ intent: "payment", counterparty: { name: "", company: "", email: "", phone: "" }, details: { amountDue: { value: "NT$19,950", asStated: "" } } });
-    assert.ok(suggestTargets(a, c)[0]?.reasons.some((r) => r.kind === "payment"));
+    assert.deepEqual(suggestTargets(a, c)[0]?.reasons.find((r) => r.kind === "payment"), { kind: "payment", value: 21000 });
   });
 });
 

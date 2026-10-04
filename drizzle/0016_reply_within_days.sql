@@ -1,0 +1,2 @@
+ALTER TABLE "person" ADD COLUMN "reply_within_days" integer DEFAULT 2 NOT NULL;--> statement-breakpoint
+ALTER TABLE "person" ADD CONSTRAINT "person_reply_within_days_check" CHECK ("person"."reply_within_days" between 0 and 30);

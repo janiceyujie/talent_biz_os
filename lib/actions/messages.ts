@@ -9,9 +9,8 @@ import { analyzeMessage } from "@/lib/ai/analyze-message";
 import { canAnalyze } from "@/lib/ai/usage";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { message, messageAnalysis, project } from "@/lib/db/schema";
+import { message, messageAnalysis } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
-import { confirmFollowUps } from "./message-follow-ups";
 import { errorText, firstIssue } from "./validation";
 
 const MAX_LENGTH = 50_000;
@@ -102,38 +101,4 @@ export async function dismissMessage(id: string, dismissed: boolean): Promise<st
   }
   refresh();
   return null;
-}
-
-/** File a message under an existing project (加到既有合作案), with a reply to-do when the person kept a reply-by date. */
-export async function linkMessageToProject(messageId: string, projectId: string, replyBy: string): Promise<string | null> {
-  const { person, talent } = await requireTalent();
-  const fail = await errorText();
-  if (!z.uuid().safeParse(messageId).success || !z.uuid().safeParse(projectId).success) return fail("invalid");
-  const reply = z.union([z.literal(""), z.iso.date()]).safeParse(replyBy);
-  if (!reply.success) return fail("dateInvalid");
-  const [p] = await db
-    .select({ title: project.title, archivedAt: project.archivedAt })
-    .from(project)
-    .where(and(eq(project.id, projectId), eq(project.talentId, talent.id)));
-  if (!p) return fail("projectNotFound");
-  if (p.archivedAt) return fail("projectArchived");
-  const failure = await db.transaction(async (tx) => {
-    const rows = await tx
-      .update(message)
-      .set({ projectId, status: "confirmed" })
-      .where(and(eq(message.id, messageId), eq(message.talentId, talent.id), eq(message.status, "analyzed")))
-      .returning({ id: message.id });
-    if (!rows.length) return fail("messageNotFound");
-    await confirmFollowUps(tx, {
-      talentId: talent.id,
-      personId: person.personId,
-      messageId,
-      projectId,
-      projectTitle: p.title,
-      replyBy: reply.data || null,
-    });
-    return null;
-  });
-  if (!failure) refresh();
-  return failure;
 }

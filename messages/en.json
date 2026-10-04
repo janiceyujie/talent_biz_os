@@ -507,9 +507,7 @@
     "aiNote": "An AI suggestion and may be wrong — check before filing. Confidence {confidence}% · {model}",
     "original": "Original message",
     "createProject": "Create a project",
-    "linkProject": "Add to an existing project",
     "pickProject": "Project",
-    "link": "Add",
     "dismiss": "Dismiss",
     "restore": "Restore",
     "reanalyze": "Analyze again",
@@ -558,6 +556,63 @@
     "assumed": "AI assumed: {note}",
     "usageRemaining": "AI analyses left today: {remaining} of {limit}",
     "usageExhausted": "Today's {limit} AI analyses are used up. New messages are saved and can be analyzed once it resets."
+  },
+  "intake": {
+    "targetHeading": "Which project is this message about?",
+    "suggested": "Suggested",
+    "reason": {
+      "contact": "Same contact: {value}",
+      "date": "Same date: {value}",
+      "detail": "Mentions {value}",
+      "title": "Similar title",
+      "payment": "An expected payment of {value}"
+    },
+    "newProject": "New project",
+    "otherProject": "Another project",
+    "changesHeading": "Proposed updates",
+    "noChanges": "Nothing to update. Applying files the message on the project's timeline.",
+    "change": {
+      "fee": "Fee",
+      "contractNotes": "Contract notes",
+      "date": "Date",
+      "newDate": "New date",
+      "stage": "Stage",
+      "settlePayment": "Payment “{label}”",
+      "newPaymentReceived": "Record a new payment received",
+      "newPaymentCancellationFee": "Add a cancellation fee (expected)",
+      "paymentNote": "Add a note to payment “{label}”",
+      "todoReply": "Add to-do: reply",
+      "todoAwaitContract": "Add to-do: wait for the contract",
+      "todoSendInvoice": "Add to-do: send the invoice",
+      "toConfirm": "Add to “to confirm”"
+    },
+    "expected": "Expected {amount}",
+    "received": "Received",
+    "settledOn": "Received on",
+    "amount": "Amount",
+    "dueBy": "Due",
+    "shortfall": "{amount} less than expected, often withheld tax; recorded as a shortfall.",
+    "asEvent": "Goes on the calendar",
+    "taxIncluded": "tax incl.",
+    "taxExcluded": "before tax",
+    "empty": "(empty)",
+    "notAgreed": "Their proposal, not an agreement. Recorded on the timeline either way.",
+    "question": "They've confirmed, but there's no contract yet. Move the stage to “{signed}”?",
+    "questionHint": "Many gigs never have a written contract. Once signed, dates can go on the calendar and you can add a deposit and balance.",
+    "moveSigned": "Move to {stage}",
+    "keep": "Keep it at {stage} until the contract",
+    "apply": "Apply {count, plural, one {# update} other {# updates}}",
+    "applying": "Applying…",
+    "answerFirst": "Answer the stage question above first.",
+    "todo": {
+      "reply": "Reply: {title}",
+      "awaitContract": "Wait for the contract: {title}",
+      "sendInvoice": "Send invoice: {title}"
+    },
+    "payment": {
+      "received": "Payment: {title}",
+      "cancellationFee": "Cancellation fee: {title}"
+    }
   },
   "contacts": {
     "search": "Search contacts",
@@ -684,7 +739,11 @@
       "googleUnavailable": "Google sign-in isn't set up on this server yet.",
       "help": "The Google account you connect can use a different email from this account. Sign-in methods only sign you in; they never read your mail.",
       "google": "Google"
-    }
+    },
+    "replyTitle": "Reply-by default",
+    "replyBody": "When a message doesn't say when it needs an answer, the reply to-do is due this many days after it arrives. You can change it for each message before applying.",
+    "replyDays": "Days after receiving",
+    "replySave": "Save reply default"
   },
   "editor": {
     "titleNew": "New {kind, select, project {project} contact {artist / partner} calendar {event / to-do} payment {ledger entry} template {reply template} other {reply draft}}",
@@ -927,7 +986,8 @@
     "uploadTooLarge": "That's too large — up to {files} files and {megabytes} MB in total.",
     "uploadMissing": "An upload didn't finish. Please try again.",
     "aiDailyLimit": "Today's AI analyses for this account are used up. It resets within 24 hours.",
-    "aiMessageLimit": "This message has been analyzed the maximum number of times."
+    "aiMessageLimit": "This message has been analyzed the maximum number of times.",
+    "proposalChanged": "The project changed after you opened this message. Check the proposed updates again."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",

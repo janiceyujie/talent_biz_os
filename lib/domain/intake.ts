@@ -4,7 +4,7 @@
 // person confirms every item. See docs/design/intake-to-project.md.
 import type { MessageAnalysis } from "@/lib/ai/analysis";
 import { projectType } from "@/lib/project-types";
-import type { CalendarItem, Contact, Payment, Project, ProjectDate, Stage } from "@/lib/types";
+import type { CalendarItem, Contact, Payment, Project, ProjectDate, ProjectDetails, Stage } from "@/lib/types";
 import { isSigned } from "./phases";
 import { paymentTotal } from "./workflow";
 
@@ -27,7 +27,7 @@ export type TargetReason =
   | { kind: "date"; value: string } // a date the project already has
   | { kind: "detail"; value: string } // same venue, event, brand, campaign…
   | { kind: "title"; value: string }
-  | { kind: "payment"; value: number }; // an expected payment of that amount
+  | { kind: "payment"; value: number }; // the total of an expected payment the amount matches
 
 export type TargetSuggestion = { projectId: string; score: number; reasons: TargetReason[] };
 
@@ -116,9 +116,10 @@ export function suggestTargets(a: MessageAnalysis, ctx: IntakeContext): TargetSu
 
     if (a.intent === "payment") {
       const amount = statedAmount(a);
-      if (amount && expectedIncome(project, ctx.payments).some((p) => near(paymentTotal(p), amount))) {
+      const match = amount ? expectedIncome(project, ctx.payments).find((p) => near(paymentTotal(p), amount)) : undefined;
+      if (match) {
         score += 2;
-        reasons.push({ kind: "payment", value: amount });
+        reasons.push({ kind: "payment", value: paymentTotal(match) });
       }
     }
 
@@ -147,6 +148,12 @@ const homes: Record<string, "deliverables" | "rights" | "travel"> = {
 export function projectField(project: Pick<Project, "details">, key: string) {
   const home = homes[key];
   return (home ? project.details[home] : project.details.fields?.[key]) ?? "";
+}
+
+/** Details with one registry field set, in its home. */
+export function withField(details: ProjectDetails, key: string, value: string): ProjectDetails {
+  const home = homes[key];
+  return home ? { ...details, [home]: value } : { ...details, fields: { ...details.fields, [key]: value } };
 }
 
 /** The fields a project of this type keeps: its registry fields. Intent fields (proposedChanges…) are about the message, not the deal. */
@@ -486,12 +493,21 @@ export function matchContact(contacts: Contact[], who: { name: string; company: 
   );
 }
 
+/** The type fields and dates a message gives a new project (the reply-by date is a to-do, not a project date). */
+export function proposedProject(a: MessageAnalysis) {
+  const fields: Record<string, string> = {};
+  for (const key of keptFields(a.projectType)) if (a.details[key]) fields[key] = a.details[key].value;
+  const dates: ProjectDate[] = a.dates
+    .filter((d) => d.date && !(d.date === a.replyBy && !d.time))
+    .map((d) => ({ what: d.what, date: d.date, time: d.time, timeZone: d.timeZone }));
+  return { fields, dates };
+}
+
 export function proposeNewProject(a: MessageAnalysis, fallbackTitle: string, ctx: IntakeContext): NewProjectProposal {
   const existing = matchContact(ctx.contacts, a.counterparty);
   const who = a.counterparty;
   const twd = a.money.amount !== null && (a.money.currency === "TWD" || !a.money.currency);
-  const fields: Record<string, string> = {};
-  for (const key of keptFields(a.projectType)) if (a.details[key]) fields[key] = a.details[key].value;
+  const { fields, dates } = proposedProject(a);
   return {
     project: {
       title: (a.title || fallbackTitle).slice(0, 200),
@@ -500,9 +516,7 @@ export function proposeNewProject(a: MessageAnalysis, fallbackTitle: string, ctx
       quotedAmount: twd ? a.money.amount : null,
       taxIncluded: a.money.taxIncluded ?? false,
       fields,
-      dates: a.dates
-        .filter((d) => d.date && !(d.date === a.replyBy && !d.time))
-        .map((d) => ({ what: d.what, date: d.date, time: d.time, timeZone: d.timeZone })),
+      dates,
     },
     contact: existing
       ? { existing }

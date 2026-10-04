@@ -2951,3 +2951,143 @@ a.disabled {
 .ai-usage {
   font-size: 13px;
 }
+
+/* Inbox: which project a message belongs to, and the changes it proposes (components/views/message-review.tsx) */
+.message-review {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.message-review h3 {
+  margin: 0;
+  font-size: 17px;
+}
+.target-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.target {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.target.on {
+  border-color: var(--ink-soft);
+  background: var(--lime-soft);
+}
+.target-other {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  color: var(--ink);
+  font-size: inherit;
+  cursor: pointer;
+}
+.target select {
+  flex: 1 1 200px;
+}
+.target-chip {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--lime);
+}
+.target-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 13px;
+  margin-top: 2px;
+}
+.proposed-changes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.change {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  line-height: 1.9;
+}
+.change.on {
+  border-color: #9db9a8;
+  background: #f7faf8;
+}
+.change input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 6px;
+}
+.change .change-label {
+  display: inline;
+  margin: 0;
+  color: var(--ink);
+  font-size: inherit;
+  font-weight: 700;
+}
+.change-from {
+  color: var(--muted);
+}
+.change-edit {
+  width: auto;
+  max-width: 100%;
+  padding: 2px 6px;
+  font-weight: 700;
+}
+.change-edit[type="number"] {
+  width: 120px;
+}
+.change-edit.wide {
+  width: 100%;
+  min-width: 0;
+}
+.change-hint {
+  display: block;
+  font-size: 13px;
+  color: #7a4f00;
+}
+.change .stated {
+  font-size: 13px;
+  color: var(--muted);
+}
+.stage-question {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #e8c36a;
+  border-radius: 10px;
+  background: #fffaf0;
+}
+.stage-question p {
+  margin: 0;
+}
+.choice {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  font-weight: 700;
+  cursor: pointer;
+}
+.stage-question .choice.on {
+  background: var(--ink-soft);
+  border-color: var(--ink-soft);
+  color: #fff;
+}

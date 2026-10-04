@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { updateWorkspace, type SettingsState } from "@/app/(app)/settings/actions";
 import { useAppData } from "@/components/app/app-data";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -11,6 +11,7 @@ import { RolePortrait } from "@/components/role/role-portrait";
 import { TimeZonePicker } from "@/components/app/time-zone-picker";
 import { CalendarFeedSettings } from "./calendar-feed-settings";
 import { SignInMethods } from "./sign-in-methods";
+import { setReplyWithinDays } from "@/lib/actions/intake";
 
 export function SettingsView() {
   const data = useAppData();
@@ -103,6 +104,7 @@ export function SettingsView() {
         <p>
           {t("aiBody")}
         </p>
+        <ReplyDefault />
       </section>
       <section className="surface padded">
         <div className="section-header">
@@ -118,5 +120,39 @@ export function SettingsView() {
         <SignOutButton />
       </section>
     </div>
+  );
+}
+
+/** The reply-by default for messages that state none; each message's date stays editable before applying. */
+function ReplyDefault() {
+  const data = useAppData();
+  const t = useTranslations("settings");
+  const [days, setDays] = useState(String(data.person.replyWithinDays));
+  const [pending, startTransition] = useTransition();
+  const [result, setResult] = useState<{ error: string | null } | null>(null);
+  return (
+    <form
+      className="editor-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        startTransition(async () => setResult({ error: await setReplyWithinDays(Number(days)) }));
+      }}
+    >
+      <h3>{t("replyTitle")}</h3>
+      <p className="muted">{t("replyBody")}</p>
+      <label>
+        {t("replyDays")}
+        <input type="number" min={0} max={30} step={1} required value={days} onChange={(e) => setDays(e.target.value)} />
+      </label>
+      {result?.error && (
+        <p className="notice error" role="alert">
+          {result.error}
+        </p>
+      )}
+      {result && !result.error && !pending && <p className="notice">{t("saved")}</p>}
+      <button className="primary" disabled={pending}>
+        {pending ? t("saving") : t("replySave")}
+      </button>
+    </form>
   );
 }

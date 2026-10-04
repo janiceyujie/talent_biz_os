@@ -54,12 +54,14 @@ export const person = pgTable(
     accountType: text({ enum: accountTypes }).notNull().default("individual"),
     locale: text().notNull().default("zh-TW"), // UI language; supported list in lib/i18n/config
     avatarAppearance: text({ enum: avatarAppearances }).notNull().default("non_binary"), // assistant character's look
+    replyWithinDays: integer().notNull().default(2), // reply-by default for a message that states none (docs/design/intake-to-project.md)
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     check("person_account_type_check", oneOf(t.accountType, accountTypes)),
     check("person_avatar_appearance_check", oneOf(t.avatarAppearance, avatarAppearances)),
+    check("person_reply_within_days_check", sql`${t.replyWithinDays} between 0 and 30`),
   ],
 ).enableRLS();
 

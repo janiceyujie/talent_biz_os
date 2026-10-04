@@ -32,6 +32,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
         feedHash: membership.calendarFeedTokenHash,
         accountType: personTable.accountType,
         appearance: personTable.avatarAppearance,
+        replyWithinDays: personTable.replyWithinDays,
       })
       .from(membership)
       .innerJoin(personTable, eq(personTable.id, membership.personId))
@@ -136,6 +137,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       email: person.email,
       role: roleOf(memberRow.accountType, talentRow.vertical),
       appearance: memberRow.appearance,
+      replyWithinDays: memberRow.replyWithinDays,
     },
     calendarFeed: Boolean(memberRow?.feedHash),
     aiDataNotice: process.env.AI_PROVIDER_KEEPS_DATA === "1" ? aiServiceName(process.env.AI_PROVIDER) : null,

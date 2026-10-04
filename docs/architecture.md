@@ -209,8 +209,10 @@ A deal is rarely one message. A venue's first offer, the signed contract, and a 
 
 - **Explicit tagging first.** If the message arrived through a channel that lets the person specify the project directly (e.g. the Gmail add-on's dropdown), use that — no inference needed.
 - **Email threading next.** When a message is a reply within an existing email thread, the link is free and certain.
-- **Similarity as a fallback.** For anything without a thread or an explicit tag — a new email, a screenshot of a different app — compare the extracted summary against the open projects for that talent using embedding similarity, and propose the closest match above a threshold.
+- **Known facts next.** Built: the same contact (email, then company or name), a date the project already has, the same venue or event, and for a payment notice an expected payment of that amount; a similar title only adds weight. Each suggestion shows its reasons (`lib/domain/intake.ts`, `suggestTargets`).
+- **Similarity as a fallback** (later). For anything the facts don't settle, compare the extracted summary against the open projects for that talent using embedding similarity, and propose the closest match above a threshold.
 - **Always proposed, never automatic** for anything inferred. A proposed match is presented as "this looks like the same deal as [project] — is it?" alongside the extraction review, and a person confirms, rejects, or starts a new project instead.
+- **Then the message's changes are proposed against that project** — a checklist the person edits and ticks, applied in one transaction and recorded in `audit_log` as `message.applied` (what changed, what was left as a proposal). Code decides what to propose by intent; the server recomputes it on apply and refuses items no longer in it. See [docs/design/intake-to-project.md](design/intake-to-project.md).
 
 ### Versioning and diffing
 
@@ -436,6 +438,8 @@ create table person (
   locale          text not null default 'zh-TW',   -- UI language; supported list lives in code
   avatar_appearance text not null default 'non_binary'
                     check (avatar_appearance in ('female','male','non_binary')),  -- assistant character's look
+  reply_within_days int not null default 2
+                    check (reply_within_days between 0 and 30),  -- reply-by default for a message that states none
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );

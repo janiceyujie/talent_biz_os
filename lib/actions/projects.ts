@@ -1,13 +1,15 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { auditLog, contact, message, project } from "@/lib/db/schema";
+import { upgradeAnalysis } from "@/lib/ai/analysis";
+import { auditLog, contact, message, messageAnalysis, project } from "@/lib/db/schema";
+import { proposedProject } from "@/lib/domain/intake";
 import { projectTypeKeys } from "@/lib/project-types";
-import { stages, type Stage } from "@/lib/types";
+import { stages, type ProjectDetails, type Stage } from "@/lib/types";
 import { confirmFollowUps } from "./message-follow-ups";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
@@ -82,6 +84,7 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
 
   const failure = await db.transaction(async (tx) => {
     if (!input.id) {
+      let details: ProjectDetails = values.details;
       if (input.messageId) {
         const [source] = await tx
           .select({ id: message.id })
@@ -89,10 +92,23 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
           .where(and(eq(message.id, input.messageId), eq(message.talentId, talent.id), eq(message.status, "analyzed")))
           .for("update");
         if (!source) return fail("messageNotFound");
+        // Until the new-project review (docs/design/intake-to-project.md) shows them, the message's
+        // dates, type fields, and open questions are kept as extracted; what the form edits wins.
+        const [latest] = await tx
+          .select({ analysis: messageAnalysis.analysis })
+          .from(messageAnalysis)
+          .where(eq(messageAnalysis.messageId, input.messageId))
+          .orderBy(desc(messageAnalysis.createdAt))
+          .limit(1);
+        if (latest) {
+          const a = upgradeAnalysis(latest.analysis);
+          const { fields, dates } = proposedProject(a);
+          details = { fields, dates, toConfirm: a.missing, ...details };
+        }
       }
       const [created] = await tx
         .insert(project)
-        .values({ ...values, talentId: talent.id })
+        .values({ ...values, details, talentId: talent.id })
         .returning({ id: project.id });
       if (input.messageId) {
         // The message this project comes from: file it here and add its reply to-do.

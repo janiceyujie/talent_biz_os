@@ -507,9 +507,7 @@
     "aiNote": "AI 建議，可能有誤，建檔前請核對。信心 {confidence}% · {model}",
     "original": "原始內容",
     "createProject": "建立新合作案",
-    "linkProject": "加到既有合作案",
     "pickProject": "選擇合作案",
-    "link": "加入",
     "dismiss": "略過",
     "restore": "還原",
     "reanalyze": "重新分析",
@@ -558,6 +556,63 @@
     "assumed": "AI 推定：{note}",
     "usageRemaining": "今日剩餘 AI 分析：{remaining}／{limit} 次",
     "usageExhausted": "今天的 {limit} 次 AI 分析已用完。新訊息仍會保存，重置後可再分析。"
+  },
+  "intake": {
+    "targetHeading": "這則訊息屬於哪個合作案？",
+    "suggested": "建議",
+    "reason": {
+      "contact": "同一聯絡人：{value}",
+      "date": "同一日期：{value}",
+      "detail": "提到 {value}",
+      "title": "名稱相近",
+      "payment": "有一筆待收 {value}"
+    },
+    "newProject": "新合作案",
+    "otherProject": "其他合作案",
+    "changesHeading": "建議的更新",
+    "noChanges": "這則訊息沒有要更新的項目；套用後會記入合作案時間軸。",
+    "change": {
+      "fee": "報價",
+      "contractNotes": "合約備註",
+      "date": "日期",
+      "newDate": "新增日期",
+      "stage": "階段",
+      "settlePayment": "款項「{label}」",
+      "newPaymentReceived": "記一筆新的收款",
+      "newPaymentCancellationFee": "新增取消費（待收）",
+      "paymentNote": "在款項「{label}」加註",
+      "todoReply": "新增待辦：回覆對方",
+      "todoAwaitContract": "新增待辦：等合約寄來",
+      "todoSendInvoice": "新增待辦：開發票給對方",
+      "toConfirm": "加入「需向對方確認」"
+    },
+    "expected": "待收 {amount}",
+    "received": "已收",
+    "settledOn": "實收日期",
+    "amount": "金額",
+    "dueBy": "期限",
+    "shortfall": "比應收少 {amount}，可能是代扣稅款；會記為短收。",
+    "asEvent": "會加入行程",
+    "taxIncluded": "含稅",
+    "taxExcluded": "未稅",
+    "empty": "（未填）",
+    "notAgreed": "對方的提議，尚未同意。不勾選也會記在時間軸。",
+    "question": "對方已確認，但還沒有合約。要把階段改為「{signed}」嗎？",
+    "questionHint": "很多演出不會簽書面合約。改為已簽約後，日期可以加入行程，也可以建立訂金與尾款。",
+    "moveSigned": "改為{stage}",
+    "keep": "先維持{stage}，收到合約再說",
+    "apply": "套用 {count} 項更新",
+    "applying": "套用中…",
+    "answerFirst": "請先回答上面階段的問題。",
+    "todo": {
+      "reply": "回覆：{title}",
+      "awaitContract": "等合約：{title}",
+      "sendInvoice": "開發票：{title}"
+    },
+    "payment": {
+      "received": "收款：{title}",
+      "cancellationFee": "取消費：{title}"
+    }
   },
   "contacts": {
     "search": "搜尋聯絡人",
@@ -684,7 +739,11 @@
       "googleUnavailable": "這個環境尚未啟用 Google 登入。",
       "help": "連結的 Google 帳號可以使用和本帳號不同的電子郵件。登入方式只用來登入，不會讀取你的郵件。",
       "google": "Google"
-    }
+    },
+    "replyTitle": "回覆期限",
+    "replyBody": "訊息沒有寫回覆期限時，回覆待辦的期限預設為收到後幾天；每則訊息套用前都可以再改。",
+    "replyDays": "收到後幾天",
+    "replySave": "儲存回覆期限"
   },
   "editor": {
     "titleNew": "新增{kind, select, project {合作案} contact {藝人與合作方} calendar {行程／待辦} payment {內帳紀錄} template {回覆範本} other {回覆草稿}}",
@@ -927,7 +986,8 @@
     "uploadTooLarge": "檔案太大，最多 {files} 個、總共 {megabytes} MB。",
     "uploadMissing": "有檔案沒有上傳完成，請再試一次。",
     "aiDailyLimit": "這個帳號今天的 AI 分析次數已用完，24 小時內會重置。",
-    "aiMessageLimit": "這則訊息已達重新分析的次數上限。"
+    "aiMessageLimit": "這則訊息已達重新分析的次數上限。",
+    "proposalChanged": "合作案在你打開這則訊息後有變動，請重新檢查建議的更新。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",

@@ -8,7 +8,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { applyMessage, createProjectFromMessage, type NewProjectInput } from "@/lib/actions/intake";
 import { dateInZone } from "@/lib/domain/dates";
-import { keptFields, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext, type TargetReason } from "@/lib/domain/intake";
+import { filedMessages, keptFields, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext, type TargetReason } from "@/lib/domain/intake";
 import { projectTypes, type ProjectType } from "@/lib/project-types";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
@@ -52,8 +52,9 @@ export function MessageReview({ message }: { message: InboxMessage }) {
       calendar: data.calendar,
       receivedOn: dateInZone(data.talent.timeZone, 0, new Date(message.receivedAt)),
       replyWithinDays: data.person.replyWithinDays,
+      filed: filedMessages(data.inbox, message.id),
     }),
-    [data, message.receivedAt],
+    [data, message.id, message.receivedAt],
   );
   const suggestions = useMemo(() => suggestTargets(a, ctx).slice(0, 3), [a, ctx]);
   const [target, setTarget] = useState<string>(suggestions[0]?.projectId ?? "new");
@@ -256,13 +257,15 @@ function ChangeRow({
       break;
     case "date": {
       label = c.from ? t("change.date") : t("change.newDate");
-      const was = c.from && c.from !== c.to ? [c.from.date, c.from.time].filter(Boolean).join(" ") : "";
+      const same = c.from && c.from.date === c.to.date && c.from.time === c.to.time;
+      const was = c.from && !same ? [c.from.date, c.from.time].filter(Boolean).join(" ") : "";
       body = (
         <>
           <span>{c.to.what}</span> {was && <>{from(was)} → </>}
           <input className="change-edit" type="date" aria-label={label} value={String(edit.date ?? "")} onChange={(e) => onEdit({ date: e.target.value })} />{" "}
           <input className="change-edit" type="time" aria-label={`${label} ${t("change.date")}`} value={String(edit.time ?? "")} onChange={(e) => onEdit({ time: e.target.value })} />
           {(c.asEvent || (signing && !c.eventId)) && <span className="muted"> · {t("asEvent")}</span>}
+          {c.earlier && <span className="change-hint">{t("earlierDate")}</span>}
         </>
       );
       break;

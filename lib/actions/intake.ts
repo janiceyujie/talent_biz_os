@@ -15,7 +15,7 @@ import { getAppData } from "@/lib/data";
 import { db } from "@/lib/db";
 import { auditLog, calendarEvent, contact, message, messageAnalysis, payment, person as personTable, project, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
-import { keptFields, proposeChanges, withField, type Change, type IntakeContext } from "@/lib/domain/intake";
+import { filedMessages, keptFields, proposeChanges, withField, type Change, type IntakeContext } from "@/lib/domain/intake";
 import { isSigned } from "@/lib/domain/phases";
 import { paymentTotal } from "@/lib/domain/workflow";
 import { projectTypeKeys } from "@/lib/project-types";
@@ -82,6 +82,7 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
     calendar: data.calendar,
     receivedOn: receivedOn(row.receivedAt, timeZone),
     replyWithinDays: data.person.replyWithinDays,
+    filed: filedMessages(data.inbox, input.messageId),
   };
   const { changes, question } = proposeChanges(upgradeAnalysis(row.analysis), target, ctx);
 

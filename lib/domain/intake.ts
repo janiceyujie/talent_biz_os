@@ -17,13 +17,34 @@ export type IntakeContext = {
   receivedOn: string;
   /** The person's default for answering a message with no stated reply-by date. */
   replyWithinDays: number;
+  /** Messages already filed on projects: who sent them and the dates they gave. */
+  filed: FiledMessage[];
 };
+
+export type FiledMessage = {
+  projectId: string;
+  counterparty: { name: string; company: string; email: string };
+  dates: ProjectDate[];
+};
+
+/** The filed messages among a list of messages, for matching later ones to their projects. */
+export function filedMessages(
+  messages: { id: string; projectId: string | null; status: string; analysis: Pick<MessageAnalysis, "counterparty" | "dates"> | null }[],
+  except = "",
+): FiledMessage[] {
+  return messages.flatMap((m) =>
+    m.projectId && m.status === "confirmed" && m.analysis && m.id !== except
+      ? [{ projectId: m.projectId, counterparty: m.analysis.counterparty, dates: m.analysis.dates.filter((d) => d.date).map((d) => ({ what: d.what, date: d.date, time: d.time, timeZone: d.timeZone })) }]
+      : [],
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Target: which project is this?
 
 export type TargetReason =
   | { kind: "contact"; value: string } // same email, company, or name
+  | { kind: "earlier"; value: string } // an earlier message from the same sender is filed on the project
   | { kind: "date"; value: string } // a date the project already has
   | { kind: "detail"; value: string } // same venue, event, brand, campaign…
   | { kind: "title"; value: string }
@@ -97,7 +118,23 @@ export function suggestTargets(a: MessageAnalysis, ctx: IntakeContext): TargetSu
       }
     }
 
-    const projectDates = new Set(datesOf(project, ctx.calendar));
+    // Messages already filed here: the same sender is as good a sign as a linked contact.
+    const earlier = ctx.filed.filter((f) => f.projectId === project.id);
+    if (!reasons.length) {
+      const byEmail = earlier.find((f) => same(f.counterparty.email, who.email));
+      const byName = [who.company, who.name].find((n) =>
+        earlier.some((f) => [f.counterparty.company, f.counterparty.name].some((m) => same(m, n) || (n.length >= 4 && overlaps(m, n)))),
+      );
+      if (byEmail) {
+        score += 5;
+        reasons.push({ kind: "earlier", value: who.email });
+      } else if (byName) {
+        score += 3;
+        reasons.push({ kind: "earlier", value: byName });
+      }
+    }
+
+    const projectDates = new Set([...datesOf(project, ctx.calendar), ...earlier.flatMap((f) => f.dates.map((d) => d.date))]);
     const date = a.dates.find((d) => d.date && projectDates.has(d.date));
     if (date) {
       score += 3;
@@ -182,7 +219,16 @@ export type Change = Base &
      * A changed or new date. `eventId` when it moves a calendar event; otherwise kept on the project
      * (`index` when replacing one). `asEvent`: becomes a calendar event, for a signed project.
      */
-    | { kind: "date"; from: ProjectDate | null; to: ProjectDate; eventId: string | null; index: number | null; asEvent: boolean }
+    | {
+        kind: "date";
+        from: ProjectDate | null;
+        to: ProjectDate;
+        eventId: string | null;
+        index: number | null;
+        asEvent: boolean;
+        /** `from` was given by an earlier message on the project, not kept on it; applying adds the date. */
+        earlier: boolean;
+      }
     | { kind: "stage"; from: Stage; to: Stage }
     /** Mark an expected payment received; the shortfall is often withheld tax. */
     | { kind: "settlePayment"; paymentId: string; expected: number; amount: number; settledOn: string; invoiceRef: string }
@@ -237,20 +283,28 @@ const promisesContract = (a: MessageAnalysis) =>
 const statusIs = (a: MessageAnalysis, pattern: RegExp) => pattern.test(a.details.paymentStatus?.value ?? "");
 
 /** Dates the message mentions, compared with the project's. */
-function dateChanges(a: MessageAnalysis, project: Project, calendar: CalendarItem[], ticked: boolean, postponed = false): Change[] {
+function dateChanges(a: MessageAnalysis, project: Project, ctx: IntakeContext, ticked: boolean, postponed = false): Change[] {
   const signed = isSigned(project.stage);
   const kept = project.details.dates ?? [];
-  const events = calendar.filter((c) => c.projectId === project.id && c.source === "event" && !c.archived);
-  const existing: { date: ProjectDate; eventId: string | null; index: number | null }[] = [
-    ...events.map((e) => ({ date: { what: e.title, date: e.date, time: e.time, timeZone: e.timeZone }, eventId: e.id, index: null })),
-    ...kept.map((d, index) => ({ date: d, eventId: null, index })),
+  const events = ctx.calendar.filter((c) => c.projectId === project.id && c.source === "event" && !c.archived);
+  type Known = { date: ProjectDate; eventId: string | null; index: number | null; earlier: boolean };
+  const onProject: Known[] = [
+    ...events.map((e) => ({ date: { what: e.title, date: e.date, time: e.time, timeZone: e.timeZone }, eventId: e.id, index: null, earlier: false })),
+    ...kept.map((d, index) => ({ date: d, eventId: null, index, earlier: false })),
   ];
+  // Dates that earlier messages on this project gave but the project doesn't keep (e.g. it predates kept dates).
+  const fromMessages: Known[] = ctx.filed
+    .filter((f) => f.projectId === project.id)
+    .flatMap((f) => f.dates)
+    .filter((d, i, all) => !onProject.some((e) => e.date.date === d.date) && all.findIndex((x) => x.date === d.date && x.time === d.time) === i)
+    .map((d) => ({ date: d, eventId: null, index: null, earlier: true }));
+  const existing = [...onProject, ...fromMessages];
   const deadline = a.replyBy;
   const out: Change[] = [];
   const stated = a.dates.filter((d) => d.date && !(d.date === deadline && !d.time));
   stated.forEach((d, i) => {
     const to: ProjectDate = { what: d.what, date: d.date, time: d.time, timeZone: d.timeZone };
-    if (existing.some((e) => e.date.date === to.date && (!to.time || e.date.time === to.time))) return; // already there
+    if (onProject.some((e) => e.date.date === to.date && (!to.time || e.date.time === to.time))) return; // already there
     // The same occasion, or the same day at a set time, is a change; anything else is a new date
     // (a rehearsal shouldn't move the show). A postponement moves the one date there is.
     const match =
@@ -267,6 +321,7 @@ function dateChanges(a: MessageAnalysis, project: Project, calendar: CalendarIte
       eventId: match?.eventId ?? null,
       index: match?.index ?? null,
       asEvent: signed && !match?.eventId,
+      earlier: match?.earlier ?? false,
     });
   });
   return out;
@@ -364,15 +419,15 @@ export function proposeChanges(a: MessageAnalysis, project: Project, ctx: Intake
       // A second offer for the same project: fill what's missing, change nothing already set.
       if (project.quotedAmount === null) changes.push(...feeChange(a, project, true));
       changes.push(...fieldChanges(a, project, true, true));
-      changes.push(...dateChanges(a, project, ctx.calendar, true).filter((c) => c.kind === "date" && !c.from));
+      changes.push(...dateChanges(a, project, ctx, true).filter((c) => c.kind === "date" && (!c.from || c.earlier)));
       break;
     case "negotiation":
       // A proposal isn't an agreement: shown, recorded on the timeline, not ticked.
-      changes.push(...feeChange(a, project, false), ...fieldChanges(a, project, false), ...dateChanges(a, project, ctx.calendar, false));
+      changes.push(...feeChange(a, project, false), ...fieldChanges(a, project, false), ...dateChanges(a, project, ctx, false));
       changes.push(...towardNegotiating);
       break;
     case "confirmation": {
-      changes.push(...feeChange(a, project, true), ...fieldChanges(a, project, true), ...dateChanges(a, project, ctx.calendar, true));
+      changes.push(...feeChange(a, project, true), ...fieldChanges(a, project, true), ...dateChanges(a, project, ctx, true));
       if (promisesContract(a))
         changes.push({
           id: "todo:awaitContract",
@@ -393,7 +448,7 @@ export function proposeChanges(a: MessageAnalysis, project: Project, ctx: Intake
           ifSigned: (project.details.dates ?? []).flatMap((d, index): Change[] =>
             replaced.has(index)
               ? []
-              : [{ id: `event:${index}`, kind: "date", ticked: true, asStated: "", from: d, to: d, eventId: null, index, asEvent: true }],
+              : [{ id: `event:${index}`, kind: "date", ticked: true, asStated: "", from: d, to: d, eventId: null, index, asEvent: true, earlier: false }],
           ),
         };
       }
@@ -403,7 +458,7 @@ export function proposeChanges(a: MessageAnalysis, project: Project, ctx: Intake
       const terms = a.details.keyTerms;
       if (terms && !same(terms.value, project.details.contractNotes ?? ""))
         changes.push({ id: "contractNotes", kind: "contractNotes", ticked: true, asStated: terms.asStated, from: project.details.contractNotes ?? "", to: terms.value });
-      changes.push(...feeChange(a, project, true), ...fieldChanges(a, project, true), ...dateChanges(a, project, ctx.calendar, true));
+      changes.push(...feeChange(a, project, true), ...fieldChanges(a, project, true), ...dateChanges(a, project, ctx, true));
       const stage = a.details.contractStage;
       if (stage && /signed|已簽|簽署完成|雙方簽/i.test(stage.value) && !isSigned(project.stage))
         changes.push(...stageChange(project, "signed", true, stage.asStated));
@@ -411,7 +466,7 @@ export function proposeChanges(a: MessageAnalysis, project: Project, ctx: Intake
       break;
     }
     case "logistics":
-      changes.push(...fieldChanges(a, project, true), ...dateChanges(a, project, ctx.calendar, true));
+      changes.push(...fieldChanges(a, project, true), ...dateChanges(a, project, ctx, true));
       break;
     case "payment":
       changes.push(...paymentChanges(a, project, ctx));
@@ -420,7 +475,7 @@ export function proposeChanges(a: MessageAnalysis, project: Project, ctx: Intake
       const newDate = a.details.newDate;
       if (newDate) {
         // Postponed: the new date replaces the old one.
-        changes.push(...dateChanges(a, project, ctx.calendar, true, true));
+        changes.push(...dateChanges(a, project, ctx, true, true));
       } else {
         changes.push(...stageChange(project, "cancelled", true, a.details.reason?.asStated ?? ""));
         const fee = parseAmount(a.details.cancellationFee?.value ?? "");

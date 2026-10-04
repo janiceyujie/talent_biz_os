@@ -564,7 +564,8 @@
       "date": "Same date: {value}",
       "detail": "Mentions {value}",
       "title": "Similar title",
-      "payment": "An expected payment of {value}"
+      "payment": "An expected payment of {value}",
+      "earlier": "Has an earlier message from {value}"
     },
     "newProject": "New project",
     "otherProject": "Another project",
@@ -627,7 +628,8 @@
       "create": "Create project",
       "creating": "Creating…",
       "moreFields": "More fields ({count})"
-    }
+    },
+    "earlierDate": "An earlier message gave this date, but the project doesn't have it yet; applying adds it."
   },
   "contacts": {
     "search": "Search contacts",

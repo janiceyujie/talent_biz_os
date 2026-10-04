@@ -26,7 +26,7 @@ Every message belongs to a new deal or an existing one. That choice comes first;
 
 Three steps, shown on one screen.
 
-**1. Target — which project is this?** The AI proposes one, with its reasons ("same contact Maya, same date 11/14"). The person keeps it, picks another, or chooses a new project. Signals, strongest first: the person picked it explicitly (Gmail add-on, later); same email thread; a known contact (email, then name or company); the same date, venue, or title; later, embedding similarity. A match is always a suggestion.
+**1. Target — which project is this?** The AI proposes one, with its reasons ("same contact Maya, same date 11/14"). The person keeps it, picks another, or chooses a new project. Signals, strongest first: the person picked it explicitly (Gmail add-on, later); same email thread; a known contact (email, then name or company), on the project or as the sender of a message already filed there; the same date (on the project or in its filed messages), venue, or title; later, embedding similarity. A match is always a suggestion.
 
 **2. Proposed changes — what this message changes.** A checklist. Each item shows **current → proposed**, the exact words it came from, and anything the AI assumed. Every proposed value is editable in place — a fee, a length, a date, an amount received — so the person corrects it right there, then ticks it. A tick applies the value as edited.
 
@@ -96,6 +96,7 @@ The facts table goes away; the summary stays short. Flags (decision 0007) stay a
 - **Two messages change the same field**: each proposal compares against the project as it is when opened, so the second sees the first's result.
 - **Stage going backwards** (a cancellation after signing): allowed, with the reason on the timeline; items already linked keep their links (decision 0004).
 - **A payment amount that doesn't match any expected payment**: offer "record as a new payment" instead of guessing.
+- **A date only an earlier message gave** (the project doesn't keep it): treated as known, so a later "11/14 at 8pm" reads as setting the time of that date; applying adds it to the project.
 - **A new date vs. a changed one**: a stated date replaces a project date only for the same occasion or the same day (a time being set); otherwise it's a new date, so a rehearsal doesn't move the show. A postponement moves the project's single date.
 - **The wrong target**: "換一個合作案" recomputes the proposals for the new target before anything is applied.
 - **Re-analysis after applying**: shows a new proposal against the updated project; nothing is undone automatically.

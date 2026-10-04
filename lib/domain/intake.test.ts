@@ -106,6 +106,7 @@ const ctx = (over: Partial<IntakeContext> = {}): IntakeContext => ({
   calendar: [],
   receivedOn: "2026-10-04",
   replyWithinDays: 2,
+  filed: [],
   ...over,
 });
 
@@ -127,6 +128,19 @@ describe("suggestTargets", () => {
   test("a company name matches the project's counterparty text when there's no linked contact", () => {
     const c = ctx({ projects: [project({ counterpartyId: null, counterparty: "The Blue Room 台北" })], contacts: [] });
     assert.equal(suggestTargets(analysis({ counterparty: { name: "", company: "Blue Room", email: "", phone: "" } }), c)[0]?.projectId, "p1");
+  });
+
+  test("an earlier message from the same sender filed on the project counts, with its dates", () => {
+    // The project was renamed and has no contact; its first message came from Blue Room on 11/14.
+    const c = ctx({
+      contacts: [],
+      projects: [project({ title: "abc", counterparty: "abcd", counterpartyId: null })],
+      filed: [{ projectId: "p1", counterparty: { name: "Blue Room", company: "Blue Room", email: "" }, dates: [{ what: "演出日期", date: "2026-11-14", time: "", timeZone: "" }] }],
+    });
+    const [s] = suggestTargets(analysis({ intent: "negotiation", counterparty: { name: "Maya", company: "Blue Room", email: "", phone: "" } }), c);
+    assert.deepEqual(s?.reasons[0], { kind: "earlier", value: "Blue Room" });
+    const byDate = suggestTargets(analysis({ counterparty: { name: "", company: "", email: "", phone: "" }, dates: [date("2026-11-14")] }), c)[0];
+    assert.ok(byDate?.reasons.some((r) => r.kind === "date"));
   });
 
   test("a similar title alone isn't enough", () => {
@@ -215,6 +229,16 @@ describe("proposeChanges", () => {
 
   test("confirmation on a signed project asks nothing", () => {
     assert.equal(proposeChanges(analysis({ intent: "confirmation" }), project({ stage: "signed" }), ctx()).question, null);
+  });
+
+  test("a date an earlier message gave is the one being confirmed, though the project doesn't keep it", () => {
+    const filed = [{ projectId: "p1", counterparty: { name: "", company: "Blue Room", email: "" }, dates: [{ what: "演出日期", date: "2026-11-14", time: "", timeZone: "" }] }];
+    const a = analysis({ intent: "confirmation", dates: [date("2026-11-14", "20:00", "演出")] });
+    const d = one(proposeChanges(a, project(), ctx({ filed })).changes, "date");
+    assert.deepEqual([d.from?.date, d.to.time, d.earlier, d.index, d.ticked], ["2026-11-14", "20:00", true, null, true]);
+    // A second inquiry with the same date still offers to keep it on the project.
+    const again = proposeChanges(analysis({ dates: [date("2026-11-14")] }), project(), ctx({ filed })).changes;
+    assert.equal(one(again, "date").earlier, true);
   });
 
   test("a changed time on a signed project moves its calendar event", () => {

@@ -564,7 +564,8 @@
       "date": "同一日期：{value}",
       "detail": "提到 {value}",
       "title": "名稱相近",
-      "payment": "有一筆待收 {value}"
+      "payment": "有一筆待收 {value}",
+      "earlier": "這個合作案已有 {value} 的訊息"
     },
     "newProject": "新合作案",
     "otherProject": "其他合作案",
@@ -627,7 +628,8 @@
       "create": "建立合作案",
       "creating": "建立中…",
       "moreFields": "其他欄位（{count}）"
-    }
+    },
+    "earlierDate": "先前的訊息提過這個日期，但合作案上還沒記；套用後會記在合作案上。"
   },
   "contacts": {
     "search": "搜尋聯絡人",

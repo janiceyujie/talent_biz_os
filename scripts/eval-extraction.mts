@@ -7,10 +7,11 @@
 //   npm run eval:extraction -- --model gemini-3.5-flash-lite
 //   npm run eval:extraction -- --provider ollama --model qwen3:8b
 //   npm run eval:extraction -- --only gig            # cases whose id contains "gig"
+//   npm run eval:extraction -- --locale en           # the person's language (default zh-TW)
 //
 // Results are saved to evals/results/ (not committed). Only made-up messages
 // belong in the cases: a free-tier provider may keep what it's sent.
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import nextEnv from "@next/env";
 import { cases, RECEIVED, type EvalCase } from "../evals/extraction/cases";
 
@@ -22,6 +23,7 @@ const arg = (name: string) => {
 if (arg("provider")) process.env.AI_PROVIDER = arg("provider");
 if (arg("model")) process.env.AI_MODEL = arg("model");
 const only = arg("only");
+const locale = arg("locale") === "en" ? "en" : "zh-TW";
 const pause = Number(arg("pause") ?? 4000); // free tiers limit requests per minute (~15)
 
 const { extractMessage } = await import("../lib/ai/extract");
@@ -30,10 +32,27 @@ type Analysis = Awaited<ReturnType<typeof extractMessage>>["analysis"];
 const lower = (s: string) => s.toLowerCase();
 type Check = { field: string; pass: boolean; expected: unknown; got: unknown };
 
+// The person's language, whatever the message's: Chinese output must contain
+// Chinese; English output must be mostly not Chinese (names may be).
+const han = (text: string) => (text.match(/[\u4e00-\u9fff]/g) ?? []).length;
+const inLanguage = (text: string) =>
+  !text || (locale === "zh-TW" ? han(text) >= Math.min(2, text.length) : han(text) <= text.length * 0.2);
+
 function score(c: EvalCase, a: Analysis): Check[] {
   const e = c.expect;
   const checks: Check[] = [];
   const add = (field: string, expected: unknown, got: unknown, pass: boolean) => checks.push({ field, expected, got, pass });
+  const written = [
+    a.title,
+    a.summary,
+    ...a.asks,
+    ...a.missing,
+    ...a.assumptions.map((x) => x.note),
+    ...a.flags.map((f) => f.note),
+    ...a.dates.map((d) => d.what),
+  ].filter(Boolean);
+  const wrong = written.filter((text) => !inLanguage(text));
+  add("outputLanguage", locale, wrong, wrong.length === 0);
   if (e.intent !== undefined) add("intent", e.intent, a.intent, a.intent === e.intent);
   if (e.projectType !== undefined) add("projectType", e.projectType, a.projectType, a.projectType === e.projectType);
   if (e.amount !== undefined) add("amount", e.amount, a.money.amount, a.money.amount === e.amount);
@@ -50,10 +69,14 @@ function score(c: EvalCase, a: Analysis): Check[] {
     ) || (!d.time && a.replyBy === d.date);
     add("dates", d, a.dates.map((x) => [x.date, x.time, x.timeZone].filter(Boolean).join(" ")), hit);
   }
+  // Detail values are in the person's language; the expected text may be in the
+  // value or in the original words it came from (asStated).
   for (const [keys, want] of Object.entries(e.details ?? {})) {
-    const values = keys.split("|").map((key) => a.details[key]?.value ?? "");
-    const pass = values.some((got) => (want === true ? got !== "" : lower(got).includes(lower(want))));
-    add(`details.${keys}`, want, values.join(" | "), pass);
+    const found = keys.split("|").map((key) => a.details[key]).filter(Boolean);
+    const pass = found.some((d) =>
+      want === true ? d.value !== "" : [d.value, d.asStated].some((text) => lower(text).includes(lower(want))),
+    );
+    add(`details.${keys}`, want, found.map((d) => `${d.value} «${d.asStated}»`).join(" | "), pass);
   }
   // Flags: required ones must be raised; a case that expects none must raise none (false alarms erode trust).
   const raised = [...new Set(a.flags.map((f) => f.kind))];
@@ -68,7 +91,12 @@ let promptVersion = "";
 for (const c of selected) {
   const t0 = Date.now();
   try {
-    const out = await extractMessage({ body: c.message, today: RECEIVED.today, timeZone: RECEIVED.timeZone, outputLocale: "zh-TW" });
+    const files = (c.files ?? []).map((name) => ({
+      name,
+      mimeType: name.endsWith(".pdf") ? "application/pdf" : name.endsWith(".jpg") ? "image/jpeg" : "image/png",
+      data: readFileSync(new URL(`../evals/extraction/files/${name}`, import.meta.url)),
+    }));
+    const out = await extractMessage({ body: c.message, files, today: RECEIVED.today, timeZone: RECEIVED.timeZone, outputLocale: locale });
     promptVersion = out.promptVersion;
     const checks = score(c, out.analysis);
     results.push({ id: c.id, seconds: (Date.now() - t0) / 1000, modelVersion: out.modelVersion, checks, analysis: out.analysis });
@@ -94,7 +122,7 @@ for (const r of results)
   }
 const all = results.flatMap((r) => r.checks);
 const passedCases = results.filter((r) => !r.error && r.checks.every((x) => x.pass)).length;
-console.log(`\nprompt ${promptVersion} · ${process.env.AI_PROVIDER}:${process.env.AI_MODEL}`);
+console.log(`\nprompt ${promptVersion} · ${process.env.AI_PROVIDER}:${process.env.AI_MODEL} · output ${locale}`);
 console.log(`cases fully right: ${passedCases}/${results.length} · checks: ${all.filter((x) => x.pass).length}/${all.length} · errors: ${results.filter((r) => r.error).length}`);
 for (const [field, s] of byField) console.log(`  ${field.padEnd(14)} ${s.pass}/${s.total}`);
 

@@ -1,10 +1,10 @@
 import "server-only";
-import { and, desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { cache } from "react";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { authAccount, calendarEvent, contact, membership, message, messageAnalysis, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { authAccount, calendarEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
@@ -58,6 +58,13 @@ export const getAppData = cache(async (): Promise<AppData> => {
         .from(messageAnalysis)
         .where(inArray(messageAnalysis.messageId, messageRows.map((m) => m.id)))
         .orderBy(desc(messageAnalysis.createdAt))
+    : [];
+  const fileRows = messageRows.length
+    ? await db
+        .select({ id: file.id, messageId: file.messageId, contentType: file.contentType, filename: file.filename, sizeBytes: file.sizeBytes })
+        .from(file)
+        .where(inArray(file.messageId, messageRows.map((m) => m.id)))
+        .orderBy(asc(file.position))
     : [];
   const latestAnalysis = new Map<string, (typeof analysisRows)[number]>();
   for (const a of analysisRows) if (!latestAnalysis.has(a.messageId)) latestAnalysis.set(a.messageId, a);
@@ -130,7 +137,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       appearance: memberRow.appearance,
     },
     calendarFeed: Boolean(memberRow?.feedHash),
-    aiTestDataOnly: process.env.AI_TEST_DATA_ONLY === "1",
+    aiDataNotice: process.env.AI_PROVIDER_KEEPS_DATA === "1" ? aiServiceName(process.env.AI_PROVIDER) : null,
     signIn: {
       password: accountRows.some((a) => a.providerId === "credential"),
       googleAccountId: accountRows.find((a) => a.providerId === "google")?.id ?? null,
@@ -214,7 +221,15 @@ export const getAppData = cache(async (): Promise<AppData> => {
         failure: m.failure,
         projectId: m.projectId,
         analysis: a ? { ...upgradeAnalysis(a.analysis), modelVersion: a.modelVersion, promptVersion: a.promptVersion } : null,
+        files: fileRows
+          .filter((f) => f.messageId === m.id)
+          .map((f) => ({ id: f.id, contentType: f.contentType, filename: f.filename ?? "", sizeBytes: f.sizeBytes })),
       };
     }),
   };
 });
+
+/** How the AI service is named to people, for the data notice. */
+function aiServiceName(provider: string | undefined) {
+  return ({ gemini: "Google Gemini", anthropic: "Anthropic Claude", ollama: "Ollama" } as Record<string, string>)[provider ?? ""] ?? "AI";
+}

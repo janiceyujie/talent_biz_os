@@ -16,6 +16,8 @@
     "eval:extraction": "tsx --conditions=react-server scripts/eval-extraction.mts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1146.0",
+    "@aws-sdk/s3-request-presigner": "^3.1146.0",
     "better-auth": "^1.7.7",
     "drizzle-orm": "^0.45.3",
     "lucide-react": "^1.49.0",

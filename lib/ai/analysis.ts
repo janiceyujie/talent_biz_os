@@ -8,6 +8,10 @@ import { projectTypeKeys, projectTypes, type ProjectType, type ProjectTypeDefini
 import { intentKeys, intents, type Intent, type IntentDefinition } from "./extraction/intents";
 import type { Flag } from "./safety";
 
+/** What an assumption is about, so the inbox can show it next to that value. */
+export const assumptionTopics = ["dates", "replyBy", "money", "counterparty", "projectType", "intent", "details", "other"] as const;
+export type AssumptionTopic = (typeof assumptionTopics)[number];
+
 /** Flags the model may raise; `hidden_text` comes only from the deterministic check (lib/ai/safety.ts). */
 const modelFlagKinds = ["instructions_to_ai", "payment_details", "inconsistency", "other"] as const;
 
@@ -26,7 +30,7 @@ const detailKeys = [
 // labels (intent, type, confidence) last, after the model has read everything.
 export const modelOutput = z.object({
   language: z.string().describe("BCP 47 code of the language the message is written in, e.g. zh-TW, en, ja"),
-  title: z.string().describe("Short name for the work, e.g. '11/14 Blue Room show'"),
+  title: z.string().describe("Short name for the work, in the output language"),
   summary: z.string().describe("Two or three sentences, in the output language"),
   counterparty: z.object({
     name: z.string().describe("The person who wrote — not the company"),
@@ -37,7 +41,7 @@ export const modelOutput = z.object({
   dates: z
     .array(
       z.object({
-        what: z.string().describe("What happens then: performance, shoot, posting, deadline…"),
+        what: z.string().describe("What happens then — performance, shoot, posting, deadline — in the output language"),
         date: z.string().describe("YYYY-MM-DD, or empty"),
         time: z.string().describe("HH:mm 24-hour, or empty"),
         timeZone: z.string().describe("IANA zone if stated or clear from the place, else empty"),
@@ -60,13 +64,23 @@ export const modelOutput = z.object({
     .array(
       z.object({
         field: z.enum(detailKeys as [string, ...string[]]),
-        value: z.string().describe("The value, briefly, in the message's own words or a faithful summary"),
+        value: z.string().describe("The value, briefly, in the output language (names and places as written)"),
         asStated: z.string().describe("The exact words it comes from"),
       }),
     )
     .describe("Fields for the chosen project type and intent, only those the message states"),
   asks: z.array(z.string()).describe("What the sender is asking for, in the output language"),
-  missing: z.array(z.string()).describe("Details a professional would need that aren't stated, and any assumption made, in the output language"),
+  missing: z
+    .array(z.string())
+    .describe("What to confirm with the sender: details a professional needs that the message doesn't state. In the output language"),
+  assumptions: z
+    .array(
+      z.object({
+        about: z.enum(assumptionTopics),
+        note: z.string().describe("What you assumed and why, in one sentence, in the output language"),
+      }),
+    )
+    .describe("How you resolved anything ambiguous — a year, which week, a time zone, who is speaking; empty if nothing was"),
   flags: z
     .array(
       z.object({
@@ -81,6 +95,14 @@ export const modelOutput = z.object({
   confidence: z.number().describe("0 to 1: how sure you are the extraction is right and complete"),
 });
 export type ModelOutput = z.infer<typeof modelOutput>;
+
+/** For screenshots, photos, and documents: the model first writes out what it read, then extracts from it. */
+export const modelOutputForFiles = z.object({
+  transcript: z
+    .string()
+    .describe("What the files say, in order and abridged. Chats: one line per message, prefixed with the speaker. Documents: the key text. Don't copy long published text."),
+  ...modelOutput.shape,
+});
 
 const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T12:00:00Z`));
 const isTime = (v: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
@@ -112,13 +134,14 @@ export type DetailValue = { value: string; asStated: string };
 
 /**
  * Stored form. Invalid dates, times, and zones are dropped rather than kept as
- * garbage; amounts are ≥ 0; confidence is in [0, 1]; details keep only the
- * fields defined for the chosen project type and intent.
+ * garbage; amounts are ≥ 0; confidence is in [0, 1]. Details keep any field in
+ * the registries, even one defined for another type or intent: a model that
+ * files a contract change under "proposedChanges" shouldn't lose it.
  */
-export function normalize(o: ModelOutput) {
+export function normalize(o: ModelOutput & { transcript?: string }) {
   const intent = o.intent as Intent;
   const projectType = o.projectType as ProjectType;
-  const allowed = new Set(fieldsOf(projectType, intent).map((f) => f.key));
+  const allowed = new Set(detailKeys);
   const details: Record<string, DetailValue> = {};
   for (const d of o.details) {
     const value = clean(d.value, 1000);
@@ -130,6 +153,8 @@ export function normalize(o: ModelOutput) {
     language: clean(o.language, 20),
     title: clean(o.title, 200),
     summary: clean(o.summary),
+    transcript: clean(o.transcript ?? "", 8000), // read from files; empty for text messages
+    transcriptWithheld: false, // the provider refused to write one out (extract.ts)
     counterparty: {
       name: clean(o.counterparty.name, 200),
       company: clean(o.counterparty.company, 200),
@@ -157,14 +182,21 @@ export function normalize(o: ModelOutput) {
     details,
     asks: o.asks.slice(0, 10).map((a) => clean(a, 300)).filter(Boolean),
     missing: o.missing.slice(0, 10).map((m) => clean(m, 300)).filter(Boolean),
+    assumptions: o.assumptions
+      .slice(0, 10)
+      .map((x) => ({ about: x.about as AssumptionTopic, note: clean(x.note, 300) }))
+      .filter((x) => x.note),
     flags: o.flags.slice(0, 5).map((f): Flag => ({ kind: f.kind, note: clean(f.note, 300), asStated: clean(f.asStated, 300), source: "model" })),
     confidence: Math.min(1, Math.max(0, Number.isFinite(o.confidence) ? o.confidence : 0)),
   };
 }
 export type MessageAnalysis = ReturnType<typeof normalize>;
 
-/** The fields shown for an analysis, in definition order: its project type's, then its intent's. */
-export const detailFieldKeys = (a: Pick<MessageAnalysis, "projectType" | "intent">) => fieldsOf(a.projectType, a.intent).map((f) => f.key);
+/** The fields shown for an analysis: its project type's and intent's, in definition order, then any others it filled. */
+export function detailFieldKeys(a: Pick<MessageAnalysis, "projectType" | "intent" | "details">) {
+  const own = fieldsOf(a.projectType, a.intent).map((f) => f.key);
+  return [...own, ...Object.keys(a.details).filter((key) => !own.includes(key))];
+}
 
 /** Analyses stored before the registry (messageType, fixed gig fields) read as the current shape. */
 export function upgradeAnalysis(raw: unknown): MessageAnalysis {
@@ -174,7 +206,14 @@ export function upgradeAnalysis(raw: unknown): MessageAnalysis {
     deliverables?: string;
     rights?: string;
   };
-  if (a.intent) return { ...(a as MessageAnalysis), flags: a.flags ?? [] };
+  if (a.intent)
+    return {
+      ...(a as MessageAnalysis),
+      flags: a.flags ?? [],
+      transcript: a.transcript ?? "",
+      transcriptWithheld: a.transcriptWithheld ?? false,
+      assumptions: a.assumptions ?? [], // older analyses kept assumptions inside "missing"
+    };
   const legacyIntent: Record<string, Intent> = { gig_offer: "inquiry", contract: "contract", payment_note: "payment" };
   const details: Record<string, DetailValue> = {};
   for (const [key, value] of Object.entries({ ...a.gig, deliverables: a.deliverables, usageRights: a.rights }))
@@ -185,5 +224,8 @@ export function upgradeAnalysis(raw: unknown): MessageAnalysis {
     replyByStated: "",
     details,
     flags: [],
+    transcript: "",
+    transcriptWithheld: false,
+    assumptions: [],
   };
 }

@@ -28,6 +28,7 @@ These keep an injection from turning into harm as the product grows. A change th
 - **Least context.** A model call sees the message and the minimum it needs (date, time zone, output language; for drafting, the one project it's about) — never other talents' data, other projects, or credentials.
 - **Tools, if ever added to a model call, are confirmed per action** by the person, and nothing derived from a message can trigger one directly.
 - **Every channel gets the same treatment,** including text read from screenshots and PDFs and the HTML of forwarded emails (where hidden text also hides in styling and comments).
+- **Uploaded files are data too.** An upload must be the type it claims (its bytes are checked), is served only to its own talent with its stored type and `nosniff`, and never as a page.
 - **Record what produced each analysis** (`model_version`, `prompt_version`) so a problem can be traced and re-run.
 
 ## Alternatives considered
@@ -42,4 +43,5 @@ These keep an injection from turning into harm as the product grows. A change th
 - Some honest messages will be flagged — the phrase patterns are conservative on purpose. The false-alarm check in the eval keeps this measured; patterns are tuned in `lib/ai/safety.ts`.
 - The deterministic checks only know the tricks we've seen; new ones get a case in the eval first, then a check.
 - None of this makes injection impossible. The guarantee that matters is the rule above: the model can propose, never act.
-- Screenshots, PDFs, and forwarded HTML will need their own hidden-text handling when those channels arrive.
+- **Images and PDFs can't be stripped of hidden text** the way typed text can. For them the model is told to flag faint, tiny, or background-colored text that addresses an AI, and it writes a transcript of what it read, which the deterministic instruction check also scans. In the eval, an email screenshot with near-invisible text demanding a tenfold fee was read correctly and flagged. Forwarded HTML will need its own handling (styles and comments) when that channel arrives.
+- Models sometimes bend a date to fit a stated weekday (12/24（三） placed in the previous year, where it is a Wednesday), which would hide the mismatch. Code applies the stated rule instead: a date written without a year that the model put months in the past is moved to its next occurrence, and the weekday check runs on the result.

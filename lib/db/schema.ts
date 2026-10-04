@@ -3,11 +3,13 @@
 import { sql, type SQL } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  bigint,
   boolean,
   char,
   check,
   date,
   index,
+  integer,
   jsonb,
   numeric,
   pgTable,
@@ -412,6 +414,41 @@ export const messageAnalysis = pgTable(
     index("message_analysis_message_idx").on(t.messageId, t.createdAt),
     check("message_analysis_intent_check", oneOf(t.intent, intentKeys)),
     check("message_analysis_confidence_check", sql`${t.confidence} between 0 and 1`),
+  ],
+).enableRLS();
+
+// A stored file: one of a message's files (in order), or an upload to a
+// project's archive. Bytes live in storage (lib/storage) under storage_key;
+// the row never holds a URL.
+export const fileRoles = ["body", "attachment", "screenshot", "upload"] as const;
+export const fileCategories = ["contract", "asset", "invoice", "other"] as const;
+
+export const file = pgTable(
+  "file",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    messageId: uuid().references(() => message.id, { onDelete: "cascade" }), // set for a message's files
+    projectId: uuid().references(() => project.id, { onDelete: "set null" }), // set for archive uploads
+    position: integer(), // order within a message
+    role: text({ enum: fileRoles }).notNull(),
+    category: text({ enum: fileCategories }), // for archive uploads
+    storageKey: text().notNull(), // 'files/{talent_id}/{id}'
+    contentType: text().notNull(),
+    filename: text(),
+    sizeBytes: bigint({ mode: "number" }).notNull(),
+    archivedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("file_message_position").on(t.messageId, t.position),
+    index("file_talent_idx").on(t.talentId),
+    index("file_project_idx").on(t.projectId),
+    check("file_role_check", oneOf(t.role, fileRoles)),
+    check("file_category_check", oneOf(t.category, fileCategories)),
+    check("file_size_check", sql`${t.sizeBytes} > 0`),
   ],
 ).enableRLS();
 

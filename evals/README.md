@@ -11,10 +11,11 @@ npm run eval:extraction                                  # provider and model fr
 npm run eval:extraction -- --model gemini-3.5-flash-lite
 npm run eval:extraction -- --provider ollama --model qwen3:8b
 npm run eval:extraction -- --only gig                    # cases whose id contains "gig"
+npm run eval:extraction -- --locale en                   # the person's language (default zh-TW)
 npm run eval:extraction -- --pause 13000                 # slower, for lower per-minute limits (default 4 s)
 ```
 
-It prints each case's passing checks, the misses with expected vs. got, and accuracy per field, with the prompt version and model. Full results go to `results/` (not committed).
+Every case also checks that what the model writes for the person — title, summary, asks, missing, flag notes, date descriptions — is in the person's language, whatever the message's (`outputLanguage`). It prints each case's passing checks, the misses with expected vs. got, and accuracy per field, with the prompt version and model. Full results go to `results/` (not committed).
 
 ### Writing cases
 
@@ -23,6 +24,10 @@ It prints each case's passing checks, the misses with expected vs. got, and accu
 - Check what matters, loosely where wording can vary: a detail passes if it contains the expected text; `true` only needs it filled; `"a|b"` accepts either field when a value fits more than one.
 - A miss is either a model or prompt problem, or a too-narrow expectation. Fix the latter in the case; fix the former in the prompt or registry, in general terms rather than for that one message, and re-run everything.
 - Models vary between runs even at temperature 0; run twice before trusting a one-check difference.
+
+### Files
+
+Cases can attach screenshots, photos, or PDFs (`files: [...]`, read from `extraction/files/`). Those are rendered from made-up HTML in `extraction/sources/` — a LINE-style chat split across two overlapping screenshots, a two-page contract, an email with near-invisible text — so they can be regenerated or varied: open a source in a browser and take screenshots, or print it to PDF (headless Chrome: `--screenshot` / `--print-to-pdf`). Keep fixtures small; they're committed.
 
 ### Adversarial cases and flags
 

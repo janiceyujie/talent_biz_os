@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import type { Intent } from "@/lib/ai/extraction/intents";
 import type { FlagKind } from "@/lib/ai/safety";
-import type { ProjectType } from "@/lib/project-types";
+import { projectTypeKeys, type ProjectType } from "@/lib/project-types";
 import type { CalendarKind, ContactRole, Payment, Stage, TransportMode } from "@/lib/types";
 
 const questionKeys = ["q1", "q2", "q3", "q4"] as const;
@@ -28,8 +28,11 @@ export function useLabels() {
     /** A registry field's label: the project type's own field, else the intent's (lib/ai/extraction). */
     detailField: (type: ProjectType, key: string) => {
       // Field keys come from the registries; `npm run i18n:check` fails if any lacks a label.
-      const own = `projectType.${type}.fields.${key}` as Parameters<typeof t>[0];
-      return t.has(own) ? t(own) : t(`intentField.${key}` as Parameters<typeof t>[0]);
+      // Look in the message's own type first, then intent fields, then any other type
+      // (a model may file a value under a field from elsewhere in the registry).
+      const candidates = [type, ...projectTypeKeys.filter((k) => k !== type)].map((k) => `projectType.${k}.fields.${key}`);
+      const found = [...candidates.slice(0, 1), `intentField.${key}`, ...candidates.slice(1)].find((k) => t.has(k as Parameters<typeof t>[0]));
+      return found ? t(found as Parameters<typeof t>[0]) : key;
     },
     unlinked: () => t("unlinked"),
     unconfirmed: () => t("unconfirmed"),

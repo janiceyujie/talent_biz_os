@@ -54,6 +54,38 @@ function statedWeekday(phrase: string) {
   return en ? enWeekday.indexOf(en[1].toLowerCase()) : null;
 }
 
+const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+/** Month and day a phrase states without a year ("12/24", "11月21日", "November 21", "21 Nov"), or null. */
+function yearlessMonthDay(phrase: string) {
+  if (/\d{4}/.test(phrase)) return null;
+  const numeric = /(\d{1,2})\s*[/月.-]\s*(\d{1,2})/.exec(phrase);
+  if (numeric) return { month: Number(numeric[1]), day: Number(numeric[2]) };
+  const named = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})\b|\b(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i.exec(phrase);
+  if (!named) return null;
+  return { month: months.indexOf((named[1] ?? named[4]).toLowerCase()) + 1, day: Number(named[2] ?? named[3]) };
+}
+
+/**
+ * Fixes yearless dates a model placed months in the past ("12/24（三）" put in
+ * the previous year, where it falls on a Wednesday): they move to this year's
+ * occurrence when that's upcoming or recent, otherwise next year's. Recent past
+ * references ("the shoot on 9/28") are left alone. Run the weekday check after
+ * this, on the result.
+ */
+export function rollForwardYearless(date: string, asStated: string, today: string) {
+  const cutoff = new Date(`${today}T12:00:00Z`);
+  cutoff.setUTCDate(cutoff.getUTCDate() - 180);
+  if (!date || date >= cutoff.toISOString().slice(0, 10)) return date;
+  const md = yearlessMonthDay(asStated);
+  if (!md || md.month !== Number(date.slice(5, 7)) || md.day !== Number(date.slice(8, 10))) return date;
+  // This year's occurrence if it's upcoming or within the last six months (a
+  // recent reference), otherwise next year's.
+  const monthDay = date.slice(4); // "-12-24"
+  const thisYear = `${today.slice(0, 4)}${monthDay}`;
+  return thisYear >= cutoff.toISOString().slice(0, 10) ? thisYear : `${Number(today.slice(0, 4)) + 1}${monthDay}`;
+}
+
 /** Dates whose stated weekday doesn't match the date ("11/14（五）" when 11/14 is a Saturday). */
 export function weekdayMismatches(dates: readonly { date: string; asStated: string }[]) {
   return dates.filter((d) => {

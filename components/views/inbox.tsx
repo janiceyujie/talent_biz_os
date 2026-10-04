@@ -5,13 +5,17 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { DataNotice } from "./data-notice";
 import { Modal } from "@/components/app/modal";
 import { RecordEditor, type Editor, type RecordData } from "@/components/app/record-editor";
+import { FileText } from "lucide-react";
 import { dismissMessage, linkMessageToProject, reanalyzeMessage, submitPastedMessage } from "@/lib/actions/messages";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
-import { detailFieldKeys } from "@/lib/ai/analysis";
+import { detailFieldKeys, type AssumptionTopic } from "@/lib/ai/analysis";
+import { isFailureCode } from "@/lib/ai/errors";
 import type { Contact, InboxMessage } from "@/lib/types";
+import { UploadDialog } from "./upload-dialog";
 
 // The review queue: messages the person sent in, each with the model's
 // proposal. Nothing becomes a project or a to-do until the person confirms
@@ -29,12 +33,19 @@ export function InboxView() {
   const format = useFormatter();
   const [editor, setEditor] = useState<Editor | null>(null);
   const [pasting, setPasting] = useState(params.get("paste") === "1");
+  const [uploading, setUploading] = useState(params.get("upload") === "1");
   const [active, setActive] = useState("");
   const [showDismissed, setShowDismissed] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const visible = data.inbox.filter((m) => showDismissed || m.status !== "dismissed");
   const message = data.inbox.find((m) => m.id === active) ?? visible[0];
   const analyzing = data.inbox.some((m) => m.status === "pending");
+
+  // ?paste=1 / ?upload=1 (from the header and Today) open a dialog once; drop
+  // them from the address so a reload doesn't open it again.
+  useEffect(() => {
+    if (params.get("paste") || params.get("upload")) router.replace("/inbox", { scroll: false });
+  }, [params, router]);
 
   // Analysis runs in the background; refresh until it lands.
   useEffect(() => {
@@ -58,7 +69,7 @@ export function InboxView() {
           <button className="primary" onClick={() => setPasting(true)}>
             {t("paste")}
           </button>
-          <button className="secondary" disabled>
+          <button className="secondary" onClick={() => setUploading(true)}>
             {t("upload")}
           </button>
         </div>
@@ -89,8 +100,8 @@ export function InboxView() {
                   {t(`channel.${m.channel}`)} ·{" "}
                   {format.dateTime(new Date(m.receivedAt), { dateStyle: "medium", timeStyle: "short" })}
                 </small>
-                <strong>{m.analysis?.title || firstLine(m.body) || t("untitled")}</strong>
-                <span>{(m.analysis?.summary || m.body).slice(0, 110)}</span>
+                <strong>{m.analysis?.title || fallbackTitle(m, t)}</strong>
+                <span>{(m.analysis?.summary || m.body || m.files.map((f) => f.filename).join(", ")).slice(0, 110)}</span>
               </button>
             </div>
           ))}
@@ -114,9 +125,30 @@ export function InboxView() {
           }}
         />
       )}
+      {uploading && (
+        <UploadDialog
+          onClose={() => setUploading(false)}
+          onSubmitted={(id, duplicate) => {
+            setUploading(false);
+            setActive(id);
+            if (duplicate) setShowDismissed(true);
+            setNotice(duplicate ? t("duplicate") : null);
+          }}
+        />
+      )}
       {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
     </>
   );
+}
+
+/** Why an analysis failed, in the person's language; older messages stored the provider's own words. */
+function failureText(failure: string | null, t: ReturnType<typeof useTranslations<"inbox">>) {
+  return isFailureCode(failure) ? t(`failure.${failure}`) : (failure ?? "");
+}
+
+/** A message's title before or without an analysis: its first line, or how many files it has. */
+function fallbackTitle(m: InboxMessage, t: ReturnType<typeof useTranslations<"inbox">>) {
+  return firstLine(m.body) || (m.files.length ? t("filesCount", { count: m.files.length }) : t("untitled"));
 }
 
 function StatusChip({ status }: { status: InboxMessage["status"] }) {
@@ -126,7 +158,6 @@ function StatusChip({ status }: { status: InboxMessage["status"] }) {
 
 function PasteDialog({ onClose, onSubmitted }: { onClose: () => void; onSubmitted: (id: string, duplicate: boolean) => void }) {
   const t = useTranslations("inbox");
-  const testDataOnly = useAppData().aiTestDataOnly;
   const [text, setText] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -157,11 +188,7 @@ function PasteDialog({ onClose, onSubmitted }: { onClose: () => void; onSubmitte
           />
         </label>
         <p className="muted">{t("pasteHint")}</p>
-        {testDataOnly && (
-          <p className="notice error" role="note">
-            {t("testDataOnly")}
-          </p>
-        )}
+        <DataNotice />
         {error && (
           <p className="notice error" role="alert">
             {error}
@@ -198,7 +225,7 @@ function MessageDetail({ message, edit }: { message: InboxMessage; edit: (e: Edi
       <div className="mail-tags">
         <StatusChip status={message.status} />
       </div>
-      <h2>{a?.title || firstLine(message.body) || t("untitled")}</h2>
+      <h2>{a?.title || fallbackTitle(message, t)}</h2>
       <p className="muted">
         {t(`channel.${message.channel}`)} · {format.dateTime(new Date(message.receivedAt), { dateStyle: "medium", timeStyle: "short" })}
       </p>
@@ -206,15 +233,46 @@ function MessageDetail({ message, edit }: { message: InboxMessage; edit: (e: Edi
       {message.status === "pending" && <p className="notice analyzing">{t("pendingBody")}</p>}
       {message.status === "error" && (
         <p className="notice error" role="alert">
-          {t("failed", { reason: message.failure ?? "" })}
+          {t("failed", { reason: failureText(message.failure, t) })}
+        </p>
+      )}
+      {a && message.status === "analyzed" && a.intent === "other" && a.confidence < 0.5 && (
+        <p className="notice" role="note">
+          {t("notWork")}
         </p>
       )}
       {a && message.status !== "pending" && <AnalysisView analysis={a} />}
 
-      <details className="original-message" open={!a}>
-        <summary>{t("original")}</summary>
-        <p className="prewrap mail-body">{message.body}</p>
-      </details>
+      {message.files.length > 0 && (
+        <div className="message-files" aria-label={t("files")}>
+          {message.files.map((f) => (
+            <a key={f.id} href={`/api/files/${f.id}`} target="_blank" rel="noopener" aria-label={t("openFile", { name: f.filename })}>
+              {f.contentType.startsWith("image/") && !f.contentType.includes("hei") ? (
+                // eslint-disable-next-line @next/next/no-img-element -- an authenticated, private file; next/image can't optimize it
+                <img src={`/api/files/${f.id}`} alt={f.filename} loading="lazy" />
+              ) : (
+                <span className="file-tile">
+                  <FileText size={26} aria-hidden="true" />
+                  {f.filename}
+                </span>
+              )}
+            </a>
+          ))}
+        </div>
+      )}
+      {a?.transcriptWithheld && <p className="muted">{t("transcriptWithheld")}</p>}
+      {a?.transcript && (
+        <details className="original-message">
+          <summary>{t("transcript")}</summary>
+          <p className="prewrap mail-body">{a.transcript}</p>
+        </details>
+      )}
+      {message.body && (
+        <details className="original-message" open={!a}>
+          <summary>{t("original")}</summary>
+          <p className="prewrap mail-body">{message.body}</p>
+        </details>
+      )}
 
       {error && (
         <p className="notice error" role="alert">
@@ -288,19 +346,36 @@ function AnalysisView({ analysis: a }: { analysis: NonNullable<InboxMessage["ana
       : `${a.money.currency === "TWD" || !a.money.currency ? money(a.money.amount) : `${a.money.currency} ${a.money.amount}`}${
           a.money.taxIncluded === null ? "" : ` (${a.money.taxIncluded ? t("taxIncluded") : t("taxExcluded")})`
         }`;
-  // [label, value, the words it came from]
-  const rows: [string, string, string][] = [
-    [t("field.intent"), labels.intent(a.intent), ""],
-    [t("field.type"), labels.projectType(a.projectType), ""],
-    [t("field.counterparty"), [a.counterparty.name, a.counterparty.company].filter(Boolean).join(" · "), ""],
-    [t("field.contact"), [a.counterparty.email, a.counterparty.phone].filter(Boolean).join(" · "), ""],
-    [t("field.money"), fee || a.money.asStated, fee ? a.money.asStated : ""],
-    [t("field.paymentTerms"), a.paymentTerms, ""],
-    [t("field.replyBy"), a.replyBy, a.replyByStated],
+  // [label, value, the words it came from, which assumptions belong under it]
+  const rows: [string, string, string, AssumptionTopic | null][] = [
+    [t("field.intent"), labels.intent(a.intent), "", "intent"],
+    [t("field.type"), labels.projectType(a.projectType), "", "projectType"],
+    [t("field.counterparty"), [a.counterparty.name, a.counterparty.company].filter(Boolean).join(" · "), "", "counterparty"],
+    [t("field.contact"), [a.counterparty.email, a.counterparty.phone].filter(Boolean).join(" · "), "", null],
+    [t("field.money"), fee || a.money.asStated, fee ? a.money.asStated : "", "money"],
+    [t("field.paymentTerms"), a.paymentTerms, "", null],
+    [t("field.replyBy"), a.replyBy, a.replyByStated, "replyBy"],
     ...detailFieldKeys(a)
       .filter((key) => a.details[key])
-      .map((key): [string, string, string] => [labels.detailField(a.projectType, key), a.details[key].value, a.details[key].asStated]),
+      .map((key): [string, string, string, AssumptionTopic | null] => [
+        labels.detailField(a.projectType, key),
+        a.details[key].value,
+        a.details[key].asStated,
+        null,
+      ]),
   ];
+  // Assumptions show under the value they affect; the rest in their own list.
+  const shown = new Set<AssumptionTopic>(rows.filter(([, value, , topic]) => value && topic).map(([, , , topic]) => topic!));
+  if (a.dates.length) shown.add("dates");
+  const assumed = (topic: AssumptionTopic) =>
+    a.assumptions
+      .filter((x) => x.about === topic)
+      .map((x, i) => (
+        <small key={i} className="assumed">
+          {t("assumed", { note: x.note })}
+        </small>
+      ));
+  const otherAssumptions = a.assumptions.filter((x) => !shown.has(x.about));
   return (
     <div className="message-analysis">
       {a.flags.length > 0 && (
@@ -323,12 +398,13 @@ function AnalysisView({ analysis: a }: { analysis: NonNullable<InboxMessage["ana
       <dl>
         {rows
           .filter(([, value]) => value)
-          .map(([label, value, stated]) => (
+          .map(([label, value, stated, topic]) => (
             <div key={label}>
               <dt>{label}</dt>
               <dd>
                 {value}
                 {stated && stated !== value && <small className="muted stated">{t("statedAs", { text: stated })}</small>}
+                {topic && assumed(topic)}
               </dd>
             </div>
           ))}
@@ -344,6 +420,7 @@ function AnalysisView({ analysis: a }: { analysis: NonNullable<InboxMessage["ana
                   </li>
                 ))}
               </ul>
+              {assumed("dates")}
             </dd>
           </div>
         )}
@@ -364,6 +441,16 @@ function AnalysisView({ analysis: a }: { analysis: NonNullable<InboxMessage["ana
           <ul>
             {a.missing.map((x) => (
               <li key={x}>{x}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {otherAssumptions.length > 0 && (
+        <>
+          <h3>{t("assumptions")}</h3>
+          <ul className="assumption-list">
+            {otherAssumptions.map((x, i) => (
+              <li key={i}>{x.note}</li>
             ))}
           </ul>
         </>
@@ -403,7 +490,7 @@ function useProjectPrefill() {
     return {
       messageId: m.id,
       replyBy: a.replyBy, // shown in the form to confirm or change; becomes the reply to-do
-      title: (a.title || firstLine(m.body)).slice(0, 200),
+      title: (a.title || firstLine(m.body) || m.files[0]?.filename || "").slice(0, 200),
       counterparty: contact?.name ?? (a.counterparty.company || a.counterparty.name),
       counterpartyId: contact?.id ?? "",
       type: a.projectType,

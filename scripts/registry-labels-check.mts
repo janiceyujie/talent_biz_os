@@ -5,6 +5,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { intents } from "../lib/ai/extraction/intents";
 import { projectTypes } from "../lib/project-types";
+import { failureCodes } from "../lib/ai/errors";
 import { flagKinds } from "../lib/ai/safety";
 
 const dir = new URL("../messages/", import.meta.url);
@@ -12,6 +13,7 @@ const required = [
   ...intents.flatMap((i) => [`labels.intent.${i.key}`, ...i.fields.map((f) => `labels.intentField.${f.key}`)]),
   ...projectTypes.flatMap((t) => [`labels.projectType.${t.key}.label`, ...t.extraction.fields.map((f) => `labels.projectType.${t.key}.fields.${f.key}`)]),
   ...flagKinds.map((k) => `labels.flag.${k}`),
+  ...failureCodes.map((c) => `inbox.failure.${c}`),
 ];
 let missing = 0;
 for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {

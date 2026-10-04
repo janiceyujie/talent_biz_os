@@ -44,7 +44,7 @@ export function TodayView() {
             <button className="primary" onClick={() => setEditor({ kind: "project" })}>
               {t("createFirstProject")}
             </button>
-            <Link className="secondary" href="/inbox">
+            <Link className="secondary" href="/inbox?upload=1">
               {t("uploadOffer")}
             </Link>
           </div>

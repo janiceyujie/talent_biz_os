@@ -160,6 +160,7 @@ export type InboxMessage = {
   failure: string | null;
   projectId: string | null;
   analysis: (MessageAnalysis & { modelVersion: string; promptVersion: string }) | null;
+  files: { id: string; contentType: string; filename: string; sizeBytes: number }[]; // screenshots, photos, PDFs, in order
 };
 
 export type AppData = {
@@ -177,8 +178,8 @@ export type AppData = {
   notificationState: NotificationState; // this person's read and snooze marks
   // This person's sign-in methods; googleAccountId is our auth_account row id (what unlinking takes).
   signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };
-  // The model provider may keep what's sent (e.g. a free tier): paste made-up data only.
-  aiTestDataOnly: boolean;
+  // The AI service's name when it may keep what's sent (e.g. a free tier) — shown as a notice; null otherwise.
+  aiDataNotice: string | null;
 };
 
 /** Read and snooze marks by notification id (ISO timestamps). */

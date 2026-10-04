@@ -509,7 +509,7 @@ create table project (
   quote_currency   char(3) not null default 'TWD' check (quote_currency = 'TWD'),
   tax_rate         numeric(5,2) not null default 0 check (tax_rate between 0 and 100),
   tax_included     boolean not null default false,
-  details          jsonb not null default '{}',   -- validated by the type's schema
+  details          jsonb not null default '{}',   -- type fields, dates kept before signing, to-confirm list (lib/types ProjectDetails)
   notes            text,
   archived_at      timestamptz,
   created_at       timestamptz not null default now(),

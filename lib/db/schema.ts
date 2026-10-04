@@ -22,7 +22,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
-import { contactRoles, stages as projectStages, transportModes } from "../types"; // relative: drizzle-kit loads this file too
+import { contactRoles, stages as projectStages, transportModes, type ProjectDetails } from "../types"; // relative: drizzle-kit loads this file too
 
 const id = () => uuid().primaryKey().defaultRandom();
 const createdAt = () => timestamp({ withTimezone: true }).notNull().defaultNow();
@@ -185,9 +185,6 @@ export const contact = pgTable(
   },
   (t) => [index("contact_talent_idx").on(t.talentId), check("contact_role_check", oneOf(t.role, contactRoles))],
 ).enableRLS();
-
-/** Type-specific fields; each type's registry entry decides which apply. */
-export type ProjectDetails = { deliverables?: string; rights?: string; travel?: string; contractNotes?: string };
 
 // One ongoing deal with one counterparty (UI: 專案 / 合作案).
 export const project = pgTable(

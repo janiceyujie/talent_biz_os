@@ -13,7 +13,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "i18n:check": "node scripts/i18n-check.mjs && tsx scripts/registry-labels-check.mts",
-    "eval:extraction": "tsx --conditions=react-server scripts/eval-extraction.mts"
+    "eval:extraction": "tsx --conditions=react-server scripts/eval-extraction.mts",
+    "test": "tsx --test 'lib/**/*.test.ts'"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1146.0",

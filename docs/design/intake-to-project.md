@@ -87,7 +87,8 @@ The facts table goes away; the summary stays short. Flags (decision 0007) stay a
 
 - **Proposals aren't stored.** They're computed when the screen opens, from the latest analysis and the project's current state, so they're never stale: if the project changed after the analysis, the proposal reflects it.
 - **What was applied is stored** in `audit_log` (action `message.applied`, details: the message, each changed field with before and after, items left unticked). The timeline reads the project's messages plus these entries.
-- **New**: a contract version table when contracts arrive (designed in the architecture doc); `project.to_confirm` (or a small table) for the to-confirm list; a reply-by default in settings (`person.reply_within_days`, editable per message); the payment fields already exist (`settled_amount`, `settled_on`).
+- **On the project's `details`** (JSON, no migration): the type's registry fields by key (`fields`; deliverables, usage rights, and travel keep their existing homes), dates kept before signing (`dates`), and the to-confirm list (`toConfirm`). The project form edits only its own keys and keeps the rest.
+- **New**: a contract version table when contracts arrive (designed in the architecture doc); a reply-by default in settings (`person.reply_within_days`, editable per message); the payment fields already exist (`settled_amount`, `settled_on`).
 - **Matching** reads contacts, projects, and payments for the talent only.
 
 ## Edge cases
@@ -95,6 +96,7 @@ The facts table goes away; the summary stays short. Flags (decision 0007) stay a
 - **Two messages change the same field**: each proposal compares against the project as it is when opened, so the second sees the first's result.
 - **Stage going backwards** (a cancellation after signing): allowed, with the reason on the timeline; items already linked keep their links (decision 0004).
 - **A payment amount that doesn't match any expected payment**: offer "record as a new payment" instead of guessing.
+- **A new date vs. a changed one**: a stated date replaces a project date only for the same occasion or the same day (a time being set); otherwise it's a new date, so a rehearsal doesn't move the show. A postponement moves the project's single date.
 - **The wrong target**: "換一個合作案" recomputes the proposals for the new target before anything is applied.
 - **Re-analysis after applying**: shows a new proposal against the updated project; nothing is undone automatically.
 
@@ -113,7 +115,7 @@ The facts table goes away; the summary stays short. Flags (decision 0007) stay a
 
 ## Build order
 
-1. Target suggestion and the per-intent change rules, as pure functions with tests (no model calls).
+1. Target suggestion and the per-intent change rules, as pure functions with tests (no model calls). **Done**: `lib/domain/intake.ts`, tests in `intake.test.ts` (`npm test`).
 2. The review screen for existing projects (negotiation, confirmation, logistics, payment), then new projects (contact and to-confirm list).
 3. The project timeline.
 4. Contract versions and their comparison.

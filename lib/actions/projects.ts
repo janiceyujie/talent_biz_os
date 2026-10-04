@@ -116,11 +116,13 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
       return null;
     }
     const [existing] = await tx
-      .select({ stage: project.stage })
+      .select({ stage: project.stage, details: project.details })
       .from(project)
       .where(and(eq(project.id, input.id), eq(project.talentId, talent.id)));
     if (!existing) return fail("projectNotFound");
-    await tx.update(project).set(values).where(and(eq(project.id, input.id), eq(project.talentId, talent.id)));
+    // The form edits only some details; keep the rest (deal fields, dates, to-confirm list from messages).
+    const details = { ...existing.details, ...values.details };
+    await tx.update(project).set({ ...values, details }).where(and(eq(project.id, input.id), eq(project.talentId, talent.id)));
     if (existing.stage !== input.stage)
       await logStageChange(tx, talent.id, person.personId, input.id, existing.stage, input.stage);
     return null;

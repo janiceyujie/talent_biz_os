@@ -14,7 +14,8 @@ import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { detailFieldKeys, type AssumptionTopic } from "@/lib/ai/analysis";
 import { isFailureCode } from "@/lib/ai/errors";
-import type { Contact, InboxMessage } from "@/lib/types";
+import { matchContact } from "@/lib/domain/intake";
+import type { InboxMessage } from "@/lib/types";
 import { UploadDialog } from "./upload-dialog";
 
 // The review queue: messages the person sent in, each with the model's
@@ -506,15 +507,4 @@ function useProjectPrefill() {
       notes: notes.slice(0, 10_000),
     };
   };
-}
-
-/** A proposed contact: same email first, then the same company or name. Never assumed — the form shows the link and it can be cleared. */
-function matchContact(contacts: Contact[], who: { name: string; company: string; email: string }) {
-  const live = contacts.filter((c) => !c.archived);
-  const same = (x: string, y: string) => !!x && !!y && x.trim().toLowerCase() === y.trim().toLowerCase();
-  return (
-    live.find((c) => same(c.email, who.email)) ??
-    live.find((c) => same(c.company, who.company) || same(c.name, who.company)) ??
-    live.find((c) => same(c.name, who.name))
-  );
 }

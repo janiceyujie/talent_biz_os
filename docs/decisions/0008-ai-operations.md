@@ -79,4 +79,5 @@ Live evals:
 ## Implementation notes (2026-10-03)
 
 - `ai_call` logs task, provider, model, prompt version, tokens, latency, status, and failure code. Estimated cost and finish reason are not stored yet; cost comes with the paid-model price table.
+- Plain-code tests run with `npm test` (Node's test runner through tsx, no extra dependency); the first cover the intake rules.
 - Recording keys leave out the system prompt, which carries today's date and calendar, so a recording stays valid across days; the prompt version still changes it whenever the rules change.

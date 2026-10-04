@@ -30,11 +30,29 @@ export type Project = {
   currency: "TWD";
   taxRate: number;
   taxIncluded: boolean;
-  details: { deliverables?: string; rights?: string; travel?: string; contractNotes?: string };
+  details: ProjectDetails;
   offerText: string; // from the project's source message
   notes: string;
   nextAction: { title: string; dueDate: string | null } | null; // the next open to-do
   archived: boolean;
+};
+
+/** A date kept on a project before it's signed, or one that isn't a calendar event (decision 0004). */
+export type ProjectDate = { what: string; date: string; time: string; timeZone: string };
+
+/**
+ * Free-form deal details. The form edits the first four; messages fill the
+ * rest (docs/design/intake-to-project.md). `fields` holds the project type's
+ * registry fields (lib/project-types) by key, except those with a home above.
+ */
+export type ProjectDetails = {
+  deliverables?: string;
+  rights?: string;
+  travel?: string;
+  contractNotes?: string;
+  fields?: Record<string, string>;
+  dates?: ProjectDate[];
+  toConfirm?: string[]; // 需向對方確認: open questions for the other side
 };
 
 export const contactRoles = ["artist", "counterparty", "manager"] as const;

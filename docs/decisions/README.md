@@ -29,3 +29,4 @@ When a choice is easy to get wrong later, was argued over, or trades something a
 | [0005](0005-language-neutral-template-placeholders.md) | Reply-template placeholders are stored language-neutral | Accepted |
 | [0006](0006-model-provider.md) | Model calls go through one provider seam; a free model during development | Accepted |
 | [0007](0007-untrusted-message-content.md) | Message content is untrusted: layered protection against prompt injection and fraud | Accepted |
+| [0008](0008-ai-operations.md) | Running the AI features: testing, prompts, paid models, and usage limits | Accepted |

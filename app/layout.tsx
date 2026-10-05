@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import "./globals.css";
 import "./experience.css"; // the prototype's visual layer: brand tokens, type scale, components
+import "./planner.css"; // day and week calendar (components/views/planner.tsx)
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");

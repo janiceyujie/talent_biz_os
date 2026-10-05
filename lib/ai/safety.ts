@@ -46,8 +46,8 @@ export function findInstructions(text: string) {
 const zhWeekday: Record<string, number> = { 日: 0, 天: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6 };
 const enWeekday = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
-/** The weekday a phrase states ("（五）", "週五", "Friday"), or null. */
-function statedWeekday(phrase: string) {
+/** The weekday a phrase states ("（五）", "週五", "Friday"), or null. 0 = Sunday. */
+export function statedWeekday(phrase: string) {
   const zh = /(?:[（(]\s*|週|周|星期|禮拜)([一二三四五六日天])/.exec(phrase);
   if (zh) return zhWeekday[zh[1]];
   const en = /\b(sun|mon|tue|wed|thu|fri|sat)[a-z]*\b/i.exec(phrase);
@@ -87,10 +87,17 @@ export function rollForwardYearless(date: string, asStated: string, today: strin
 }
 
 /** Dates whose stated weekday doesn't match the date ("11/14（五）" when 11/14 is a Saturday). */
-export function weekdayMismatches(dates: readonly { date: string; asStated: string }[]) {
+export function weekdayMismatches<D extends { date: string; asStated: string }>(dates: readonly D[]) {
   return dates.filter((d) => {
     if (!d.date || !d.asStated) return false;
     const stated = statedWeekday(d.asStated);
     return stated !== null && stated !== new Date(`${d.date}T12:00:00Z`).getUTCDay();
   });
+}
+
+/** For a weekday warning: the date, the weekday it falls on, and the one the message states (0 = Sunday). */
+export function weekdayMismatchOf(dates: readonly { date: string; asStated: string }[], asStated: string) {
+  const d = weekdayMismatches(dates).find((x) => x.asStated === asStated);
+  if (!d) return null;
+  return { date: d.date, actual: new Date(`${d.date}T12:00:00Z`).getUTCDay(), stated: statedWeekday(d.asStated)! };
 }

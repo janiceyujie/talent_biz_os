@@ -123,6 +123,7 @@ export type CalendarItem = {
   done: boolean;
   archived: boolean;
   travel: TravelDetails | null; // travel and accommodation events only
+  endTime: string; // an ordinary event's end, same day and zone (HH:mm or ""); travel and stays use `travel`
 };
 
 export const transportModes = ["high_speed_rail", "train", "flight", "transfer", "other"] as const;

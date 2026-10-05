@@ -2969,6 +2969,8 @@ a.disabled {
   gap: 8px;
 }
 .target {
+  color: var(--ink);
+  font-size: inherit;
   display: flex;
   gap: 10px;
   align-items: flex-start;
@@ -3275,4 +3277,8 @@ a.disabled {
 .contract-versions a {
   color: #2c5c50;
   font-size: 13px;
+}
+/* Today: reminders sit between the day's overview and the week strip */
+.planner-overview > .action-list {
+  margin: 24px 0;
 }

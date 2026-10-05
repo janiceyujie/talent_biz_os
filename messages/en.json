@@ -237,7 +237,7 @@
     "flag": {
       "instructions_to_ai": "Contains text aimed at an AI. It was ignored — check the details against the original yourself.",
       "payment_details": "Asks for a payment or gives new payment details — a common fraud pattern. Confirm with the sender using contact details you already have.",
-      "inconsistency": "Something doesn't add up, such as a weekday that doesn't match the date.",
+      "inconsistency": "Something in the message doesn’t add up.",
       "hidden_text": "Contained invisible characters, which can hide instructions; they were removed before analysis.",
       "other": "Something here looks off — take a closer look."
     }
@@ -249,16 +249,40 @@
     "uploadOffer": "Upload an offer",
     "metricReceivable": "Outstanding · TWD",
     "metricReceivableNote": "From recorded outstanding payments",
-    "metricActive": "Active projects",
-    "metricActiveNote": "Signed · in execution or settlement",
-    "metricToday": "Open items today",
-    "metricNotices": "Unread notifications",
-    "metricNoticesNote": "Deadlines, to-dos, and payments",
     "nextActions": "Needs attention soon",
-    "viewCalendar": "View calendar",
     "nextActionsEmpty": "Nothing due soon. New to-dos will show up here.",
-    "pipeline": "Signed projects",
-    "viewProjects": "View projects"
+    "viewProjects": "View projects",
+    "openCalendar": "Open calendar",
+    "todaySchedule": "Today",
+    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "todayEmpty": "Nothing scheduled today.",
+    "attention": "Needs attention",
+    "overdue": "Overdue payments",
+    "overdueNote": "To collect and to pay",
+    "waitingMessages": "Messages to review",
+    "waitingFirst": "{title}{count, plural, =1 {} other { and # more}}",
+    "waitingNone": "No messages waiting",
+    "talking": "Projects in talks",
+    "talkingNone": "No projects in talks",
+    "clashes": "Schedule clashes",
+    "clashesNote": "Items affected in the next seven days",
+    "active": "Signed and settling",
+    "projectCount": "{count, plural, one {# project} other {# projects}}",
+    "nextSevenDays": "Next seven days",
+    "viewAll": "View all",
+    "todayShort": "Today",
+    "nothing": "Nothing scheduled",
+    "travel": "Travel and stays",
+    "travelNone": "No travel or stays coming up.",
+    "deliveries": "Deliverables due",
+    "late": "Late",
+    "deliveriesNone": "No deliverables due soon.",
+    "money": "Money",
+    "moneyNote": "Unsettled amounts, tax included",
+    "receivable": "To collect",
+    "payable": "To pay",
+    "moneyNone": "Nothing to collect or pay.",
+    "viewFinance": "View finance"
   },
   "finance": {
     "revenueTitle": "Revenue received · TWD",
@@ -347,7 +371,8 @@
         "noDueDate": "No due date"
       },
       "agingNote": "From the due dates of all outstanding, non-voided income; entries without a due date are listed on their own."
-    }
+    },
+    "summaryLabel": "Cash summary"
   },
   "projects": {
     "search": "Search projects",
@@ -407,7 +432,8 @@
       "cancelled": "The project was cancelled. Handle any remaining payments on their own."
     },
     "notSignedNote": "Still in negotiation. Once it's signed (stage 已簽約 / Signed or later), you can add linked to-dos, events, and payments.",
-    "quoteNotSet": "Quote not set"
+    "quoteNotSet": "Quote not set",
+    "listLabel": "Projects"
   },
   "workflow": {
     "section": "Project workflow and payments",
@@ -554,7 +580,17 @@
     "assumed": "AI assumed: {note}",
     "usageRemaining": "AI analyses left today: {remaining} of {limit}",
     "usageExhausted": "Today's {limit} AI analyses are used up. New messages are saved and can be analyzed once it resets.",
-    "factsWithAssumptions": "What the AI read (with {count} assumptions)"
+    "factsWithAssumptions": "What the AI read (with {count} assumptions)",
+    "weekdayMismatch": "{date} is a {actual}, but the message says {stated}.",
+    "listLabel": "Messages",
+    "listHeading": "Messages",
+    "listCount": "{count, plural, one {# message} other {# messages}}",
+    "readerLabel": "Message",
+    "filedChip": "Filed on a project",
+    "backToList": "Back to messages",
+    "source": "Source",
+    "receivedAt": "Received",
+    "filedOn": "Project"
   },
   "intake": {
     "targetHeading": "Which project is this message about?",
@@ -744,6 +780,64 @@
       "seat": "Seat {seat}"
     }
   },
+  "planner": {
+    "views": "Calendar views",
+    "view": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
+    },
+    "prevWeek": "Previous week",
+    "nextWeek": "Next week",
+    "prevDay": "Previous day",
+    "nextDay": "Next day",
+    "today": "Today",
+    "weekRange": "{from} — {to}",
+    "goTo": "Go to date",
+    "legendFixed": "Fixed · changes need confirming",
+    "legendFlexible": "Flexible work (to-dos)",
+    "zone": "Time zone: {zone}",
+    "hint": "Click an item to change its date and time.",
+    "undo": "Undo",
+    "moved": "Moved “{title}”.",
+    "undone": "Moved “{title}” back.",
+    "invalidMove": "Can't move it there: the end must be after the start, on the same day. Click the item to edit it.",
+    "nothing": "Nothing scheduled",
+    "emptyRange": "Nothing scheduled in these dates.",
+    "caption": "Items are placed by their start hour and stacked within it; card height isn't length. Items without an end time, and due dates without a time, aren't checked for clashes. Items in another time zone are shown in yours; change them in the full form.",
+    "dragHelp": "Drag an item with the mouse to move it, or drag “Resize” at its bottom to a new end, in 15-minute steps; or click it to edit.",
+    "previewEnd": "New end: {date} {end}",
+    "previewMove": "Move to: {date} {start}",
+    "resizing": "Resizing: {title}",
+    "moving": "Moving: {title}",
+    "gridLabel": "Schedule, scrollable by day and hour",
+    "time": "Time",
+    "untimed": "Due / no time",
+    "edit": "Edit {title}",
+    "fixed": "Fixed",
+    "flexible": "Flexible",
+    "startsAt": "From {start}",
+    "noTime": "No time set",
+    "conflict": "Clashes",
+    "stated": "Set as {when}",
+    "resize": "Change how long {title} lasts",
+    "resizeShort": "Resize",
+    "invalidTime": "Enter a valid date; the end must be after the start.",
+    "confirmTitle": "Confirm the new time",
+    "editTitle": "Date and time",
+    "fixedWarning": "This is a scheduled commitment; others may have arranged the show, travel, or delivery around it. Change it?",
+    "from": "Was: {when}",
+    "to": "Now: {when}",
+    "date": "Date",
+    "start": "Start",
+    "end": "End",
+    "overlaps": "Overlaps {items}. Change the time, or confirm to keep the clash.",
+    "fullEdit": "Full edit",
+    "back": "Back",
+    "cancel": "Cancel",
+    "confirm": "Confirm change",
+    "save": "Save"
+  },
   "calendarFeed": {
     "title": "Calendar subscription",
     "on": "On",
@@ -862,10 +956,17 @@
       "operator": "Airline / operator",
       "serviceNumber": "Flight / train number",
       "seat": "Seat / carriage",
-      "replyBy": "Reply by"
+      "replyBy": "Reply by",
+      "quotedAmount": "Quote amount",
+      "statusIn": "Collection status",
+      "statusOut": "Payment status",
+      "dueDateIn": "Collection due date",
+      "dueDateOut": "Payment due date",
+      "settledDateIn": "Date received",
+      "settledDateOut": "Date paid",
+      "endTime": "End time"
     },
     "unlinked": "Unlinked",
-    "paymentHelp": "One entry is one complete payment. Split staged payments into deposit and balance; keep it “Outstanding” until the money arrives. Received and paid totals use the settled date. If less arrives than billed (withholding tax, the NHI supplementary premium), enter the amount received — the gap is shown separately.",
     "kind": {
       "pastReply": "Past reply",
       "template": "Reply template"
@@ -886,7 +987,20 @@
     "contactLinked": "Linked to contact {name}",
     "contactUnlinked": "Not linked to a contact — saved on this project only",
     "contactHint": "Search your partners by name or company, or type a new name",
-    "contactClear": "Clear partner"
+    "contactClear": "Clear partner",
+    "contactKeep": "Keep “{name}”",
+    "contactKeepNote": "Saved on this project only; no contact is created",
+    "section": {
+      "amount": "Amount and tax",
+      "basics": "Project details",
+      "quote": "Quote",
+      "dealDetails": "Offer, contract and deliverables",
+      "collecting": "Collection",
+      "paying": "Payment",
+      "other": "Other details"
+    },
+    "paymentHelpIn": "Record each installment separately. Keep it as Outstanding until it is received. Received income is reported by the date received. If less arrives than billed (withholding tax, the NHI supplementary premium), enter the amount received — the gap is shown separately.",
+    "paymentHelpOut": "Record each installment separately. Keep it as To pay until it is paid. Paid expenses are reported by the date paid."
   },
   "tone": {
     "natural": "Natural and professional",
@@ -937,7 +1051,22 @@
     "savedTitle": "Saved drafts",
     "savedEmpty": "Saved drafts show up here so you can pick them up again.",
     "archive": "Archive",
-    "restore": "Restore"
+    "restore": "Restore",
+    "templateList": "Templates",
+    "previewTemplate": "Show the template",
+    "sectionOffer": "The offer",
+    "sectionSettings": "Draft settings",
+    "sectionReply": "Reply",
+    "selectedTemplate": "Template",
+    "noTemplateSelected": "No template selected",
+    "needSource": "Add the offer text to apply a template.",
+    "needTemplate": "Pick a template from the list, or write the reply yourself.",
+    "unsavedChanges": "Unsaved changes",
+    "newDraft": "New draft",
+    "confirmTitle": "You have unsaved text",
+    "leaveMessage": "If you leave, these changes won't be kept.",
+    "replaceMessage": "Applying the template replaces the current reply; the other fields stay. Continue?",
+    "confirmReplace": "Replace"
   },
   "auth": {
     "signIn": "Sign in",

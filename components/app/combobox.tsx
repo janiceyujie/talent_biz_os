@@ -9,6 +9,8 @@ export type ComboOption = { id: string; primary: string; secondary?: string };
  * the text and the matching; this handles the list, keyboard, and focus.
  * Arrow keys move, Enter picks, the first Escape closes the list (not the
  * dialog around it), and a click picks before the input loses focus.
+ * `explicitPick`: nothing is highlighted until an arrow key moves there, so
+ * Enter on typed text keeps the text instead of taking the first match.
  */
 export function Combobox({
   label,
@@ -21,6 +23,7 @@ export function Combobox({
   clearLabel,
   onClear,
   hint,
+  explicitPick = false,
 }: {
   label: string;
   required?: boolean;
@@ -32,10 +35,12 @@ export function Combobox({
   clearLabel?: string;
   onClear?: () => void;
   hint?: ReactNode;
+  explicitPick?: boolean;
 }) {
   const listId = useId();
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(0);
+  const none = explicitPick ? -1 : 0;
+  const [active, setActive] = useState(none);
   const shown = open && options.length > 0;
   const pick = (id: string) => {
     onPick(id);
@@ -46,10 +51,11 @@ export function Combobox({
       e.preventDefault();
       setOpen(true);
       const n = options.length;
-      setActive((i) => (n ? (i + (e.key === "ArrowDown" ? 1 : -1) + n) % n : 0));
-    } else if (e.key === "Enter" && shown && options[active]) {
-      e.preventDefault();
-      pick(options[active].id);
+      setActive((i) => (n ? (Math.max(i, e.key === "ArrowDown" ? -1 : 0) + (e.key === "ArrowDown" ? 1 : -1) + n) % n : none));
+    } else if (e.key === "Enter" && shown) {
+      e.preventDefault(); // never submit the form from the list
+      if (options[active]) pick(options[active].id);
+      else setOpen(false);
     } else if (e.key === "Escape" && shown) {
       e.preventDefault();
       e.stopPropagation();
@@ -75,11 +81,12 @@ export function Combobox({
             onChange={(e) => {
               onText(e.target.value);
               setOpen(true);
-              setActive(0);
+              setActive(none);
             }}
             onFocus={(e) => {
               e.target.select();
               setOpen(true);
+              setActive(none);
             }}
             onBlur={() => {
               setOpen(false);

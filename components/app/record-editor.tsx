@@ -21,6 +21,7 @@ import {
   transportModes,
   type CalendarItem,
   type Project,
+  type Stage,
   type TransportMode,
 } from "@/lib/types";
 import { useAppData } from "./app-data";
@@ -84,6 +85,7 @@ export function RecordEditor({
 }) {
   const data$ = useAppData();
   const t = useTranslations("editor");
+  const tProjects = useTranslations("projects");
   const tTone = useTranslations("tone");
   const labels = useLabels();
   const uiLocale = toLocale(useLocale());
@@ -185,6 +187,10 @@ export function RecordEditor({
       ...(key === "status" ? { settledDate: value === "settled" ? d.settledDate || today : "" } : {}),
       // An arrival or check-out usually happens in the same zone; start from it.
       ...(key === "endDate" && value ? { endTimeZone: d.endTimeZone || d.timeZone } : {}),
+      // A trip's arrival or a stay's check-out isn't another kind's end time: drop it on switching.
+      ...(key === "kind" && (d.kind === "travel" || d.kind === "accommodation") && value !== d.kind
+        ? { endDate: "", endTime: "", endTimeZone: "" }
+        : {}),
     }));
 
   function field(key: string, label: string, type = "text", required = false, options?: Option[], list?: string) {
@@ -246,14 +252,19 @@ export function RecordEditor({
     </div>
   );
 
-  const pricing = (amountKey: string, amountRequired = true) => (
-    <div className="form-grid">
-      {field(amountKey, t("field.amount"), "number", amountRequired)}
-      {field("currency", t("field.currency"), "text", true, [["TWD", "TWD"]])}
-      {field("taxRate", t("field.taxRate"), "number", true)}
-      {field("taxIncluded", t("field.taxIncluded"), "checkbox")}
-    </div>
+  const pricing = (amountKey: string, amountRequired = true, legend = t("section.amount"), amountLabel = t("field.amount")) => (
+    <fieldset className="form-section">
+      <legend>{legend}</legend>
+      <div className="form-grid">
+        {field(amountKey, amountLabel, "number", amountRequired)}
+        {field("currency", t("field.currency"), "text", true, [["TWD", "TWD"]])}
+        {field("taxRate", t("field.taxRate"), "number", true)}
+        {field("taxIncluded", t("field.taxIncluded"), "checkbox")}
+      </div>
+    </fieldset>
   );
+  // Income is collected, a cost is paid: the payment form's words follow the direction.
+  const out = data.direction === "out";
 
   return (
     <Modal title={t(editor.item?.id ? "titleEdit" : "titleNew", { kind })} onClose={requestClose}>
@@ -276,27 +287,35 @@ export function RecordEditor({
         <fieldset className="editor-fields" disabled={pending}>
           {kind === "project" && (
             <>
-              {field("title", t("field.projectTitle"), "text", true)}
-              <div className="form-grid">
-                <div>
-                  <ContactPicker
-                    label={t("field.counterparty")}
-                    contacts={data$.contacts}
-                    name={String(data.counterparty ?? "")}
-                    contactId={String(data.counterpartyId ?? "")}
-                    onChange={({ name, contactId }) => setData((d) => ({ ...d, counterparty: name, counterpartyId: contactId }))}
-                  />
+              <fieldset className="form-section">
+                <legend>{t("section.basics")}</legend>
+                {field("title", t("field.projectTitle"), "text", true)}
+                <div className="form-grid">
+                  {field("type", t("field.type"), "text", true, typeOptions)}
+                  <div>
+                    {field("stage", t("field.stage"), "text", true, options(stages, labels.stage))}
+                    <p className="muted">{tProjects(`stageNote.${stages.includes(data.stage as Stage) ? (data.stage as Stage) : "offer"}`)}</p>
+                  </div>
                 </div>
-                {field("type", t("field.type"), "text", true, typeOptions)}
-                {field("stage", t("field.stage"), "text", true, options(stages, labels.stage))}
-              </div>
-              {pricing("quotedAmount", false)}
+                <ContactPicker
+                  label={t("field.counterparty")}
+                  contacts={data$.contacts}
+                  name={String(data.counterparty ?? "")}
+                  contactId={String(data.counterpartyId ?? "")}
+                  onChange={({ name, contactId }) => setData((d) => ({ ...d, counterparty: name, counterpartyId: contactId }))}
+                />
+              </fieldset>
+              {pricing("quotedAmount", false, t("section.quote"), t("field.quotedAmount"))}
               <p className="muted">{t("quoteHelp")}</p>
-              {field("contractNotes", t("field.contractNotes"), "textarea")}
-              {field("deliverables", t("field.deliverables"), "textarea")}
-              {field("rights", t("field.rights"), "textarea")}
-              {field("travel", t("field.travel"), "textarea")}
-              {field("notes", t("field.notes"), "textarea")}
+              {/* Can be filled in later; collapsing keeps what's typed. */}
+              <details className="form-details">
+                <summary>{t("section.dealDetails")}</summary>
+                {field("contractNotes", t("field.contractNotes"), "textarea")}
+                {field("deliverables", t("field.deliverables"), "textarea")}
+                {field("rights", t("field.rights"), "textarea")}
+                {field("travel", t("field.travel"), "textarea")}
+                {field("notes", t("field.notes"), "textarea")}
+              </details>
             </>
           )}
           {kind === "contact" && (
@@ -317,6 +336,7 @@ export function RecordEditor({
               <div className="form-grid">
                 {field("date", t(travel ? "field.departDate" : stay ? "field.checkInDate" : "field.date"), "date", true)}
                 {field("time", t(travel ? "field.departTime" : stay ? "field.checkInTime" : "field.time"), "time", travel || stay)}
+                {!travel && !stay && !todoKinds.includes(String(data.kind)) && field("endTime", t("field.endTime"), "time")}
                 <TimeZonePicker
                   label={t("field.timeZone")}
                   required
@@ -393,37 +413,34 @@ export function RecordEditor({
           )}
           {kind === "payment" && (
             <>
+              {/* What it is and which way it goes, then how much, then when it moves. */}
               {field("label", t("field.label"), "text", true)}
               {projectLink()}
-              <div className="form-grid">
-                {field("direction", t("field.direction"), "text", true, options(["in", "out"] as const, labels.direction))}
-                {field("recordedDate", t("field.recordedDate"), "date", true)}
-                {field("dueDate", t("field.dueDate"), "date")}
-                {field(
-                  "installment",
-                  t("field.installment"),
-                  "text",
-                  true,
-                  options(["regular", "deposit", "balance"] as const, labels.installment),
-                )}
-                {field(
-                  "status",
-                  t("field.status"),
-                  "text",
-                  true,
-                  options(["expected", "settled"] as const, (status) =>
-                    labels.paymentStatus({ status, direction: data.direction === "out" ? "out" : "in" }),
-                  ),
-                )}
-                {field("invoiceRef", t("field.invoiceRef"))}
-                {data.status === "settled" && field("settledDate", t("field.settledDate"), "date", true)}
-                {data.status === "settled" && field("settledAmount", t("field.settledAmount"), "number")}
-              </div>
-              <p className="muted">
-                {t("paymentHelp")}
-              </p>
+              {field("direction", t("field.direction"), "text", true, options(["in", "out"] as const, labels.direction))}
               {pricing("amount")}
-              {field("notes", t("field.notes"), "textarea")}
+              <fieldset className="form-section">
+                <legend>{t(out ? "section.paying" : "section.collecting")}</legend>
+                <div className="form-grid">
+                  {field(
+                    "status",
+                    t(out ? "field.statusOut" : "field.statusIn"),
+                    "text",
+                    true,
+                    options(["expected", "settled"] as const, (status) => labels.paymentStatus({ status, direction: out ? "out" : "in" })),
+                  )}
+                  {field("installment", t("field.installment"), "text", true, options(["regular", "deposit", "balance"] as const, labels.installment))}
+                  {data.status === "settled" && field("settledDate", t(out ? "field.settledDateOut" : "field.settledDateIn"), "date", true)}
+                  {data.status === "settled" && field("settledAmount", t("field.settledAmount"), "number")}
+                  {field("dueDate", t(out ? "field.dueDateOut" : "field.dueDateIn"), "date")}
+                  {field("recordedDate", t("field.recordedDate"), "date", true)}
+                </div>
+                <p className="muted">{t(out ? "paymentHelpOut" : "paymentHelpIn")}</p>
+              </fieldset>
+              <details className="form-details">
+                <summary>{t("section.other")}</summary>
+                {field("invoiceRef", t("field.invoiceRef"))}
+                {field("notes", t("field.notes"), "textarea")}
+              </details>
             </>
           )}
           {kind === "template" && (

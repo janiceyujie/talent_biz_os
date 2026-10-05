@@ -16,20 +16,8 @@ export function FinanceInsights() {
   const asOf = new Intl.DateTimeFormat(locale, { timeZone: data.talent.timeZone, month: "numeric", day: "numeric" }).format(new Date());
   return (
     <>
-      <section className="surface contract-metrics">
-        <div>
-          <small>{t("contracted")}</small>
-          <strong>{money(report.contracted)}</strong>
-        </div>
-        <div>
-          <small>{t("unbilled")}</small>
-          <strong>{money(report.unbilled)}</strong>
-        </div>
-        <p>{t("contractNote")}</p>
-        {report.unknownQuotes > 0 && <p>{t("unknownQuotes", { count: report.unknownQuotes })}</p>}
-      </section>
       <div className="finance-insights-grid">
-        <section className="surface padded">
+        <section className="surface padded cash-trend-card">
           <div className="section-header">
             <h2>{t("cashTitle")}</h2>
             <span className="chart-key">
@@ -75,7 +63,7 @@ export function FinanceInsights() {
             </table>
           </details>
         </section>
-        <section className="surface padded">
+        <section className="surface padded aging-card">
           <div className="section-header">
             <h2>{t("agingTitle")}</h2>
             <span className="muted">{t("asOf", { date: asOf })}</span>
@@ -94,6 +82,19 @@ export function FinanceInsights() {
           <p className="muted">{t("agingNote")}</p>
         </section>
       </div>
+      {/* Signed-contract totals ignore the date filter, so they follow the dated charts. */}
+      <section className="surface contract-metrics">
+        <div>
+          <small>{t("contracted")}</small>
+          <strong>{money(report.contracted)}</strong>
+        </div>
+        <div>
+          <small>{t("unbilled")}</small>
+          <strong>{money(report.unbilled)}</strong>
+        </div>
+        <p>{t("contractNote")}</p>
+        {report.unknownQuotes > 0 && <p>{t("unknownQuotes", { count: report.unknownQuotes })}</p>}
+      </section>
     </>
   );
 }

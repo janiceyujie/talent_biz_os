@@ -64,16 +64,7 @@ export function ProjectWorkflowPanel({
   ].filter(Boolean);
 
   return (
-    <section aria-label={t("section")}>
-      <h3>{t("toConfirm")}</h3>
-      <ul>
-        {labels.projectQuestions(project.type).map((q) => (
-          <li key={q}>{q}</li>
-        ))}
-      </ul>
-      <button className="secondary full" disabled={project.archived} onClick={() => compose(project.id)}>
-        {t("draftForProject")}
-      </button>
+    <section className="deal-workflow" aria-label={t("section")}>
       <h3>{t("payments")}</h3>
       <dl>
         {[
@@ -103,6 +94,18 @@ export function ProjectWorkflowPanel({
       ) : (
         !quoteSet && <p className="muted">{t("planNeedsQuote")}</p>
       )}
+      <button className="secondary full" disabled={project.archived} onClick={() => compose(project.id)}>
+        {t("draftForProject")}
+      </button>
+      {/* Reference for the reply, not a task list: collapsed so the money stays in view. */}
+      <details className="deal-reference">
+        <summary>{t("toConfirm")}</summary>
+        <ul>
+          {labels.projectQuestions(project.type).map((q) => (
+            <li key={q}>{q}</li>
+          ))}
+        </ul>
+      </details>
       <h3>{t("closingCheck")}</h3>
       {warnings.length ? (
         <ul>

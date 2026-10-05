@@ -11,6 +11,8 @@ import { Combobox } from "./combobox";
  * on this project only — no contact is created, and editing a picked name
  * unlinks it, so new text is never tied to the old contact.
  */
+const KEEP = "keep-typed-name";
+
 export function ContactPicker({
   label,
   contacts,
@@ -37,18 +39,30 @@ export function ContactPicker({
       label={label}
       text={name}
       onText={(text) => onChange({ name: text, contactId: "" })}
-      options={matches.map((c) => ({
-        id: c.id,
-        primary: c.name,
-        secondary: [c.company, labels.contactRole(c.role)].filter(Boolean).join(" · "),
-      }))}
+      explicitPick
+      options={[
+        ...matches.map((c) => ({
+          id: c.id,
+          primary: c.name,
+          secondary: [c.company, labels.contactRole(c.role)].filter(Boolean).join(" · "),
+        })),
+        // Typed text can stay as this project's own name even when a contact partly matches.
+        ...(name.trim() && !(linked && linked.name === name) ? [{ id: KEEP, primary: t("contactKeep", { name: name.trim() }), secondary: t("contactKeepNote") }] : []),
+      ]}
       onPick={(id) => {
+        if (id === KEEP) return onChange({ name: name.trim(), contactId: "" });
         const c = contacts.find((x) => x.id === id)!;
         onChange({ name: c.name, contactId: c.id });
       }}
       clearLabel={t("contactClear")}
       onClear={() => onChange({ name: "", contactId: "" })}
-      hint={linked ? t("contactLinked", { name: linked.name }) : name ? t("contactUnlinked") : t("contactHint")}
+      hint={
+        linked
+          ? t("contactLinked", { name: [linked.name, linked.company || labels.contactRole(linked.role)].filter(Boolean).join(" · ") })
+          : name
+            ? t("contactUnlinked")
+            : t("contactHint")
+      }
     />
   );
 }

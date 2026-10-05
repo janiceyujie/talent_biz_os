@@ -274,6 +274,15 @@ stateDiagram-v2
 
 A rejected proposal never generates a file. A cancelled confirmed event only stops appearing as upcoming here — the `.ics` file already downloaded isn't reachable to remove.
 
+### Day and week calendar
+
+行程 opens on a week view, with day and month (the earlier calendar) as tabs; 今日總覽 leads with today's schedule from the same items (`lib/calendar/planner.ts`).
+
+- **One timeline** of events, to-dos, and expected payments with a due date (signed or unlinked work only), in the talent's time zone. Items stated in another zone are shown at the talent's local time.
+- **Fixed vs. flexible** is derived, not stored: events and payment dates are fixed (someone else depends on them), to-dos are flexible. Dragging a flexible item saves at once; a fixed item or a clash asks to confirm, showing the old and new times. The last 20 moves can be undone.
+- **Moves save through the calendar form's action**, so the same rules apply (decision 0004). Mouse drag in 15-minute steps; touch and keyboard use the date-and-time editor.
+- **Never invented**: an item without an end time keeps none when moved and isn't checked for clashes. Ordinary events can have an end time later the same day (`end_date` = start date); travel and stays keep their own arrival and check-out and are edited in the full form, as are items in another zone.
+
 ## Entity model
 
 Two ideas carry the model. **A login is not a business:** `person` is someone who signs in, `talent` is the artist or creator whose business is tracked, and `membership` links them with a role — so manager accounts (one person, many talents) and bands (many people, one talent) are a permissions change, not a schema change. **The project is the unit a person manages:** messages, contract versions, calendar events, money, files, drafts, and to-dos all hang off it.

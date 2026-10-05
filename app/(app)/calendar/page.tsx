@@ -1,12 +1,13 @@
 import { PageHeader } from "@/components/app/page-header";
-import { CalendarView } from "@/components/views/calendar";
+import { PlannerView } from "@/components/views/planner";
 
 export default async function Page({ searchParams }: PageProps<"/calendar">) {
-  const { day } = await searchParams;
+  const { day, date } = await searchParams;
+  const valid = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
   return (
     <>
       <PageHeader titleKey="calendar" />
-      <CalendarView initialDay={typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : ""} />
+      <PlannerView initialDay={valid(day)} initialDate={valid(date)} />
     </>
   );
 }

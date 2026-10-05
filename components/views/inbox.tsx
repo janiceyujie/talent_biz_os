@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type RefObject } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { DataNotice } from "./data-notice";
 import { Modal } from "@/components/app/modal";
@@ -13,6 +13,7 @@ import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { detailFieldKeys, type AssumptionTopic } from "@/lib/ai/analysis";
 import { isFailureCode } from "@/lib/ai/errors";
+import { weekdayMismatchOf } from "@/lib/ai/safety";
 import type { InboxMessage } from "@/lib/types";
 import { MessageReview } from "./message-review";
 import { UploadDialog } from "./upload-dialog";
@@ -39,6 +40,9 @@ export function InboxView() {
   const visible = data.inbox.filter((m) => showDismissed || m.status !== "dismissed");
   const message = data.inbox.find((m) => m.id === active) ?? visible[0];
   const analyzing = data.inbox.some((m) => m.status === "pending");
+  const listHeading = useRef<HTMLHeadingElement>(null);
+  const readerHeading = useRef<HTMLHeadingElement>(null);
+  const lastMessageButton = useRef<HTMLButtonElement | null>(null);
 
   // ?paste=1 / ?upload=1 (from the header and Today) open a dialog once; drop
   // them from the address so a reload doesn't open it again.
@@ -54,7 +58,7 @@ export function InboxView() {
   }, [analyzing, router]);
 
   return (
-    <>
+    <div className="inbox-workspace">
       <section className="surface padded">
         <div className="section-header">
           <div>
@@ -82,7 +86,13 @@ export function InboxView() {
         )}
       </section>
       <div className="inbox-layout section-gap">
-        <section className="surface padded">
+        <section className="surface padded inbox-messages" aria-label={t("listLabel")}>
+          <div className="inbox-list-heading">
+            <h2 ref={listHeading} tabIndex={-1}>
+              {t("listHeading")}
+            </h2>
+            <span role="status">{t("listCount", { count: visible.length })}</span>
+          </div>
           <label className="check-line">
             <input type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} />
             {t("showDismissed")}
@@ -94,23 +104,50 @@ export function InboxView() {
             </div>
           )}
           {visible.map((m) => (
-            <div className="mail-item single" key={m.id}>
-              <button className={`mail-summary ${message?.id === m.id ? "active" : ""}`} onClick={() => setActive(m.id)}>
+            <div className={`mail-item single ${message?.id === m.id ? "is-active" : ""}`} key={m.id}>
+              <button
+                className={`mail-summary ${message?.id === m.id ? "active" : ""}`}
+                aria-pressed={message?.id === m.id}
+                onClick={(e) => {
+                  lastMessageButton.current = e.currentTarget;
+                  setActive(m.id);
+                  // On narrow screens the message is below the list: take the reader there.
+                  if (window.matchMedia("(max-width: 900px)").matches)
+                    requestAnimationFrame(() => {
+                      readerHeading.current?.focus({ preventScroll: true });
+                      readerHeading.current?.scrollIntoView({ block: "start" });
+                    });
+                }}
+              >
                 <small>
                   <StatusChip status={m.status} />
-                  {!!m.analysis?.flags.length && <em className="message-status status-flagged">{t("flagChip")}</em>}{" "}
-                  {t(`channel.${m.channel}`)} ·{" "}
-                  {format.dateTime(new Date(m.receivedAt), { dateStyle: "medium", timeStyle: "short" })}
+                  {!!m.analysis?.flags.length && <em className="message-status status-flagged">{t("flagChip")}</em>} {t(`channel.${m.channel}`)}
                 </small>
                 <strong>{m.analysis?.title || fallbackTitle(m, t)}</strong>
-                <span>{(m.analysis?.summary || m.body || m.files.map((f) => f.filename).join(", ")).slice(0, 110)}</span>
+                <span className="mail-snippet">{(m.analysis?.summary || m.body || m.files.map((f) => f.filename).join(", ")).slice(0, 110)}</span>
+                <span className="mail-summary-meta">
+                  <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
+                  {m.status === "confirmed" && m.projectId && <span>{t("filedChip")}</span>}
+                </span>
               </button>
             </div>
           ))}
         </section>
-        <section className="surface padded">
+        <section className="surface padded inbox-reader" aria-label={t("readerLabel")}>
           {message ? (
-            <MessageDetail key={message.id} message={message} />
+            <>
+              <button
+                className="secondary inbox-back"
+                onClick={() => {
+                  const target = lastMessageButton.current?.isConnected ? lastMessageButton.current : listHeading.current;
+                  target?.focus({ preventScroll: true });
+                  target?.scrollIntoView({ block: "center" });
+                }}
+              >
+                {t("backToList")}
+              </button>
+              <MessageDetail key={message.id} message={message} headingRef={readerHeading} />
+            </>
           ) : (
             <p className="empty">{t("pick")}</p>
           )}
@@ -138,7 +175,7 @@ export function InboxView() {
           }}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -208,7 +245,7 @@ function PasteDialog({ onClose, onSubmitted }: { onClose: () => void; onSubmitte
   );
 }
 
-function MessageDetail({ message }: { message: InboxMessage }) {
+function MessageDetail({ message, headingRef }: { message: InboxMessage; headingRef: RefObject<HTMLHeadingElement | null> }) {
   const t = useTranslations("inbox");
   const labels = useLabels();
   const format = useFormatter();
@@ -217,6 +254,8 @@ function MessageDetail({ message }: { message: InboxMessage }) {
   const run = (action: () => Promise<string | null>) => startTransition(async () => setError(await action()));
   const a = message.analysis;
   const analyzed = !!a && message.status !== "pending";
+  const data = useAppData();
+  const filedOn = message.projectId ? data.projects.find((p) => p.id === message.projectId) : undefined;
 
   // Read, then decide (docs/design/intake-to-project.md, screen 1): a short summary and the files up
   // top, then which project it belongs to and what it changes; the AI's full reading and the original
@@ -227,10 +266,32 @@ function MessageDetail({ message }: { message: InboxMessage }) {
         <StatusChip status={message.status} />
         {analyzed && <em className="message-status intent-chip">{labels.intent(a.intent)}</em>}
       </div>
-      <h2>{a?.title || fallbackTitle(message, t)}</h2>
-      <p className="muted">
-        {t(`channel.${message.channel}`)} · {format.dateTime(new Date(message.receivedAt), { dateStyle: "medium", timeStyle: "short" })}
-      </p>
+      <h2 ref={headingRef} tabIndex={-1}>
+        {a?.title || fallbackTitle(message, t)}
+      </h2>
+      <dl className="mail-metadata">
+        <div>
+          <dt>{t("source")}</dt>
+          <dd>{t(`channel.${message.channel}`)}</dd>
+        </div>
+        <div>
+          <dt>{t("receivedAt")}</dt>
+          <dd>
+            <time dateTime={message.receivedAt}>
+              {format.dateTime(new Date(message.receivedAt), { dateStyle: "medium", timeStyle: "short", timeZone: data.talent.timeZone })}
+            </time>{" "}
+            · {data.talent.timeZone}
+          </dd>
+        </div>
+        {filedOn && (
+          <div>
+            <dt>{t("filedOn")}</dt>
+            <dd>
+              {filedOn.title} · {labels.stage(filedOn.stage)}
+            </dd>
+          </div>
+        )}
+      </dl>
 
       {message.status === "pending" && <p className="notice analyzing">{t("pendingBody")}</p>}
       {message.status === "error" && (
@@ -325,18 +386,30 @@ function MessageDetail({ message }: { message: InboxMessage }) {
 function Flags({ analysis: a }: { analysis: NonNullable<InboxMessage["analysis"]> }) {
   const t = useTranslations("inbox");
   const labels = useLabels();
+  const format = useFormatter();
   if (!a.flags.length) return null;
   return (
     <div className="notice analysis-flags" role="alert">
       <strong>{t("flagsTitle")}</strong>
       <ul>
-        {a.flags.map((f, i) => (
-          <li key={i}>
-            {labels.flag(f.kind)}
-            {f.note && <span className="flag-note"> {f.note}</span>}
-            {f.asStated && <small className="muted stated">{t("statedAs", { text: f.asStated })}</small>}
-          </li>
-        ))}
+        {a.flags.map((f, i) => {
+          // The weekday check knows exactly what's wrong; say it rather than the general label.
+          const weekday = f.kind === "inconsistency" && f.source === "check" ? weekdayMismatchOf(a.dates, f.asStated) : null;
+          const day = (n: number) => format.dateTime(new Date(Date.UTC(2026, 1, 1 + n, 12)), { weekday: "long", timeZone: "UTC" }); // 2026-02-01 is a Sunday
+          return (
+            <li key={i}>
+              {weekday
+                ? t("weekdayMismatch", {
+                    date: format.dateTime(new Date(`${weekday.date}T12:00:00Z`), { month: "numeric", day: "numeric", timeZone: "UTC" }),
+                    actual: day(weekday.actual),
+                    stated: day(weekday.stated),
+                  })
+                : labels.flag(f.kind)}
+              {f.note && <span className="flag-note"> {f.note}</span>}
+              {f.asStated && <small className="muted stated">{t("statedAs", { text: f.asStated })}</small>}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

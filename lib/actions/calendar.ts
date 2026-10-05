@@ -66,8 +66,13 @@ const itemInput = z.object({
   notes: optionalText,
   done: z.boolean().optional().default(false),
 }).superRefine((e, ctx) => {
-  if (e.kind !== "travel" && e.kind !== "accommodation") return;
   const issue = (message: string) => ctx.addIssue({ code: "custom", message });
+  if (e.kind !== "travel" && e.kind !== "accommodation") {
+    // An ordinary event may end later the same day, in its own zone.
+    if (e.endTime && !e.time) issue("timeInvalid");
+    else if (e.endTime && e.time && e.endTime <= e.time) issue("endBeforeStart");
+    return;
+  }
   if (e.kind === "travel" && !e.transportMode) issue("transportModeRequired");
   if (e.kind === "accommodation" && !e.hotelName) issue("hotelNameRequired");
   if (!e.time) return issue("travelTimeRequired");
@@ -160,10 +165,12 @@ function travelColumns(input: z.infer<typeof itemInput>) {
   const travel = input.kind === "travel";
   const stay = input.kind === "accommodation";
   const keep = <T,>(on: boolean, v: T) => (on ? v : null);
+  // An ordinary event's end is the same day and zone; only events (not to-dos) get here.
+  const sameDayEnd = !travel && !stay && !!input.endTime;
   return {
-    endDate: keep(travel || stay, input.endDate),
-    endTime: keep(travel || stay, input.endTime),
-    endTimeZone: keep(travel || stay, input.endTimeZone),
+    endDate: travel || stay ? input.endDate : sameDayEnd ? input.date : null,
+    endTime: travel || stay || sameDayEnd ? input.endTime : null,
+    endTimeZone: travel || stay ? input.endTimeZone : sameDayEnd ? input.timeZone : null,
     transportMode: keep(travel, input.transportMode),
     operator: keep(travel, input.operator),
     serviceNumber: keep(travel, input.serviceNumber),

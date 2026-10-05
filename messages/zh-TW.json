@@ -237,7 +237,7 @@
     "flag": {
       "instructions_to_ai": "內含想指示 AI 的文字，已忽略。請對照原始內容自行核對。",
       "payment_details": "要求付款或提供新的匯款／付款資訊，常見於詐騙。請用你原本就有的聯絡方式向對方確認。",
-      "inconsistency": "內容前後不一致，例如星期與日期不符。",
+      "inconsistency": "內容前後不一致。",
       "hidden_text": "含有看不見的字元，可能藏有指示，分析前已移除。",
       "other": "這則訊息有可疑之處，請多留意。"
     }
@@ -249,16 +249,40 @@
     "uploadOffer": "上傳邀約",
     "metricReceivable": "待收款 · TWD",
     "metricReceivableNote": "依已登錄的待收款計算",
-    "metricActive": "進行中的合作案",
-    "metricActiveNote": "已簽約 · 執行與結算中",
-    "metricToday": "今日未完成事項",
-    "metricNotices": "未讀通知",
-    "metricNoticesNote": "期限、待辦與收付款項",
     "nextActions": "近期需要處理",
-    "viewCalendar": "查看行程",
     "nextActionsEmpty": "目前沒有近期到期事項。新增待辦後會出現在這裡。",
-    "pipeline": "已簽約案件",
-    "viewProjects": "查看案件"
+    "viewProjects": "查看合作案",
+    "openCalendar": "開啟行事曆",
+    "todaySchedule": "今日行程",
+    "itemCount": "{count} 項",
+    "todayEmpty": "今天沒有已安排的行程。",
+    "attention": "需要注意",
+    "overdue": "逾期款項",
+    "overdueNote": "待收與待付",
+    "waitingMessages": "待處理進件",
+    "waitingFirst": "{title}{count, plural, =1 {} other { 等 # 件}}",
+    "waitingNone": "沒有待處理的訊息",
+    "talking": "洽談中的合作案",
+    "talkingNone": "目前沒有洽談中的案件",
+    "clashes": "行程衝突",
+    "clashesNote": "接下來七天受影響的行程",
+    "active": "執行與結算中",
+    "projectCount": "{count} 案",
+    "nextSevenDays": "接下來七天",
+    "viewAll": "查看全部",
+    "todayShort": "今日",
+    "nothing": "沒有安排",
+    "travel": "交通與住宿",
+    "travelNone": "近期沒有交通住宿安排。",
+    "deliveries": "即將交付",
+    "late": "已逾期",
+    "deliveriesNone": "近期沒有交付期限。",
+    "money": "付款進度",
+    "moneyNote": "未結清的含稅金額",
+    "receivable": "待收",
+    "payable": "待付",
+    "moneyNone": "目前沒有待收或待付款項。",
+    "viewFinance": "查看內帳分析"
   },
   "finance": {
     "revenueTitle": "已收營收分布 · TWD",
@@ -347,7 +371,8 @@
         "noDueDate": "未填期限"
       },
       "agingNote": "依全部未作廢待收款的期限計算；未填期限單獨列出。"
-    }
+    },
+    "summaryLabel": "收支摘要"
   },
   "projects": {
     "search": "搜尋合作案",
@@ -407,7 +432,8 @@
       "cancelled": "合作已取消。仍有款項時請另外處理。"
     },
     "notSignedNote": "目前仍在洽談階段。切換為「已簽約」之後，才能建立關聯待辦、行程與請款。",
-    "quoteNotSet": "報價未定"
+    "quoteNotSet": "報價未定",
+    "listLabel": "合作案清單"
   },
   "workflow": {
     "section": "案件流程與收款",
@@ -554,7 +580,17 @@
     "assumed": "AI 推定：{note}",
     "usageRemaining": "今日剩餘 AI 分析：{remaining}／{limit} 次",
     "usageExhausted": "今天的 {limit} 次 AI 分析已用完。新訊息仍會保存，重置後可再分析。",
-    "factsWithAssumptions": "AI 整理的資訊（含 {count} 項推定）"
+    "factsWithAssumptions": "AI 整理的資訊（含 {count} 項推定）",
+    "weekdayMismatch": "{date} 是{actual}，但訊息寫的是{stated}。",
+    "listLabel": "訊息列表",
+    "listHeading": "訊息",
+    "listCount": "{count} 則",
+    "readerLabel": "訊息內容",
+    "filedChip": "已歸入合作案",
+    "backToList": "返回訊息列表",
+    "source": "來源",
+    "receivedAt": "收件時間",
+    "filedOn": "所屬合作案"
   },
   "intake": {
     "targetHeading": "這則訊息屬於哪個合作案？",
@@ -744,6 +780,64 @@
       "seat": "座位 {seat}"
     }
   },
+  "planner": {
+    "views": "行事曆檢視",
+    "view": {
+      "day": "日檢視",
+      "week": "週檢視",
+      "month": "月曆"
+    },
+    "prevWeek": "上一週",
+    "nextWeek": "下一週",
+    "prevDay": "前一天",
+    "nextDay": "後一天",
+    "today": "今日",
+    "weekRange": "{from} — {to}",
+    "goTo": "前往日期",
+    "legendFixed": "固定事件 · 調整需確認",
+    "legendFlexible": "彈性工作（待辦）",
+    "zone": "時區：{zone}",
+    "hint": "點擊事件可編輯日期與時間。",
+    "undo": "復原",
+    "moved": "已更新「{title}」的時間。",
+    "undone": "已復原「{title}」的時間。",
+    "invalidMove": "無法調整：結束時間須晚於開始時間，且須在同一天內。請點擊事件編輯。",
+    "nothing": "沒有安排",
+    "emptyRange": "這段日期沒有行程。",
+    "caption": "事件依開始時段排列，同時段上下排列，卡片高度不代表時長。沒有結束時間的事件、未指定時段的期限不參與衝突判斷。其他時區的行程換算成你的時區顯示，請用完整表單修改。",
+    "dragHelp": "用滑鼠拖曳事件可改期，下緣「調整長度」可拖至新的結束時間，以 15 分鐘為單位；也可點擊編輯。",
+    "previewEnd": "新的結束時間：{date} {end}",
+    "previewMove": "移至：{date} {start}",
+    "resizing": "正在調整長度：{title}",
+    "moving": "正在移動：{title}",
+    "gridLabel": "時間表，可捲動瀏覽所有日期與時段",
+    "time": "時間",
+    "untimed": "期限／未定時",
+    "edit": "編輯 {title}",
+    "fixed": "固定",
+    "flexible": "彈性",
+    "startsAt": "{start} 開始",
+    "noTime": "未指定時段",
+    "conflict": "時間衝突",
+    "stated": "原定 {when}",
+    "resize": "調整 {title} 的長度",
+    "resizeShort": "調整長度",
+    "invalidTime": "請填寫有效日期；結束時間須晚於開始時間。",
+    "confirmTitle": "確認調整時間",
+    "editTitle": "編輯日期與時間",
+    "fixedWarning": "這是已安排的行程，對方可能依此安排演出、交通或交付。確定要調整嗎？",
+    "from": "原本：{when}",
+    "to": "改為：{when}",
+    "date": "日期",
+    "start": "開始時間",
+    "end": "結束時間",
+    "overlaps": "與 {items} 重疊。請調整時間，或確認保留衝突。",
+    "fullEdit": "完整編輯",
+    "back": "返回編輯",
+    "cancel": "取消",
+    "confirm": "確認調整",
+    "save": "儲存"
+  },
   "calendarFeed": {
     "title": "行事曆訂閱",
     "on": "已啟用",
@@ -862,10 +956,17 @@
       "operator": "航空公司／營運單位",
       "serviceNumber": "班次／航班號碼",
       "seat": "座位／車廂",
-      "replyBy": "回覆期限"
+      "replyBy": "回覆期限",
+      "quotedAmount": "報價金額",
+      "statusIn": "收款狀態",
+      "statusOut": "付款狀態",
+      "dueDateIn": "收款期限",
+      "dueDateOut": "付款期限",
+      "settledDateIn": "實際收款日期",
+      "settledDateOut": "實際付款日期",
+      "endTime": "結束時間"
     },
     "unlinked": "未關聯",
-    "paymentHelp": "一筆紀錄代表一筆完整收付。分次收款請拆成訂金與尾款；尚未收到款項時保持「待收」。已收／已付的報表依實際收付日期計算。實際入帳少於應收（例如扣繳、二代健保）時，填寫實收金額，差額會另外顯示。",
     "kind": {
       "pastReply": "過往回覆",
       "template": "回覆範本"
@@ -886,7 +987,20 @@
     "contactLinked": "已連結聯絡人：{name}",
     "contactUnlinked": "未連結聯絡人，只存在這個合作案",
     "contactHint": "搜尋合作方姓名或公司，或直接輸入新名稱",
-    "contactClear": "清除合作方"
+    "contactClear": "清除合作方",
+    "contactKeep": "保留「{name}」",
+    "contactKeepNote": "僅儲存於此案，不新增聯絡人",
+    "section": {
+      "amount": "金額與稅額",
+      "basics": "基本資料",
+      "quote": "報價",
+      "dealDetails": "邀約、合約與交付內容",
+      "collecting": "收款資訊",
+      "paying": "付款資訊",
+      "other": "其他資料"
+    },
+    "paymentHelpIn": "一筆紀錄代表一筆款項。分次收款請分筆登錄；尚未收到時保持「待收」。已收報表依實際收款日期計算。實際入帳少於應收（例如扣繳、二代健保）時，填寫實收金額，差額會另外顯示。",
+    "paymentHelpOut": "一筆紀錄代表一筆款項。分次付款請分筆登錄；尚未支付時保持「待付」。已付報表依實際付款日期計算。"
   },
   "tone": {
     "natural": "自然專業",
@@ -937,7 +1051,22 @@
     "savedTitle": "已保存的草稿",
     "savedEmpty": "儲存後可從這裡繼續編輯。",
     "archive": "歸檔",
-    "restore": "還原"
+    "restore": "還原",
+    "templateList": "範本列表",
+    "previewTemplate": "查看範本內容",
+    "sectionOffer": "邀約資料",
+    "sectionSettings": "擬稿設定",
+    "sectionReply": "回覆內容",
+    "selectedTemplate": "選取範本",
+    "noTemplateSelected": "尚未選取範本",
+    "needSource": "填寫邀約內容後即可套用範本。",
+    "needTemplate": "請從範本列表選取一份範本，或直接編寫回覆。",
+    "unsavedChanges": "尚未儲存的變更",
+    "newDraft": "新草稿",
+    "confirmTitle": "還有尚未保留的內容",
+    "leaveMessage": "離開後，本次修改將不會保留。",
+    "replaceMessage": "套用範本會取代目前的回覆內容，其他欄位會保留。要繼續嗎？",
+    "confirmReplace": "確認取代"
   },
   "auth": {
     "signIn": "登入",

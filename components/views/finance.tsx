@@ -140,7 +140,7 @@ export function FinanceView() {
   }
 
   return (
-    <>
+    <div className="finance-workspace">
       <div className="toolbar wrap">
         <label>
           {t("currency")}
@@ -162,13 +162,15 @@ export function FinanceView() {
           {t("exportCsv")}
         </button>
       </div>
-      <section className="metrics-grid finance-metrics">
-        <Metric label={t("metricReceived")} value={money(s.received)} note={t("metricReceivedNote")} tone="dark" />
+      {/* One summary: net cash leads, the four flows support it. */}
+      <section className="finance-summary" aria-label={t("summaryLabel")}>
+        <Metric label={t("metricNet")} value={money(s.received - s.paid)} note={t("metricNetNote")} tone="dark" />
+        <Metric label={t("metricReceived")} value={money(s.received)} note={t("metricReceivedNote")} />
         <Metric label={t("metricReceivable")} value={money(s.receivable)} note={t("metricReceivableNote")} />
         <Metric label={t("metricPaid")} value={money(s.paid)} note={t("metricPaidNote")} />
         <Metric label={t("metricPayable")} value={money(s.payable)} note={t("metricPayableNote")} />
-        <Metric label={t("metricNet")} value={money(s.received - s.paid)} note={t("metricNetNote")} tone="lime" />
       </section>
+      <FinanceInsights />
       <div className="finance-grid">
         <Revenue data={data} from={from} to={to || "9999-12-31"} />
         <section className="surface tax-card">
@@ -187,10 +189,10 @@ export function FinanceView() {
             <input type="number" min="0" max="100" step="0.01" value={rate} onChange={(e) => setRate(Number(e.target.value))} />
           </label>
           <div className="segmented">
-            <button className={!included ? "active" : ""} onClick={() => setIncluded(false)}>
+            <button className={!included ? "active" : ""} aria-pressed={!included} onClick={() => setIncluded(false)}>
               {t("enterExclusive")}
             </button>
-            <button className={included ? "active" : ""} onClick={() => setIncluded(true)}>
+            <button className={included ? "active" : ""} aria-pressed={included} onClick={() => setIncluded(true)}>
               {t("enterInclusive")}
             </button>
           </div>
@@ -216,14 +218,13 @@ export function FinanceView() {
           </button>
         </section>
       </div>
-      <FinanceInsights />
       <section className="surface ledger-card">
         <div className="section-header">
           <div>
             <span>{tEyebrow("ledger")}</span>
             <h2>{t("ledgerTitle")}</h2>
           </div>
-          <button onClick={() => setEditor({ kind: "payment" })}>{t("newEntry")}</button>
+          <button className="primary" onClick={() => setEditor({ kind: "payment" })}>{t("newEntry")}</button>
         </div>
         <label className="check-line">
           <input type="checkbox" checked={showVoided} onChange={(e) => setShowVoided(e.target.checked)} />
@@ -308,6 +309,6 @@ export function FinanceView() {
         {t("footnote")}
       </p>
       {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
-    </>
+    </div>
   );
 }

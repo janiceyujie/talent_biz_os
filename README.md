@@ -13,7 +13,7 @@ npm run db:migrate           # apply migrations in drizzle/
 npm run dev
 ```
 
-Schema changes: edit `lib/db/schema.ts`, then `npm run db:generate` and `npm run db:migrate`. Sign-up sends a verification email; open it in Mailpit to finish. Google sign-in appears once `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are set.
+Schema changes: edit `lib/db/schema.ts`, then `npm run db:generate` and `npm run db:migrate`. (Before the first production deploy the migrations are squashed into one baseline: see [docs/setup/launch-checklist.md](docs/setup/launch-checklist.md).) Sign-up sends a verification email; open it in Mailpit to finish. Google sign-in appears once `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are set.
 
 Local tools: Supabase Studio at http://127.0.0.1:54323, Mailpit (catches outgoing email) at http://127.0.0.1:54324.
 

@@ -1,0 +1,25 @@
+# Changes to these paths need @janiceyujie's review once "Require review from Code Owners"
+# is on in the branch protection for main. Everything else merges on passing checks.
+
+# Data: schema and migrations
+/lib/db/          @janiceyujie
+/drizzle/         @janiceyujie
+/supabase/        @janiceyujie
+
+# Auth and access
+/lib/auth/        @janiceyujie
+/proxy.ts         @janiceyujie
+
+# AI and untrusted message content
+/lib/ai/          @janiceyujie
+
+# Architecture and the rules agents follow
+/docs/architecture.md  @janiceyujie
+/docs/decisions/  @janiceyujie
+/AGENTS.md        @janiceyujie
+/CLAUDE.md        @janiceyujie
+/.github/         @janiceyujie
+
+# Dependencies
+/package.json      @janiceyujie
+/package-lock.json @janiceyujie

@@ -20,7 +20,7 @@ This file is the shared instructions for every coding agent on this repo (Claude
 
 Changes here can lose data, leak data, or lock people out, so make them only when the task needs them. When a PR touches any of these, list them at the top of its description so the reviewer knows where to look closely.
 
-- **Database** (`lib/db/schema.ts`, `drizzle/`): change the schema in `schema.ts`, then generate a new migration with `npm run db:generate`. Never edit or delete an existing migration file. Never drop or rename a column with data in it without asking.
+- **Database** (`lib/db/schema.ts`, `drizzle/`): change the schema in `schema.ts`, then generate a new migration with `npm run db:generate`. Never edit or delete an existing migration file (the one exception is the one-time squash into a baseline before the first production deploy, in `docs/setup/launch-checklist.md`, done only when asked). Never drop or rename a column with data in it without asking.
 - **Auth and access** (`lib/auth/`, `proxy.ts`): who can sign in and who can see what. Every query for a talent's data must be scoped to that account.
 - **AI and untrusted messages** (`lib/ai/`): message content is untrusted input — follow the rules in `docs/decisions/0007-untrusted-message-content.md`. The model never gets tools or acts on its own; a person confirms everything it extracts.
 - **Secrets**: never commit `.env*` files (only `.env.example`), API keys, or real customer messages.

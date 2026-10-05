@@ -52,6 +52,10 @@ Every redirect URI must be listed exactly, so per-branch preview URLs (e.g. `my-
 - **No Google on previews**; use email and password there.
 - **Better Auth's OAuth proxy plugin**, which routes preview sign-ins through one registered URL. Worth it only if previews need Google often.
 
+## Next: Google Calendar
+
+Calendar sync uses this same project and client, adding the Calendar API and one permission: [google-calendar.md](google-calendar.md).
+
 ## Later: reading Gmail
 
 When the connected mailbox (architecture doc, "Designed for later: a connected mailbox") is built, it asks for Gmail scopes Google classes as **restricted**. That means app verification and an annual third-party security assessment (CASA) before more than test users can use it, and it should be its own consent, separate from sign-in. Plan weeks for it; it doesn't affect sign-in.

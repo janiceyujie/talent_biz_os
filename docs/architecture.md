@@ -78,6 +78,7 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - An in-app calendar of events and deadlines across projects, filterable to one project — **MVP**.
 - A downloadable calendar file for a confirmed event — **MVP**.
 - A private calendar subscription link, so confirmed events appear in Google or Apple Calendar with no account connection — **MVP**.
+- Google Calendar sync: our events pushed to a dedicated Google calendar in near-real time, then the person's chosen Google calendars shown here read-only — **Phase 2**, in progress; phases, permission, and ownership in [decision 0009](decisions/0009-google-calendar-sync.md), Google setup in [docs/setup/google-calendar.md](setup/google-calendar.md).
 - To-dos generated from extracted deadlines: reply by Friday, deposit due Oct 1, review this changed contract — **MVP**. To-dos are also how a message is tracked: its "to respond" / "waiting for reply" state is read from the to-dos linked to it, since the system never sees the person's own replies.
 - Direct calendar account connection, so confirmed events appear without a download step — **Phase 2**.
 

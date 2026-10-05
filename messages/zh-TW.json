@@ -841,7 +841,10 @@
     "hintMove": "拖曳可改期",
     "hintDelete": "右鍵刪除",
     "hintProject": "合作案行程，調整需確認",
-    "hintOpen": "點一下以完整表單編輯 · 右鍵刪除"
+    "hintOpen": "點一下以完整表單編輯 · 右鍵刪除",
+    "hintGoogle": "來自 Google 日曆「{calendar}」· 唯讀，點一下在 Google 開啟",
+    "fromGoogle": "來自 Google · {calendar}",
+    "untitled": "（無標題）"
   },
   "calendarFeed": {
     "title": "行事曆訂閱",
@@ -860,6 +863,45 @@
     "create": "建立訂閱連結",
     "disable": "停用訂閱",
     "resetNote": "重設後舊連結會立即失效。"
+  },
+  "googleCalendar": {
+    "calendarName": "Talent Biz OS · {talent}",
+    "calendarDescription": "由 Talent Biz OS 建立並同步的行程。請在 Talent Biz OS 中修改；在這裡的修改會在下次同步時被覆蓋。",
+    "title": "Google 日曆同步",
+    "body": "把你在這裡的行程同步到 Google 日曆中的專屬日曆「Talent Biz OS」。本服務只會建立與修改這個日曆，不會讀取或變更你其他的 Google 日曆。",
+    "shared": "同步內容：行程的標題、時間、地點與所屬合作案。待辦與款項不會同步。",
+    "notConfigured": "這個環境尚未設定 Google。",
+    "needGoogle": "請先在下方「登入方式」連結 Google 帳號。",
+    "connect": "連結 Google 日曆",
+    "connecting": "正在完成連結…",
+    "connected": "已連結 · 上次同步：{when}",
+    "pending": "已連結 · 同步中…",
+    "syncNow": "立即同步",
+    "syncing": "同步中…",
+    "syncQueued": "已開始同步。",
+    "disconnect": "中斷連結",
+    "reconnect": "重新連結",
+    "needsReconnect": "Google 的授權已失效（測試階段每 7 天過期一次，或已在 Google 帳號中移除），請重新連結。",
+    "error": {
+      "google": "上次同步失敗：Google 回傳錯誤，下次有變更或按「立即同步」時會再試。",
+      "network": "上次同步失敗：連不上 Google，下次有變更或按「立即同步」時會再試。",
+      "auth": "Google 的授權已失效，請重新連結。"
+    },
+    "disconnectTitle": "中斷 Google 日曆連結？",
+    "disconnectBody": "之後不再同步，並撤銷本服務對你 Google 帳號的存取權（Google 登入不受影響）。",
+    "deleteCalendar": "同時刪除 Google 上的「Talent Biz OS」日曆",
+    "confirmDisconnect": "中斷連結",
+    "cancel": "取消",
+    "importTitle": "在這裡顯示你的 Google 日曆",
+    "importBody": "選擇要在行事曆中顯示的 Google 日曆。這些行程是唯讀的、只有你看得到，也不會連到合作案；可以用來看出和私人行程的衝突。",
+    "importChoose": "選擇要顯示的 Google 日曆",
+    "importChange": "變更顯示的日曆",
+    "chooseTitle": "要顯示哪些 Google 日曆？",
+    "chooseBody": "勾選的日曆會出現在這裡的行事曆中（前一個月到未來六個月），每幾分鐘更新一次。",
+    "chooseNone": "這個 Google 帳號沒有其他日曆。",
+    "chooseSave": "儲存",
+    "saving": "儲存中…",
+    "bodyWithRead": "把你在這裡的行程同步到 Google 日曆中的專屬日曆「Talent Biz OS」。本服務只會建立與修改這個日曆，不會變更你其他的 Google 日曆；只讀取你在下方勾選要顯示的日曆。"
   },
   "settings": {
     "workspace": "工作區設定",
@@ -1173,7 +1215,11 @@
     "uploadMissing": "有檔案沒有上傳完成，請再試一次。",
     "aiDailyLimit": "這個帳號今天的 AI 分析次數已用完，24 小時內會重置。",
     "aiMessageLimit": "這則訊息已達重新分析的次數上限。",
-    "proposalChanged": "合作案在你打開這則訊息後有變動，請重新檢查建議的更新。"
+    "proposalChanged": "合作案在你打開這則訊息後有變動，請重新檢查建議的更新。",
+    "calendarNotGranted": "Google 沒有授權日曆存取，請再按一次「連結 Google 日曆」並允許。",
+    "calendarNoOffline": "Google 沒有提供離線存取權，請再按一次「連結 Google 日曆」重新授權。",
+    "calendarNotConnected": "尚未連結 Google 日曆。",
+    "calendarUnreachable": "暫時連不上 Google，請稍後再試。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",

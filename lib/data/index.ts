@@ -3,9 +3,10 @@ import { and, asc, desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { cache } from "react";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { dailyUsage } from "@/lib/ai/usage";
-import { isGoogleEnabled, requireTalent } from "@/lib/auth";
+import { CALENDAR_SCOPE, hasScopes, IMPORT_SCOPES } from "@/lib/calendar/google/scope";
+import { isGoogleConfigured, isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { auditLog, authAccount, calendarEvent, contract, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { auditLog, authAccount, calendarConnection, calendarEvent, calendarImportSource, contract, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
@@ -55,7 +56,10 @@ export const getAppData = cache(async (): Promise<AppData> => {
     db.select().from(todo).where(eq(todo.talentId, current.id)).orderBy(todo.createdAt),
     db.select().from(replyTemplate).where(eq(replyTemplate.talentId, current.id)).orderBy(desc(replyTemplate.updatedAt)),
     db.select().from(notificationState).where(eq(notificationState.personId, person.personId)),
-    db.select({ id: authAccount.id, providerId: authAccount.providerId }).from(authAccount).where(eq(authAccount.personId, person.personId)),
+    db
+      .select({ id: authAccount.id, providerId: authAccount.providerId, scope: authAccount.scope })
+      .from(authAccount)
+      .where(eq(authAccount.personId, person.personId)),
     db.select().from(message).where(eq(message.talentId, current.id)).orderBy(desc(message.receivedAt)).limit(200),
   ]);
 
@@ -64,6 +68,21 @@ export const getAppData = cache(async (): Promise<AppData> => {
     .from(contract)
     .where(eq(contract.talentId, current.id))
     .orderBy(desc(contract.versionNumber));
+
+  const [connection] = await db
+    .select()
+    .from(calendarConnection)
+    .where(and(eq(calendarConnection.personId, person.personId), eq(calendarConnection.talentId, current.id)));
+  // This person's own Google calendars shown here (decision 0009, phase 2): only they see them.
+  const importSources = connection
+    ? await db.select().from(calendarImportSource).where(eq(calendarImportSource.connectionId, connection.id))
+    : [];
+  const importedRows = importSources.length
+    ? await db
+        .select()
+        .from(externalEvent)
+        .where(inArray(externalEvent.sourceId, importSources.map((x) => x.id)))
+    : [];
 
   // What applying each message changed, for project timelines (latest entry per message).
   const appliedRows = await db
@@ -167,6 +186,35 @@ export const getAppData = cache(async (): Promise<AppData> => {
     calendarFeed: Boolean(memberRow?.feedHash),
     aiDataNotice: process.env.AI_PROVIDER_KEEPS_DATA === "1" ? aiServiceName(process.env.AI_PROVIDER) : null,
     aiUsage: await dailyUsage(current.id),
+    externalEvents: importedRows.map((e) => {
+      const source = importSources.find((x) => x.id === e.sourceId)!;
+      return {
+        id: e.id,
+        calendar: source.name,
+        color: source.color,
+        title: e.title,
+        date: e.startDate,
+        time: hhmm(e.startTime),
+        endDate: e.endDate ?? "",
+        endTime: hhmm(e.endTime),
+        timeZone: e.timeZone,
+        location: e.location ?? "",
+        link: e.htmlLink ?? "",
+      };
+    }),
+    googleCalendar: {
+      available: isGoogleConfigured,
+      importGranted: hasScopes(accountRows.find((a) => a.providerId === "google")?.scope, IMPORT_SCOPES),
+      importing: importSources.map((x) => ({ name: x.name, color: x.color, lastImportedAt: x.lastImportedAt?.toISOString() ?? null })),
+      granted: !!accountRows.find((a) => a.providerId === "google")?.scope?.split(/[ ,]/).includes(CALENDAR_SCOPE),
+      connection: connection
+        ? {
+            status: connection.status,
+            lastError: connection.lastError,
+            lastSyncedAt: connection.lastSyncedAt?.toISOString() ?? null,
+          }
+        : null,
+    },
     signIn: {
       password: accountRows.some((a) => a.providerId === "credential"),
       googleAccountId: accountRows.find((a) => a.providerId === "google")?.id ?? null,

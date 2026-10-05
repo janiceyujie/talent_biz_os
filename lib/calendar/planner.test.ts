@@ -21,6 +21,7 @@ const item = (over: Partial<PlanItem> = {}): PlanItem => ({
   done: false,
   note: "",
   amount: null,
+  external: null,
   ...over,
 });
 
@@ -119,6 +120,19 @@ describe("planItems", () => {
   test("an event can end on a later day", () => {
     const [x] = planItems(data([cal({ time: "22:00", endDate: "2026-10-06", endTime: "02:00" })]));
     assert.deepEqual([x.date, x.start, x.endDate, x.end], ["2026-10-05", "22:00", "2026-10-06", "02:00"]);
+  });
+
+  test("the person's Google events: read-only, at the talent's time, all-day ones on each day they cover", () => {
+    const externalEvents = [
+      { id: "g1", calendar: "Personal", color: "#7986cb", title: "牙醫", date: "2026-10-07", time: "10:00", endDate: "2026-10-07", endTime: "11:00", timeZone: "Asia/Tokyo", location: "", link: "https://calendar.google.com/x" },
+      { id: "g2", calendar: "Personal", color: null, title: "旅行", date: "2026-10-10", time: "", endDate: "2026-10-12", endTime: "", timeZone: "Asia/Taipei", location: "", link: "" },
+    ];
+    const items = planItems({ ...data([]), externalEvents });
+    const dentist = items.find((i) => i.id === "google:g1")!;
+    assert.deepEqual([dentist.start, dentist.end, dentist.movable, dentist.external?.calendar], ["09:00", "10:00", false, "Personal"]);
+    assert.deepEqual(items.filter((i) => i.ref.id === "g2").map((i) => i.date), ["2026-10-10", "2026-10-11", "2026-10-12"]);
+    // A Google event clashes with ours like any other.
+    assert.equal(conflicts(item({ date: "2026-10-07", start: "09:30", endDate: "2026-10-07", end: "10:30" }), items).length, 1);
   });
 
   test("an item in another zone shows at the talent's time and isn't dragged", () => {

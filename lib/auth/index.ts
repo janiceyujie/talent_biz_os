@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { membership, talent } from "@/lib/db/schema";
 import { auth } from "./config";
 
-export { isGoogleEnabled } from "./config";
+export { isGoogleConfigured, isGoogleEnabled } from "./config";
 
 // The rest of the app reads identity only through these helpers, never
 // through Better Auth directly (see Portability rules in docs/architecture.md).

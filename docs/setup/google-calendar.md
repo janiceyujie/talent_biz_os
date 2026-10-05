@@ -20,16 +20,25 @@ Then in the app: 設定 → 連結 Google 日曆. Google asks for the calendar p
 
 **Testing mode limits**, worth knowing before a demo: up to 100 test users; their consent (and so the refresh token) expires after **7 days**, after which the card shows "needs reconnecting".
 
-**Automated tests** never call Google: they run against a fake Google Calendar, so no test account or keys are involved.
+**Automated tests** never call Google: they run against a fake Google Calendar, so no test account or keys are involved. They use a second dev server beside yours, with its own build folder and the stand-in Google sign-in:
 
-## Phase 2 (Google → ours), later
+```
+NEXT_DIST_DIR=.next-test GOOGLE_CLIENT_ID= GOOGLE_CLIENT_SECRET= GOOGLE_TEST_STUB=1 \
+  BETTER_AUTH_URL=http://localhost:3001 \
+  GOOGLE_CALENDAR_API_URL=http://localhost:4010/calendar/v3 GOOGLE_OAUTH_REVOKE_URL=http://localhost:4010/revoke \
+  npx next dev -p 3001
+```
 
-Needs the app deployed at a public `https` address (Google's change notifications can't reach localhost) and the job queue. Then add, in the same Data access screen:
+(Empty values blank out your real keys for that server only; `.env.local` is untouched.)
+
+## Phase 2 (Google → ours): showing your Google calendars
+
+Works locally (it polls; no public address needed). In the same **Data access** screen, add:
 
 - `https://www.googleapis.com/auth/calendar.calendarlist.readonly` — list the person's calendars to choose from
 - `https://www.googleapis.com/auth/calendar.events.readonly` — read events on the chosen calendars
 
-These are sensitive scopes; they're requested only when someone turns import on.
+Then 設定 → 在這裡顯示你的 Google 日曆 → 選擇要顯示的 Google 日曆: Google asks for the two permissions, and you tick which calendars to show. These are sensitive scopes, asked only when someone turns this on. After deploying, Google's change notifications can replace polling (decision 0009).
 
 ## Before real users: verification
 

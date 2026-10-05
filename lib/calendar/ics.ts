@@ -17,7 +17,7 @@ export type IcsEvent = {
 
 import { wallTimeToUtc } from "@/lib/domain/dates";
 
-const DEFAULT_DURATION_MINUTES = 60; // for timed events without an end
+export const DEFAULT_DURATION_MINUTES = 60; // for timed events without an end (here and in Google sync)
 
 const utcStamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 const dateValue = (date: string) => date.replaceAll("-", "");

@@ -841,7 +841,10 @@
     "hintMove": "Drag to move",
     "hintDelete": "right-click to delete",
     "hintProject": "Project item, changes need confirming",
-    "hintOpen": "Click to edit in the full form · right-click to delete"
+    "hintOpen": "Click to edit in the full form · right-click to delete",
+    "hintGoogle": "From Google Calendar “{calendar}” · read-only; click to open in Google",
+    "fromGoogle": "From Google · {calendar}",
+    "untitled": "(No title)"
   },
   "calendarFeed": {
     "title": "Calendar subscription",
@@ -860,6 +863,45 @@
     "create": "Create subscription link",
     "disable": "Turn off subscription",
     "resetNote": "Resetting stops the old link immediately."
+  },
+  "googleCalendar": {
+    "calendarName": "Talent Biz OS · {talent}",
+    "calendarDescription": "Events created and synced by Talent Biz OS. Change them in Talent Biz OS; edits made here are overwritten on the next sync.",
+    "title": "Google Calendar sync",
+    "body": "Sync your events here to a dedicated “Talent Biz OS” calendar in Google Calendar. The app only creates and changes that calendar; it can't read or change your other Google calendars.",
+    "shared": "Synced: each event's title, time, place, and project. To-dos and payments aren't synced.",
+    "notConfigured": "Google isn't set up in this environment.",
+    "needGoogle": "Connect your Google account under Sign-in methods below first.",
+    "connect": "Connect Google Calendar",
+    "connecting": "Finishing the connection…",
+    "connected": "Connected · last synced {when}",
+    "pending": "Connected · syncing…",
+    "syncNow": "Sync now",
+    "syncing": "Syncing…",
+    "syncQueued": "Sync started.",
+    "disconnect": "Disconnect",
+    "reconnect": "Reconnect",
+    "needsReconnect": "Google access has ended (in testing it expires every 7 days, or it was removed in your Google account). Reconnect to keep syncing.",
+    "error": {
+      "google": "The last sync failed: Google returned an error. It retries on the next change or Sync now.",
+      "network": "The last sync failed: couldn't reach Google. It retries on the next change or Sync now.",
+      "auth": "Google access has ended. Reconnect to keep syncing."
+    },
+    "disconnectTitle": "Disconnect Google Calendar?",
+    "disconnectBody": "Syncing stops, and the app's access to your Google account is withdrawn (Google sign-in keeps working).",
+    "deleteCalendar": "Also delete the “Talent Biz OS” calendar in Google",
+    "confirmDisconnect": "Disconnect",
+    "cancel": "Cancel",
+    "importTitle": "Show your Google calendars here",
+    "importBody": "Choose Google calendars to show on the calendar here. Their events are read-only, visible only to you, and never part of a project; they help spot clashes with personal plans.",
+    "importChoose": "Choose Google calendars to show",
+    "importChange": "Change calendars shown",
+    "chooseTitle": "Which Google calendars should show here?",
+    "chooseBody": "Ticked calendars appear on the calendar here (from a month ago to six months ahead), refreshed every few minutes.",
+    "chooseNone": "This Google account has no other calendars.",
+    "chooseSave": "Save",
+    "saving": "Saving…",
+    "bodyWithRead": "Sync your events here to a dedicated “Talent Biz OS” calendar in Google Calendar. The app only creates and changes that calendar; it never changes your other Google calendars, and reads only the ones you choose to show below."
   },
   "settings": {
     "workspace": "Workspace settings",
@@ -1173,7 +1215,11 @@
     "uploadMissing": "An upload didn't finish. Please try again.",
     "aiDailyLimit": "Today's AI analyses for this account are used up. It resets within 24 hours.",
     "aiMessageLimit": "This message has been analyzed the maximum number of times.",
-    "proposalChanged": "The project changed after you opened this message. Check the proposed updates again."
+    "proposalChanged": "The project changed after you opened this message. Check the proposed updates again.",
+    "calendarNotGranted": "Google didn't grant calendar access. Press Connect Google Calendar again and allow it.",
+    "calendarNoOffline": "Google didn't grant offline access. Press Connect Google Calendar again to re-authorize.",
+    "calendarNotConnected": "Google Calendar isn't connected.",
+    "calendarUnreachable": "Couldn't reach Google. Try again in a moment."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",

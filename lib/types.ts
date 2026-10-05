@@ -229,6 +229,20 @@ export type TimelineEntry = {
   recorded: boolean;
 };
 
+export type ExternalEvent = {
+  id: string;
+  calendar: string; // the Google calendar's name
+  color: string | null;
+  title: string;
+  date: string;
+  time: string; // "" = all day
+  endDate: string;
+  endTime: string;
+  timeZone: string;
+  location: string;
+  link: string; // opens the event in Google Calendar
+};
+
 export type AppData = {
   talent: { id: string; name: string; timeZone: string };
   person: { displayName: string; email: string; role: Role; appearance: Appearance; replyWithinDays: number };
@@ -244,6 +258,17 @@ export type AppData = {
   timeline: TimelineEntry[]; // newest first
   contracts: Contract[]; // newest version first
   notificationState: NotificationState; // this person's read and snooze marks
+  // Google Calendar sync for this person and talent (decision 0009): whether Google granted the
+  // calendar permission, and the connection's state once made.
+  /** This person's own Google events, read-only (decision 0009, phase 2); "" = not set. Wall time in `timeZone`. */
+  externalEvents: ExternalEvent[];
+  googleCalendar: {
+    available: boolean; // a Google provider is configured here
+    importGranted: boolean; // Google allowed listing and reading their calendars
+    importing: { name: string; color: string | null; lastImportedAt: string | null }[]; // the calendars shown here
+    granted: boolean;
+    connection: { status: "connected" | "needs_reconnect" | "error"; lastError: string | null; lastSyncedAt: string | null } | null;
+  };
   // This person's sign-in methods; googleAccountId is our auth_account row id (what unlinking takes).
   signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };
   // The AI service's name when it may keep what's sent (e.g. a free tier) — shown as a notice; null otherwise.

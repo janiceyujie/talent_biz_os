@@ -12,7 +12,7 @@ export type PlanItem = {
   /** Unique per item on the timeline; a stay's check-out marker gets its own. */
   id: string;
   /** What it was made from, for editing and saving. */
-  ref: { source: "event" | "todo"; id: string } | { source: "payment"; id: string };
+  ref: { source: "event" | "todo"; id: string } | { source: "payment"; id: string } | { source: "google"; id: string; link: string };
   title: string;
   kind: CalendarKind;
   date: string; // YYYY-MM-DD in the talent's zone
@@ -33,6 +33,8 @@ export type PlanItem = {
   /** Shown when the item can't sit on the timeline as stated (another zone, multi-day). */
   note: string;
   amount: number | null; // payment due dates
+  /** From one of the person's own Google calendars (decision 0009, phase 2): read-only, never on a project. */
+  external: { calendar: string; color: string | null } | null;
 };
 
 export const plusDays = (date: string, days: number) => {
@@ -166,7 +168,7 @@ function wallTime(instant: Date, zone: string) {
  * them would mean rewriting a time someone gave in their own zone); travel
  * and stays span days and are edited in the full form.
  */
-export function planItems(data: Pick<AppData, "calendar" | "payments" | "projects" | "talent">): PlanItem[] {
+export function planItems(data: Pick<AppData, "calendar" | "payments" | "projects" | "talent"> & Partial<Pick<AppData, "externalEvents">>): PlanItem[] {
   const zone = data.talent.timeZone;
   const projectOf = (id: string | null) => data.projects.find((p) => p.id === id);
   const items: PlanItem[] = [];
@@ -181,6 +183,7 @@ export function planItems(data: Pick<AppData, "calendar" | "payments" | "project
       client: p?.counterparty ?? "",
       done: c.done,
       amount: null,
+      external: null,
     };
     const trip = !!c.travel;
     // Shown in the talent's zone; an item in another zone is converted, start and end.
@@ -235,7 +238,35 @@ export function planItems(data: Pick<AppData, "calendar" | "payments" | "project
       done: false,
       note: "",
       amount: paymentTotal(pay) * (pay.direction === "out" ? -1 : 1),
+      external: null,
     });
+  }
+  // The person's own Google events: shown in the talent's zone, read-only, part of clash checks.
+  for (const g of data.externalEvents ?? []) {
+    const local = g.time && g.timeZone !== zone ? wallTime(wallTimeToUtc(g.date, g.time, g.timeZone), zone) : { date: g.date, time: g.time };
+    const endDay = g.endDate || g.date;
+    const localEnd = g.endTime && g.timeZone !== zone ? wallTime(wallTimeToUtc(endDay, g.endTime, g.timeZone), zone) : { date: endDay, time: g.endTime };
+    const base = {
+      ref: { source: "google" as const, id: g.id, link: g.link },
+      title: g.title,
+      kind: "meeting" as CalendarKind,
+      fixed: true,
+      movable: false,
+      projectId: null,
+      project: "",
+      client: "",
+      done: false,
+      note: "",
+      amount: null,
+      external: { calendar: g.calendar, color: g.color },
+    };
+    if (g.time) {
+      items.push({ ...base, id: `google:${g.id}`, date: local.date, start: local.time, endDate: localEnd.time ? localEnd.date : "", end: localEnd.time });
+      continue;
+    }
+    // All day: on each day it covers (a long one is capped at a month).
+    for (let d = g.date, n = 0; d <= endDay && n < 31; d = plusDays(d, 1), n++)
+      items.push({ ...base, id: `google:${g.id}:${d}`, date: d, start: "", endDate: "", end: "" });
   }
   return items.sort((a, b) => `${a.date}${a.start || "99"}`.localeCompare(`${b.date}${b.start || "99"}`));
 }

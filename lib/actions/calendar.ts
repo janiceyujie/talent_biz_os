@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { auditLog, calendarEvent, todo } from "@/lib/db/schema";
 import { exactInstant } from "@/lib/domain/dates";
 import { calendarKinds, transportModes, type CalendarKind } from "@/lib/types";
+import { requestCalendarSync } from "@/lib/calendar/google/sync";
 import { checkProjectLink } from "./project-link";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
@@ -160,6 +161,8 @@ export async function saveCalendarItem(data: Record<string, unknown>): Promise<s
       if (!rows.length) return fail("eventNotFound");
     }
   }
+  // Events only; to-dos aren't synced to Google (decision 0009).
+  if (target === "event") await requestCalendarSync(talent.id);
   refresh();
   return null;
 }
@@ -216,6 +219,7 @@ export async function archiveCalendarItem(id: string, source: "event" | "todo", 
           .where(and(eq(calendarEvent.id, id), eq(calendarEvent.talentId, talent.id)))
           .returning({ id: calendarEvent.id });
   if (!rows.length) return fail("itemNotFound");
+  if (source === "event") await requestCalendarSync(talent.id);
   refresh();
   return null;
 }
@@ -251,6 +255,7 @@ export async function deleteCalendarItem(id: string, source: "event" | "todo"): 
     });
     return null;
   });
+  if (!failure && source === "event") await requestCalendarSync(talent.id);
   if (!failure) refresh();
   return failure;
 }

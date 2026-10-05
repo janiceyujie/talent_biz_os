@@ -588,3 +588,98 @@ export const replyTemplate = pgTable(
     check("reply_template_kind_check", oneOf(t.kind, replyTemplateKinds)),
   ],
 ).enableRLS();
+
+// Google Calendar sync (decision 0009). One connection per person per talent:
+// their Google account (the linked auth_account) and the dedicated calendar
+// we created there. `dirty` asks a running sync to go around once more.
+export const calendarConnectionStatuses = ["connected", "needs_reconnect", "error"] as const;
+
+export const calendarConnection = pgTable(
+  "calendar_connection",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    personId: uuid()
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    authAccountId: uuid()
+      .notNull()
+      .references(() => authAccount.id, { onDelete: "cascade" }),
+    provider: text().notNull().default("google"),
+    externalCalendarId: text(), // the dedicated calendar; null until created
+    status: text({ enum: calendarConnectionStatuses }).notNull().default("connected"),
+    lastError: text(), // a failure code, for the settings card
+    lastSyncedAt: timestamp({ withTimezone: true }),
+    dirty: boolean().notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique("calendar_connection_person_talent").on(t.personId, t.talentId, t.provider),
+    index("calendar_connection_talent_idx").on(t.talentId),
+    check("calendar_connection_status_check", oneOf(t.status, calendarConnectionStatuses)),
+  ],
+).enableRLS();
+
+// Which Google event each of our events became, per connection. The event link
+// is set null (not cascaded) when an event is deleted, so the next sync still
+// knows which Google event to remove.
+export const calendarEventSync = pgTable(
+  "calendar_event_sync",
+  {
+    id: id(),
+    connectionId: uuid()
+      .notNull()
+      .references(() => calendarConnection.id, { onDelete: "cascade" }),
+    eventId: uuid().references(() => calendarEvent.id, { onDelete: "set null" }),
+    externalEventId: text().notNull(),
+    etag: text(),
+    syncedAt: timestamp({ withTimezone: true }).notNull(), // our event's updated_at when last pushed
+  },
+  (t) => [
+    unique("calendar_event_sync_connection_event").on(t.connectionId, t.eventId),
+    index("calendar_event_sync_connection_idx").on(t.connectionId),
+  ],
+).enableRLS();
+
+// Phase 2 of decision 0009: the person's own Google calendars shown here,
+// read-only. Personal: only the person who connected sees them. Each poll
+// re-reads a window of dates and replaces what's stored for that calendar.
+export const calendarImportSource = pgTable(
+  "calendar_import_source",
+  {
+    id: id(),
+    connectionId: uuid()
+      .notNull()
+      .references(() => calendarConnection.id, { onDelete: "cascade" }),
+    externalCalendarId: text().notNull(),
+    name: text().notNull(),
+    color: text(), // Google's background colour for the calendar, as #rrggbb
+    lastImportedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [unique("calendar_import_source_connection_calendar").on(t.connectionId, t.externalCalendarId)],
+).enableRLS();
+
+// One event read from a chosen Google calendar, as wall time plus zone like our own (decision 0003).
+export const externalEvent = pgTable(
+  "external_event",
+  {
+    id: id(),
+    sourceId: uuid()
+      .notNull()
+      .references(() => calendarImportSource.id, { onDelete: "cascade" }),
+    externalEventId: text().notNull(), // a repeating event's occurrences each have their own id
+    title: text().notNull(),
+    startDate: date().notNull(),
+    startTime: time({ precision: 0 }), // null = all day
+    endDate: date(),
+    endTime: time({ precision: 0 }),
+    timeZone: text().notNull(),
+    location: text(),
+    htmlLink: text(), // opens the event in Google Calendar
+  },
+  (t) => [unique("external_event_source_event").on(t.sourceId, t.externalEventId), index("external_event_source_start_idx").on(t.sourceId, t.startDate)],
+).enableRLS();

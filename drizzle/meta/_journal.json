@@ -127,6 +127,20 @@
       "when": 1791089797877,
       "tag": "0017_contracts",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791221235698,
+      "tag": "0018_google_calendar_sync",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791224230790,
+      "tag": "0019_google_calendar_import",
+      "breakpoints": true
     }
   ]
 }

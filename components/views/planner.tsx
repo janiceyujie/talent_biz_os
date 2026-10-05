@@ -14,6 +14,7 @@ import { Modal } from "@/components/app/modal";
 import { PageHeader } from "@/components/app/page-header";
 import { calendarRecord, RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { deleteCalendarItem, saveCalendarItem } from "@/lib/actions/calendar";
+import { refreshGoogleCalendars } from "@/lib/actions/google-calendar";
 import { at, clock, conflicts, layoutDay, minutes, moveItem, planItems, plusDays, segment, validItem, weekStart, type PlanItem } from "@/lib/calendar/planner";
 import { dateInZone } from "@/lib/domain/dates";
 import { useMoney } from "@/lib/i18n/format";
@@ -62,18 +63,29 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
   const [menu, setMenu] = useState<{ item: PlanItem; x: number; y: number } | null>(null);
   const [deleting, setDeleting] = useState<PlanItem | null>(null);
   const onMenu = (item: PlanItem, e: ReactMouseEvent) => {
-    if (item.ref.source === "payment") return;
+    if (item.ref.source === "payment" || item.ref.source === "google") return; // not ours to delete here
     e.preventDefault();
     setMenu({ item, x: e.clientX, y: e.clientY });
   };
   const remove = (item: PlanItem) =>
     startTransition(async () => {
-      if (item.ref.source === "payment") return;
+      if (item.ref.source === "payment" || item.ref.source === "google") return;
       const failure = await deleteCalendarItem(item.ref.id, item.ref.source);
       if (failure) return setMessage(failure);
       setMessage(t("deleted", { title: item.title }));
     });
+  // The person's own Google calendars (decision 0009, phase 2): read again on opening and every few
+  // minutes while the calendar is open (the server skips it if read in the last two minutes).
+  const importing = data.googleCalendar.importing.length > 0;
+  useEffect(() => {
+    if (!importing) return;
+    void refreshGoogleCalendars();
+    const timer = setInterval(() => void refreshGoogleCalendars(), 3 * 60_000);
+    return () => clearInterval(timer);
+  }, [importing]);
   const open = (item: PlanItem) => {
+    // A Google event opens in Google Calendar: it's read-only here.
+    if (item.ref.source === "google") return void (item.ref.link && window.open(item.ref.link, "_blank", "noopener"));
     if (item.movable) return setEditing(item);
     // Multi-day, other-zone, and payment items are edited in their full form.
     if (item.ref.source === "payment") {
@@ -434,11 +446,19 @@ function TimeGrid({
                   <article
                     key={b.id}
                     data-event-id={item.id}
-                    className={`cal-block ${item.fixed ? "is-fixed" : "is-flexible"} ${clash ? "has-conflict" : ""} ${preview?.item.id === item.id ? "is-dragging" : ""} ${item.done ? "is-done" : ""}`}
-                    style={{ top: (b.from / 60) * HOUR, height, left: `calc(${(b.lane / b.lanes) * 100}% + 2px)`, width: `calc(${100 / b.lanes}% - 4px)` }}
+                    className={`cal-block ${item.external ? "is-external" : item.fixed ? "is-fixed" : "is-flexible"} ${clash ? "has-conflict" : ""} ${preview?.item.id === item.id ? "is-dragging" : ""} ${item.done ? "is-done" : ""}`}
+                    style={{
+                      top: (b.from / 60) * HOUR,
+                      height,
+                      left: `calc(${(b.lane / b.lanes) * 100}% + 2px)`,
+                      width: `calc(${100 / b.lanes}% - 4px)`,
+                      ...(item.external?.color ? { borderLeftColor: item.external.color } : {}),
+                    }}
                     onContextMenu={(e) => onMenu(item, e)}
                     title={
-                      item.movable
+                      item.external
+                        ? t("hintGoogle", { calendar: item.external.calendar })
+                        : item.movable
                         ? [item.fixed ? t("hintProject") : "", item.end ? t("hintMoveResize") : t("hintMove"), t("hintDelete")].filter(Boolean).join(" · ")
                         : t("hintOpen")
                     }
@@ -455,7 +475,7 @@ function TimeGrid({
                       onClick={() => onOpen(item)}
                       aria-label={t("edit", { title: item.title })}
                     >
-                      <strong>{item.title}</strong>
+                      <strong>{item.title || t("untitled")}</strong>
                       <span>
                         {item.end ? `${item.start}–${item.endDate !== item.date ? `${item.endDate.slice(5)} ` : ""}${item.end}` : t("startsAt", { start: item.start })}
                         {item.project ? ` · ${item.project}` : ""}
@@ -493,18 +513,21 @@ export function EventCard({
   const clash = conflicts(item, items).length > 0;
   return (
     <article
-      className={`planner-event ${item.fixed ? "is-fixed" : "is-flexible"} ${clash ? "has-conflict" : ""} ${item.done ? "is-done" : ""}`}
+      className={`planner-event ${item.external ? "is-external" : item.fixed ? "is-fixed" : "is-flexible"} ${clash ? "has-conflict" : ""} ${item.done ? "is-done" : ""}`}
       data-event-id={item.id}
       onContextMenu={onMenu && ((e) => onMenu(item, e))}
     >
       <button className="planner-event-main" onClick={() => onOpen(item)} aria-label={t("edit", { title: item.title })}>
-        {!compact && (
-          <span className="planner-event-meta">
-            {item.fixed ? <LockKeyhole size={14} aria-hidden="true" /> : <Move size={14} aria-hidden="true" />}
-            {t(item.fixed ? "fixed" : "flexible")} · {labels.calendarKind(item.kind)}
-          </span>
-        )}
-        <strong>{item.title}</strong>
+        {!compact &&
+          (item.external ? (
+            <span className="planner-event-meta">{t("fromGoogle", { calendar: item.external.calendar })}</span>
+          ) : (
+            <span className="planner-event-meta">
+              {item.fixed ? <LockKeyhole size={14} aria-hidden="true" /> : <Move size={14} aria-hidden="true" />}
+              {t(item.fixed ? "fixed" : "flexible")} · {labels.calendarKind(item.kind)}
+            </span>
+          ))}
+        <strong>{item.title || t("untitled")}</strong>
         <span className="planner-event-time">
           {item.start
             ? item.end

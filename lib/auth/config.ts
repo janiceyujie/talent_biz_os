@@ -42,6 +42,9 @@ const google = realGoogle ?? testGoogle;
 /** Whether to show "Continue with Google" — real Google only. */
 export const isGoogleEnabled = realGoogle !== undefined;
 
+/** Whether a Google provider exists at all (real, or the test stand-in outside production): Calendar sync needs one. */
+export const isGoogleConfigured = google !== undefined;
+
 /** Emails go out in the recipient's saved language, whatever browser asked for them. */
 async function emailText(user: object) {
   const locale = toLocale("locale" in user ? user.locale : undefined);
@@ -78,6 +81,9 @@ export const auth = betterAuth({
   account: {
     modelName: "authAccount",
     fields: { userId: "personId" },
+    // Google tokens can act on a person's calendar (decision 0009): encrypted at rest with the
+    // auth secret. Tokens saved before this was on stay readable (they're used as they are).
+    encryptOAuthTokens: true,
     // docs/decisions/0001: a first Google sign-in links to an existing person
     // only when both Google and we have verified the email (Better Auth's
     // defaults, kept explicit). A different email links only from settings

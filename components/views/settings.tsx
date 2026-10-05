@@ -10,6 +10,7 @@ import Link from "next/link";
 import { RolePortrait } from "@/components/role/role-portrait";
 import { TimeZonePicker } from "@/components/app/time-zone-picker";
 import { CalendarFeedSettings } from "./calendar-feed-settings";
+import { GoogleCalendarSettings } from "./google-calendar-settings";
 import { SignInMethods } from "./sign-in-methods";
 import { setReplyWithinDays } from "@/lib/actions/intake";
 
@@ -82,6 +83,7 @@ export function SettingsView() {
         </div>
       </section>
       <CalendarFeedSettings />
+      <GoogleCalendarSettings />
       <section className="surface padded">
         <div className="section-header">
           <div>

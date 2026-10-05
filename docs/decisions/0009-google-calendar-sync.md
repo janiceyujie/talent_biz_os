@@ -21,7 +21,7 @@ Two-way sync is a long-lived connection to an account we don't control:
 |---|---|---|
 | 0 | The subscription link (built) | — |
 | 1 | **Ours → Google**: our events pushed to a dedicated calendar in near-real time | Calendar permission; background work (in-process until the job queue, decision 0008) |
-| 2 | **Google → ours**: the person's chosen Google calendars shown here, read-only | Read permission; Google's change notifications, so a public HTTPS address (after hosting is chosen) |
+| 2 | **Google → ours**: the person's chosen Google calendars shown here, read-only | Read permission; polling now, Google's change notifications once there's a public HTTPS address |
 | 3 | Full two-way editing of project events from Google | Only if people actually edit project events in Google |
 
 Each phase ships on its own; the next starts when the last is in use.
@@ -37,7 +37,7 @@ Each phase ships on its own; the next starts when the last is in use.
 
 - A **dedicated calendar**, 「Talent Biz OS」, created in their account on connect. Not their primary calendar: it can be shown, hidden, or colored on its own, and disconnecting can remove it cleanly without touching anything they made.
 - What's pushed: **events** (`calendar_event`), confirmed and not archived — the same set as the subscription feed. To-dos and payment dates stay out (they're deadlines, not time someone spends). Project and counterparty go in the description; nothing from messages or money.
-- Each event remembers its Google event id and version (`etag`) and when it last synced, so later edits update the same Google event.
+- Each event remembers, per connection, its Google event id and version (`etag`) and when it last synced (`calendar_event_sync`), so later edits update the same Google event. Per connection rather than on the event, because two people in a workspace can each connect their own Google account.
 
 ### Ownership and conflicts
 
@@ -49,7 +49,7 @@ Each phase ships on its own; the next starts when the last is in use.
 ### Storage and security
 
 - Tokens stay in `auth_account` (Better Auth), **encrypted at rest** (`account.encryptOAuthTokens`, keyed by the auth secret). They're used only by the server.
-- A `calendar_connection` row per person and talent: Google account, dedicated calendar id, phase-2 calendar choices, status (connected, needs reconnecting, error), last successful sync.
+- A `calendar_connection` row per person and talent: Google account, dedicated calendar id, phase-2 calendar choices (later), status (connected, needs reconnecting, error), last failure, last successful sync.
 - Imported events (phase 2) are kept in their own table, not mixed into `calendar_event`, so they can be dropped wholesale.
 - **Disconnect**: revoke the token at Google, delete it and the connection, clear the Google ids on our events, delete imported events, and — if the person chooses — delete the dedicated calendar. Revoking access from Google's side is detected on the next sync and shown as "needs reconnecting".
 - The connect screen says exactly what is shared each way and what is stored.
@@ -57,7 +57,8 @@ Each phase ships on its own; the next starts when the last is in use.
 ### Sync mechanics
 
 - Phase 1: push on every create, change, and delete (after the save commits); a first full push on connect; retries with backoff; failures shown on the 設定 card, never blocking a save here.
-- Phase 2: incremental sync with Google's sync tokens; change notifications (channels renewed before they expire, about weekly); a periodic sync as a safety net.
+- Phase 2: each read re-fetches a window of dates (a month back to six months ahead, repeating events expanded) and replaces what's stored for that calendar — right for deletions and repetition with no bookkeeping. Read on opening the calendar and every few minutes while it's open (at most every two minutes), and on 立即同步. Google's sync tokens and change notifications (channels renewed before they expire, about weekly) replace polling after deployment.
+- **Imported events are personal**: only the person who connected sees them — not the workspace's other members — and they never link to projects.
 - Tests use a fake Google Calendar, never a real account (as recorded model responses do for the AI, decision 0008).
 
 ## Alternatives considered
@@ -75,3 +76,19 @@ Each phase ships on its own; the next starts when the last is in use.
 - Phase 2 waits on hosting (a public HTTPS address) and the job queue.
 - Background work and retries become product features, not internals: the 設定 card shows sync status.
 - Outlook / Apple would be separate integrations; the connection table is provider-neutral so they can follow.
+
+## Implementation notes (phase 1, 2026-10-05)
+
+- `lib/calendar/google/`: `plan.ts` (pure: event → Google event; what to create, update, remove), `api.ts` (plain fetch, no SDK; `GOOGLE_CALENDAR_API_URL` points it at a fake in tests), `sync.ts` (one sync per connection at a time via a transaction-scoped advisory lock; a change mid-sync sets `dirty` and the sync goes around again).
+- Triggered after every event save, archive, and delete, and after the intake review applies dates; 立即同步 runs it directly. Background work uses `after()` until the job queue exists (decision 0008).
+- The calendar permission is requested with `access_type=offline` and `prompt=select_account consent` on that request only, so sign-in is unchanged and a refresh token is always returned.
+- A calendar deleted in Google is re-created on the next sync, with every event pushed again; an event deleted or edited in Google is restored from ours.
+- Unlinking the Google account in 登入方式 removes the connection with it (the Google calendar stays, as Google keeps it).
+- End-to-end tests run a second dev server (`NEXT_DIST_DIR=.next-test`, port 3001) with the stand-in Google sign-in and a fake Calendar API.
+
+## Implementation notes (phase 2, 2026-10-05)
+
+- `calendar_import_source` (a chosen Google calendar, per connection) and `external_event` (migration 0019); disconnecting removes both.
+- `lib/calendar/google/import-plan.ts` (pure: a Google event as wall time plus zone; all-day ends on the last day covered) and `import.ts` (the windowed re-read, one per calendar at a time). A calendar removed from their Google list, or no longer readable, stops being shown.
+- 設定 → 在這裡顯示你的 Google 日曆 asks for the two read permissions (with offline access) only when pressed, then lists their calendars (not our own) to tick.
+- On the calendar, Google events are read-only: not draggable, no delete, open in Google when clicked, coloured by their Google calendar, and part of clash checks. The month view doesn't show them yet.

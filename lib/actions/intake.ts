@@ -10,6 +10,7 @@ import { getTranslations } from "next-intl/server";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
+import { requestCalendarSync } from "@/lib/calendar/google/sync";
 import { requireTalent } from "@/lib/auth";
 import { getAppData } from "@/lib/data";
 import { db } from "@/lib/db";
@@ -289,6 +290,8 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
     });
     return null;
   });
+  // Applying can add or move calendar events (dates on a signed project).
+  if (!failure) await requestCalendarSync(talent.id);
   if (!failure) refresh();
   return failure;
 }

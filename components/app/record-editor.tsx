@@ -4,7 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
-import { projectTypes } from "@/lib/project-types";
+import { defaultProjectType, projectTypes } from "@/lib/project-types";
 import { saveContact } from "@/lib/actions/contacts";
 import { saveCalendarItem } from "@/lib/actions/calendar";
 import { savePayment } from "@/lib/actions/payments";
@@ -99,7 +99,7 @@ export function RecordEditor({
       title: "",
       counterparty: "",
       counterpartyId: "",
-      type: "gig",
+      type: defaultProjectType,
       stage: "offer",
       quotedAmount: "", // blank = 報價未定
       currency: "TWD",
@@ -149,8 +149,8 @@ export function RecordEditor({
       taxIncluded: false,
       notes: "",
     },
-    template: { title: "", projectType: "gig", kind: "past_reply", language: uiLocale, tone: tTone("natural"), body: "" },
-    draft: { projectId: "", subject: "", recipient: "", projectType: "gig", source: "", body: "" },
+    template: { title: "", projectType: defaultProjectType, kind: "past_reply", language: uiLocale, tone: tTone("natural"), body: "" },
+    draft: { projectId: "", subject: "", recipient: "", projectType: defaultProjectType, source: "", body: "" },
   };
   const kind = editor.kind;
   const onSave = savers[kind];
@@ -336,7 +336,7 @@ export function RecordEditor({
               <div className="form-grid">
                 {field("date", t(travel ? "field.departDate" : stay ? "field.checkInDate" : "field.date"), "date", true)}
                 {field("time", t(travel ? "field.departTime" : stay ? "field.checkInTime" : "field.time"), "time", travel || stay)}
-                {!travel && !stay && !todoKinds.includes(String(data.kind)) && field("endTime", t("field.endTime"), "time")}
+
                 <TimeZonePicker
                   label={t("field.timeZone")}
                   required
@@ -354,6 +354,13 @@ export function RecordEditor({
                   ),
                 )}
               </div>
+              {!travel && !stay && !todoKinds.includes(String(data.kind)) && (
+                // An ordinary event's end, in the same zone as its start.
+                <div className="form-grid">
+                  {field("endDate", t("field.endDate"), "date")}
+                  {field("endTime", t("field.endTime"), "time", !!data.endDate)}
+                </div>
+              )}
               {projectLink()}
               {travel && (
                 <>

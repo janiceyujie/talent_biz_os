@@ -17,10 +17,11 @@ export type PlanItem = {
   kind: CalendarKind;
   date: string; // YYYY-MM-DD in the talent's zone
   start: string; // HH:mm or "" (untimed: a due date, an all-day item)
+  endDate: string; // the end's day: the start day or later; "" with no recorded end
   end: string; // HH:mm or "" (no recorded end: never invented)
   /**
-   * Fixed: a commitment someone else depends on (events, payment dates) — moving it asks first.
-   * Flexible: the person's own work (to-dos) — moves directly unless it clashes.
+   * Fixed: a commitment someone else depends on — an event on a project, a payment date. Moving it asks first.
+   * Flexible: the person's own events and to-dos — they move directly unless they clash.
    */
   fixed: boolean;
   /** Can be dragged: has a start, is in the talent's zone, and isn't a multi-day or derived item. */
@@ -53,35 +54,92 @@ export const clock = (value: number) => `${String(Math.floor(value / 60)).padSta
 const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T12:00:00Z`).toISOString().slice(0, 10) === v;
 const isTime = (v: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
 
-/** A real date; a start without an end, or an end after the start on the same day. */
-export function validItem(item: Pick<PlanItem, "date" | "start" | "end">) {
+/** Minutes since 1970-01-01 00:00 for a wall date and time: lets spans cross midnight. Zone-free on purpose. */
+export const at = (date: string, time: string) => Date.parse(`${date}T00:00:00Z`) / 60000 + minutes(time);
+const fromAt = (value: number) => {
+  const d = new Date(Math.floor(value / 1440) * 86400000);
+  return { date: d.toISOString().slice(0, 10), time: clock(((value % 1440) + 1440) % 1440) };
+};
+
+/** A real date; a start without an end, or an end after the start (possibly on a later day). */
+export function validItem(item: Pick<PlanItem, "date" | "start" | "endDate" | "end">) {
   if (!isDate(item.date)) return false;
   if (!item.start) return !item.end;
   if (!isTime(item.start)) return false;
-  return !item.end || (isTime(item.end) && minutes(item.end) > minutes(item.start));
+  if (!item.end) return true;
+  return isDate(item.endDate) && isTime(item.end) && at(item.endDate, item.end) > at(item.date, item.start);
 }
 
-/** Timed items on the same day whose spans overlap. Items without both a start and an end never clash. */
+const span = (i: Pick<PlanItem, "date" | "start" | "endDate" | "end">) =>
+  i.start && i.end && i.endDate ? [at(i.date, i.start), at(i.endDate, i.end)] : null;
+
+/** Timed items whose spans overlap (across midnight too). Items without both a start and an end never clash. */
 export function conflicts(item: PlanItem, items: PlanItem[]) {
-  if (!item.start || !item.end) return [];
-  return items.filter(
-    (o) =>
-      o.id !== item.id &&
-      !o.done &&
-      o.date === item.date &&
-      o.start &&
-      o.end &&
-      minutes(item.start) < minutes(o.end) &&
-      minutes(item.end) > minutes(o.start),
-  );
+  const a = span(item);
+  if (!a) return [];
+  return items.filter((o) => {
+    const b = o.id !== item.id && !o.done ? span(o) : null;
+    return !!b && a[0] < b[1] && a[1] > b[0];
+  });
 }
 
-/** Move to a new day and start, keeping the length; or with `resize`, set a new end on the same day. */
-export function moveItem(item: PlanItem, date: string, start: string, resize = false): PlanItem {
-  if (resize) return { ...item, end: date === item.date ? start : item.start };
-  if (!item.end) return { ...item, date, start };
-  const end = minutes(start) + minutes(item.end) - minutes(item.start);
-  return { ...item, date, start, end: end <= 1439 ? clock(end) : "" };
+/**
+ * Move to a new start, keeping the length; or set a new start or end edge
+ * (`edge`), refusing an edge that would cross the other one.
+ */
+export function moveItem(item: PlanItem, date: string, time: string, edge: "move" | "start" | "end" = "move"): PlanItem {
+  const target = at(date, time);
+  if (edge === "end") {
+    if (target <= at(item.date, item.start)) return item;
+    return { ...item, endDate: date, end: time };
+  }
+  if (edge === "start") {
+    if (item.end && target >= at(item.endDate, item.end)) return item;
+    return { ...item, date, start: time };
+  }
+  if (!item.end) return { ...item, date, start: time };
+  const end = fromAt(target + at(item.endDate, item.end) - at(item.date, item.start));
+  return { ...item, date, start: time, endDate: end.date, end: end.time };
+}
+
+/** The part of an item on one day, in minutes from that day's midnight; null if it isn't on the day. */
+export function segment(item: PlanItem, day: string) {
+  if (!item.start) return null;
+  const dayStart = at(day, "00:00");
+  const from = at(item.date, item.start);
+  const to = item.end ? at(item.endDate, item.end) : from; // no end: a point in time
+  if (to < dayStart || from >= dayStart + 1440 || (to === dayStart && from < dayStart)) return null;
+  return { from: Math.max(from, dayStart) - dayStart, to: Math.min(to, dayStart + 1440) - dayStart, open: !item.end };
+}
+
+/**
+ * Side-by-side columns for overlapping blocks on one day, like a calendar app:
+ * each block gets a lane, and every block in a cluster of overlaps shares the
+ * cluster's lane count. Blocks without an end count as `minLength` long.
+ */
+export function layoutDay<T extends { id: string; from: number; to: number }>(blocks: T[], minLength = 30) {
+  const sorted = [...blocks].sort((a, b) => a.from - b.from || b.to - a.to);
+  const out = new Map<string, { lane: number; lanes: number }>();
+  let cluster: { id: string; lane: number }[] = [];
+  let clusterEnd = -1;
+  let laneEnds: number[] = [];
+  const close = () => {
+    const lanes = Math.max(1, ...cluster.map((c) => c.lane + 1));
+    for (const c of cluster) out.set(c.id, { lane: c.lane, lanes });
+    cluster = [];
+    laneEnds = [];
+  };
+  for (const b of sorted) {
+    const end = Math.max(b.to, b.from + minLength);
+    if (b.from >= clusterEnd) close();
+    let lane = laneEnds.findIndex((e) => e <= b.from);
+    if (lane === -1) lane = laneEnds.length;
+    laneEnds[lane] = end;
+    cluster.push({ id: b.id, lane });
+    clusterEnd = Math.max(clusterEnd, end);
+  }
+  close();
+  return out;
 }
 
 /** The wall date and time in `zone` at an instant. */
@@ -124,20 +182,22 @@ export function planItems(data: Pick<AppData, "calendar" | "payments" | "project
       done: c.done,
       amount: null,
     };
-    const multiDay = !!c.travel;
+    const trip = !!c.travel;
+    // Shown in the talent's zone; an item in another zone is converted, start and end.
     const local = c.time && c.timeZone !== zone ? wallTime(wallTimeToUtc(c.date, c.time, c.timeZone), zone) : { date: c.date, time: c.time };
+    const endDay = c.endDate || c.date;
     const localEnd =
-      c.endTime && c.timeZone !== zone ? wallTime(wallTimeToUtc(c.date, c.endTime, c.timeZone), zone) : { date: c.date, time: c.endTime };
-    const sameDay = !multiDay && localEnd.date === local.date;
+      c.endTime && c.timeZone !== zone ? wallTime(wallTimeToUtc(endDay, c.endTime, c.timeZone), zone) : { date: endDay, time: c.endTime };
     items.push({
       ...base,
       id: `${c.source}:${c.id}`,
       date: local.date,
-      start: multiDay ? "" : local.time,
-      end: sameDay ? localEnd.time : "",
-      fixed: c.source === "event",
-      movable: !multiDay && !!c.time && c.timeZone === zone,
-      note: multiDay || c.timeZone !== zone ? [c.date, c.time, c.timeZone].filter(Boolean).join(" ") : "",
+      start: trip ? "" : local.time,
+      endDate: !trip && c.time && c.endTime ? localEnd.date : "",
+      end: !trip && c.time && c.endTime ? localEnd.time : "",
+      fixed: c.source === "event" && !!c.projectId,
+      movable: !trip && !!c.time && c.timeZone === zone,
+      note: trip || c.timeZone !== zone ? [c.date, c.time, c.timeZone].filter(Boolean).join(" ") : "",
     });
     // A trip's arrival or a stay's check-out on another day gets its own marker.
     if (c.travel?.endDate && c.travel.endDate !== c.date)
@@ -146,6 +206,7 @@ export function planItems(data: Pick<AppData, "calendar" | "payments" | "project
         id: `${c.source}:${c.id}:end`,
         date: c.travel.endDate,
         start: "",
+        endDate: "",
         end: "",
         fixed: true,
         movable: false,
@@ -164,6 +225,7 @@ export function planItems(data: Pick<AppData, "calendar" | "payments" | "project
       kind: "payment",
       date: pay.dueDate,
       start: "",
+      endDate: "",
       end: "",
       fixed: true,
       movable: false,

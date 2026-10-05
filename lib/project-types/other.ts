@@ -1,6 +1,7 @@
 // Anything else (其他): only the core fields.
 export const other = {
   key: "other",
+  eventKind: "meeting",
   fullSupport: false,
   extraction: {
     description: "Work that fits none of the other types: teaching, writing, judging, consulting, and so on.",

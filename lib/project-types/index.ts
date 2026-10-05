@@ -15,12 +15,17 @@ export type ProjectTypeDefinition = {
   fullSupport: boolean;
   /** What the model is told about this type, and the fields it extracts for it (lib/ai/extraction). */
   extraction: { description: string; fields: readonly FieldDefinition[] };
+  /** The calendar kind for the type's main dates when they become events (the show, the shoot). */
+  eventKind: "performance" | "meeting";
 };
 
 export const projectTypes = [gig, brandDeal, sponsoredPost, licensing, other] as const;
 export type ProjectType = (typeof projectTypes)[number]["key"];
 
 export const projectTypeKeys = projectTypes.map((t) => t.key) as ProjectType[];
+
+/** The type a new project, template, or draft starts as: the first registered. */
+export const defaultProjectType = projectTypeKeys[0];
 
 export function projectType(key: string): ProjectTypeDefinition {
   return projectTypes.find((t) => t.key === key) ?? other;

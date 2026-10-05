@@ -18,7 +18,7 @@ import { dateInZone } from "@/lib/domain/dates";
 import { filedMessages, keptFields, proposeChanges, withField, type Change, type ChangeRecord, type IntakeContext } from "@/lib/domain/intake";
 import { isSigned } from "@/lib/domain/phases";
 import { paymentTotal } from "@/lib/domain/workflow";
-import { projectTypeKeys } from "@/lib/project-types";
+import { projectType, projectTypeKeys } from "@/lib/project-types";
 import { stages, type ProjectDate, type ProjectDetails, type Stage } from "@/lib/types";
 import { errorText } from "./validation";
 
@@ -159,7 +159,7 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
             await tx.insert(calendarEvent).values({
               talentId: talent.id,
               projectId: target.id,
-              kind: target.type === "gig" ? "performance" : "meeting",
+              kind: projectType(target.type).eventKind,
               title: (to.what || target.title).slice(0, 200),
               startDate: to.date,
               startTime: to.time || null,

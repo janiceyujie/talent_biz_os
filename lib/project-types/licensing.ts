@@ -1,6 +1,7 @@
 // Licensing existing work (授權).
 export const licensing = {
   key: "licensing",
+  eventKind: "meeting",
   fullSupport: false,
   extraction: {
     description: "Use of existing work — music, recordings, photos, footage, likeness — in someone else's production (授權, 版權, 使用權, sync).",

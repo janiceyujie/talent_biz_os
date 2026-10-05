@@ -1,6 +1,7 @@
 // A performance or event appearance (演出).
 export const gig = {
   key: "gig",
+  eventKind: "performance",
   fullSupport: true,
   extraction: {
     description: "A performance or event appearance: concert, club show, festival slot, wedding or corporate gig, DJ set, live appearance (演出, 表演, 商演, live).",

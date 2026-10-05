@@ -19,7 +19,7 @@ const weekdays = (locale: string) =>
 
 // Calendar events and to-dos in one month view. Each item shows in its own
 // local date and time zone; cross-zone items aren't converted to one timeline.
-export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
+export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?: string; hideAdd?: boolean }) {
   const data = useAppData();
   const t = useTranslations("calendar");
   const labels = useLabels();
@@ -74,9 +74,11 @@ export function CalendarView({ initialDay = "" }: { initialDay?: string }) {
         <button className="secondary" onClick={() => setDay("")}>
           {t("wholeMonth")}
         </button>
-        <button className="primary" onClick={() => setEditor({ kind: "calendar", item: day ? { date: day } : undefined })}>
-          {t("new")}
-        </button>
+        {!hideAdd && (
+          <button className="primary" onClick={() => setEditor({ kind: "calendar", item: day ? { date: day } : undefined })}>
+            {t("new")}
+          </button>
+        )}
         <label className="check-line">
           <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} />
           {t("showDone")}

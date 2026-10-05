@@ -1,6 +1,7 @@
 // A paid post or product review (業配).
 export const sponsoredPost = {
   key: "sponsored_post",
+  eventKind: "meeting",
   fullSupport: false,
   extraction: {
     description: "A paid or gifted post about a product or service: review, unboxing, mention, affiliate post (業配, 開箱, 置入, 團購).",

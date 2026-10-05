@@ -96,6 +96,7 @@ const event = (over: Partial<CalendarItem> = {}): CalendarItem => ({
   done: false,
   archived: false,
   travel: null,
+  endDate: "",
   endTime: "",
   ...over,
 });

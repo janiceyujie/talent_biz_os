@@ -1,6 +1,7 @@
 // A brand collaboration or campaign (品牌合作).
 export const brandDeal = {
   key: "brand_deal",
+  eventKind: "meeting",
   fullSupport: false,
   extraction: {
     description: "A collaboration with a brand: campaign, ambassadorship, branded content, event or product launch appearance, co-created content (品牌合作, 代言, campaign).",

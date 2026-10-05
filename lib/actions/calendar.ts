@@ -6,7 +6,7 @@ import { z } from "zod";
 import { canonicalZone, isTimeZone } from "@/lib/time-zones";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { calendarEvent, todo } from "@/lib/db/schema";
+import { auditLog, calendarEvent, todo } from "@/lib/db/schema";
 import { exactInstant } from "@/lib/domain/dates";
 import { calendarKinds, transportModes, type CalendarKind } from "@/lib/types";
 import { checkProjectLink } from "./project-link";
@@ -68,9 +68,13 @@ const itemInput = z.object({
 }).superRefine((e, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: "custom", message });
   if (e.kind !== "travel" && e.kind !== "accommodation") {
-    // An ordinary event may end later the same day, in its own zone.
-    if (e.endTime && !e.time) issue("timeInvalid");
-    else if (e.endTime && e.time && e.endTime <= e.time) issue("endBeforeStart");
+    // An ordinary event may end later, in its own zone: an end time, on the start day unless an end date is given.
+    if (!e.endTime) return;
+    if (!e.time) return issue("timeInvalid");
+    const start = exactInstant(e.date, e.time, e.timeZone);
+    const end = exactInstant(e.endDate || e.date, e.endTime, e.timeZone);
+    if (start === null || end === null) return issue("wallTimeInvalid");
+    if (end <= start) issue("endBeforeStart");
     return;
   }
   if (e.kind === "travel" && !e.transportMode) issue("transportModeRequired");
@@ -165,12 +169,12 @@ function travelColumns(input: z.infer<typeof itemInput>) {
   const travel = input.kind === "travel";
   const stay = input.kind === "accommodation";
   const keep = <T,>(on: boolean, v: T) => (on ? v : null);
-  // An ordinary event's end is the same day and zone; only events (not to-dos) get here.
-  const sameDayEnd = !travel && !stay && !!input.endTime;
+  // An ordinary event's end is in its start zone; only events (not to-dos) get here.
+  const hasEnd = !travel && !stay && !!input.endTime;
   return {
-    endDate: travel || stay ? input.endDate : sameDayEnd ? input.date : null,
-    endTime: travel || stay || sameDayEnd ? input.endTime : null,
-    endTimeZone: travel || stay ? input.endTimeZone : sameDayEnd ? input.timeZone : null,
+    endDate: travel || stay ? input.endDate : hasEnd ? input.endDate || input.date : null,
+    endTime: travel || stay || hasEnd ? input.endTime : null,
+    endTimeZone: travel || stay ? input.endTimeZone : hasEnd ? input.timeZone : null,
     transportMode: keep(travel, input.transportMode),
     operator: keep(travel, input.operator),
     serviceNumber: keep(travel, input.serviceNumber),
@@ -214,4 +218,39 @@ export async function archiveCalendarItem(id: string, source: "event" | "todo", 
   if (!rows.length) return fail("itemNotFound");
   refresh();
   return null;
+}
+
+/**
+ * Delete an event or to-do for good (decision 0002: only when the person asks;
+ * archiving is the way to keep it). The audit log keeps what it was, so a
+ * deletion can still be traced.
+ */
+export async function deleteCalendarItem(id: string, source: "event" | "todo"): Promise<string | null> {
+  const { person, talent } = await requireTalent();
+  const fail = await errorText();
+  if (!z.uuid().safeParse(id).success || (source !== "event" && source !== "todo")) return fail("invalid");
+  const failure = await db.transaction(async (tx) => {
+    const [gone] =
+      source === "todo"
+        ? await tx
+            .delete(todo)
+            .where(and(eq(todo.id, id), eq(todo.talentId, talent.id)))
+            .returning({ title: todo.title, date: todo.dueDate, time: todo.dueTime, projectId: todo.projectId })
+        : await tx
+            .delete(calendarEvent)
+            .where(and(eq(calendarEvent.id, id), eq(calendarEvent.talentId, talent.id)))
+            .returning({ title: calendarEvent.title, date: calendarEvent.startDate, time: calendarEvent.startTime, projectId: calendarEvent.projectId });
+    if (!gone) return fail("itemNotFound");
+    await tx.insert(auditLog).values({
+      talentId: talent.id,
+      actorPersonId: person.personId,
+      action: "calendar.deleted",
+      targetType: source,
+      targetId: id,
+      details: gone,
+    });
+    return null;
+  });
+  if (!failure) refresh();
+  return failure;
 }

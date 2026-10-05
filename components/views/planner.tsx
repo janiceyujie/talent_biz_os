@@ -3,29 +3,32 @@
 // Day and week calendar over the talent's real events, to-dos, and payment
 // dates (lib/calendar/planner.ts), with the month view as the third tab.
 // Dragging a timed item moves it in 15-minute steps and saves through the same
-// action as the calendar form; fixed items and clashes ask first, and recent
-// moves can be undone. Adapted from the prototype's planner
+// action as the calendar form; a project's items and clashes ask first.
+// Adapted from the prototype's planner
 // (talent-business-os-prototype, src/components/planner/calendar.tsx).
-import { ChevronLeft, ChevronRight, LockKeyhole, Move, Undo2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, LockKeyhole, Move, Plus, Trash2, X } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
-import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition, type PointerEvent } from "react";
+import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition, type MouseEvent as ReactMouseEvent, type PointerEvent } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
+import { PageHeader } from "@/components/app/page-header";
 import { calendarRecord, RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
-import { saveCalendarItem } from "@/lib/actions/calendar";
-import { clock, conflicts, minutes, moveItem, planItems, plusDays, validItem, weekStart, type PlanItem } from "@/lib/calendar/planner";
+import { deleteCalendarItem, saveCalendarItem } from "@/lib/actions/calendar";
+import { at, clock, conflicts, layoutDay, minutes, moveItem, planItems, plusDays, segment, validItem, weekStart, type PlanItem } from "@/lib/calendar/planner";
 import { dateInZone } from "@/lib/domain/dates";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { CalendarView } from "./calendar";
 
 type View = "day" | "week" | "month";
+type Edge = "move" | "start" | "end";
+/** On a day: starts there, or a timed item still running (an overnight event on its second day). */
+const onDay = (item: PlanItem, day: string) => item.date === day || (!!item.start && !!segment(item, day));
 
 /** `initialDay` opens the month filtered to that day (reminder links); `initialDate` opens that day's schedule. */
 export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?: string; initialDate?: string }) {
   const data = useAppData();
   const t = useTranslations("planner");
-  const tCalendar = useTranslations("calendar");
   const format = useFormatter();
   const today = dateInZone(data.talent.timeZone);
   const [view, setView] = useState<View>(initialDay ? "month" : initialDate ? "day" : "week");
@@ -34,29 +37,42 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
   const [editing, setEditing] = useState<(PlanItem & { dropped?: boolean }) | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [message, setMessage] = useState("");
-  const [history, setHistory] = useState<PlanItem[]>([]); // the item as it was before each move
   const [, startTransition] = useTransition();
   const saved = useMemo(() => planItems(data), [data]);
   // A move shows at once; the server's answer replaces it.
   const [items, show] = useOptimistic(saved, (state, moved: PlanItem) => state.map((i) => (i.id === moved.id ? moved : i)));
 
   /** Save a new date and time through the calendar form's action. */
-  const save = (next: PlanItem, before: PlanItem | null) =>
+  const save = (next: PlanItem) =>
     startTransition(async () => {
       const c = data.calendar.find((x) => x.id === next.ref.id && x.source === next.ref.source);
       if (!c) return;
       show(next);
-      const failure = await saveCalendarItem({ ...calendarRecord(c), date: next.date, time: next.start, endTime: next.end });
+      const failure = await saveCalendarItem({
+        ...calendarRecord(c),
+        date: next.date,
+        time: next.start,
+        endDate: next.end ? next.endDate : "",
+        endTime: next.end,
+      });
       if (failure) return setMessage(failure);
-      if (before) setHistory((h) => [...h.slice(-19), before]);
-      setMessage(before ? t("moved", { title: next.title }) : t("undone", { title: next.title }));
+      setMessage(t("moved", { title: next.title }));
     });
-  const undo = () => {
-    const before = history.at(-1);
-    if (!before) return;
-    setHistory((h) => h.slice(0, -1));
-    save(before, null);
+  // Right-click menu and delete confirmation. Payment dates are voided in the ledger, not deleted here.
+  const [menu, setMenu] = useState<{ item: PlanItem; x: number; y: number } | null>(null);
+  const [deleting, setDeleting] = useState<PlanItem | null>(null);
+  const onMenu = (item: PlanItem, e: ReactMouseEvent) => {
+    if (item.ref.source === "payment") return;
+    e.preventDefault();
+    setMenu({ item, x: e.clientX, y: e.clientY });
   };
+  const remove = (item: PlanItem) =>
+    startTransition(async () => {
+      if (item.ref.source === "payment") return;
+      const failure = await deleteCalendarItem(item.ref.id, item.ref.source);
+      if (failure) return setMessage(failure);
+      setMessage(t("deleted", { title: item.title }));
+    });
   const open = (item: PlanItem) => {
     if (item.movable) return setEditing(item);
     // Multi-day, other-zone, and payment items are edited in their full form.
@@ -74,58 +90,52 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
 
   return (
     <div className="planner">
-      <div className="planner-view-tabs" role="group" aria-label={t("views")}>
-        {(["day", "week", "month"] as const).map((v) => (
-          <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>
-            {t(`view.${v}`)}
-          </button>
-        ))}
-      </div>
+      {/* The calendar is the page: every control shares the title's row; help sits behind ⓘ. */}
+      <PageHeader titleKey="calendar">
+        {view !== "month" && (
+          <div className="planner-date-nav">
+            <button className="secondary" aria-label={t(view === "week" ? "prevWeek" : "prevDay")} onClick={() => setDate(plusDays(date, view === "week" ? -7 : -1))}>
+              <ChevronLeft size={18} aria-hidden="true" />
+            </button>
+            <button className="secondary" onClick={() => setDate(today)}>
+              {t("today")}
+            </button>
+            <button className="secondary" aria-label={t(view === "week" ? "nextWeek" : "nextDay")} onClick={() => setDate(plusDays(date, view === "week" ? 7 : 1))}>
+              <ChevronRight size={18} aria-hidden="true" />
+            </button>
+            <strong className="planner-range">{view === "week" ? t("weekRange", { from: days[0], to: days[6].slice(5) }) : date}</strong>
+            <span className="planner-zone">{data.talent.timeZone}</span>
+          </div>
+        )}
+        <span className="planner-toolbar-spacer" />
+        <select className="planner-view-select" aria-label={t("views")} value={view} onChange={(e) => setView(e.target.value as View)}>
+          {(["day", "week", "month"] as const).map((v) => (
+            <option key={v} value={v}>
+              {t(`view.${v}`)}
+            </option>
+          ))}
+        </select>
+        {view !== "month" && (
+          <>
+            <input
+              className="planner-go-to"
+              type="date"
+              aria-label={t("goTo")}
+              title={t("goTo")}
+              value={date}
+              onInput={(e) => e.currentTarget.value && setDate(e.currentTarget.value)}
+            />
+          </>
+        )}
+        <button className="primary" onClick={() => setEditor({ kind: "calendar", item: { date } })}>
+          <Plus size={16} aria-hidden="true" />
+          {t("add")}
+        </button>
+      </PageHeader>
       {view === "month" ? (
-        <CalendarView initialDay={initialDay} />
+        <CalendarView initialDay={initialDay} hideAdd />
       ) : (
         <>
-          <div className="planner-toolbar">
-            <div className="planner-date-nav">
-              <button className="secondary" aria-label={t(view === "week" ? "prevWeek" : "prevDay")} onClick={() => setDate(plusDays(date, view === "week" ? -7 : -1))}>
-                <ChevronLeft size={18} aria-hidden="true" />
-              </button>
-              <button className="secondary" onClick={() => setDate(today)}>
-                {t("today")}
-              </button>
-              <button className="secondary" aria-label={t(view === "week" ? "nextWeek" : "nextDay")} onClick={() => setDate(plusDays(date, view === "week" ? 7 : 1))}>
-                <ChevronRight size={18} aria-hidden="true" />
-              </button>
-            </div>
-            <h2>{view === "week" ? t("weekRange", { from: days[0], to: days[6].slice(5) }) : date}</h2>
-            <button className="primary" onClick={() => setEditor({ kind: "calendar", item: { date } })}>
-              {tCalendar("new")}
-            </button>
-            <label className="planner-date-picker">
-              {t("goTo")}
-              <input type="date" value={date} onInput={(e) => e.currentTarget.value && setDate(e.currentTarget.value)} />
-            </label>
-          </div>
-          <div className="planner-legend">
-            <span>
-              <LockKeyhole size={15} aria-hidden="true" />
-              {t("legendFixed")}
-            </span>
-            <span>
-              <Move size={15} aria-hidden="true" />
-              {t("legendFlexible")}
-            </span>
-            <span>{t("zone", { zone: data.talent.timeZone })}</span>
-          </div>
-          <div className="planner-feedback">
-            <span role="status" aria-live="polite">
-              {message || t("hint")}
-            </span>
-            <button className="secondary" disabled={!history.length} onClick={undo}>
-              <Undo2 size={16} aria-hidden="true" />
-              {t("undo")}
-            </button>
-          </div>
           <TimeGrid
             days={days}
             today={today}
@@ -133,11 +143,27 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
             items={items}
             dayLabel={dayLabel}
             onOpen={open}
-            onDrop={(next, before) => {
+            onMenu={onMenu}
+            onDrop={(next) => {
               if (!validItem(next)) return setMessage(t("invalidMove"));
               // Fixed commitments and clashes are confirmed in the editor; flexible work just moves.
               if (next.fixed || conflicts(next, items).length) setEditing({ ...next, dropped: true });
-              else save(next, before);
+              else save(next);
+            }}
+            onCreate={(day, time) => {
+              // A new event at the clicked time, an hour long; the form sets the rest.
+              const endAt = minutes(time) + NEW_LENGTH;
+              setEditor({
+                kind: "calendar",
+                item: {
+                  date: day,
+                  time,
+                  endDate: endAt >= 1440 ? plusDays(day, 1) : day,
+                  endTime: clock(endAt % 1440),
+                  kind: "meeting",
+                  timeZone: data.talent.timeZone,
+                },
+              });
             }}
           />
           <div className="planner-mobile-agenda">
@@ -147,18 +173,44 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
                   {day.slice(5)} · {dayLabel(day)}
                   {day === today ? ` · ${t("today")}` : ""}
                 </h3>
-                {items
-                  .filter((e) => e.date === day)
-                  .map((item) => (
-                    <EventCard key={item.id} item={item} items={items} onOpen={open} />
-                  ))}
-                {!items.some((e) => e.date === day) && <p className="muted">{t("nothing")}</p>}
+                {items.filter((e) => onDay(e, day)).map((item) => (
+                  <EventCard key={item.id} item={item} items={items} onOpen={open} onMenu={onMenu} />
+                ))}
+                {!items.some((e) => onDay(e, day)) && <p className="muted">{t("nothing")}</p>}
               </section>
             ))}
           </div>
-          {!items.some((e) => days.includes(e.date)) && <p className="notice">{t("emptyRange")}</p>}
-          <p className="planner-caption">{t("caption")}</p>
+          {!items.some((e) => days.some((d) => onDay(e, d))) && <p className="notice">{t("emptyRange")}</p>}
         </>
+      )}
+      {message && <Toast message={message} onClose={() => setMessage("")} />}
+      {menu && <ItemMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} onDelete={() => (setDeleting(menu.item), setMenu(null))} />}
+      {deleting && (
+        <Modal title={t("deleteTitle")} onClose={() => setDeleting(null)}>
+          <p>
+            <strong>{deleting.title}</strong>
+            <br />
+            {deleting.date} {deleting.start}
+            {deleting.end ? `–${deleting.endDate !== deleting.date ? `${deleting.endDate} ` : ""}${deleting.end}` : ""}
+            {deleting.project ? ` · ${deleting.project}` : ""}
+          </p>
+          <p className="muted">{t("deleteBody")}</p>
+          <footer className="modal-actions">
+            <button className="secondary" onClick={() => setDeleting(null)}>
+              {t("cancel")}
+            </button>
+            <button
+              className="primary danger"
+              onClick={() => {
+                const item = deleting;
+                setDeleting(null);
+                remove(item);
+              }}
+            >
+              {t("delete")}
+            </button>
+          </footer>
+        </Modal>
       )}
       {editing && (
         <TimeEditor
@@ -168,9 +220,13 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
           original={saved.find((i) => i.id === editing.id) ?? editing}
           items={items}
           onClose={() => setEditing(null)}
-          onSave={(next, before) => {
+          onSave={(next) => {
             setEditing(null);
-            save(next, before);
+            save(next);
+          }}
+          onDelete={() => {
+            setDeleting(editing);
+            setEditing(null);
           }}
           onFull={() => {
             const c = data.calendar.find((x) => x.id === editing.ref.id);
@@ -184,7 +240,27 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
   );
 }
 
-/** One row per hour, plus a row for dated items without a time. Dragging works with a mouse; touch uses the editor. */
+// Grid settings, in one place. HOUR also sets the CSS variable --hour, so the drawn hour lines and the
+// block positions can't drift apart.
+const HOUR = 56; // px per hour
+const SNAP = 5; // minutes: dragging moves in 5-minute steps
+const CLICK_STEP = 15; // minutes: a click on empty time starts on the quarter hour
+const NEW_LENGTH = 60; // minutes: a new event from a click is an hour long until edited
+const OPEN_AT_HOUR = 8; // the grid first scrolls to the working day, not midnight
+const POINT_PX = 26; // height of an item with a start but no end
+const MIN_BLOCK_PX = 18; // a very short item stays clickable
+const snap = (m: number) => Math.round(m / SNAP) * SNAP;
+const toWall = (value: number) => {
+  const d = new Date(Math.floor(value / 1440) * 86400000);
+  return { date: d.toISOString().slice(0, 10), time: clock(((value % 1440) + 1440) % 1440) };
+};
+
+/**
+ * Days side by side, each a column 24 hours tall: a block sits at its start
+ * time and is as tall as it lasts; overlapping blocks share the width.
+ * Dragging a block moves it, its top and bottom edges change the start and
+ * end (mouse; touch uses the editor), and clicking empty time adds an event.
+ */
 function TimeGrid({
   days,
   today,
@@ -192,7 +268,9 @@ function TimeGrid({
   items,
   dayLabel,
   onOpen,
+  onMenu,
   onDrop,
+  onCreate,
 }: {
   days: string[];
   today: string;
@@ -200,52 +278,58 @@ function TimeGrid({
   items: PlanItem[];
   dayLabel: (d: string) => string;
   onOpen: (item: PlanItem) => void;
-  onDrop: (next: PlanItem, before: PlanItem) => void;
+  onMenu: (item: PlanItem, e: ReactMouseEvent) => void;
+  onDrop: (next: PlanItem) => void;
+  onCreate: (date: string, time: string) => void;
 }) {
   const t = useTranslations("planner");
   const scroll = useRef<HTMLDivElement>(null);
-  const pointer = useRef<{ item: PlanItem; resize: boolean; x: number; y: number; active: boolean } | null>(null);
+  const pointer = useRef<{ item: PlanItem; edge: Edge; grab: number; x: number; y: number; active: boolean } | null>(null);
   const suppressClick = useRef(false);
-  const [drag, setDrag] = useState<{ item: PlanItem; resize: boolean } | null>(null);
-  const [preview, setPreview] = useState<PlanItem | null>(null);
+  const [preview, setPreview] = useState<{ item: PlanItem; edge: Edge } | null>(null);
 
   // Open on the working day, not midnight.
   useEffect(() => {
-    const node = scroll.current;
-    const morning = node?.querySelector<HTMLElement>('[data-hour="8"]');
-    if (node && morning) node.scrollTop += morning.getBoundingClientRect().top - node.getBoundingClientRect().top - 60;
+    if (scroll.current) scroll.current.scrollTop = OPEN_AT_HOUR * HOUR - 8;
   }, [view]);
 
-  const cancel = () => {
-    pointer.current = null;
-    setDrag(null);
-    setPreview(null);
+  /** The day and minute under the pointer, as minutes since the epoch (see `at`). */
+  const pointAt = (x: number, y: number) => {
+    const col = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-day]");
+    if (!col || !scroll.current?.contains(col)) return null;
+    const minute = Math.min(1440, Math.max(0, ((y - col.getBoundingClientRect().top) / HOUR) * 60));
+    return at(col.dataset.day!, "00:00") + minute;
   };
-  const start = (e: PointerEvent<HTMLButtonElement>, item: PlanItem, resize: boolean) => {
+  const target = (e: PointerEvent<HTMLElement>) => {
+    const current = pointer.current;
+    const point = current && pointAt(e.clientX, e.clientY);
+    if (!current || point === null) return null;
+    const { date, time } = toWall(snap(point - current.grab));
+    return moveItem(current.item, date, time, current.edge);
+  };
+  const start = (e: PointerEvent<HTMLElement>, item: PlanItem, edge: Edge) => {
     if (e.pointerType !== "mouse" || e.button !== 0 || !item.movable) return;
+    e.stopPropagation();
+    const point = pointAt(e.clientX, e.clientY);
+    // Moving keeps where the block was grabbed; an edge follows the pointer.
+    const grab = edge === "move" && point !== null ? point - at(item.date, item.start) : 0;
     suppressClick.current = false;
-    pointer.current = { item, resize, x: e.clientX, y: e.clientY, active: false };
+    pointer.current = { item, edge, grab, x: e.clientX, y: e.clientY, active: false };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
-  // The quarter hour under the pointer: each hour cell is split into four.
-  const target = (e: PointerEvent<HTMLButtonElement>) => {
-    const current = pointer.current;
-    const cell = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>("[data-drop]");
-    if (!current || !cell || !scroll.current?.contains(cell)) return null;
-    const [day, time] = cell.dataset.drop!.split("T");
-    const box = cell.getBoundingClientRect();
-    const quarter = Math.min(3, Math.max(0, Math.floor(((e.clientY - box.top) / box.height) * 4)));
-    return moveItem(current.item, day, clock(minutes(time) + quarter * 15), current.resize);
-  };
-  const move = (e: PointerEvent<HTMLButtonElement>) => {
+  const move = (e: PointerEvent<HTMLElement>) => {
     const current = pointer.current;
     if (!current) return;
-    if (!current.active && Math.hypot(e.clientX - current.x, e.clientY - current.y) < 6) return; // a click, not a drag
+    if (!current.active && Math.hypot(e.clientX - current.x, e.clientY - current.y) < 5) return; // a click, not a drag
     current.active = true;
-    setDrag({ item: current.item, resize: current.resize });
-    setPreview(target(e));
+    const next = target(e);
+    setPreview(next ? { item: next, edge: current.edge } : null);
   };
-  const end = (e: PointerEvent<HTMLButtonElement>) => {
+  const cancel = () => {
+    pointer.current = null;
+    setPreview(null);
+  };
+  const end = (e: PointerEvent<HTMLElement>) => {
     const current = pointer.current;
     const next = current?.active ? target(e) : null;
     if (current?.active) {
@@ -253,14 +337,40 @@ function TimeGrid({
       setTimeout(() => (suppressClick.current = false), 0);
     }
     cancel();
-    if (current && next) onDrop(next, current.item);
+    const i = current?.item;
+    if (i && next && (next.date !== i.date || next.start !== i.start || next.end !== i.end || next.endDate !== i.endDate)) onDrop(next);
   };
-  const card = (item: PlanItem, timed: boolean) => (
-    <EventCard key={item.id} item={item} items={items} onOpen={onOpen} drag={timed ? { start, move, end, cancel } : undefined} />
+  // Clicking empty time adds an event there, on the quarter hour.
+  const create = (e: ReactMouseEvent<HTMLElement>, day: string) => {
+    if (suppressClick.current || (e.target as HTMLElement).closest(".cal-block")) return;
+    const minute = Math.floor((((e.clientY - e.currentTarget.getBoundingClientRect().top) / HOUR) * 60) / CLICK_STEP) * CLICK_STEP;
+    onCreate(day, clock(Math.min(1440 - CLICK_STEP, Math.max(0, minute))));
+  };
+
+  // While dragging, the preview stands in for the dragged item.
+  const shown = preview ? items.map((i) => (i.id === preview.item.id ? preview.item : i)) : items;
+  const blocks = (day: string) => {
+    const segs = shown.flatMap((item) => {
+      const seg = segment(item, day);
+      return seg ? [{ id: item.id, item, ...seg }] : [];
+    });
+    const lanes = layoutDay(segs, (POINT_PX / HOUR) * 60); // an item without an end takes the room its marker needs
+    return segs.map((s) => ({ ...s, ...lanes.get(s.id)! }));
+  };
+  const handle = (item: PlanItem, edge: Edge) => (
+    <span
+      className={`cal-handle cal-handle-${edge}`}
+      title={t("resize", { title: item.title })}
+      onPointerDown={(e) => start(e, item, edge)}
+      onPointerMove={move}
+      onPointerUp={end}
+      onPointerCancel={cancel}
+    />
   );
 
   return (
     <div
+      className="cal"
       onClickCapture={(e) => {
         if (suppressClick.current) {
           e.preventDefault();
@@ -274,43 +384,86 @@ function TimeGrid({
         }
       }}
     >
-      <p className="planner-drag-help">{t("dragHelp")}</p>
-      {drag && (
-        <p className="planner-drag-preview" role="status">
-          {preview
-            ? t(drag.resize ? "previewEnd" : "previewMove", { date: preview.date, start: preview.start, end: preview.end || "" })
-            : t(drag.resize ? "resizing" : "moving", { title: drag.item.title })}
-        </p>
-      )}
-      <div className="planner-grid-scroll" ref={scroll} tabIndex={0} aria-label={t("gridLabel")}>
-        <div
-          className={`planner-time-grid ${view === "day" ? "is-day" : ""}`}
-          style={{ gridTemplateColumns: `56px repeat(${days.length}, minmax(${view === "day" ? 240 : 156}px, 1fr))` }}
-        >
-          <div className="planner-grid-heading">{t("time")}</div>
+      <p className="planner-drag-preview" role="status">
+        {preview
+          ? t(preview.edge === "end" ? "previewEnd" : preview.edge === "start" ? "previewStart" : "previewMove", {
+              date: preview.edge === "end" ? preview.item.endDate : preview.item.date,
+              start: preview.item.start,
+              end: preview.item.end || "",
+            })
+          : ""}
+      </p>
+      <div
+        className="cal-frame"
+        style={{ ["--hour" as string]: `${HOUR}px`, ["--cal-days" as string]: days.length, ["--cal-min" as string]: view === "day" ? "240px" : "120px" }}
+      >
+        <div className="cal-head">
+          <div className="cal-corner">{t("time")}</div>
           {days.map((day) => (
-            <div key={day} className={`planner-grid-heading ${day === today ? "is-today" : ""}`}>
+            <div key={day} className={`cal-day-head ${day === today ? "is-today" : ""}`}>
               <span>{dayLabel(day)}</span>
               <strong>{day.slice(5)}</strong>
             </div>
           ))}
-          <div className="planner-hour">{t("untimed")}</div>
+          <div className="cal-corner cal-allday-label">{t("untimed")}</div>
           {days.map((day) => (
-            <div className="planner-slot planner-undated" key={day}>
-              {items.filter((e) => e.date === day && !e.start).map((item) => card(item, false))}
+            <div className="cal-allday" key={day}>
+              {items
+                .filter((i) => i.date === day && !i.start)
+                .map((item) => (
+                  <EventCard key={item.id} item={item} items={items} onOpen={onOpen} onMenu={onMenu} compact />
+                ))}
             </div>
           ))}
-          {Array.from({ length: 24 }, (_, hour) => (
-            <div className="planner-grid-row" key={hour}>
-              <div className="planner-hour" data-hour={hour}>
-                {clock(hour * 60)}
-              </div>
-              {days.map((day) => {
-                const at = preview && Math.floor(minutes(drag?.resize ? preview.end || "00:00" : preview.start || "00:00") / 60);
+        </div>
+        <div className="cal-body" ref={scroll} tabIndex={0} aria-label={t("gridLabel")}>
+          <div className="cal-hours" aria-hidden="true">
+            {Array.from({ length: 24 }, (_, h) => (
+              <span key={h} style={{ top: h * HOUR }}>
+                {clock(h * 60)}
+              </span>
+            ))}
+          </div>
+          {days.map((day) => (
+            <div key={day} className={`cal-col ${day === today ? "is-today" : ""}`} data-day={day} onClick={(e) => create(e, day)} title={t("clickToAdd")}>
+              {blocks(day).map((b) => {
+                const item = b.item;
+                const height = b.open ? POINT_PX : Math.max(((b.to - b.from) / 60) * HOUR, MIN_BLOCK_PX);
+                const clash = conflicts(item, items).length > 0;
                 return (
-                  <div className={`planner-slot ${preview?.date === day && at === hour ? "is-drop-target" : ""}`} key={day} data-drop={`${day}T${clock(hour * 60)}`}>
-                    {items.filter((e) => e.date === day && e.start && Math.floor(minutes(e.start) / 60) === hour).map((item) => card(item, true))}
-                  </div>
+                  <article
+                    key={b.id}
+                    data-event-id={item.id}
+                    className={`cal-block ${item.fixed ? "is-fixed" : "is-flexible"} ${clash ? "has-conflict" : ""} ${preview?.item.id === item.id ? "is-dragging" : ""} ${item.done ? "is-done" : ""}`}
+                    style={{ top: (b.from / 60) * HOUR, height, left: `calc(${(b.lane / b.lanes) * 100}% + 2px)`, width: `calc(${100 / b.lanes}% - 4px)` }}
+                    onContextMenu={(e) => onMenu(item, e)}
+                    title={
+                      item.movable
+                        ? [item.fixed ? t("hintProject") : "", item.end ? t("hintMoveResize") : t("hintMove"), t("hintDelete")].filter(Boolean).join(" · ")
+                        : t("hintOpen")
+                    }
+                  >
+                    {/* Edges are draggable where the item really starts or ends on this day. */}
+                    {item.movable && item.end && item.date === day && handle(item, "start")}
+                    <button
+                      className="cal-block-main"
+                      data-movable={item.movable}
+                      onPointerDown={(e) => start(e, item, "move")}
+                      onPointerMove={move}
+                      onPointerUp={end}
+                      onPointerCancel={cancel}
+                      onClick={() => onOpen(item)}
+                      aria-label={t("edit", { title: item.title })}
+                    >
+                      <strong>{item.title}</strong>
+                      <span>
+                        {item.end ? `${item.start}–${item.endDate !== item.date ? `${item.endDate.slice(5)} ` : ""}${item.end}` : t("startsAt", { start: item.start })}
+                        {item.project ? ` · ${item.project}` : ""}
+                      </span>
+                      {clash && <span className="planner-conflict">{t("conflict")}</span>}
+                    </button>
+                    {item.movable && item.end && item.endDate === day && handle(item, "end")}
+                  </article>
                 );
               })}
             </div>
@@ -321,59 +474,50 @@ function TimeGrid({
   );
 }
 
-type DragHandlers = {
-  start: (e: PointerEvent<HTMLButtonElement>, item: PlanItem, resize: boolean) => void;
-  move: (e: PointerEvent<HTMLButtonElement>) => void;
-  end: (e: PointerEvent<HTMLButtonElement>) => void;
-  cancel: () => void;
-};
-
-export function EventCard({ item, items, onOpen, drag }: { item: PlanItem; items: PlanItem[]; onOpen: (item: PlanItem) => void; drag?: DragHandlers }) {
+export function EventCard({
+  item,
+  items,
+  onOpen,
+  onMenu,
+  compact = false,
+}: {
+  item: PlanItem;
+  items: PlanItem[];
+  onOpen: (item: PlanItem) => void;
+  onMenu?: (item: PlanItem, e: ReactMouseEvent) => void;
+  compact?: boolean;
+}) {
   const t = useTranslations("planner");
   const labels = useLabels();
   const money = useMoney();
   const clash = conflicts(item, items).length > 0;
   return (
-    <article className={`planner-event ${item.fixed ? "is-fixed" : "is-flexible"} ${clash ? "has-conflict" : ""} ${item.done ? "is-done" : ""}`} data-event-id={item.id}>
-      <button
-        className="planner-event-main"
-        draggable={false}
-        data-movable={!!drag && item.movable}
-        onPointerDown={(e) => drag?.start(e, item, false)}
-        onPointerMove={drag?.move}
-        onPointerUp={drag?.end}
-        onPointerCancel={drag?.cancel}
-        onClick={() => onOpen(item)}
-        aria-label={t("edit", { title: item.title })}
-      >
-        <span className="planner-event-meta">
-          {item.fixed ? <LockKeyhole size={14} aria-hidden="true" /> : <Move size={14} aria-hidden="true" />}
-          {t(item.fixed ? "fixed" : "flexible")} · {labels.calendarKind(item.kind)}
-        </span>
+    <article
+      className={`planner-event ${item.fixed ? "is-fixed" : "is-flexible"} ${clash ? "has-conflict" : ""} ${item.done ? "is-done" : ""}`}
+      data-event-id={item.id}
+      onContextMenu={onMenu && ((e) => onMenu(item, e))}
+    >
+      <button className="planner-event-main" onClick={() => onOpen(item)} aria-label={t("edit", { title: item.title })}>
+        {!compact && (
+          <span className="planner-event-meta">
+            {item.fixed ? <LockKeyhole size={14} aria-hidden="true" /> : <Move size={14} aria-hidden="true" />}
+            {t(item.fixed ? "fixed" : "flexible")} · {labels.calendarKind(item.kind)}
+          </span>
+        )}
         <strong>{item.title}</strong>
         <span className="planner-event-time">
-          {item.start ? (item.end ? `${item.start}–${item.end}` : t("startsAt", { start: item.start })) : t("noTime")}
+          {item.start
+            ? item.end
+              ? `${item.start}–${item.endDate !== item.date ? `${item.endDate.slice(5)} ` : ""}${item.end}`
+              : t("startsAt", { start: item.start })
+            : t("noTime")}
         </span>
-        {item.project && <span>{item.project}</span>}
-        {item.client && <span className="planner-event-meta">{item.client}</span>}
+        {!compact && item.project && <span>{item.project}</span>}
+        {!compact && item.client && <span className="planner-event-meta">{item.client}</span>}
         {item.amount !== null && <span className="planner-event-meta">{money(Math.abs(item.amount))}</span>}
         {clash && <span className="planner-conflict">{t("conflict")}</span>}
         {item.note && <span className="planner-event-meta">{t("stated", { when: item.note })}</span>}
       </button>
-      {drag && item.movable && item.end && (
-        <button
-          className="planner-resize"
-          draggable={false}
-          onPointerDown={(e) => drag.start(e, item, true)}
-          onPointerMove={drag.move}
-          onPointerUp={drag.end}
-          onPointerCancel={drag.cancel}
-          onClick={() => onOpen(item)}
-          aria-label={t("resize", { title: item.title })}
-        >
-          {t("resizeShort")}
-        </button>
-      )}
     </article>
   );
 }
@@ -386,6 +530,7 @@ function TimeEditor({
   items,
   onClose,
   onSave,
+  onDelete,
   onFull,
 }: {
   item: PlanItem;
@@ -393,19 +538,22 @@ function TimeEditor({
   original: PlanItem;
   items: PlanItem[];
   onClose: () => void;
-  onSave: (next: PlanItem, before: PlanItem) => void;
+  onSave: (next: PlanItem) => void;
+  onDelete: () => void;
   onFull: () => void;
 }) {
   const t = useTranslations("planner");
   const [draft, setDraft] = useState<PlanItem>(item);
+  // The value is read before the update: React runs the update after the input event is gone.
+  const set = (key: "date" | "start" | "endDate" | "end", value: string) => setDraft((d) => ({ ...d, [key]: value }));
   const [confirm, setConfirm] = useState(dropped);
   const [error, setError] = useState("");
   const overlaps = conflicts(draft, items);
-  const changed = draft.date !== original.date || draft.start !== original.start || draft.end !== original.end;
+  const changed = draft.date !== original.date || draft.start !== original.start || draft.end !== original.end || draft.endDate !== original.endDate;
   const submit = () => {
     if (!validItem(draft)) return setError(t("invalidTime"));
     if ((draft.fixed || overlaps.length) && !confirm) return setConfirm(true);
-    onSave(draft, original);
+    onSave(draft);
   };
   return (
     <Modal title={t(confirm ? "confirmTitle" : "editTitle")} onClose={onClose}>
@@ -419,41 +567,31 @@ function TimeEditor({
         )}
         {draft.fixed && changed && (
           <p className="planner-warning" role="alert">
-            {t("fixedWarning")}
+            {t("fixedWarning", { project: item.project })}
           </p>
         )}
         {confirm ? (
-          <p>
-            {t("from", { when: `${original.date} ${original.start}${original.end ? `–${original.end}` : ""}` })}
-            <br />
-            {t("to", { when: `${draft.date} ${draft.start}${draft.end ? `–${draft.end}` : ""}` })}
-          </p>
+          <ChangeSummary before={original} after={draft} />
         ) : (
-          <>
+          // Start and end as pairs: day and time side by side.
+          <div className="planner-time-fields">
             <label>
-              {t("date")}
-              <input type="date" required value={draft.date} onInput={(e) => {
-                  const date = e.currentTarget.value; // read now: the event is gone when the update runs
-                  setDraft((d) => ({ ...d, date }));
-                }} />
+              {t("startDate")}
+              <input type="date" required value={draft.date} onInput={(e) => set("date", e.currentTarget.value)} />
             </label>
-            <div className="planner-time-fields">
-              <label>
-                {t("start")}
-                <input type="time" value={draft.start} onInput={(e) => {
-                  const start = e.currentTarget.value; // read now: the event is gone when the update runs
-                  setDraft((d) => ({ ...d, start }));
-                }} />
-              </label>
-              <label>
-                {t("end")}
-                <input type="time" value={draft.end} onInput={(e) => {
-                  const end = e.currentTarget.value; // read now: the event is gone when the update runs
-                  setDraft((d) => ({ ...d, end }));
-                }} />
-              </label>
-            </div>
-          </>
+            <label>
+              {t("start")}
+              <input type="time" value={draft.start} onInput={(e) => set("start", e.currentTarget.value)} />
+            </label>
+            <label>
+              {t("endDate")}
+              <input type="date" value={draft.endDate} onInput={(e) => set("endDate", e.currentTarget.value)} />
+            </label>
+            <label>
+              {t("end")}
+              <input type="time" value={draft.end} onInput={(e) => set("end", e.currentTarget.value)} />
+            </label>
+          </div>
         )}
         {!!overlaps.length && (
           <div className="planner-warning" role="alert">
@@ -466,10 +604,20 @@ function TimeEditor({
             {error}
           </p>
         )}
-        <div className="planner-actions">
-          <button className="text-button" onClick={onFull}>
-            {t("fullEdit")}
-          </button>
+        <div className="planner-actions planner-editor-actions">
+          {/* Deleting sits apart, on the left; the everyday actions on the right. */}
+          {!confirm && (
+            <button className="secondary danger-outline" onClick={onDelete}>
+              <Trash2 size={16} aria-hidden="true" />
+              {t("delete")}
+            </button>
+          )}
+          <span className="planner-actions-spacer" />
+          {!confirm && (
+            <button className="secondary" onClick={onFull}>
+              {t("fullEdit")}
+            </button>
+          )}
           <button className="secondary" onClick={confirm ? () => setConfirm(false) : onClose}>
             {t(confirm ? "back" : "cancel")}
           </button>
@@ -479,5 +627,92 @@ function TimeEditor({
         </div>
       </div>
     </Modal>
+  );
+}
+
+/** The right-click menu: one action for now. Closes on any outside click, scroll, or Escape. */
+function ItemMenu({ x, y, onClose, onDelete }: { x: number; y: number; onClose: () => void; onDelete: () => void }) {
+  const t = useTranslations("planner");
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.querySelector("button")?.focus();
+    const close = (e: Event) => {
+      if (e.type === "keydown" && (e as KeyboardEvent).key !== "Escape") return;
+      if (e.type === "pointerdown" && ref.current?.contains(e.target as Node)) return;
+      onClose();
+    };
+    document.addEventListener("pointerdown", close, true);
+    document.addEventListener("keydown", close);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("pointerdown", close, true);
+      document.removeEventListener("keydown", close);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [onClose]);
+  // Keep the menu on screen near the pointer.
+  const left = Math.min(x, (typeof window === "undefined" ? x : window.innerWidth) - 180);
+  const top = Math.min(y, (typeof window === "undefined" ? y : window.innerHeight) - 60);
+  return (
+    <div ref={ref} className="cal-menu" role="menu" style={{ left, top }}>
+      <button role="menuitem" className="danger-text" onClick={onDelete}>
+        <Trash2 size={16} aria-hidden="true" />
+        {t("delete")}
+      </button>
+    </div>
+  );
+}
+
+/** Only what a change changes: the day if it moved, the times, and the length if it changed. */
+function ChangeSummary({ before, after }: { before: PlanItem; after: PlanItem }) {
+  const t = useTranslations("planner");
+  const format = useFormatter();
+  const day = (d: string) => format.dateTime(new Date(`${d}T12:00:00Z`), { month: "numeric", day: "numeric", weekday: "short", timeZone: "UTC" });
+  const times = (i: PlanItem) => (i.end ? `${i.start}–${i.endDate !== i.date ? `${day(i.endDate)} ` : ""}${i.end}` : i.start);
+  const length = (i: PlanItem) => {
+    if (!i.end) return "";
+    const total = at(i.endDate, i.end) - at(i.date, i.start);
+    return t("length", { hours: Math.floor(total / 60), minutes: total % 60 });
+  };
+  const rows = [
+    [t("changeDay"), day(before.date), day(after.date)],
+    [t("changeTime"), times(before), times(after)],
+    [t("changeLength"), length(before), length(after)],
+  ].filter(([, was, now]) => was !== now);
+  return (
+    <dl className="change-summary">
+      {rows.map(([label, was, now]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd>
+            <s>{was}</s> → <strong>{now}</strong>
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** What just happened, at the bottom of the screen for a few seconds. */
+function Toast({ message, onClose }: { message: string; onClose: () => void }) {
+  const t = useTranslations("planner");
+  // Each new message gets its own few seconds; re-renders don't restart the timer.
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
+  useEffect(() => {
+    const timer = setTimeout(() => close.current(), 8000);
+    return () => clearTimeout(timer);
+  }, [message]);
+  return (
+    <div className="planner-toast" role="status" aria-live="polite">
+      <span>{message}</span>
+      <button className="icon-button" aria-label={t("dismiss")} onClick={onClose}>
+        <X size={16} aria-hidden="true" />
+      </button>
+    </div>
   );
 }

@@ -123,7 +123,8 @@ export const getAppData = cache(async (): Promise<AppData> => {
               hotelName: e.hotelName ?? "",
             } satisfies TravelDetails)
           : null,
-      endTime: e.kind !== "travel" && e.kind !== "accommodation" && e.endDate === e.startDate ? hhmm(e.endTime) : "",
+      endDate: e.kind !== "travel" && e.kind !== "accommodation" ? (e.endDate ?? "") : "",
+      endTime: e.kind !== "travel" && e.kind !== "accommodation" ? hhmm(e.endTime) : "",
     })),
     ...todoRows
       .filter((t) => t.dueDate) // undated to-dos have no place on a calendar
@@ -141,6 +142,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
         done: t.status === "done",
         archived: t.status === "dismissed",
         travel: null,
+        endDate: "",
         endTime: "",
       })),
   ];

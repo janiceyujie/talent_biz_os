@@ -10,7 +10,7 @@ import { archiveTemplate } from "@/lib/actions/templates";
 import { PastReplyError, renderTemplate } from "@/lib/domain/workflow";
 import { localeNames, toLocale } from "@/lib/i18n/config";
 import { useLabels } from "@/lib/i18n/labels";
-import { projectTypes, type ProjectType } from "@/lib/project-types";
+import { defaultProjectType, projectTypes, type ProjectType } from "@/lib/project-types";
 import { displayName, placeholderKeys, toDisplay, type PlaceholderKey } from "@/lib/templates/placeholders";
 import type { ReplyDraft } from "@/lib/types";
 
@@ -33,7 +33,7 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
   const recipientFor = (counterpartyId: string | null | undefined) =>
     data.contacts.find((c) => c.id === counterpartyId)?.email || "";
 
-  const [type, setType] = useState<ProjectType>(initial?.type || "gig");
+  const [type, setType] = useState<ProjectType>(initial?.type || defaultProjectType);
   const [projectId, setProjectId] = useState(initial?.id || "");
   const [templateId, setTemplateId] = useState("");
   const [tone, setTone] = useState(tTone("natural"));

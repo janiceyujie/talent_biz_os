@@ -4,13 +4,13 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client";
 
-export function SignOutButton() {
+export function SignOutButton({ className = "sign-out" }: { className?: string }) {
   const t = useTranslations("shell");
   const router = useRouter();
   return (
     <button
       type="button"
-      className="sign-out"
+      className={className}
       onClick={async () => {
         await authClient.signOut();
         router.push("/sign-in");

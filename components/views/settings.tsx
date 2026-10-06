@@ -1,160 +1,187 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
-import { updateWorkspace, type SettingsState } from "@/app/(app)/settings/actions";
-import { useAppData } from "@/components/app/app-data";
-import { SignOutButton } from "@/components/sign-out-button";
-import { LocaleSwitch } from "@/components/locale-switch";
+import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { RolePortrait } from "@/components/role/role-portrait";
+import { useEffect, useId, useRef, useState } from "react";
+import { updateWorkspace } from "@/app/(app)/settings/actions";
+import { useAppData } from "@/components/app/app-data";
 import { TimeZonePicker } from "@/components/app/time-zone-picker";
+import { Toast } from "@/components/app/toast";
+import { LocaleSwitch } from "@/components/locale-switch";
+import { RolePortrait } from "@/components/role/role-portrait";
+import { SignOutButton } from "@/components/sign-out-button";
+import { setReplyWithinDays } from "@/lib/actions/intake";
 import { CalendarFeedSettings } from "./calendar-feed-settings";
 import { GoogleCalendarSettings } from "./google-calendar-settings";
+import { SettingsGroup, SettingsRow } from "./settings-row";
 import { SignInMethods } from "./sign-in-methods";
-import { setReplyWithinDays } from "@/lib/actions/intake";
 
+const REPLY_SAVE_DELAY_MS = 600; // the days field saves once typing or stepping pauses
+const MAX_REPLY_DAYS = 30; // as setReplyWithinDays allows
+
+/**
+ * Settings, grouped by whose they are: your account, your preferences, the
+ * workspace (shared), and connected services. Every setting saves as it
+ * changes; a toast confirms.
+ */
 export function SettingsView() {
   const data = useAppData();
   const t = useTranslations("settings");
-  const tEyebrow = useTranslations("eyebrow");
   const tLocale = useTranslations("locale");
   const tRoles = useTranslations("roles");
-  const [state, action, pending] = useActionState<SettingsState, FormData>(updateWorkspace, {});
-  const [timeZone, setTimeZone] = useState(data.talent.timeZone);
+  const [toast, setToast] = useState<string | null>(null);
+  const saved = () => setToast(t("saved"));
 
   return (
-    <div className="settings-stack">
-      <section className="surface padded">
-        <div className="section-header">
-          <div>
-            <span>{tEyebrow("workspace")}</span>
-            <h2>{t("workspace")}</h2>
-          </div>
-        </div>
-        <form className="editor-form" action={action}>
-          <div className="form-grid">
-            <label>
-              {t("name")}
-              <input name="name" required defaultValue={data.talent.name} />
-            </label>
-            <TimeZonePicker label={t("timeZone")} required name="timeZone" value={timeZone} onChange={setTimeZone} />
-          </div>
-          <p className="muted">{t("timeZoneHelp")}</p>
-          {state.error && (
-            <p className="notice error" role="alert">
-              {state.error}
-            </p>
-          )}
-          {state.saved && !pending && <p className="notice">{t("saved")}</p>}
-          <button className="primary" disabled={pending}>
-            {pending ? t("saving") : t("save")}
-          </button>
-        </form>
-      </section>
-      <section className="surface padded">
-        <div className="section-header">
-          <div>
-            <span>{tEyebrow("language")}</span>
-            <h2>{tLocale("heading")}</h2>
-          </div>
-        </div>
-        <p className="muted">{tLocale("help")}</p>
-        <div className="form-grid">
-          <LocaleSwitch />
-        </div>
-      </section>
-      <section className="surface padded">
-        <div className="section-header">
-          <div>
-            <span>{tEyebrow("role")}</span>
-            <h2>{tRoles("settingsTitle")}</h2>
-          </div>
-        </div>
-        <div className="role-settings">
+    <div className="settings-page">
+      <SettingsGroup title={t("groupAccount")}>
+        <div className="settings-row settings-account">
           <RolePortrait role={data.person.role} appearance={data.person.appearance} />
-          <div>
-            <strong>{tRoles(`${data.person.role}.label`)}</strong>
-            <p className="muted">{tRoles("settingsBody")}</p>
-            <Link className="secondary" href="/role">
-              {tRoles("change")}
-            </Link>
+          <div className="settings-row-label">
+            <strong>{data.person.displayName}</strong>
+            <small>{data.person.email}</small>
+          </div>
+          <div className="settings-row-control">
+            <SignOutButton className="secondary" />
           </div>
         </div>
-      </section>
-      <CalendarFeedSettings />
-      <GoogleCalendarSettings />
-      <section className="surface padded">
-        <div className="section-header">
-          <div>
-            <span>{tEyebrow("google")}</span>
-            <h2>{t("gmailTitle")}</h2>
-          </div>
+        <SignInMethods onNotice={setToast} />
+      </SettingsGroup>
+
+      <SettingsGroup title={t("groupPreferences")}>
+        <SettingsRow label={tLocale("heading")} description={tLocale("help")}>
+          <LocaleSwitch bare className="settings-select" />
+        </SettingsRow>
+        <SettingsRow label={tRoles("settingsTitle")} hint={[tRoles("settingsBody")]}>
+          <span>{tRoles(`${data.person.role}.label`)}</span>
+          <Link className="secondary" href="/role">
+            {tRoles("change")}
+          </Link>
+        </SettingsRow>
+        <ReplyDays onSaved={saved} />
+      </SettingsGroup>
+
+      <SettingsGroup title={t("groupWorkspace")}>
+        <Workspace onSaved={saved} />
+      </SettingsGroup>
+
+      <SettingsGroup title={t("groupServices")}>
+        <GoogleCalendarSettings onNotice={setToast} />
+        <CalendarFeedSettings />
+        <SettingsRow icon={<Mail size={20} />} label={t("gmailTitle")} hint={[t("gmailBody")]}>
           <span className="mock-chip">{t("comingSoon")}</span>
-        </div>
-        <p>
-          {t("gmailBody")}
-        </p>
-      </section>
-      <section className="surface padded">
-        <div className="section-header">
-          <div>
-            <span>{tEyebrow("assistant")}</span>
-            <h2>{t("aiTitle")}</h2>
-          </div>
-        </div>
-        <p>
-          {t("aiBody")}
-        </p>
-        <ReplyDefault />
-      </section>
-      <section className="surface padded">
-        <div className="section-header">
-          <div>
-            <span>{tEyebrow("account")}</span>
-            <h2>{t("account")}</h2>
-          </div>
-        </div>
-        <p>
-          {data.person.displayName} · {data.person.email}
-        </p>
-        <SignInMethods />
-        <SignOutButton />
-      </section>
+        </SettingsRow>
+      </SettingsGroup>
+
+      <SettingsGroup title={t("aiTitle")} hint={[t("aiBody")]}>
+        <p className="settings-note">{t("aiShort")}</p>
+      </SettingsGroup>
+
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 }
 
-/** The reply-by default for messages that state none; each message's date stays editable before applying. */
-function ReplyDefault() {
+/** The workspace's name and zone: owners change them (each saves on its own); others see them. */
+function Workspace({ onSaved }: { onSaved: () => void }) {
+  const data = useAppData();
+  const t = useTranslations("settings");
+  const nameId = useId();
+  const [timeZone, setTimeZone] = useState(data.talent.timeZone);
+  const [error, setError] = useState<{ field: "name" | "timeZone"; text: string } | null>(null);
+  const save = async (change: { name: string } | { timeZone: string }) => {
+    const failure = await updateWorkspace(change);
+    const field = "name" in change ? "name" : "timeZone";
+    setError(failure ? { field, text: failure } : null);
+    if (!failure) onSaved();
+  };
+
+  if (!data.person.workspaceOwner)
+    return (
+      <>
+        <SettingsRow label={t("name")} description={t("ownerOnly")}>
+          <span>{data.talent.name}</span>
+        </SettingsRow>
+        <SettingsRow label={t("timeZone")} description={t("timeZoneHelp")}>
+          <span>{data.talent.timeZone}</span>
+        </SettingsRow>
+      </>
+    );
+  return (
+    <>
+      <SettingsRow label={t("name")} htmlFor={nameId} error={error?.field === "name" ? error.text : null}>
+        <input
+          id={nameId}
+          className="settings-input"
+          defaultValue={data.talent.name}
+          maxLength={200}
+          // Saves on leaving the field (or Enter), when it changed.
+          onBlur={(e) => {
+            const name = e.currentTarget.value.trim();
+            if (name !== data.talent.name) void save({ name });
+          }}
+          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+        />
+      </SettingsRow>
+      <SettingsRow label={t("timeZone")} description={t("timeZoneHelp")} error={error?.field === "timeZone" ? error.text : null}>
+        <div className="settings-input">
+          <TimeZonePicker
+            label={t("timeZone")}
+            hideLabel
+            required
+            value={timeZone}
+            onChange={(zone) => {
+              setTimeZone(zone);
+              if (zone !== data.talent.timeZone) void save({ timeZone: zone });
+            }}
+          />
+        </div>
+      </SettingsRow>
+    </>
+  );
+}
+
+/** The reply-by default for messages that state none: 「收到後 [n] 天」, saved once the number settles. */
+function ReplyDays({ onSaved }: { onSaved: () => void }) {
   const data = useAppData();
   const t = useTranslations("settings");
   const [days, setDays] = useState(String(data.person.replyWithinDays));
-  const [pending, startTransition] = useTransition();
-  const [result, setResult] = useState<{ error: string | null } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const savedValue = useRef(data.person.replyWithinDays);
+  const n = Number(days);
+  const valid = days !== "" && Number.isInteger(n) && n >= 0 && n <= MAX_REPLY_DAYS;
+  useEffect(() => {
+    if (!valid || n === savedValue.current) return;
+    const timer = setTimeout(async () => {
+      const failure = await setReplyWithinDays(n);
+      setError(failure);
+      if (!failure) {
+        savedValue.current = n;
+        onSaved();
+      }
+    }, REPLY_SAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [valid, n, onSaved]);
   return (
-    <form
-      className="editor-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        startTransition(async () => setResult({ error: await setReplyWithinDays(Number(days)) }));
-      }}
-    >
-      <h3>{t("replyTitle")}</h3>
-      <p className="muted">{t("replyBody")}</p>
-      <label>
-        {t("replyDays")}
-        <input type="number" min={0} max={30} step={1} required value={days} onChange={(e) => setDays(e.target.value)} />
-      </label>
-      {result?.error && (
-        <p className="notice error" role="alert">
-          {result.error}
-        </p>
-      )}
-      {result && !result.error && !pending && <p className="notice">{t("saved")}</p>}
-      <button className="primary" disabled={pending}>
-        {pending ? t("saving") : t("replySave")}
-      </button>
-    </form>
+    <SettingsRow label={t("replyTitle")} hint={[t("replyBody")]} error={valid ? error : t("replyInvalid", { max: MAX_REPLY_DAYS })}>
+      <span className="settings-inline-field">
+        {t.rich("replyDays", {
+          field: () => (
+            <input
+              className="settings-number"
+              type="number"
+              aria-label={t("replyTitle")}
+              min={0}
+              max={MAX_REPLY_DAYS}
+              step={1}
+              required
+              value={days}
+              onChange={(e) => setDays(e.target.value)}
+            />
+          ),
+        })}
+      </span>
+    </SettingsRow>
   );
 }

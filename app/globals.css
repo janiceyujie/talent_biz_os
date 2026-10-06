@@ -1834,18 +1834,6 @@ summary {
   font-size: var(--text-meta);
   margin: 5px 0;
 }
-.settings-stack {
-  display: grid;
-  gap: 18px;
-  max-width: 1000px;
-}
-.settings-stack p {
-  font-size: var(--text-meta);
-  line-height: 1.8;
-}
-.settings-stack .section-header {
-  flex-wrap: wrap;
-}
 .setup-steps {
   padding-left: 22px;
 }
@@ -2655,19 +2643,6 @@ a.disabled {
 .role-switch {
   text-decoration: none;
 }
-.role-settings {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-}
-.role-settings svg {
-  width: 96px;
-  flex: none;
-}
-.role-settings .secondary {
-  display: inline-flex;
-  margin-top: 8px;
-}
 
 /* Record editor: the field group that locks while saving */
 .editor-fields {
@@ -2695,39 +2670,6 @@ a.disabled {
   display: block;
   color: var(--muted);
   font-size: 13px;
-}
-
-/* Settings: sign-in methods */
-.sign-in-methods {
-  display: grid;
-  gap: 10px;
-  margin: 8px 0 16px;
-}
-.sign-in-methods h3 {
-  margin: 0;
-  font-size: 16px;
-}
-.sign-in-methods dl {
-  margin: 0;
-  display: grid;
-  gap: 6px;
-}
-.sign-in-methods dl > div {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--line);
-}
-.sign-in-methods dt {
-  color: var(--muted);
-}
-.sign-in-methods dd {
-  margin: 0;
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  flex-wrap: wrap;
 }
 
 /* Inbox: message status, analysis, actions */
@@ -3559,7 +3501,7 @@ button.primary.danger {
 .planner-toolbar-spacer {
   flex: 1;
 }
-.planner-toast {
+.app-toast {
   position: fixed;
   left: 50%;
   bottom: 24px;
@@ -3575,7 +3517,14 @@ button.primary.danger {
   color: #fff;
   box-shadow: 0 10px 28px rgba(36, 56, 51, 0.25);
 }
-.planner-toast .icon-button {
+/* As a popover it's in the top layer; undo the browser's centred-box defaults. */
+.app-toast[popover] {
+  inset: auto auto 24px 50%;
+  margin: 0;
+  border: 0;
+  overflow: visible;
+}
+.app-toast .icon-button {
   color: #fff;
 }
 .page-title .page-actions {
@@ -3656,18 +3605,31 @@ button.primary.danger {
   border-left: 3px solid #7986cb;
   padding-left: 8px;
 }
-.google-import {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
+/* 設定 → Google 日曆's dialog: the two directions */
+.calendar-flows {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  align-items: center;
+  margin: 10px 0 14px;
 }
-.google-import h3 {
-  margin: 0 0 4px;
-  font-size: 15px;
+.calendar-flows dt {
+  color: var(--muted);
+  font-size: var(--text-meta);
+  font-weight: 700;
+}
+.calendar-flows dd {
+  margin: 0;
+}
+.google-import {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
 }
 .google-import-list {
   list-style: none;
-  margin: 8px 0 12px;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
@@ -3692,4 +3654,243 @@ button.primary.danger {
   margin: 8px 0 16px;
   padding: 0;
   border: 0;
+}
+
+/* ⓘ beside a title: the section's explanation, on hover, focus, or tap */
+.info-hint {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 2px;
+}
+.info-hint .info-hint-button {
+  display: inline-flex;
+  min-height: 0;
+  min-width: 0;
+  padding: 3px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  background: transparent;
+  cursor: help;
+}
+.info-hint .info-hint-button:hover,
+.info-hint.is-open .info-hint-button {
+  color: var(--ink);
+}
+.info-hint-body {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: calc(-8px + var(--shift, 0px));
+  z-index: 40;
+  flex-direction: column;
+  gap: 8px;
+  width: max-content;
+  max-width: min(360px, calc(100vw - 48px));
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(21, 23, 17, 0.12);
+  color: var(--ink-soft);
+  font-size: var(--text-meta);
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.55;
+  text-transform: none;
+  white-space: normal;
+}
+.info-hint.is-open .info-hint-body {
+  display: flex;
+}
+
+/* Settings: groups of rows, label on the left and control on the right; rows stack on phones */
+.settings-page {
+  display: grid;
+  gap: 28px;
+  max-width: 720px;
+}
+.settings-group h2 {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.settings-list {
+  padding: 0 20px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px 16px;
+  min-height: 60px;
+  padding: 12px 0;
+}
+.settings-row + .settings-row {
+  border-top: 1px solid var(--line);
+}
+.settings-row-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--muted);
+}
+.settings-row-label {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.settings-row-title {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 600;
+}
+.settings-row-label small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.settings-row-label .settings-row-error {
+  color: var(--red);
+}
+.settings-row-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.settings-row-control .secondary,
+.settings-row-control .primary {
+  min-height: 36px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+.settings-input {
+  width: 280px;
+}
+.settings-select {
+  width: auto;
+  min-width: 160px;
+}
+.settings-inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.settings-number {
+  width: 72px;
+  text-align: center;
+}
+.settings-account svg {
+  flex: none;
+  width: 48px;
+  height: 48px;
+}
+.settings-account .settings-row-label small {
+  overflow-wrap: anywhere;
+}
+.settings-note {
+  margin: 0;
+  padding: 16px 0;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.status-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, #285e52);
+}
+@media (max-width: 600px) {
+  .settings-list {
+    padding: 0 16px;
+  }
+  /* Short controls stay beside their label; a field takes the next line. */
+  .settings-row {
+    flex-wrap: wrap;
+  }
+  .settings-row-label {
+    flex: 1 1 160px;
+  }
+  .settings-row-control {
+    margin-left: auto;
+  }
+  .settings-row-control:has(.settings-input) {
+    width: 100%;
+  }
+  .settings-input {
+    width: 100%;
+  }
+  .settings-account {
+    flex-wrap: nowrap;
+  }
+  .settings-account .settings-row-label {
+    flex-basis: auto;
+  }
+}
+.settings-row-title label {
+  display: inline;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+}
+/* A destructive action in a dialog's footer sits apart, on the left. */
+.modal-actions > :is(.danger-text, .danger-outline):first-child {
+  margin-right: auto;
+}
+/* 設定 → 訂閱連結: the one-time link, and the actions on an active one */
+.feed-link {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+.feed-link input {
+  flex: 1;
+  min-width: 0;
+}
+.feed-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.feed-other {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+}
+.feed-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+}
+.feed-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.feed-actions > div {
+  display: grid;
+  gap: 2px;
+}
+.feed-actions small {
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.feed-actions .secondary {
+  white-space: nowrap;
 }

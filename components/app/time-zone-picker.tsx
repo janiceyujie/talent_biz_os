@@ -18,12 +18,14 @@ export function TimeZonePicker({
   onChange,
   required,
   name,
+  hideLabel,
 }: {
   label: string;
   value: string;
   onChange: (zone: string) => void;
   required?: boolean;
   name?: string;
+  hideLabel?: boolean;
 }) {
   const t = useTranslations("timeZone");
   const locale = toLocale(useLocale());
@@ -41,6 +43,7 @@ export function TimeZonePicker({
     <>
       <Combobox
         label={label}
+        hideLabel={hideLabel}
         required={required}
         text={query ?? display}
         onText={setQuery}

@@ -245,7 +245,7 @@ export type ExternalEvent = {
 
 export type AppData = {
   talent: { id: string; name: string; timeZone: string };
-  person: { displayName: string; email: string; role: Role; appearance: Appearance; replyWithinDays: number };
+  person: { displayName: string; email: string; role: Role; appearance: Appearance; replyWithinDays: number; workspaceOwner: boolean };
   calendarFeed: boolean; // a subscription link exists (the URL itself is only shown once)
   projects: Project[];
   contacts: Contact[];

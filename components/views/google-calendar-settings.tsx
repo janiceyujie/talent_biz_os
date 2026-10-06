@@ -1,9 +1,10 @@
 "use client";
 
-// 設定 → Google 日曆同步 (decision 0009, phase 1). Connecting asks Google for one
+// 設定 → 連結的服務 → Google 日曆 (decision 0009). Connecting asks Google for one
 // more permission on the linked Google account; coming back finishes the
 // connection, and the first sync runs in the background.
-import { useFormatter, useTranslations } from "next-intl";
+import { CalendarDays, Unlink } from "lucide-react";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
@@ -18,17 +19,24 @@ import {
 } from "@/lib/actions/google-calendar";
 import { authClient } from "@/lib/auth/client";
 import { CALENDAR_SCOPE, IMPORT_SCOPES } from "@/lib/calendar/google/scope";
+import { SettingsRow } from "./settings-row";
 
-export function GoogleCalendarSettings() {
+// Google's own default calendar colour, for a calendar that reports none.
+const DEFAULT_GOOGLE_COLOR = "#7986cb";
+const MINUTE_MS = 60_000; // how often "n minutes ago" updates
+
+/** 設定 → 連結的服務 → Google 日曆: one row (status, connect or 管理), the details in a dialog. */
+export function GoogleCalendarSettings({ onNotice }: { onNotice: (text: string) => void }) {
   const data = useAppData();
   const t = useTranslations("googleCalendar");
-  const tEyebrow = useTranslations("eyebrow");
   const format = useFormatter();
+  const now = useNow({ updateInterval: MINUTE_MS });
   const router = useRouter();
   const params = useSearchParams();
   const [pending, startTransition] = useTransition();
-  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const [failed, setFailed] = useState<string | null>(null); // what the last action here couldn't do
   const [confirming, setConfirming] = useState(false);
+  const [managing, setManaging] = useState(false);
   const [deleteCalendar, setDeleteCalendar] = useState(true);
   const { granted, connection, importGranted, importing } = data.googleCalendar;
   const [choosing, setChoosing] = useState<GoogleCalendarChoice[] | null>(null);
@@ -36,7 +44,8 @@ export function GoogleCalendarSettings() {
   const run = (action: () => Promise<string | null>, done?: string) =>
     startTransition(async () => {
       const failure = await action();
-      setMessage(failure ? { text: failure, error: true } : done ? { text: done, error: false } : null);
+      setFailed(failure);
+      if (!failure && done) onNotice(done);
     });
 
   // Back from Google's consent screen (or granted without a connection yet): finish connecting, once.
@@ -52,8 +61,9 @@ export function GoogleCalendarSettings() {
 
   const openChooser = () =>
     startTransition(async () => {
+      setManaging(false);
       const result = await listGoogleCalendars();
-      if ("error" in result) setMessage({ text: result.error, error: true });
+      if ("error" in result) setFailed(result.error);
       else setChoosing(result.calendars);
     });
   const askToRead = () =>
@@ -99,82 +109,116 @@ export function GoogleCalendarSettings() {
       });
     });
 
-  const status = !connection
-    ? null
-    : connection.status === "needs_reconnect"
-      ? { text: t("needsReconnect"), error: true }
-      : connection.lastError
-        ? { text: t(`error.${connection.lastError as "google" | "network" | "auth"}`), error: true }
-        : connection.lastSyncedAt
-          ? { text: t("connected", { when: format.dateTime(new Date(connection.lastSyncedAt), { dateStyle: "medium", timeStyle: "short" }) }), error: false }
-          : { text: t("pending"), error: false };
+  // The row says where things stand in a few words; the dialog has the full sentence.
+  const syncProblem =
+    connection?.status === "needs_reconnect"
+      ? t("needsReconnect")
+      : connection?.lastError
+        ? t(`error.${connection.lastError as "google" | "network" | "auth"}`)
+        : null;
+  const rowError =
+    failed ?? (connection?.status === "needs_reconnect" ? t("needsReconnectShort") : connection?.lastError ? t("syncFailed") : null);
+  const rowStatus = !data.googleCalendar.available ? (
+    t("notConfigured")
+  ) : !googleLinked ? (
+    t("needGoogle")
+  ) : !connection ? (
+    t("notConnected")
+  ) : rowError ? null : connection.lastSyncedAt ? (
+    <>
+      <span className="status-dot" aria-hidden="true" />
+      {/* Under a minute (or "in 2 seconds", when this device's clock runs a little behind the server's) reads as just now. */}
+      {now.getTime() - new Date(connection.lastSyncedAt).getTime() < MINUTE_MS
+        ? t("syncedJustNow")
+        : t("syncedAgo", { when: format.relativeTime(new Date(connection.lastSyncedAt), now) })}
+    </>
+  ) : (
+    t("pending")
+  );
+  const usable = data.googleCalendar.available && googleLinked;
 
   return (
-    <section className="surface padded google-calendar-card">
-      <div className="section-header">
-        <div>
-          <span>{tEyebrow("google")}</span>
-          <h2>{t("title")}</h2>
-        </div>
-      </div>
-      {/* What the app can do depends on what Google was asked for: say exactly that. */}
-      <p>{importGranted ? t("bodyWithRead") : t("body")}</p>
-      <p className="muted">{t("shared")}</p>
-      {!data.googleCalendar.available ? (
-        <p className="muted">{t("notConfigured")}</p>
-      ) : !googleLinked ? (
-        <p className="muted">{t("needGoogle")}</p>
-      ) : (
-        <>
-          {status && (
-            <p className={status.error ? "notice error" : "muted"} role={status.error ? "alert" : "status"}>
-              {status.text}
-            </p>
-          )}
-          <div className="row-actions">
-            {!connection || connection.status === "needs_reconnect" ? (
-              <button className="primary" disabled={pending} onClick={connect}>
-                {pending && granted ? t("connecting") : connection ? t("reconnect") : t("connect")}
-              </button>
-            ) : (
-              <button className="secondary" disabled={pending} onClick={() => run(() => syncGoogleCalendarNow(), t("syncQueued"))}>
-                {pending ? t("syncing") : t("syncNow")}
-              </button>
-            )}
-            {connection && (
-              <button className="text-button" disabled={pending} onClick={() => setConfirming(true)}>
-                {t("disconnect")}
-              </button>
-            )}
-          </div>
-          {connection?.status === "connected" && (
-            // Phase 2: the person's own Google calendars, shown here read-only.
-            <div className="google-import">
-              <h3>{t("importTitle")}</h3>
-              <p className="muted">{t("importBody")}</p>
-              {importing.length > 0 && (
+    <>
+      <SettingsRow
+        icon={<CalendarDays size={20} />}
+        label={t("title")}
+        hint={[t("aboutSend"), t("aboutShow")]}
+        description={rowStatus}
+        error={rowError}
+      >
+        {usable && (!connection || connection.status === "needs_reconnect") && (
+          <button className="primary" disabled={pending} onClick={connect}>
+            {pending && granted ? t("connecting") : connection ? t("reconnect") : t("connect")}
+          </button>
+        )}
+        {usable && connection?.status === "needs_reconnect" && (
+          <button className="text-button" disabled={pending} onClick={() => setConfirming(true)}>
+            {t("disconnect")}
+          </button>
+        )}
+        {usable && connection?.status === "connected" && (
+          <button className="secondary" onClick={() => setManaging(true)}>
+            {t("manage")}
+          </button>
+        )}
+      </SettingsRow>
+      {managing && connection && (
+        <Modal title={t("title")} onClose={() => setManaging(false)}>
+          <p className={syncProblem ? "notice error" : "muted"} role={syncProblem ? "alert" : "status"}>
+            {syncProblem ??
+              (connection.lastSyncedAt
+                ? t("connected", { when: format.dateTime(new Date(connection.lastSyncedAt), { dateStyle: "medium", timeStyle: "short" }) })
+                : t("pending"))}
+          </p>
+          {/* The two directions, named by what they do (decision 0009). */}
+          <dl className="calendar-flows">
+            <dt>{t("sendTitle")}</dt>
+            <dd>{t("sendTo")}</dd>
+            <dt>{t("importTitle")}</dt>
+            <dd className="google-import">
+              {importing.length > 0 ? (
                 <ul className="google-import-list">
                   {importing.map((c) => (
                     <li key={c.name}>
-                      <span className="calendar-dot" style={{ background: c.color ?? "#7986cb" }} aria-hidden="true" />
+                      <span className="calendar-dot" style={{ background: c.color ?? DEFAULT_GOOGLE_COLOR }} aria-hidden="true" />
                       {c.name}
                     </li>
                   ))}
                 </ul>
+              ) : (
+                <span className="muted">{t("importNone")}</span>
               )}
-              <button className="secondary" disabled={pending} onClick={importGranted ? openChooser : askToRead}>
+              <button className="text-button" disabled={pending} onClick={importGranted ? openChooser : askToRead}>
                 {importing.length ? t("importChange") : t("importChoose")}
               </button>
-            </div>
+            </dd>
+          </dl>
+          {failed && (
+            <p className="notice error" role="alert">
+              {failed}
+            </p>
           )}
-        </>
+          <footer className="modal-actions">
+            <button
+              className="secondary danger-outline"
+              onClick={() => {
+                setManaging(false);
+                setConfirming(true);
+              }}
+            >
+              <Unlink size={16} aria-hidden="true" />
+              {t("disconnect")}
+            </button>
+            <button className="secondary" disabled={pending} onClick={() => run(() => syncGoogleCalendarNow(), t("syncQueued"))}>
+              {pending ? t("syncing") : t("syncNow")}
+            </button>
+            <button className="primary" onClick={() => setManaging(false)}>
+              {t("done")}
+            </button>
+          </footer>
+        </Modal>
       )}
-      {choosing && <CalendarChooser calendars={choosing} onClose={() => setChoosing(null)} onSaved={(failure) => setMessage(failure ? { text: failure, error: true } : null)} />}
-      {message && (
-        <p className={message.error ? "notice error" : "muted"} role={message.error ? "alert" : "status"}>
-          {message.text}
-        </p>
-      )}
+      {choosing && <CalendarChooser calendars={choosing} onClose={() => setChoosing(null)} onSaved={setFailed} />}
       {confirming && (
         <Modal title={t("disconnectTitle")} onClose={() => setConfirming(false)}>
           <p>{t("disconnectBody")}</p>
@@ -198,7 +242,7 @@ export function GoogleCalendarSettings() {
           </footer>
         </Modal>
       )}
-    </section>
+    </>
   );
 }
 
@@ -221,7 +265,7 @@ function CalendarChooser({ calendars, onClose, onSaved }: { calendars: GoogleCal
         {calendars.map((c) => (
           <label key={c.id} className="check-line">
             <input type="checkbox" checked={picked.has(c.id)} onChange={() => toggle(c.id)} />
-            <span className="calendar-dot" style={{ background: c.color ?? "#7986cb" }} aria-hidden="true" />
+            <span className="calendar-dot" style={{ background: c.color ?? DEFAULT_GOOGLE_COLOR }} aria-hidden="true" />
             {c.name}
           </label>
         ))}

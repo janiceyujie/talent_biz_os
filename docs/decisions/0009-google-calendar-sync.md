@@ -83,13 +83,13 @@ Each phase ships on its own; the next starts when the last is in use.
 - Triggered after every event save, archive, and delete, and after the intake review applies dates; 立即同步 runs it directly. Background work uses `after()` until the job queue exists (decision 0008).
 - The calendar permission is requested with `access_type=offline` and `prompt=select_account consent` on that request only, so sign-in is unchanged and a refresh token is always returned.
 - A failed push leaves the connection dirty, so it goes again on the next change or 立即同步; automatic retries with backoff wait for the job queue (launch checklist).
-- A calendar deleted in Google is re-created on the next sync, with every event pushed again; an event deleted or edited in Google is restored from ours.
-- Unlinking the Google account in 登入方式 removes the connection with it (the Google calendar stays, as Google keeps it).
+- A calendar deleted in Google is re-created on the next sync, with every event pushed again; an event deleted or edited in Google is restored from ours. Tracked in [tech-debt.md](../tech-debt.md) until phase 3.
+- Unlinking the Google account (設定 → 以 Google 登入) removes the connection with it (the Google calendar stays, as Google keeps it).
 - End-to-end tests run a second dev server (`NEXT_DIST_DIR=.next-test`, port 3001) with the stand-in Google sign-in and a fake Calendar API.
 
 ## Implementation notes (phase 2, 2026-10-05)
 
 - `calendar_import_source` (a chosen Google calendar, per connection) and `external_event` (migration 0019); disconnecting removes both.
 - `lib/calendar/google/import-plan.ts` (pure: a Google event as wall time plus zone; all-day ends on the last day covered) and `import.ts` (the windowed re-read, one per calendar at a time). A calendar removed from their Google list, or no longer readable, stops being shown.
-- 設定 → 在這裡顯示你的 Google 日曆 asks for the two read permissions (with offline access) only when pressed, then lists their calendars (not our own) to tick.
+- 設定 → 連結的服務 → Google 日曆 → 管理 → 在這裡顯示 asks for the two read permissions (with offline access) only when pressed, then lists their calendars (not our own) to tick.
 - On the calendar, Google events are read-only: not draggable, no delete, open in Google when clicked, coloured by their Google calendar, and part of clash checks. The month view lists them on their own dates (an all-day event on each day it covers).

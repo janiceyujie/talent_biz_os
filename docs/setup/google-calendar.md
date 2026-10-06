@@ -1,6 +1,6 @@
 # Setting up Google Calendar sync
 
-The Google side of 連結 Google 日曆. Do [Google sign-in](google-sign-in.md) first: the calendar connection asks the Google account already linked there for one more permission, in the **same Google Cloud project and OAuth client**. The behavior is in [decision 0009](../decisions/0009-google-calendar-sync.md).
+The Google side of 設定 → 連結的服務 → Google 日曆. Do [Google sign-in](google-sign-in.md) first: the calendar connection asks the Google account already linked there for one more permission, in the **same Google Cloud project and OAuth client**. The behavior is in [decision 0009](../decisions/0009-google-calendar-sync.md).
 
 Written against the Google Cloud console in October 2026; if a label has moved, look for the same idea.
 
@@ -16,9 +16,9 @@ In the project you made for sign-in:
 4. **Clients**: nothing changes — the same web client and redirect URI as sign-in.
 5. **`.env.local`**: nothing new for Google. Set a strong `BETTER_AUTH_SECRET` if you haven't: it encrypts the stored Google tokens, so changing it later means people reconnect.
 
-Then in the app: 設定 → 連結 Google 日曆. Google asks for the calendar permission (with the "Google hasn't verified this app" screen while testing — **Advanced → Go to … (unsafe)** is expected for test users). A 「Talent Biz OS」 calendar appears in Google Calendar and fills with your events.
+Then in the app: 設定 → 連結的服務 → Google 日曆 → 連結. Google asks for the calendar permission (with the "Google hasn't verified this app" screen while testing — **Advanced → Go to … (unsafe)** is expected for test users). A 「Talent Biz OS」 calendar appears in Google Calendar and fills with your events.
 
-**Testing mode limits**, worth knowing before a demo: up to 100 test users; their consent (and so the refresh token) expires after **7 days**, after which the card shows "needs reconnecting".
+**Testing mode limits**, worth knowing before a demo: up to 100 test users; their consent (and so the refresh token) expires after **7 days**, after which the Google 日曆 row in 設定 shows 「Google 的授權已失效」 and 重新連結.
 
 **Automated tests** never call Google: they run against a fake Google Calendar, so no test account or keys are involved. They use a second dev server beside yours, with its own build folder and the stand-in Google sign-in:
 
@@ -38,7 +38,7 @@ Works locally (it polls; no public address needed). In the same **Data access** 
 - `https://www.googleapis.com/auth/calendar.calendarlist.readonly` — list the person's calendars to choose from
 - `https://www.googleapis.com/auth/calendar.events.readonly` — read events on the chosen calendars
 
-Then 設定 → 在這裡顯示你的 Google 日曆 → 選擇要顯示的 Google 日曆: Google asks for the two permissions, and you tick which calendars to show. These are sensitive scopes, asked only when someone turns this on. After deploying, Google's change notifications can replace polling (decision 0009).
+Then 設定 → 連結的服務 → Google 日曆 → 管理 → 在這裡顯示 → 選擇日曆: Google asks for the two permissions, and you tick which calendars to show. These are sensitive scopes, asked only when someone turns this on. After deploying, Google's change notifications can replace polling (decision 0009).
 
 ## Before real users: verification
 
@@ -63,5 +63,5 @@ As for sign-in: a production OAuth client (ideally its own project) with the pro
 | "Google Calendar API has not been used in project … or it is disabled" | Step 1: enable the API in this project |
 | Google never asks for calendar access | The scope isn't added under Data access, or this Google account isn't the one linked in 設定 |
 | `access_denied` for a teammate | They aren't under Test users while the app is in Testing |
-| Card shows "needs reconnecting" after a week | Testing-mode consent expired (7 days), or access was removed at myaccount.google.com → Security → Third-party connections |
-| Events don't appear in Google | The 「Talent Biz OS」 calendar is hidden in Google Calendar's sidebar, or the 設定 card shows a sync error |
+| 「Google 的授權已失效」 after a week | Testing-mode consent expired (7 days), or access was removed at myaccount.google.com → Security → Third-party connections |
+| Events don't appear in Google | The 「Talent Biz OS」 calendar is hidden in Google Calendar's sidebar, or the Google 日曆 row in 設定 shows 上次同步失敗 (管理 has the details) |

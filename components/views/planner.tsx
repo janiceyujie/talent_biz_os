@@ -6,12 +6,13 @@
 // action as the calendar form; a project's items and clashes ask first.
 // Adapted from the prototype's planner
 // (talent-business-os-prototype, src/components/planner/calendar.tsx).
-import { ChevronLeft, ChevronRight, LockKeyhole, Move, Plus, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, LockKeyhole, Move, Plus, Trash2 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition, type MouseEvent as ReactMouseEvent, type PointerEvent } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
 import { PageHeader } from "@/components/app/page-header";
+import { Toast } from "@/components/app/toast";
 import { calendarRecord, RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { deleteCalendarItem, saveCalendarItem } from "@/lib/actions/calendar";
 import { refreshGoogleCalendars } from "@/lib/actions/google-calendar";
@@ -720,28 +721,6 @@ function ChangeSummary({ before, after }: { before: PlanItem; after: PlanItem })
         </div>
       ))}
     </dl>
-  );
-}
-
-/** What just happened, at the bottom of the screen for a few seconds. */
-function Toast({ message, onClose }: { message: string; onClose: () => void }) {
-  const t = useTranslations("planner");
-  // Each new message gets its own few seconds; re-renders don't restart the timer.
-  const close = useRef(onClose);
-  useEffect(() => {
-    close.current = onClose;
-  });
-  useEffect(() => {
-    const timer = setTimeout(() => close.current(), 8000);
-    return () => clearTimeout(timer);
-  }, [message]);
-  return (
-    <div className="planner-toast" role="status" aria-live="polite">
-      <span>{message}</span>
-      <button className="icon-button" aria-label={t("dismiss")} onClick={onClose}>
-        <X size={16} aria-hidden="true" />
-      </button>
-    </div>
   );
 }
 

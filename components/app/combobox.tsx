@@ -24,6 +24,7 @@ export function Combobox({
   onClear,
   hint,
   explicitPick = false,
+  hideLabel = false,
 }: {
   label: string;
   required?: boolean;
@@ -36,6 +37,7 @@ export function Combobox({
   onClear?: () => void;
   hint?: ReactNode;
   explicitPick?: boolean;
+  hideLabel?: boolean; // the label is beside it (a settings row): kept for screen readers only
 }) {
   const listId = useId();
   const [open, setOpen] = useState(false);
@@ -65,8 +67,7 @@ export function Combobox({
   return (
     <div className="searchable-field">
       <label>
-        {label}
-        {required ? " *" : ""}
+        {hideLabel ? <span className="sr-only">{label}</span> : `${label}${required ? " *" : ""}`}
         <span className="searchable-input">
           <input
             role="combobox"

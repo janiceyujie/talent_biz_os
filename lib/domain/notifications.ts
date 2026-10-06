@@ -26,7 +26,7 @@ type Base = {
 };
 export type Notification = Base &
   (
-    | { kind: "calendar"; calendarKind: CalendarKind; marker: ReturnType<typeof pointKind>; location: string }
+    | { kind: "calendar"; source: "event" | "todo"; calendarKind: CalendarKind; marker: ReturnType<typeof pointKind>; location: string }
     | { kind: "receivable" | "payable"; amount: number }
   );
 
@@ -77,6 +77,7 @@ export function notifications(data: AppData, now = new Date()): Notification[] {
       return [{
         id: `calendar:${p.item.id}:${p.end ? "end:" : ""}${p.date}:${p.time}`,
         kind: "calendar",
+        source: p.item.source,
         calendarKind: p.item.kind,
         marker: pointKind(p),
         title: p.item.title,

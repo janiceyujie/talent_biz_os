@@ -1,59 +1,60 @@
 "use client";
 
-// 今日總覽: today's schedule first, what needs attention beside it, then
-// reminders, the next seven days, travel, deliverables, and money due.
-// Layout from the prototype's overview (talent-business-os-prototype,
-// src/components/planner/overview.tsx), on the talent's real records.
-import { ArrowUpRight, CalendarDays, CircleAlert } from "lucide-react";
+// 今日總覽: what needs you (one list, most urgent first) as the main column,
+// the schedule beside it (today, then the coming days that have something),
+// and money in one line. Events live in the schedule only; empty sections
+// don't show. On phones the actions come first.
+import { ArrowUpRight, BedDouble, CalendarDays, Loader2, Plane } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAppData } from "@/components/app/app-data";
-import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
+import { ANALYSIS_POLL_MS } from "@/components/app/paste-dialog";
+import { RecordEditor, type Editor } from "@/components/app/record-editor";
 import { useNotificationText } from "@/components/app/notification-text";
 import { ReminderStatus, useNotifications } from "@/components/app/notifications";
 import { conflicts, plusDays, planItems, type PlanItem } from "@/lib/calendar/planner";
 import { dateInZone } from "@/lib/domain/dates";
-import { phaseOf } from "@/lib/domain/phases";
-import { isSignedOpen, paymentTotal } from "@/lib/domain/workflow";
+import { todayActions, type TodayAction } from "@/lib/domain/today";
+import { paymentTotal } from "@/lib/domain/workflow";
 import { useMoney } from "@/lib/i18n/format";
-import { EventCard } from "./planner";
+
+const COMING_DAYS = 6; // after today: the rest of the week
+
+/** The date for the page title, in the talent's zone. */
+export function TodayDate() {
+  const data = useAppData();
+  const format = useFormatter();
+  const today = dateInZone(data.talent.timeZone);
+  return (
+    <span className="page-subtitle">
+      {format.dateTime(new Date(`${today}T12:00:00Z`), { month: "long", day: "numeric", weekday: "short", timeZone: "UTC" })}
+    </span>
+  );
+}
 
 export function TodayView() {
   const data = useAppData();
   const t = useTranslations("today");
   const tEyebrow = useTranslations("eyebrow");
-  const format = useFormatter();
-  const money = useMoney();
-  const notificationText = useNotificationText();
-  const router = useRouter();
   const [editor, setEditor] = useState<Editor | null>(null);
   const { list } = useNotifications();
-  const alerts = list.filter((n) => !n.snoozedUntil);
   const today = dateInZone(data.talent.timeZone);
-  const weekEnd = plusDays(today, 6);
   const items = useMemo(() => planItems(data), [data]);
-  const todayItems = items.filter((i) => i.date === today && !i.done);
-  const nextWeek = items.filter((i) => i.date >= today && i.date <= weekEnd && !i.done);
-  const travel = nextWeek.filter((i) => i.kind === "travel" || i.kind === "accommodation");
-  const deliveries = items.filter((i) => i.kind === "deliverable" && !i.done && i.date <= weekEnd);
-  const clashes = nextWeek.filter((i) => conflicts(i, items).length).length;
-  const live = data.projects.filter((p) => !p.archived);
-  const waiting = data.inbox.filter((m) => m.status === "analyzed");
-  const talking = live.filter((p) => phaseOf(p.stage) === "negotiation");
-  const open = data.payments.filter((p) => !p.voided && p.status === "expected");
-  const overdue = open.filter((p) => p.dueDate && p.dueDate < today);
-  const dueSoon = open.filter((p) => p.dueDate && p.dueDate >= today && p.dueDate <= weekEnd);
-  const sum = (direction: "in" | "out") => open.filter((p) => p.direction === direction).reduce((n, p) => n + paymentTotal(p), 0);
-  const toCalendar = (date = today) => router.push(`/calendar?date=${date}`);
-  const openItem = (item: PlanItem) => {
-    if (item.ref.source === "payment") {
-      const p = data.payments.find((x) => x.id === item.ref.id);
-      if (p) setEditor({ kind: "payment", item: toRecord(p) });
-    } else toCalendar(item.date);
-  };
-  const weekday = (d: string) => format.dateTime(new Date(`${d}T12:00:00Z`), { weekday: "short", timeZone: "UTC" });
+  const actions = todayActions({ reminders: list.filter((n) => !n.snoozedUntil), inbox: data.inbox, items, today });
+  // The schedule is events (ours and the person's Google ones); to-dos and payments are actions.
+  const scheduled = items.filter((i) => (i.ref.source === "event" || i.ref.source === "google") && !i.done);
+  const onDay = (d: string) => scheduled.filter((i) => i.date === d).sort((a, b) => a.start.localeCompare(b.start));
+  // A message imported from the header is analyzed in the background: say so, and look again until it lands.
+  const analyzing = data.inbox.filter((m) => m.status === "pending").length;
+  const router = useRouter();
+  useEffect(() => {
+    if (!analyzing) return;
+    const timer = setInterval(() => router.refresh(), ANALYSIS_POLL_MS);
+    return () => clearInterval(timer);
+  }, [analyzing, router]);
+  const coming = Array.from({ length: COMING_DAYS }, (_, i) => plusDays(today, i + 1)).filter((d) => onDay(d).length);
 
   return (
     <>
@@ -72,178 +73,162 @@ export function TodayView() {
           </div>
         </section>
       )}
-      <div className="planner planner-overview">
-        <div className="overview-date">
-          <span>
-            {today} · {data.talent.timeZone}
-          </span>
-          <button className="text-button" onClick={() => toCalendar()}>
-            {t("openCalendar")} <ArrowUpRight size={16} aria-hidden="true" />
-          </button>
-        </div>
-        <div className="overview-layout">
-          <section className="overview-today" aria-labelledby="today-agenda-title">
-            <header className="overview-section-title">
-              <h2 id="today-agenda-title">{t("todaySchedule")}</h2>
-              <span>{t("itemCount", { count: todayItems.length })}</span>
-            </header>
-            {todayItems.map((item) => (
-              <EventCard key={item.id} item={item} items={items} onOpen={openItem} />
-            ))}
-            {!todayItems.length && <p className="empty">{t("todayEmpty")}</p>}
-          </section>
-          <aside className="overview-attention" aria-label={t("attention")}>
-            <h2>
-              <CircleAlert size={20} aria-hidden="true" />
-              {t("attention")}
-            </h2>
-            <button className="overview-summary-row" onClick={() => router.push("/finance")}>
-              <span>
-                <strong>{t("overdue")}</strong>
-                <small>{t("overdueNote")}</small>
-              </span>
-              <b>{overdue.length}</b>
-            </button>
-            <button className="overview-summary-row" onClick={() => router.push("/inbox")}>
-              <span>
-                <strong>{t("waitingMessages")}</strong>
-                <small>{waiting.length ? t("waitingFirst", { title: waiting[0].analysis?.title || "", count: waiting.length }) : t("waitingNone")}</small>
-              </span>
-              <b>{waiting.length}</b>
-            </button>
-            <button className="overview-summary-row" onClick={() => router.push("/projects")}>
-              <span>
-                <strong>{t("talking")}</strong>
-                <small>{talking.length ? t("waitingFirst", { title: talking[0].title, count: talking.length }) : t("talkingNone")}</small>
-              </span>
-              <b>{talking.length}</b>
-            </button>
-            <button className="overview-summary-row" onClick={() => toCalendar()}>
-              <span>
-                <strong>{t("clashes")}</strong>
-                <small>{t("clashesNote")}</small>
-              </span>
-              <b>{clashes}</b>
-            </button>
-            <div className="overview-active">
-              <span>{t("active")}</span>
-              <strong>{t("projectCount", { count: live.filter(isSignedOpen).length })}</strong>
-              <Link className="text-button" href="/projects">
-                {t("viewProjects")} <ArrowUpRight size={16} aria-hidden="true" />
-              </Link>
-            </div>
-          </aside>
-        </div>
-
-        <section className="surface action-list">
-          <div className="section-header">
-            <div>
-              <span>{tEyebrow("nextActions")}</span>
-              <h2>{t("nextActions")}</h2>
-            </div>
-          </div>
-          {alerts.slice(0, 5).map((n, i) => {
-            const text = notificationText(n);
-            return (
-              <button className="action-row" key={n.id} onClick={() => router.push(n.href)}>
-                <span className={`priority p-${i + 1}`}>{String(i + 1).padStart(2, "0")}</span>
-                <div>
-                  <ReminderStatus urgency={n.urgency} />
-                  <strong>{text.title}</strong>
-                  <small>{text.detail}</small>
-                </div>
-              </button>
-            );
-          })}
-          {!alerts.length && <p className="empty">{t("nextActionsEmpty")}</p>}
-        </section>
-
-        <section className="overview-week" aria-label={t("nextSevenDays")}>
-          <header className="overview-section-title">
-            <h2>{t("nextSevenDays")}</h2>
-            <button className="text-button" onClick={() => toCalendar()}>
-              {t("viewAll")}
-            </button>
+      <div className="today-layout">
+        <section className="today-actions" aria-labelledby="today-actions-title">
+          <header className="today-section-title">
+            <h2 id="today-actions-title">{t("actionsTitle")}</h2>
+            {actions.length > 0 && <span className="today-count">{actions.length}</span>}
           </header>
-          <div className="overview-week-strip">
-            {Array.from({ length: 7 }, (_, i) => plusDays(today, i)).map((day) => {
-              const onDay = items.filter((e) => e.date === day && !e.done);
-              return (
-                <button className={day === today ? "is-today" : ""} key={day} onClick={() => toCalendar(day)}>
-                  <span>{day === today ? t("todayShort") : weekday(day)}</span>
-                  <strong>{day.slice(5)}</strong>
-                  <span>{onDay.length ? t("itemCount", { count: onDay.length }) : t("nothing")}</span>
-                  <small>{onDay[0]?.title || "—"}</small>
-                </button>
-              );
-            })}
+          <div className="surface today-action-list">
+            {analyzing > 0 && (
+              <p className="today-analyzing" role="status">
+                <Loader2 size={16} aria-hidden="true" />
+                {t("analyzing", { count: analyzing })}
+              </p>
+            )}
+            {actions.map((a) => (
+              <ActionRow key={a.id} action={a} today={today} />
+            ))}
+            {!actions.length && !analyzing && <p className="empty">{t("actionsEmpty")}</p>}
           </div>
+          <MoneyLine today={today} />
         </section>
 
-        <div className="overview-bottom">
-          <section>
-            <h2>
-              <CalendarDays size={20} aria-hidden="true" />
-              {t("travel")}
-            </h2>
-            {travel.slice(0, 3).map((e) => (
-              <button className="overview-list-row" key={e.id} onClick={() => toCalendar(e.date)}>
-                <strong>{e.title}</strong>
-                <span>
-                  {e.note || e.date}
-                  {e.project ? ` · ${e.project}` : ""}
-                </span>
-              </button>
-            ))}
-            {!travel.length && <p className="muted">{t("travelNone")}</p>}
-          </section>
-          <section>
-            <h2>{t("deliveries")}</h2>
-            {deliveries.slice(0, 3).map((e) => (
-              <button className="overview-list-row" key={e.id} onClick={() => toCalendar(e.date)}>
-                <strong>{e.title}</strong>
-                <span>
-                  {e.date < today ? `${t("late")} · ` : ""}
-                  {e.date}
-                  {e.client ? ` · ${e.client}` : ""}
-                </span>
-              </button>
-            ))}
-            {!deliveries.length && <p className="muted">{t("deliveriesNone")}</p>}
-          </section>
-          <section>
-            <h2>{t("money")}</h2>
-            <p className="planner-caption">{t("moneyNote")}</p>
-            <div className="overview-money">
-              {sum("in") > 0 && (
-                <p>
-                  <span>{t("receivable")}</span>
-                  <strong>{money(sum("in"))}</strong>
-                </p>
-              )}
-              {sum("out") > 0 && (
-                <p>
-                  <span>{t("payable")}</span>
-                  <strong>{money(sum("out"))}</strong>
-                </p>
-              )}
-            </div>
-            {!open.length && <p className="muted">{t("moneyNone")}</p>}
-            {dueSoon.slice(0, 2).map((p) => (
-              <button key={p.id} className="overview-list-row" onClick={() => setEditor({ kind: "payment", item: toRecord(p) })}>
-                <strong>{p.label}</strong>
-                <span>
-                  {p.dueDate} · {money(paymentTotal(p))}
-                </span>
-              </button>
-            ))}
-            <Link className="text-button" href="/finance">
-              {t("viewFinance")} <ArrowUpRight size={16} aria-hidden="true" />
+        <aside className="today-schedule" aria-labelledby="today-schedule-title">
+          <header className="today-section-title">
+            <h2 id="today-schedule-title">{t("todaySchedule")}</h2>
+            <Link className="secondary today-calendar-link" href={`/calendar?date=${today}`}>
+              <CalendarDays size={16} aria-hidden="true" />
+              {t("openCalendar")}
             </Link>
-          </section>
-        </div>
+          </header>
+          <div className="surface today-agenda">
+            {onDay(today).map((i) => (
+              <ScheduleRow key={i.id} item={i} items={items} />
+            ))}
+            {!onDay(today).length && <p className="empty">{t("todayEmpty")}</p>}
+            {coming.map((d) => (
+              <div key={d} className="today-day">
+                <DayLabel date={d} />
+                {onDay(d).map((i) => (
+                  <ScheduleRow key={i.id} item={i} items={items} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </aside>
       </div>
       {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
     </>
+  );
+}
+
+/** One thing to act on: a tag for how urgent, what it is, and where it opens. */
+function ActionRow({ action: a, today }: { action: TodayAction; today: string }) {
+  const t = useTranslations("today");
+  const text = useNotificationText();
+  const router = useRouter();
+  const when = useWhen(today);
+  const row =
+    a.kind === "reminder"
+      ? { tag: <ReminderStatus urgency={a.urgency} />, ...text(a.reminder), href: a.reminder.href }
+      : a.kind === "review"
+        ? {
+            tag: <span className="reminder-status today-tag-review">{t("tagReview")}</span>,
+            title: a.message.analysis?.title || t("reviewUntitled"),
+            detail: t("reviewDetail"),
+            href: `/inbox?message=${a.message.id}`,
+          }
+        : {
+            tag: <span className="reminder-status today-tag-clash">{t("tagClash")}</span>,
+            title: `${a.items[0].title} × ${a.items[1].title}`,
+            detail: `${when(a.date)} ${a.items[0].start}`,
+            href: `/calendar?date=${a.date}`,
+          };
+  return (
+    <button className="today-action" onClick={() => router.push(row.href)}>
+      {row.tag}
+      <span>
+        <strong>{row.title}</strong>
+        <small>{row.detail}</small>
+      </span>
+    </button>
+  );
+}
+
+/** One event on one line: time, title, project; travel and Google marked; clashes flagged. */
+function ScheduleRow({ item: i, items }: { item: PlanItem; items: PlanItem[] }) {
+  const t = useTranslations("today");
+  const router = useRouter();
+  const clash = conflicts(i, items).length > 0;
+  const Icon = i.kind === "travel" ? Plane : i.kind === "accommodation" ? BedDouble : null;
+  const open = () =>
+    i.ref.source === "google" ? void (i.ref.link && window.open(i.ref.link, "_blank", "noopener")) : router.push(`/calendar?date=${i.date}`);
+  return (
+    <button className="today-event" onClick={open}>
+      <span className="today-event-time">
+        {i.start || t("allDay")}
+        {i.end && <small>{i.endDate && i.endDate !== i.date ? `→${i.end}` : i.end}</small>}
+      </span>
+      <span className="today-event-title">
+        <strong>
+          {Icon && <Icon size={14} aria-hidden="true" />}
+          {i.external && <span className="calendar-dot" style={i.external.color ? { background: i.external.color } : undefined} aria-hidden="true" />}
+          {i.title}
+        </strong>
+        {(i.project || i.external) && <small>{i.external ? t("fromGoogle", { calendar: i.external.calendar }) : i.project}</small>}
+      </span>
+      {clash && <span className="today-event-clash">{t("tagClash")}</span>}
+    </button>
+  );
+}
+
+function DayLabel({ date }: { date: string }) {
+  const format = useFormatter();
+  return <h3>{format.dateTime(new Date(`${date}T12:00:00Z`), { month: "numeric", day: "numeric", weekday: "short", timeZone: "UTC" })}</h3>;
+}
+
+/** 「今天」, 「明天」, or the weekday and date. */
+function useWhen(today: string) {
+  const t = useTranslations("today");
+  const format = useFormatter();
+  return (d: string) =>
+    d === today
+      ? t("todayShort")
+      : d === plusDays(today, 1)
+        ? t("tomorrow")
+        : format.dateTime(new Date(`${d}T12:00:00Z`), { month: "numeric", day: "numeric", weekday: "short", timeZone: "UTC" });
+}
+
+/** Money in one line: what's overdue, due this week, and outstanding in total; zeros left out. */
+function MoneyLine({ today }: { today: string }) {
+  const data = useAppData();
+  const t = useTranslations("today");
+  const money = useMoney();
+  const open = data.payments.filter((p) => !p.voided && p.status === "expected");
+  if (!open.length) return null;
+  const weekEnd = plusDays(today, COMING_DAYS);
+  const total = (rows: typeof open) => rows.reduce((n, p) => n + paymentTotal(p), 0);
+  const incoming = open.filter((p) => p.direction === "in");
+  const parts = [
+    ["moneyOverdue", total(incoming.filter((p) => p.dueDate && p.dueDate < today))],
+    ["moneyThisWeek", total(incoming.filter((p) => p.dueDate && p.dueDate >= today && p.dueDate <= weekEnd))],
+    ["moneyExpected", total(incoming)],
+    ["moneyPayable", total(open.filter((p) => p.direction === "out"))],
+  ] as const;
+  return (
+    <p className="today-money">
+      <span>{t("money")}</span>
+      {parts
+        .filter(([, amount]) => amount > 0)
+        .map(([key, amount]) => (
+          <span key={key} className={key === "moneyOverdue" ? "is-overdue" : undefined}>
+            {t(key, { amount: money(amount) })}
+          </span>
+        ))}
+      <Link className="text-button" href="/finance">
+        {t("viewFinance")} <ArrowUpRight size={14} aria-hidden="true" />
+      </Link>
+    </p>
   );
 }

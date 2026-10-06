@@ -98,44 +98,37 @@ select:focus-visible {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+/* The sidebar toggle and search, kept together at the left; the search grows as it did on its own. */
+.topbar-start {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 504px; /* the search's 460px, plus the toggle and gap */
+}
+.collapse-nav {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.collapse-nav:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--ink);
+}
 .close-nav {
   display: none;
   border: 0;
   background: transparent;
   color: white;
-}
-.workspace {
-  display: grid;
-  grid-template-columns: 34px 1fr auto;
-  gap: 10px;
-  align-items: center;
-  padding: 11px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.055);
-}
-.workspace > span {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 9px;
-  color: var(--ink);
-  background: #faf7ec;
-  font-size: var(--text-meta);
-  font-weight: 800;
-}
-.workspace strong,
-.workspace small {
-  display: block;
-}
-.workspace strong {
-  font-size: var(--text-meta);
-}
-.workspace small {
-  margin-top: 2px;
-  color: #899184;
-  font-size: var(--text-meta);
 }
 .sidebar nav {
   display: grid;
@@ -153,8 +146,7 @@ select:focus-visible {
 .sidebar nav .nav-label-secondary {
   margin-top: 22px;
 }
-.sidebar nav :is(a, button),
-.sidebar-footer > button {
+.sidebar nav :is(a, button) {
   width: 100%;
   min-height: 42px;
   padding: 0 11px;
@@ -170,8 +162,7 @@ select:focus-visible {
   cursor: pointer;
 }
 .sidebar nav :is(a, button):hover,
-.sidebar nav :is(a, button).active,
-.sidebar-footer > button:hover {
+.sidebar nav :is(a, button).active {
   color: white;
   background: rgba(255, 255, 255, 0.075);
 }
@@ -201,21 +192,6 @@ select:focus-visible {
   font-variant-numeric: lining-nums tabular-nums;
   white-space: nowrap;
 }
-.sidebar-footer {
-  margin-top: auto;
-  padding-top: 13px;
-  border-top: 1px solid rgba(255, 255, 255, 0.09);
-}
-.sidebar-footer > button {
-  margin-bottom: 12px;
-}
-.sidebar-footer > div {
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.sidebar-footer > div > span,
 .avatar {
   width: 32px;
   height: 32px;
@@ -226,21 +202,6 @@ select:focus-visible {
   background: var(--orange);
   font-size: var(--text-meta);
   font-weight: 900;
-}
-.sidebar-footer p {
-  margin: 0;
-}
-.sidebar-footer strong,
-.sidebar-footer small {
-  display: block;
-}
-.sidebar-footer strong {
-  font-size: var(--text-meta);
-}
-.sidebar-footer small {
-  margin-top: 2px;
-  color: #80887c;
-  font-size: var(--text-meta);
 }
 .app-main {
   min-height: 100vh;
@@ -462,57 +423,6 @@ select:focus-visible {
   font-size: var(--text-meta);
   font-weight: 700;
   cursor: pointer;
-}
-.action-list {
-  padding: 22px;
-}
-.action-row {
-  width: 100%;
-  padding: 16px 3px;
-  display: grid;
-  grid-template-columns: 38px 1fr auto;
-  gap: 13px;
-  align-items: center;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-}
-.action-row:last-child {
-  border-bottom: 0;
-}
-.priority {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  background: var(--paper);
-  font-size: var(--text-meta);
-  font-weight: 850;
-}
-.p-1 {
-  color: white;
-  background: var(--orange);
-}
-.action-row strong,
-.action-row small {
-  display: block;
-}
-.action-row strong {
-  font-size: var(--text-meta);
-}
-.action-row small {
-  margin-top: 5px;
-  color: var(--muted);
-  font-size: var(--text-meta);
-}
-.action-row em {
-  color: var(--muted);
-  font-size: var(--text-meta);
-  font-style: normal;
-  font-weight: 750;
 }
 .assistant-panel {
   min-height: 355px;
@@ -1568,19 +1478,6 @@ small {
   background: #fff0e9;
   color: #9c3c27;
 }
-.workspace-link {
-  width: 100%;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.workspace-link strong,
-.workspace-link small {
-  max-width: 145px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .sidebar {
   overflow-y: auto;
 }
@@ -2521,24 +2418,8 @@ summary {
 
 /* Ported shell uses links for navigation where the prototype used buttons. */
 .sidebar nav a,
-.workspace-link,
-.top-actions > a,
 .section-header > a {
   text-decoration: none;
-}
-.top-actions > a {
-  color: inherit;
-}
-.sidebar-footer .sign-out {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--muted);
-  font-size: var(--text-meta, 0.875rem);
-  cursor: pointer;
-}
-.sidebar-footer .sign-out:hover {
-  color: var(--ink);
 }
 
 /* Sign-in, sign-up, password reset, onboarding. */
@@ -2639,9 +2520,6 @@ a.disabled {
 }
 .auth-locale select {
   margin-top: 4px;
-}
-.role-switch {
-  text-decoration: none;
 }
 
 /* Record editor: the field group that locks while saving */
@@ -3220,11 +3098,6 @@ a.disabled {
   color: #2c5c50;
   font-size: 13px;
 }
-/* Today: reminders sit between the day's overview and the week strip */
-.planner-overview > .action-list {
-  margin: 24px 0;
-}
-
 /* Day and week calendar: blocks at their real time and length (components/views/planner.tsx, TimeGrid) */
 .cal-frame {
   border: 1px solid var(--line);
@@ -3893,4 +3766,412 @@ button.primary.danger {
 }
 .feed-actions .secondary {
   white-space: nowrap;
+}
+
+/* The avatar menu, top right: everything about the signed-in person */
+.account-menu {
+  position: relative;
+}
+.account-avatar {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent, #285e52);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.account-avatar[aria-expanded="true"],
+.account-avatar:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-soft, #e8f1ed);
+}
+.account-menu-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 90;
+  display: grid;
+  width: min(260px, calc(100vw - 32px));
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(21, 23, 17, 0.14);
+}
+.account-menu-who {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px 10px;
+}
+.account-menu-who small,
+.account-menu-group > small {
+  color: var(--muted);
+  font-size: var(--text-meta);
+  overflow-wrap: anywhere;
+}
+.account-menu-list [role^="menuitem"] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.account-menu-list [role^="menuitem"]:hover,
+.account-menu-list [role^="menuitem"]:focus-visible {
+  background: var(--accent-soft, #e8f1ed);
+  outline: none;
+}
+.account-menu-list [role^="menuitem"] svg {
+  flex: none;
+  color: var(--muted);
+}
+.account-menu-list .invisible {
+  visibility: hidden;
+}
+.account-menu-who,
+.account-menu-group {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+.account-menu-group {
+  display: grid;
+  padding-bottom: 4px;
+}
+.account-menu-group > small {
+  padding: 6px 10px 2px;
+}
+
+/* Sidebar collapsed to its icons (wide screens; the toggle and ⌘\ switch it).
+   Labels stay for screen readers and show on hover; the inbox count becomes a dot. */
+@media (min-width: 801px) {
+  .app-shell.sidebar-collapsed {
+    --sidebar: 72px;
+  }
+  .sidebar,
+  .app-main {
+    transition: width 0.2s ease, margin-left 0.2s ease;
+  }
+  .sidebar-collapsed .sidebar {
+    padding: 22px 12px;
+  }
+  .sidebar-collapsed .brand {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 0 0 12px;
+  }
+  .sidebar-collapsed .brand > div,
+  .sidebar-collapsed .sidebar nav > small,
+  .sidebar-collapsed .sidebar nav .nav-group-label {
+    display: none;
+  }
+  .sidebar-collapsed .sidebar nav {
+    margin-top: 12px;
+  }
+  .sidebar-collapsed .sidebar nav :is(a, button) {
+    position: relative;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 0;
+  }
+  .sidebar-collapsed .sidebar nav :is(a, button) span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .sidebar-collapsed .sidebar nav :is(a, button) em {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    min-width: 0;
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    font-size: 0;
+    background: var(--orange);
+  }
+}
+@media (max-width: 800px) {
+  .collapse-nav {
+    display: none;
+  }
+}
+
+/* The collapsed sidebar's label beside an icon, on hover or keyboard focus */
+.nav-tip {
+  position: fixed;
+  z-index: 60;
+  left: calc(var(--sidebar) + 6px);
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font-size: var(--text-meta);
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.nav-tip::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -4px;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+/* 今日總覽: what needs you (main column), the schedule beside it; stacked on narrow screens, actions first */
+.page-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+.page-subtitle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.page-subtitle small {
+  font-size: var(--text-meta);
+  font-weight: 500;
+}
+.today-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.today-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.today-section-title h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.today-section-title h2 + .today-count {
+  margin-right: auto;
+}
+.today-count {
+  min-width: 24px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: var(--text-meta);
+  font-weight: 700;
+  text-align: center;
+}
+.today-action-list,
+.today-agenda {
+  padding: 4px 16px;
+}
+.today-action-list .empty,
+.today-agenda .empty {
+  padding: 14px 0;
+}
+.today-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.today-action:last-child {
+  border-bottom: 0;
+}
+.today-action:hover strong {
+  text-decoration: underline;
+}
+.today-action .reminder-status {
+  flex: none;
+  min-width: 76px; /* one width for every tag, so the titles line up */
+  justify-content: center;
+  margin: 0;
+}
+.today-action > span:last-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.today-action small {
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.today-tag-review {
+  background: var(--blue-soft);
+  color: #2f569f;
+}
+.today-tag-clash {
+  background: var(--orange-soft);
+  color: #9b381d;
+}
+.today-money {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin: 12px 4px 0;
+  font-size: var(--text-meta);
+  color: var(--muted);
+}
+.today-money > span:first-child {
+  font-weight: 700;
+  color: var(--ink);
+}
+.today-money .is-overdue {
+  color: var(--red);
+  font-weight: 650;
+}
+.today-money .text-button {
+  margin-left: auto;
+}
+.today-event {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.today-event:hover strong {
+  text-decoration: underline;
+}
+.today-event-time {
+  display: grid;
+  font-size: var(--text-meta);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.today-event-time small {
+  color: var(--muted);
+  font-weight: 500;
+}
+.today-event-title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.today-event-title strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.today-event-title strong svg {
+  flex: none;
+  color: var(--muted);
+}
+.today-event-title small {
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.today-event-clash {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--orange-soft);
+  color: #9b381d;
+  font-size: 12px;
+  font-weight: 650;
+}
+.today-day h3 {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: var(--text-meta);
+  font-weight: 700;
+}
+.today-agenda > .today-event:last-of-type,
+.today-day:last-child .today-event:last-child {
+  border-bottom: 0;
+}
+@media (max-width: 900px) {
+  .today-layout {
+    grid-template-columns: 1fr;
+  }
+  .page-subtitle {
+    font-size: 15px;
+  }
+}
+.today-section-title .text-button,
+.today-money .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.today-calendar-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: var(--text-meta);
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.today-analyzing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.today-analyzing svg {
+  animation: spin 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .today-analyzing svg {
+    animation: none;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

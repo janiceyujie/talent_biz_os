@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, FileText, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
-import { DataNotice } from "./data-notice";
+import { DataNotice } from "@/components/app/data-notice";
 import { Modal } from "@/components/app/modal";
 import { prepareUpload, registerUpload } from "@/lib/actions/uploads";
 import { UPLOAD_LIMITS, type UploadType } from "@/lib/uploads";

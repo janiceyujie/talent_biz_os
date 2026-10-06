@@ -4,3 +4,4 @@ export const PRODUCT_NAME = "Talent Business OS";
 export const PRODUCT_MONOGRAM = "TB";
 export const PRODUCT_TAGLINE = "CREATIVE BUSINESS";
 export const SEARCH_SHORTCUT = "⌘ K";
+export const COLLAPSE_SHORTCUT = "⌘ \\"; // collapses the sidebar to its icons

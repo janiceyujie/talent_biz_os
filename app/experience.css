@@ -51,20 +51,12 @@ button:disabled {
   color: var(--ink);
   border-right: 1px solid var(--line);
 }
-.brand > span,
-.workspace > span,
-.sidebar-footer > div > span {
+.brand > span {
   background: var(--accent);
   color: #fff;
 }
-.brand small,
-.workspace small,
-.sidebar-footer small {
+.brand small {
   color: #64736b;
-}
-.workspace {
-  background: #fff;
-  border-color: var(--line);
 }
 .sidebar nav :is(a, button) {
   color: #53625b;
@@ -87,12 +79,6 @@ button:disabled {
 .sidebar nav :is(a, button).active em {
   background: var(--surface);
   border-color: #b6cfc3;
-}
-.sidebar-footer {
-  border-color: var(--line);
-}
-.sidebar-footer strong {
-  color: var(--ink);
 }
 .close-nav {
   color: var(--ink);
@@ -1060,23 +1046,6 @@ td .text-button {
 .demo-chip,
 .file-folder {
   line-height: 1.5;
-}
-.role-switch {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px 4px;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  background: none;
-  text-align: left;
-  cursor: pointer;
-  font-size: var(--text-meta);
-}
-.role-switch span {
-  color: var(--accent);
 }
 .file-name {
   display: flex;

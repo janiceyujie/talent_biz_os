@@ -5,10 +5,9 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type RefObject } from "react";
 import { useAppData } from "@/components/app/app-data";
-import { DataNotice } from "./data-notice";
-import { Modal } from "@/components/app/modal";
+import { ANALYSIS_POLL_MS, PasteDialog } from "@/components/app/paste-dialog";
 import { FileText } from "lucide-react";
-import { dismissMessage, reanalyzeMessage, submitPastedMessage } from "@/lib/actions/messages";
+import { dismissMessage, reanalyzeMessage } from "@/lib/actions/messages";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { detailFieldKeys, type AssumptionTopic } from "@/lib/ai/analysis";
@@ -22,7 +21,6 @@ import { UploadDialog } from "./upload-dialog";
 // proposal. Nothing becomes a project or a to-do until the person confirms
 // it here (docs/architecture.md, "Analysis"; the message is untrusted input).
 
-const POLL_MS = 2500;
 const firstLine = (text: string) => text.trim().split("\n")[0]?.slice(0, 80) ?? "";
 
 export function InboxView() {
@@ -44,16 +42,21 @@ export function InboxView() {
   const readerHeading = useRef<HTMLHeadingElement>(null);
   const lastMessageButton = useRef<HTMLButtonElement | null>(null);
 
-  // ?paste=1 / ?upload=1 (from the header and Today) open a dialog once; drop
-  // them from the address so a reload doesn't open it again.
+  // ?paste=1 / ?upload=1 (the header's 匯入邀約 here, Today's 上傳邀約) open a dialog —
+  // also when already on this page, where the address changes without a reload —
+  // then leave the address so a reload doesn't open it again.
   useEffect(() => {
-    if (params.get("paste") || params.get("upload")) router.replace("/inbox", { scroll: false });
+    const paste = params.get("paste") === "1";
+    const upload = params.get("upload") === "1";
+    if (!paste && !upload) return;
+    queueMicrotask(() => (paste ? setPasting(true) : setUploading(true)));
+    router.replace("/inbox", { scroll: false });
   }, [params, router]);
 
   // Analysis runs in the background; refresh until it lands.
   useEffect(() => {
     if (!analyzing) return;
-    const timer = setInterval(() => router.refresh(), POLL_MS);
+    const timer = setInterval(() => router.refresh(), ANALYSIS_POLL_MS);
     return () => clearInterval(timer);
   }, [analyzing, router]);
 
@@ -194,56 +197,6 @@ function StatusChip({ status }: { status: InboxMessage["status"] }) {
   return <em className={`message-status status-${status}`}>{t(status)}</em>;
 }
 
-function PasteDialog({ onClose, onSubmitted }: { onClose: () => void; onSubmitted: (id: string, duplicate: boolean) => void }) {
-  const t = useTranslations("inbox");
-  const [text, setText] = useState("");
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  return (
-    <Modal title={t("pasteTitle")} onClose={() => !pending && onClose()}>
-      <form
-        className="editor-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          startTransition(async () => {
-            const result = await submitPastedMessage(text);
-            if ("error" in result) setError(result.error);
-            else onSubmitted(result.id, result.duplicate);
-          });
-        }}
-      >
-        <label>
-          {t("pasteLabel")}
-          <textarea
-            aria-label={t("pasteLabel")}
-            rows={12}
-            required
-            autoFocus
-            maxLength={50_000}
-            placeholder={t("pastePlaceholder")}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
-        </label>
-        <p className="muted">{t("pasteHint")}</p>
-        <DataNotice />
-        {error && (
-          <p className="notice error" role="alert">
-            {error}
-          </p>
-        )}
-        <footer className="modal-actions">
-          <button type="button" className="secondary" disabled={pending} onClick={onClose}>
-            {t("dismiss")}
-          </button>
-          <button type="submit" className="primary" disabled={pending || !text.trim()}>
-            {pending ? t("submitting") : t("analyze")}
-          </button>
-        </footer>
-      </form>
-    </Modal>
-  );
-}
 
 function MessageDetail({ message, headingRef }: { message: InboxMessage; headingRef: RefObject<HTMLHeadingElement | null> }) {
   const t = useTranslations("inbox");

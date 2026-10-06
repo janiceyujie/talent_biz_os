@@ -1,10 +1,10 @@
 import { PageHeader } from "@/components/app/page-header";
-import { TodayView } from "@/components/views/today";
+import { TodayDate, TodayView } from "@/components/views/today";
 
 export default function Page() {
   return (
     <>
-      <PageHeader titleKey="today" />
+      <PageHeader titleKey="today" subtitle={<TodayDate />} />
       <TodayView />
     </>
   );

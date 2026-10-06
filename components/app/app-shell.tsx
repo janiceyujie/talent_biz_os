@@ -1,27 +1,33 @@
 "use client";
 
-import { Bell, Menu, Search, Settings, X } from "lucide-react";
+import { Bell, Menu, PanelLeftClose, PanelLeftOpen, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { SignOutButton } from "@/components/sign-out-button";
-import { LocaleSwitch } from "@/components/locale-switch";
-import { PRODUCT_MONOGRAM, PRODUCT_NAME, PRODUCT_TAGLINE, SEARCH_SHORTCUT } from "@/lib/brand";
+import { COLLAPSE_SHORTCUT, PRODUCT_MONOGRAM, PRODUCT_NAME, PRODUCT_TAGLINE, SEARCH_SHORTCUT } from "@/lib/brand";
 import { useLabels } from "@/lib/i18n/labels";
+import { AccountMenu } from "./account-menu";
 import { Companion } from "./companion";
 import { NotificationList, ReminderToast, useNotifications } from "./notifications";
 import { useAppData } from "./app-data";
 import { Modal } from "./modal";
 import { isActive, nav } from "./nav";
 
-const initial = (name: string) => name.trim().slice(0, 2).toUpperCase() || "TB";
+// Collapsing the sidebar to its icons is a per-browser preference (wide screens only; phones use the drawer).
+const COLLAPSED_KEY = "talent-biz-os.sidebar-collapsed";
+const rememberCollapsed = (collapsed: boolean) => {
+  try {
+    localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0");
+  } catch {
+    // storage unavailable (private window): it just isn't remembered
+  }
+};
 
 export function AppShell({ children }: { children: ReactNode }) {
   const data = useAppData();
   const t = useTranslations("shell");
   const tNav = useTranslations("nav");
-  const tRoles = useTranslations("roles");
   const labels = useLabels();
   const pathname = usePathname();
   const router = useRouter();
@@ -32,6 +38,25 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [companionOpen, setCompanionOpen] = useState(false);
   const [query, setQuery] = useState("");
   const sidebar = useRef<HTMLElement>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [tip, setTip] = useState<{ label: string; top: number } | null>(null);
+  const showTip = (el: HTMLElement, label: string) => {
+    const r = el.getBoundingClientRect();
+    setTip({ label, top: r.top + r.height / 2 });
+  };
+  const toggleCollapsed = () =>
+    setCollapsed((c) => {
+      setTip(null);
+      rememberCollapsed(!c);
+      return !c;
+    });
+  useEffect(() => {
+    let stored = false;
+    try {
+      stored = localStorage.getItem(COLLAPSED_KEY) === "1";
+    } catch {}
+    if (stored) queueMicrotask(() => setCollapsed(true));
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 800px)");
@@ -87,6 +112,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         e.preventDefault();
         setShowSearch(true);
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
+        e.preventDefault();
+        setCollapsed((c) => {
+          rememberCollapsed(!c);
+          return !c;
+        });
+      }
     };
     window.addEventListener("keydown", keys);
     return () => window.removeEventListener("keydown", keys);
@@ -119,7 +151,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
       <aside
         ref={sidebar}
         id="workspace-navigation"
@@ -139,17 +171,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             <X size={20} />
           </button>
         </div>
-        <Link className="workspace workspace-link" href="/settings" onClick={() => setMobile(false)}>
-          <span>{initial(data.talent.name)}</span>
-          <div>
-            <strong>{data.talent.name}</strong>
-            <small>{data.person.email}</small>
-          </div>
-        </Link>
-        <Link className="role-switch" href="/role" onClick={() => setMobile(false)}>
-          <strong>{tRoles(`${data.person.role}.label`)}</strong>
-          <span>{tRoles("change")} ↗</span>
-        </Link>
         <nav>
           <small>{tNav("groupWork")}</small>
           {nav.map((item, i) => {
@@ -164,6 +185,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                   href={item.href}
                   className={active ? "active" : ""}
                   aria-current={active ? "page" : undefined}
+                  // Collapsed, the label shows as a tooltip beside the icon (the sidebar scrolls, so it's drawn outside it).
+                  onMouseEnter={collapsed ? (e) => showTip(e.currentTarget, tNav(item.key)) : undefined}
+                  onMouseLeave={collapsed ? () => setTip(null) : undefined}
+                  onFocus={collapsed ? (e) => e.currentTarget.matches(":focus-visible") && showTip(e.currentTarget, tNav(item.key)) : undefined}
+                  onBlur={collapsed ? () => setTip(null) : undefined}
                   onClick={() => setMobile(false)}
                 >
                   <Icon size={19} />
@@ -174,16 +200,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="sidebar-footer">
-          <div>
-            <span>{initial(data.person.displayName)}</span>
-            <p>
-              <strong>{data.person.displayName}</strong>
-              <SignOutButton />
-            </p>
-          </div>
-        </div>
       </aside>
+      {collapsed && tip && (
+        // The link already carries its name for screen readers; this is the visible copy.
+        <div className="nav-tip" aria-hidden="true" style={{ top: tip.top }}>
+          {tip.label}
+        </div>
+      )}
       {mobile && (
         <button
           className="nav-backdrop"
@@ -204,11 +227,24 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Menu size={20} />
           </button>
-          <button className="global-search" onClick={() => setShowSearch(true)}>
-            <Search size={17} />
-            <span>{t("searchPlaceholder")}</span>
-            <kbd>{SEARCH_SHORTCUT}</kbd>
-          </button>
+          <div className="topbar-start">
+            {/* Wide screens: collapse the sidebar to its icons for more room (calendar, dashboard). Phones use the menu button above. */}
+            <button
+              className="collapse-nav"
+              aria-label={tNav(collapsed ? "expandMenu" : "collapseMenu")}
+              title={`${tNav(collapsed ? "expandMenu" : "collapseMenu")} (${COLLAPSE_SHORTCUT})`}
+              aria-expanded={!collapsed}
+              aria-controls="workspace-navigation"
+              onClick={toggleCollapsed}
+            >
+              {collapsed ? <PanelLeftOpen size={19} aria-hidden="true" /> : <PanelLeftClose size={19} aria-hidden="true" />}
+            </button>
+            <button className="global-search" onClick={() => setShowSearch(true)}>
+              <Search size={17} />
+              <span>{t("searchPlaceholder")}</span>
+              <kbd>{SEARCH_SHORTCUT}</kbd>
+            </button>
+          </div>
           <Companion
             key={data.person.role}
             open={companionOpen}
@@ -216,7 +252,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             blocked={mobile || showNotifications || showSearch}
           />
           <div className="top-actions">
-            <LocaleSwitch compact />
             <button
               aria-label={t("notifications", { count: unread.length })}
               onClick={() => setShowNotifications(true)}
@@ -224,9 +259,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Bell size={19} />
               {unread.length > 0 && <i />}
             </button>
-            <Link href="/settings" aria-label={t("openSettings")}>
-              <Settings size={18} />
-            </Link>
+            <AccountMenu />
           </div>
         </header>
         <div className="page-content">{children}</div>

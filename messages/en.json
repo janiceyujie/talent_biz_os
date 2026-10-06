@@ -792,7 +792,6 @@
     "prevDay": "Previous day",
     "nextDay": "Next day",
     "today": "Today",
-    "weekRange": "{from} — {to}",
     "goTo": "Go to date",
     "moved": "Moved “{title}”.",
     "invalidMove": "Can't move it there: the end must be after the start, on the same day. Click the item to edit it.",
@@ -801,7 +800,6 @@
     "previewEnd": "New end: {date} {end}",
     "previewMove": "Move to: {date} {start}",
     "gridLabel": "Schedule, scrollable by day and hour",
-    "time": "Time",
     "untimed": "Due / no time",
     "edit": "Edit {title}",
     "fixed": "Fixed",
@@ -844,7 +842,9 @@
     "hintOpen": "Click to edit in the full form · right-click to delete",
     "hintGoogle": "From Google Calendar “{calendar}” · read-only; click to open in Google",
     "fromGoogle": "From Google · {calendar}",
-    "untitled": "(No title)"
+    "untitled": "(No title)",
+    "create": "Create",
+    "zone": "Times are in {zone}"
   },
   "calendarFeed": {
     "title": "Calendar subscription",

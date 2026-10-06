@@ -47,10 +47,11 @@ export async function syncConnection(connectionId: string) {
       } catch (e) {
         const failure: SyncFailure =
           e instanceof AccessLost || (e instanceof GoogleCalendarError && e.authLost) ? "auth" : e instanceof GoogleCalendarError && e.status ? "google" : "network";
-        // Lost access needs the person; anything else is retried on the next change or 立即同步.
+        // Still behind Google, so stay dirty. Lost access needs the person; anything else
+        // goes again on the next change or 立即同步 (automatic retries come with the job queue).
         await tx
           .update(calendarConnection)
-          .set({ lastError: failure, ...(failure === "auth" ? { status: "needs_reconnect" as const } : {}) })
+          .set({ dirty: true, lastError: failure, ...(failure === "auth" ? { status: "needs_reconnect" as const } : {}) })
           .where(eq(calendarConnection.id, c.id));
         console.error("calendar sync failed", { connectionId, failure, message: e instanceof Error ? e.message : String(e) });
         return;

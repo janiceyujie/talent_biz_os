@@ -6,6 +6,7 @@ What has to happen before the first production deploy and before real users. Eac
 
 - [ ] Hosting and job queue, together (architecture doc, "Stack": open since M2). Serverless hosting can't run a long-lived worker, so the queue choice depends on it.
 - [ ] Move background work off `after()` to the queue: message analysis (decision 0008), Google Calendar sync (decision 0009).
+- [ ] Retry failed Google Calendar pushes from the queue, waiting longer after each failure (e.g. 1 min, 5 min, 30 min, 2 h, then every 6 h). Retry network errors, Google being down, and Google's "slow down"; not lost access (the person reconnects) or a request Google rejects (it would fail the same way). Until then a failed push stays pending and goes on the next change or 立即同步.
 
 ## 2. Squash the database migrations into one baseline
 

@@ -792,7 +792,6 @@
     "prevDay": "前一天",
     "nextDay": "後一天",
     "today": "今日",
-    "weekRange": "{from} — {to}",
     "goTo": "前往日期",
     "moved": "已更新「{title}」的時間。",
     "invalidMove": "無法調整：結束時間須晚於開始時間，且須在同一天內。請點擊事件編輯。",
@@ -801,7 +800,6 @@
     "previewEnd": "新的結束時間：{date} {end}",
     "previewMove": "移至：{date} {start}",
     "gridLabel": "時間表，可捲動瀏覽所有日期與時段",
-    "time": "時間",
     "untimed": "期限／未定時",
     "edit": "編輯 {title}",
     "fixed": "固定",
@@ -844,7 +842,9 @@
     "hintOpen": "點一下以完整表單編輯 · 右鍵刪除",
     "hintGoogle": "來自 Google 日曆「{calendar}」· 唯讀，點一下在 Google 開啟",
     "fromGoogle": "來自 Google · {calendar}",
-    "untitled": "（無標題）"
+    "untitled": "（無標題）",
+    "create": "新增",
+    "zone": "時間以 {zone} 顯示"
   },
   "calendarFeed": {
     "title": "行事曆訂閱",

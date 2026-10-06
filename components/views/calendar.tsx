@@ -6,7 +6,7 @@ import { useAppData } from "@/components/app/app-data";
 import { calendarRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
 import { TravelSummary } from "@/components/app/travel-summary";
 import { YourTime } from "@/components/app/your-time";
-import { calendarPoints, pointKind } from "@/lib/calendar/points";
+import { calendarPoints, externalPoints, pointKind, type CalendarPoint, type ExternalPoint } from "@/lib/calendar/points";
 import { archiveCalendarItem, setTodoDone } from "@/lib/actions/calendar";
 import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
@@ -22,6 +22,7 @@ const weekdays = (locale: string) =>
 export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?: string; hideAdd?: boolean }) {
   const data = useAppData();
   const t = useTranslations("calendar");
+  const tp = useTranslations("planner");
   const labels = useLabels();
   const locale = useLocale();
   const today = dateInZone(data.talent.timeZone);
@@ -42,9 +43,13 @@ export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?
   const count = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)).getUTCDate();
   // Each marker sits on its own local date: a stay can start in one month and end in the next.
   const points = calendarPoints(calendar);
-  const items = points
-    .filter((p) => p.item.archived === archived && (showDone || !p.item.done) && p.date.startsWith(month) && (!day || p.date === day))
-    .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`) || a.key.localeCompare(b.key));
+  // The person's Google events (decision 0009, phase 2): read-only, never archived or done.
+  const google = externalPoints(data.externalEvents);
+  const shown = (p: { date: string }) => p.date.startsWith(month) && (!day || p.date === day);
+  const items: (CalendarPoint | ExternalPoint)[] = [
+    ...points.filter((p) => p.item.archived === archived && (showDone || !p.item.done) && shown(p)),
+    ...(archived ? [] : google.filter(shown)),
+  ].sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`) || a.key.localeCompare(b.key));
   const move = (n: number) => {
     const d = new Date(start);
     d.setUTCMonth(d.getUTCMonth() + n);
@@ -103,7 +108,8 @@ export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?
         ))}
         {Array.from({ length: count }, (_, i) => {
           const date = `${month}-${String(i + 1).padStart(2, "0")}`;
-          const n = points.filter((p) => !p.item.archived && !p.item.done && p.date === date).length;
+          const n =
+            points.filter((p) => !p.item.archived && !p.item.done && p.date === date).length + google.filter((p) => p.date === date).length;
           return (
             <button
               className={`${date === day ? "selected" : ""} ${date === today ? "today" : ""}`}
@@ -119,6 +125,7 @@ export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?
       <section className="surface padded section-gap">
         <h2>{t("itemsFor", { period: day || month })}</h2>
         {items.map((p) => {
+          if ("event" in p) return <GoogleRow key={`google:${p.key}`} point={p} label={tp("fromGoogle", { calendar: p.event.calendar })} />;
           const c = p.item;
           const marker = pointKind(p);
           return (
@@ -176,5 +183,26 @@ export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?
       </section>
       {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
     </>
+  );
+}
+
+/** A Google event: read-only here, opens in Google. */
+function GoogleRow({ point: p, label }: { point: ExternalPoint; label: string }) {
+  const t = useTranslations("calendar");
+  const g = p.event;
+  return (
+    <article className="event-row is-external" style={g.color ? { borderLeftColor: g.color } : undefined}>
+      <span aria-hidden="true" />
+      <div>
+        <a className="text-button left" href={g.link} target="_blank" rel="noopener noreferrer">
+          <strong>{g.title}</strong>
+        </a>
+        <small>
+          {p.date} {p.time || t("noTime")} · {p.timeZone} · {label}
+        </small>
+        <YourTime date={p.date} time={p.time} timeZone={p.timeZone} />
+        {g.location && <p>{g.location}</p>}
+      </div>
+    </article>
   );
 }

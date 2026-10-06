@@ -82,6 +82,7 @@ Each phase ships on its own; the next starts when the last is in use.
 - `lib/calendar/google/`: `plan.ts` (pure: event → Google event; what to create, update, remove), `api.ts` (plain fetch, no SDK; `GOOGLE_CALENDAR_API_URL` points it at a fake in tests), `sync.ts` (one sync per connection at a time via a transaction-scoped advisory lock; a change mid-sync sets `dirty` and the sync goes around again).
 - Triggered after every event save, archive, and delete, and after the intake review applies dates; 立即同步 runs it directly. Background work uses `after()` until the job queue exists (decision 0008).
 - The calendar permission is requested with `access_type=offline` and `prompt=select_account consent` on that request only, so sign-in is unchanged and a refresh token is always returned.
+- A failed push leaves the connection dirty, so it goes again on the next change or 立即同步; automatic retries with backoff wait for the job queue (launch checklist).
 - A calendar deleted in Google is re-created on the next sync, with every event pushed again; an event deleted or edited in Google is restored from ours.
 - Unlinking the Google account in 登入方式 removes the connection with it (the Google calendar stays, as Google keeps it).
 - End-to-end tests run a second dev server (`NEXT_DIST_DIR=.next-test`, port 3001) with the stand-in Google sign-in and a fake Calendar API.
@@ -91,4 +92,4 @@ Each phase ships on its own; the next starts when the last is in use.
 - `calendar_import_source` (a chosen Google calendar, per connection) and `external_event` (migration 0019); disconnecting removes both.
 - `lib/calendar/google/import-plan.ts` (pure: a Google event as wall time plus zone; all-day ends on the last day covered) and `import.ts` (the windowed re-read, one per calendar at a time). A calendar removed from their Google list, or no longer readable, stops being shown.
 - 設定 → 在這裡顯示你的 Google 日曆 asks for the two read permissions (with offline access) only when pressed, then lists their calendars (not our own) to tick.
-- On the calendar, Google events are read-only: not draggable, no delete, open in Google when clicked, coloured by their Google calendar, and part of clash checks. The month view doesn't show them yet.
+- On the calendar, Google events are read-only: not draggable, no delete, open in Google when clicked, coloured by their Google calendar, and part of clash checks. The month view lists them on their own dates (an all-day event on each day it covers).

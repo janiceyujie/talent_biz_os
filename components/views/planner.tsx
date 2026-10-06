@@ -7,7 +7,7 @@
 // Adapted from the prototype's planner
 // (talent-business-os-prototype, src/components/planner/calendar.tsx).
 import { ChevronLeft, ChevronRight, LockKeyhole, Move, Plus, Trash2, X } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition, type MouseEvent as ReactMouseEvent, type PointerEvent } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
@@ -115,8 +115,6 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
             <button className="secondary" aria-label={t(view === "week" ? "nextWeek" : "nextDay")} onClick={() => setDate(plusDays(date, view === "week" ? 7 : 1))}>
               <ChevronRight size={18} aria-hidden="true" />
             </button>
-            <strong className="planner-range">{view === "week" ? t("weekRange", { from: days[0], to: days[6].slice(5) }) : date}</strong>
-            <span className="planner-zone">{data.talent.timeZone}</span>
           </div>
         )}
         <span className="planner-toolbar-spacer" />
@@ -139,9 +137,9 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
             />
           </>
         )}
-        <button className="primary" onClick={() => setEditor({ kind: "calendar", item: { date } })}>
+        <button className="primary" title={t("add")} aria-label={t("add")} onClick={() => setEditor({ kind: "calendar", item: { date } })}>
           <Plus size={16} aria-hidden="true" />
-          {t("add")}
+          {t("create")}
         </button>
       </PageHeader>
       {view === "month" ? (
@@ -150,6 +148,7 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
         <>
           <TimeGrid
             days={days}
+            timeZone={data.talent.timeZone}
             today={today}
             view={view}
             items={items}
@@ -279,12 +278,14 @@ function TimeGrid({
   view,
   items,
   dayLabel,
+  timeZone,
   onOpen,
   onMenu,
   onDrop,
   onCreate,
 }: {
   days: string[];
+  timeZone: string;
   today: string;
   view: View;
   items: PlanItem[];
@@ -295,6 +296,7 @@ function TimeGrid({
   onCreate: (date: string, time: string) => void;
 }) {
   const t = useTranslations("planner");
+  const locale = useLocale();
   const scroll = useRef<HTMLDivElement>(null);
   const pointer = useRef<{ item: PlanItem; edge: Edge; grab: number; x: number; y: number; active: boolean } | null>(null);
   const suppressClick = useRef(false);
@@ -410,7 +412,10 @@ function TimeGrid({
         style={{ ["--hour" as string]: `${HOUR}px`, ["--cal-days" as string]: days.length, ["--cal-min" as string]: view === "day" ? "240px" : "120px" }}
       >
         <div className="cal-head">
-          <div className="cal-corner">{t("time")}</div>
+          {/* Every time on the grid is in the talent's zone: its offset here, the full name on hover. */}
+          <div className="cal-corner" title={t("zone", { zone: timeZone })}>
+            {zoneOffset(days[0], timeZone, locale)}
+          </div>
           {days.map((day) => (
             <div key={day} className={`cal-day-head ${day === today ? "is-today" : ""}`}>
               <span>{dayLabel(day)}</span>
@@ -738,4 +743,10 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
       </button>
     </div>
   );
+}
+
+/** The zone's short offset (e.g. "GMT+8") on a date, so daylight-saving changes show. */
+function zoneOffset(date: string, timeZone: string, locale: string) {
+  const parts = new Intl.DateTimeFormat(locale, { timeZone, timeZoneName: "shortOffset" }).formatToParts(new Date(`${date}T12:00:00Z`));
+  return parts.find((p) => p.type === "timeZoneName")?.value ?? timeZone;
 }

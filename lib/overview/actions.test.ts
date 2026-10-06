@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { PlanItem } from "@/lib/calendar/planner";
 import type { InboxMessage } from "@/lib/types";
-import type { StatefulNotification } from "./notifications";
-import { todayActions } from "./today";
+import type { StatefulNotification } from "@/lib/domain/notifications";
+import { todayActions } from "./actions";
 
 const TODAY = "2026-10-06";
 

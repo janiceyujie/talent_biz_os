@@ -16,7 +16,8 @@ import { ProjectWorkflowPanel } from "./project-workflow-panel";
 import { TravelItinerary } from "./travel-itinerary";
 import { ContractVersions, ProjectFacts, ProjectTimeline } from "./project-timeline";
 
-export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
+/** `selectedId` opens that project (and its phase); `initialPhase` opens a phase tab (from 今日總覽's 合作案進度). */
+export function ProjectsView({ selectedId = "", initialPhase }: { selectedId?: string; initialPhase?: Phase }) {
   const data = useAppData();
   const money = useMoney();
   const router = useRouter();
@@ -30,6 +31,7 @@ export function ProjectsView({ selectedId = "" }: { selectedId?: string }) {
   const [phase, setPhase] = useState<Phase>(() => {
     const linked = data.projects.find((p) => p.id === selectedId);
     if (linked) return phaseOf(linked.stage);
+    if (initialPhase) return initialPhase;
     // Signed work first; otherwise the first phase that has projects.
     const live = data.projects.filter((p) => !p.archived);
     const order: Phase[] = ["execution", "negotiation", "settlement", "ended"];

@@ -6,7 +6,8 @@ import { dailyUsage } from "@/lib/ai/usage";
 import { CALENDAR_SCOPE, hasScopes, IMPORT_SCOPES } from "@/lib/calendar/google/scope";
 import { isGoogleConfigured, isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { auditLog, authAccount, calendarConnection, calendarEvent, calendarImportSource, contract, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { readPreferences } from "@/lib/preferences";
+import { auditLog, authAccount, calendarConnection, calendarEvent, calendarImportSource, contract, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
@@ -29,7 +30,7 @@ const eventKind = (k: string): CalendarKind => (calendarKinds.includes(k as Cale
  */
 export const getAppData = cache(async (): Promise<AppData> => {
   const { person, talent: current } = await requireTalent();
-  const [[talentRow], [memberRow], projectRows, contactRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows, messageRows] = await Promise.all([
+  const [[talentRow], [memberRow], projectRows, contactRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows, messageRows, preferenceRows] = await Promise.all([
     db
       .select({ id: talent.id, name: talent.name, timeZone: talent.timeZone, vertical: talent.vertical })
       .from(talent)
@@ -61,6 +62,10 @@ export const getAppData = cache(async (): Promise<AppData> => {
       .from(authAccount)
       .where(eq(authAccount.personId, person.personId)),
     db.select().from(message).where(eq(message.talentId, current.id)).orderBy(desc(message.receivedAt)).limit(200),
+    db
+      .select({ key: preference.key, value: preference.value })
+      .from(preference)
+      .where(and(eq(preference.personId, person.personId), eq(preference.talentId, current.id))),
   ]);
 
   const contractRows = await db
@@ -221,6 +226,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       googleAccountId: accountRows.find((a) => a.providerId === "google")?.id ?? null,
       googleAvailable: isGoogleEnabled,
     },
+    preferences: readPreferences(preferenceRows),
     notificationState: Object.fromEntries(
       stateRows.map((r) => [
         r.notificationId,
@@ -244,6 +250,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       notes: p.notes ?? "",
       nextAction: nextAction.get(p.id) ?? null,
       archived: p.archivedAt !== null,
+      updatedAt: p.updatedAt.toISOString(),
     })),
     contacts: contactRows.map((c) => ({
       id: c.id,

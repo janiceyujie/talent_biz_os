@@ -45,6 +45,7 @@ const project = (over: Partial<Project> = {}): Project => ({
   notes: "",
   nextAction: null,
   archived: false,
+  updatedAt: "2026-10-01T00:00:00Z",
   ...over,
 });
 

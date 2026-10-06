@@ -81,7 +81,7 @@ export function renderTemplate(template: ReplyTemplate, source: string, project:
 export const paymentDate = (p: Payment) => (p.status === "settled" ? p.settledDate || p.recordedDate : p.recordedDate);
 
 /** Cash-basis totals for a date range (TWD only for the MVP): settled rows count their cash. */
-export function summarize(data: AppData, from = "", to = "9999-12-31") {
+export function summarize(data: Pick<AppData, "payments">, from = "", to = "9999-12-31") {
   const rows = data.payments.filter(
     (p) => !p.voided && p.status !== "cancelled" && paymentDate(p) >= from && paymentDate(p) <= to,
   );

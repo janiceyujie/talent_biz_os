@@ -107,6 +107,7 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - A list of projects: counterparty, status, next key date — **MVP**.
 - Per-project detail: the timeline of messages and versions, current terms, open to-dos — **MVP**.
 - Concrete urgency signals validated in interviews: expected income in the next 30 days, deliverables and signatures pending, a contract that doesn't match its offer, unconfirmed travel or venue logistics, overdue payments — **MVP**.
+- 今日總覽 as widgets (`lib/overview`, `components/overview`): 需要你處理 (overdue money, to-dos, messages to review, clashes), 待跟進 (deals in negotiation with no news for a week), 合作案進度, 行程, 款項, 本月收入 — two columns, defaults per role; a widget that's on always shows, with its own empty state — **built**. Showing, hiding, and reordering them (自訂今日總覽, saved per person and workspace in `preference`, [decision 0010](decisions/0010-per-person-preferences.md)) — **built**; per-widget settings — **Later**.
 - A single view across every talent a manager or agency represents — **Later**.
 - Search across projects, contacts, calendar, and templates (⌘K) — **MVP**.
 - In-app notifications derived from upcoming to-dos, events, and payments due to be received or paid — **MVP**. Ordered by urgency (within the next two hours, overdue, today, later); read state and "remind me in an hour" are saved per person — **MVP**. Background push (browser, email) — **Later**.
@@ -759,6 +760,16 @@ create table notification_state (
   read_at          timestamptz,
   snoozed_until    timestamptz,        -- computed by the server ("remind me in an hour")
   primary key (person_id, notification_id)
+);
+
+-- A person's settings per workspace, by key (e.g. 'overview.layout'); keys and value shapes in lib/preferences.ts (decision 0010)
+create table preference (
+  person_id   uuid not null references person(id) on delete cascade,
+  talent_id   uuid not null references talent(id) on delete cascade,
+  key         text not null,
+  value       jsonb not null,             -- only what differs from the defaults; validated on read and save
+  updated_at  timestamptz not null default now(),
+  primary key (person_id, talent_id, key)
 );
 
 create table audit_log (

@@ -236,6 +236,26 @@ export const notificationState = pgTable(
   (t) => [primaryKey({ columns: [t.personId, t.notificationId] })],
 ).enableRLS();
 
+// A person's settings in one workspace, by key (e.g. 'overview.layout'): small
+// JSON values the app validates on read, so a bad or outdated one falls back
+// to defaults. One row per person, workspace, and key; new keys need no
+// migration. The allowed keys and their shapes are in lib/preferences.
+export const preference = pgTable(
+  "preference",
+  {
+    personId: uuid()
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    key: text().notNull(),
+    value: jsonb().$type<unknown>().notNull(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [primaryKey({ columns: [t.personId, t.talentId, t.key] })],
+).enableRLS();
+
 export const auditLog = pgTable(
   "audit_log",
   {

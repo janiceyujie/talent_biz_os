@@ -4,7 +4,7 @@
 // coming week. Pure; the view words each row.
 import { conflicts, plusDays, type PlanItem } from "@/lib/calendar/planner";
 import type { InboxMessage } from "@/lib/types";
-import { urgencies, type StatefulNotification, type Urgency } from "./notifications";
+import { urgencies, type StatefulNotification, type Urgency } from "@/lib/domain/notifications";
 
 const CLASH_WINDOW_DAYS = 7; // as the reminders
 

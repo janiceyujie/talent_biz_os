@@ -1,6 +1,7 @@
 // What screens receive. Shapes follow the planned tables in
 // docs/architecture.md#schema; until a table is built, its list is empty
 // (see lib/data). Dates are local YYYY-MM-DD strings in the talent's time zone.
+import type { Preferences } from "@/lib/preferences";
 import type { Locale } from "@/lib/i18n/config";
 import type { Appearance, Role } from "@/lib/roles";
 import type { MessageAnalysis } from "@/lib/ai/analysis";
@@ -36,6 +37,7 @@ export type Project = {
   notes: string;
   nextAction: { title: string; dueDate: string | null } | null; // the next open to-do
   archived: boolean;
+  updatedAt: string; // ISO instant of the last change (any edit, including stage)
 };
 
 /** A date kept on a project before it's signed, or one that isn't a calendar event (decision 0004). */
@@ -258,6 +260,7 @@ export type AppData = {
   timeline: TimelineEntry[]; // newest first
   contracts: Contract[]; // newest version first
   notificationState: NotificationState; // this person's read and snooze marks
+  preferences: Preferences; // this person's settings in this workspace (lib/preferences)
   // Google Calendar sync for this person and talent (decision 0009): whether Google granted the
   // calendar permission, and the connection's state once made.
   /** This person's own Google events, read-only (decision 0009, phase 2); "" = not set. Wall time in `timeZone`. */

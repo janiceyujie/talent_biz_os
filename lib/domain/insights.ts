@@ -1,6 +1,6 @@
 // Finance and partner reports over AppData. TWD only for the MVP, like every
 // other summary. Pure functions; run anywhere.
-import type { AppData, Contact, Payment, Project } from "@/lib/types";
+import type { AppData, Contact, Payment, ProjectSummary } from "@/lib/types";
 import { dateInZone } from "./dates";
 import { minorUnits } from "./money";
 import { isSigned } from "./phases";
@@ -25,7 +25,7 @@ export function financeInsights(data: AppData, now = new Date()) {
   const payments = data.payments.filter(live);
   const signed = data.projects.filter((p) => !p.archived && isSigned(p.stage));
   const quoted = signed.filter((p) => p.quotedAmount !== null);
-  const billedFor = (p: Project) =>
+  const billedFor = (p: ProjectSummary) =>
     payments.filter((x) => x.projectId === p.id && x.direction === "in").reduce((n, x) => n + units(paymentTotal(x)), 0);
   const contracted = quoted.reduce((n, p) => n + units(projectQuoteTotal(p)!), 0);
   const unbilled = quoted.reduce((n, p) => n + Math.max(0, units(projectQuoteTotal(p)!) - billedFor(p)), 0);

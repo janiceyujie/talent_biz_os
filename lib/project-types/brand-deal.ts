@@ -1,4 +1,4 @@
-// A brand collaboration or campaign (品牌合作).
+// A brand collaboration or campaign (Brand partnership).
 export const brandDeal = {
   key: "brand_deal",
   eventKind: "meeting",

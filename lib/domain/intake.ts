@@ -1,15 +1,15 @@
-// From 進件 to 合作案: which project a message belongs to, and what it would
+// From intake to project: which project a message belongs to, and what it would
 // change there. Pure functions over the analysis and the talent's records —
 // the AI only extracted the facts; these rules decide what to propose, and the
 // person confirms every item. See docs/design/intake-to-project.md.
 import type { MessageAnalysis } from "@/lib/ai/analysis";
 import { projectType } from "@/lib/project-types";
-import type { CalendarItem, Contact, Contract, ContractTerms, Payment, Project, ProjectDate, ProjectDetails, Stage, TermChange } from "@/lib/types";
+import type { CalendarItem, Contact, Contract, ContractTerms, Payment, Project, ProjectDate, ProjectSummary, ProjectDetails, Stage, TermChange } from "@/lib/types";
 import { isSigned } from "./phases";
 import { paymentTotal } from "./workflow";
 
 export type IntakeContext = {
-  projects: Project[];
+  projects: ProjectSummary[];
   contacts: Contact[];
   payments: Payment[];
   calendar: CalendarItem[];
@@ -55,7 +55,7 @@ export type TargetSuggestion = { projectId: string; score: number; reasons: Targ
 
 const norm = (s: string) => s.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
 const same = (a: string, b: string) => !!a && !!b && norm(a) === norm(b);
-/** One contains the other, for names like "Blue Room" vs. "The Blue Room 台北". */
+/** One contains the other, for names like "Blue Room" vs. "The Blue Room Taipei". */
 const overlaps = (a: string, b: string) => {
   const x = norm(a);
   const y = norm(b);
@@ -81,10 +81,10 @@ const titleSimilarity = (a: string, b: string) => {
 };
 
 /** Fields that name the deal's place or occasion; a match is a good sign it's the same project. */
-const identifyingFields = ["venue", "eventName", "brand", "campaign", "product", "work"];
+export const identifyingFields = ["venue", "eventName", "brand", "campaign", "product", "work"];
 
 /** A project's dates: the ones kept on it, plus its calendar events. */
-function datesOf(project: Project, calendar: CalendarItem[]) {
+function datesOf(project: ProjectSummary, calendar: CalendarItem[]) {
   return [
     ...(project.details.dates ?? []).map((d) => d.date),
     ...calendar.filter((c) => c.projectId === project.id && c.source === "event" && !c.archived).map((c) => c.date),
@@ -273,7 +273,7 @@ const addDays = (date: string, days: number) => {
   return d.toISOString().slice(0, 10);
 };
 
-/** A plain amount from text like "NT$19,950" or "19,950 元"; null if there isn't exactly one number. */
+/** A plain amount from text like "NT$19,950" or "19,950" followed by the Chinese word for dollars; null if there isn't exactly one number. */
 export function parseAmount(text: string) {
   const numbers = norm(text).match(/\d[\d,]*(\.\d+)?/g) ?? [];
   if (numbers.length !== 1) return null;
@@ -290,7 +290,7 @@ function statedAmount(a: MessageAnalysis) {
 
 const near = (expected: number, amount: number) => amount <= expected && amount >= expected * 0.85;
 
-const expectedIncome = (project: Project, payments: Payment[]) =>
+const expectedIncome = (project: Pick<Project, "id">, payments: Payment[]) =>
   payments.filter((p) => p.projectId === project.id && p.direction === "in" && p.status === "expected" && !p.voided);
 
 /** Words in the message that mean a contract is coming. A hint for a to-do the person ticks, not a fact. */

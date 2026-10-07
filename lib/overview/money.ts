@@ -1,4 +1,4 @@
-// 款項: money still expected, at a glance — what's overdue, due this week, and outstanding in total.
+// Money: money still expected, at a glance — what's overdue, due this week, and outstanding in total.
 import { plusDays } from "@/lib/calendar/planner";
 import { paymentTotal } from "@/lib/domain/workflow";
 import type { Payment } from "@/lib/types";

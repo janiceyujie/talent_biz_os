@@ -6,13 +6,14 @@
 import { useTranslations } from "next-intl";
 import { useMemo, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { applyMessage, createProjectFromMessage, type NewProjectInput } from "@/lib/actions/intake";
 import { dateInZone } from "@/lib/domain/dates";
 import { filedMessages, keptFields, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext, type TargetReason } from "@/lib/domain/intake";
 import { projectTypes, type ProjectType } from "@/lib/project-types";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
-import type { InboxMessage, Project, Stage, TermChange } from "@/lib/types";
+import type { InboxMessage, Project, ProjectSummary, Stage, TermChange } from "@/lib/types";
 
 type Analysis = NonNullable<InboxMessage["analysis"]>;
 type Edit = Record<string, unknown>;
@@ -103,7 +104,7 @@ export function MessageReview({ message }: { message: InboxMessage }) {
         )}
       </div>
       {target === "new" && <NewProject message={message} analysis={a} ctx={ctx} />}
-      {chosen && <Changes key={chosen.id} message={message} analysis={a} project={chosen} ctx={ctx} />}
+      {chosen && <ChangesFor key={chosen.id} message={message} analysis={a} project={chosen} ctx={ctx} />}
     </section>
   );
 }
@@ -113,6 +114,14 @@ function Reason({ reason }: { reason: TargetReason }) {
   const money = useMoney();
   const value = reason.kind === "payment" ? money(reason.value) : reason.value;
   return <span>{t(`reason.${reason.kind}`, { value })}</span>;
+}
+
+/** The proposal compares the message with the project's details, so it waits for the full project. */
+function ChangesFor({ project, ...rest }: { message: InboxMessage; analysis: Analysis; project: ProjectSummary; ctx: IntakeContext }) {
+  const tProjects = useTranslations("projects");
+  const { detail, failed } = useProjectDetail(project);
+  if (detail) return <Changes {...rest} project={withDetail(project, detail)} />;
+  return <p className={failed ? "notice error" : "muted"}>{tProjects(failed ? "detailFailed" : "loading")}</p>;
 }
 
 function Changes({ message, analysis, project, ctx }: { message: InboxMessage; analysis: Analysis; project: Project; ctx: IntakeContext }) {
@@ -579,7 +588,7 @@ export function TermDiff({ diff, against, same, type }: { diff: TermChange[]; ag
   );
 }
 
-/** "報價 $30,000 → $35,000", "演出長度 60 分鐘 → （刪除）". */
+/** The label, then old → new: "Fee $30,000 → $35,000", or "Set length 60 min → (removed)". */
 export function useDescribeTerm(type: ProjectType) {
   const t = useTranslations("intake");
   const labels = useLabels();

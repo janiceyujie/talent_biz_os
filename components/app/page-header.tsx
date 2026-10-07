@@ -32,7 +32,7 @@ export function PageHeader({ titleKey, subtitle, children }: { titleKey: NavKey;
         )}
         {withActions.includes(titleKey) && (
           <div className="page-actions">
-            {/* On 進件分類 its own dialog opens (and selects the new message); elsewhere it opens here, without leaving the page. */}
+            {/* On Intake its own dialog opens (and selects the new message); elsewhere it opens here, without leaving the page. */}
             {titleKey === "inbox" ? (
               <Link className="secondary" href="/inbox?paste=1">
                 {t("shell.importOffer")}

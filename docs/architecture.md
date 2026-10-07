@@ -791,6 +791,7 @@ Shaped by the situation: a part-time build, a handful of solo artists at first, 
 | Layer | Choice | Status | Why |
 |---|---|---|---|
 | App shape | Next.js monolith (React, TS) — route handlers + server actions | Decided | One deployable and shared types; the Gmail add-on webhook is just another route handler. Split only for a concrete reason (see below) |
+| Data loading | The layout carries what every page needs; a page fetches what it shows, lists in pages of 50 with keyset cursors, an item's detail when it's opened | Decided — moving screen by screen | The cost of a page stays proportional to the screen, not the account. Projects are done (`/api/projects`, `/api/projects/[id]`); the layout still carries a summary of each project and every payment, to-do, and event until the other screens move. See [decision 0011](decisions/0011-pages-fetch-what-they-show.md) |
 | Primary DB | Postgres, hosted on Supabase | Decided | Relational integrity for money, contracts, and versions. Supabase gives free local dev (`supabase start`) and Asia regions; to us it is plain Postgres |
 | Vector search | pgvector | Decided | Project matching without a second datastore; supported by every major Postgres host |
 | DB access + migrations | Drizzle (`drizzle-kit`) | Decided | SQL-shaped, typed queries and typed `jsonb`; schema lives in TS; works on any Postgres |

@@ -2143,6 +2143,41 @@ summary {
   position: relative;
   min-width: 0;
 }
+/* Partner field: its link state on one quiet line, and the new contact's details under it. */
+.contact-status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.contact-status.linked {
+  gap: 4px;
+  color: var(--accent);
+}
+.contact-status .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: inherit;
+}
+.contact-new {
+  margin: 12px 0 0;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+}
+.contact-new legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 4px;
+  font-size: var(--text-meta);
+  font-weight: 650;
+}
+.contact-new legend .text-button {
+  font-weight: 400;
+}
 .searchable-field > label {
   display: block;
   margin-bottom: 8px;
@@ -3453,7 +3488,7 @@ button.primary.danger {
   .page-title .planner-date-nav {
     width: 100%;
   }
-  /* Phones hide secondary title-row buttons (Today's 匯入邀約); the calendar's date buttons stay. */
+  /* Phones hide secondary title-row buttons (Today's Import offer); the calendar's date buttons stay. */
   .page-actions .planner-date-nav .secondary {
     display: inline-flex;
   }
@@ -3478,7 +3513,7 @@ button.primary.danger {
   border-left: 3px solid #7986cb;
   padding-left: 8px;
 }
-/* 設定 → Google 日曆's dialog: the two directions */
+/* Settings → Google Calendar's dialog: the two directions */
 .calendar-flows {
   display: grid;
   grid-template-columns: max-content 1fr;
@@ -3720,7 +3755,7 @@ button.primary.danger {
 .modal-actions > :is(.danger-text, .danger-outline):first-child {
   margin-right: auto;
 }
-/* 設定 → 訂閱連結: the one-time link, and the actions on an active one */
+/* Settings → Subscription link: the one-time link, and the actions on an active one */
 .feed-link {
   display: flex;
   gap: 8px;
@@ -3942,7 +3977,7 @@ button.primary.danger {
   transform: translateY(-50%) rotate(45deg);
 }
 
-/* 今日總覽: what needs you (main column), the schedule beside it; stacked on narrow screens, actions first */
+/* Today: what needs you (main column), the schedule beside it; stacked on narrow screens, actions first */
 .page-heading {
   display: flex;
   flex-wrap: wrap;
@@ -4135,7 +4170,7 @@ button.primary.danger {
   }
 }
 
-/* 今日總覽's widgets (components/overview): two columns of cards, stacked on narrow screens */
+/* Today's widgets (components/overview): two columns of cards, stacked on narrow screens */
 .overview-column {
   display: grid;
   gap: 24px;
@@ -4217,7 +4252,7 @@ button.primary.danger {
   font-size: var(--text-meta);
 }
 
-/* 自訂今日總覽: each column's widgets, shown or hidden, reordered by arrows or dragging */
+/* Customize Today: each column's widgets, shown or hidden, reordered by arrows or dragging */
 .overview-footer {
   display: flex;
   justify-content: flex-end;

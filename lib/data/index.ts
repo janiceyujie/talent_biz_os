@@ -7,17 +7,13 @@ import { CALENDAR_SCOPE, hasScopes, IMPORT_SCOPES } from "@/lib/calendar/google/
 import { isGoogleConfigured, isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { readPreferences } from "@/lib/preferences";
-import { auditLog, authAccount, calendarConnection, calendarEvent, calendarImportSource, contract, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { summaryOf } from "./projects";
+import { authAccount, calendarConnection, calendarEvent, calendarImportSource, contract, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
-import type { ChangeRecord } from "@/lib/domain/intake";
-import { calendarKinds, type Stage, type AppData, type CalendarItem, type CalendarKind, type TravelDetails } from "@/lib/types";
+import { calendarKinds, type AppData, type CalendarItem, type CalendarKind, type TravelDetails } from "@/lib/types";
 
-type AppliedDetails = { created?: boolean; applied?: unknown[]; left?: unknown[]; stage?: { from: Stage; to: Stage } | null };
-/** Entries written before items were recorded in full stored only ids; those show as a filed message. */
-const records = (items: unknown[] | undefined) =>
-  (items ?? []).filter((i): i is ChangeRecord => typeof i === "object" && i !== null && "kind" in i);
 
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : "");
 const todoKind: Record<string, CalendarKind> = { deliverable: "deliverable", payment_due: "payment" };
@@ -89,14 +85,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
         .where(inArray(externalEvent.sourceId, importSources.map((x) => x.id)))
     : [];
 
-  // What applying each message changed, for project timelines (latest entry per message).
-  const appliedRows = await db
-    .select({ targetId: auditLog.targetId, details: auditLog.details })
-    .from(auditLog)
-    .where(and(eq(auditLog.talentId, current.id), eq(auditLog.action, "message.applied")))
-    .orderBy(desc(auditLog.createdAt));
-  const appliedByMessage = new Map<string, AppliedDetails>();
-  for (const r of appliedRows) if (!appliedByMessage.has(r.targetId)) appliedByMessage.set(r.targetId, r.details as AppliedDetails);
+
 
   // Latest analysis per message (analyses are versioned; the newest wins).
   const analysisRows = messageRows.length
@@ -115,9 +104,6 @@ export const getAppData = cache(async (): Promise<AppData> => {
     : [];
   const latestAnalysis = new Map<string, (typeof analysisRows)[number]>();
   for (const a of analysisRows) if (!latestAnalysis.has(a.messageId)) latestAnalysis.set(a.messageId, a);
-  // A project's offer text is the earliest message filed under it.
-  const offerText = new Map<string, string>();
-  for (const m of [...messageRows].reverse()) if (m.projectId && !offerText.has(m.projectId)) offerText.set(m.projectId, m.bodyText ?? "");
 
   const calendar: CalendarItem[] = [
     ...eventRows.map((e) => ({
@@ -233,25 +219,8 @@ export const getAppData = cache(async (): Promise<AppData> => {
         { readAt: r.readAt?.toISOString() ?? null, snoozedUntil: r.snoozedUntil?.toISOString() ?? null },
       ]),
     ),
-    projects: projectRows.map((p) => ({
-      id: p.id,
-      title: p.title,
-      counterparty: p.counterparty,
-      counterpartyId: p.counterpartyId,
-      artist: talentRow.name,
-      type: isProjectType(p.type) ? p.type : "other",
-      stage: p.stage,
-      quotedAmount: p.quotedAmount,
-      currency: "TWD",
-      taxRate: p.taxRate,
-      taxIncluded: p.taxIncluded,
-      details: p.details,
-      offerText: offerText.get(p.id) ?? "",
-      notes: p.notes ?? "",
-      nextAction: nextAction.get(p.id) ?? null,
-      archived: p.archivedAt !== null,
-      updatedAt: p.updatedAt.toISOString(),
-    })),
+    // A summary of each project (decision 0011); the full project: lib/data/projects.ts.
+    projects: projectRows.map((p) => summaryOf(p, nextAction.get(p.id) ?? null, talentRow.name)),
     contacts: contactRows.map((c) => ({
       id: c.id,
       role: c.role,
@@ -295,24 +264,6 @@ export const getAppData = cache(async (): Promise<AppData> => {
     })),
     drafts: [],
     files: [],
-    timeline: messageRows
-      .filter((m) => m.projectId && m.status === "confirmed")
-      .map((m) => {
-        const a = latestAnalysis.get(m.id);
-        const applied = appliedByMessage.get(m.id);
-        return {
-          messageId: m.id,
-          projectId: m.projectId!,
-          receivedAt: m.receivedAt.toISOString(),
-          title: (a && upgradeAnalysis(a.analysis).title) || (m.bodyText ?? "").trim().split("\n")[0].slice(0, 80),
-          summary: (a && upgradeAnalysis(a.analysis).summary) || "",
-          created: !!applied?.created,
-          applied: records(applied?.applied),
-          left: records(applied?.left),
-          stage: applied?.stage ?? null,
-          recorded: !!applied,
-        };
-      }),
     contracts: contractRows.map((c) => ({
       id: c.id,
       projectId: c.projectId,

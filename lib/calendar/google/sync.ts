@@ -48,7 +48,7 @@ export async function syncConnection(connectionId: string) {
         const failure: SyncFailure =
           e instanceof AccessLost || (e instanceof GoogleCalendarError && e.authLost) ? "auth" : e instanceof GoogleCalendarError && e.status ? "google" : "network";
         // Still behind Google, so stay dirty. Lost access needs the person; anything else
-        // goes again on the next change or 立即同步 (automatic retries come with the job queue).
+        // goes again on the next change or Sync now (automatic retries come with the job queue).
         await tx
           .update(calendarConnection)
           .set({ dirty: true, lastError: failure, ...(failure === "auth" ? { status: "needs_reconnect" as const } : {}) })

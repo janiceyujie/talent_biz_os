@@ -6,7 +6,7 @@ import { person } from "@/lib/db/schema";
 import { roleOf, toVertical } from "@/lib/roles";
 import { updateRole } from "./actions";
 
-/** "變更角色": the onboarding role picker, without the name step. */
+/** "Change role": the onboarding role picker, without the name step. */
 export default async function ChangeRolePage() {
   const { person: current, talent } = await requireTalent();
   const [row] = await db

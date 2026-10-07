@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
+import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { archiveTemplate } from "@/lib/actions/templates";
 import { PastReplyError, renderTemplate } from "@/lib/domain/workflow";
@@ -37,7 +38,9 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
   const [projectId, setProjectId] = useState(initial?.id || "");
   const [templateId, setTemplateId] = useState("");
   const [tone, setTone] = useState(tTone("natural"));
-  const [source, setSource] = useState(initial?.offerText || "");
+  const [source, setSource] = useState("");
+  // The project whose offer text is still on its way, to prefill the source with.
+  const [prefill, setPrefill] = useState(initial?.id || "");
   const [body, setBody] = useState("");
   const [subject, setSubject] = useState(initial ? `Re: ${initial.title}`.slice(0, 200) : t("defaultSubject"));
   const [recipient, setRecipient] = useState(recipientFor(initial?.counterpartyId));
@@ -48,6 +51,7 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
   const project = data.projects.find((p) => p.id === projectId);
 
   function load(d: ReplyDraft) {
+    setPrefill("");
     setProjectId(d.projectId || "");
     setType(d.projectType);
     setTemplateId("");
@@ -64,7 +68,7 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
     if (!template) return;
     try {
       // The reply is written in the template's language; this status line is in the reader's.
-      const result = renderTemplate(template, source, project);
+      const result = renderTemplate(template, source, full);
       const shown = result.missing.map((name) =>
         placeholderKeys.includes(name as PlaceholderKey) ? displayName(name as PlaceholderKey, uiLocale) : name,
       );
@@ -99,6 +103,18 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
   const content = JSON.stringify([projectId, subject, recipient, type, source, body]);
   const [baseline, setBaseline] = useState(content);
   const dirty = content !== baseline;
+  // The offer text arrives after the switch: fill it in, as part of the baseline, unless something was typed there first.
+  // Adjusted while rendering (not in an effect), once per arriving detail.
+  const { detail } = useProjectDetail(project);
+  // Templates fill in deliverables and rights, which only the full project has (until it loads, they read as missing).
+  const full = project && (detail?.projectId === project.id ? withDetail(project, detail) : { ...project, notes: "" });
+  if (detail && detail.projectId === prefill) {
+    setPrefill("");
+    if (!source) {
+      setSource(detail.offerText);
+      setBaseline((b) => JSON.stringify(Object.assign(JSON.parse(b), { 4: detail.offerText })));
+    }
+  }
   const [pendingChange, setPendingChange] = useState<{ run: () => void; replace: boolean } | null>(null);
   /** Run a change that would discard the composer's text, asking first when there's unsaved text. */
   const requestChange = (run: () => void, replace = false) => {
@@ -134,8 +150,9 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
       subject: p ? `Re: ${p.title}`.slice(0, 200) : t("defaultSubject"),
       recipient: recipientFor(p?.counterpartyId),
       type: p?.type || type,
-      source: p?.offerText || "",
+      source: "", // the offer text follows once it's fetched
     };
+    setPrefill(p?.id || "");
     setProjectId(next.projectId);
     setSubject(next.subject);
     setRecipient(next.recipient);

@@ -41,7 +41,6 @@ const project = (over: Partial<Project> = {}): Project => ({
   taxRate: 5,
   taxIncluded: true,
   details: {},
-  offerText: "",
   notes: "",
   nextAction: null,
   archived: false,

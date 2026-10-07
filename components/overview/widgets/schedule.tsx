@@ -10,7 +10,7 @@ import { Widget } from "../widget";
 const COMING_DAYS = 6; // after today: the rest of the week
 
 /**
- * 行程: today's events, then only the coming days that have something. Events
+ * Schedule: today's events, then only the coming days that have something. Events
  * only (ours and the person's Google ones): to-dos and payments are actions.
  * An empty today is news, so it always shows.
  */

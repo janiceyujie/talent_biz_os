@@ -1,4 +1,4 @@
-// 今日總覽's widgets: arrangement and each widget's data. Run: npm test
+// Today's widgets: arrangement and each widget's data. Run: npm test
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { InboxMessage, Payment, Project } from "@/lib/types";
@@ -42,7 +42,7 @@ describe("editing the layout", () => {
 
   test("moving the side's first widget up swaps it with the main's last; each column keeps three spots", () => {
     const start = editableLayout("musician");
-    const up = moveWidget(start, 3, 2); // 行程 into the main column; 合作案進度 down into the side
+    const up = moveWidget(start, 3, 2); // Schedule into the main column; Deals by phase down into the side
     assert.deepEqual(overviewLayout("musician", toSavedLayout(up)), { main: ["actions", "stalled", "schedule"], side: ["pipeline", "money", "income"] });
     const down = moveWidget(start, 2, 3); // and the other way
     assert.deepEqual(overviewLayout("musician", toSavedLayout(down)), { main: ["actions", "stalled", "schedule"], side: ["pipeline", "money", "income"] });

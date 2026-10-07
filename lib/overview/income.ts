@@ -1,4 +1,4 @@
-// 本月收入: money received this calendar month (talent's zone) next to last month's, cash basis.
+// Received this month: money received this calendar month (talent's zone) next to last month's, cash basis.
 import { summarize } from "@/lib/domain/workflow";
 import type { AppData } from "@/lib/types";
 

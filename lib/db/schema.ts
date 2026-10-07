@@ -188,7 +188,7 @@ export const contact = pgTable(
   (t) => [index("contact_talent_idx").on(t.talentId), check("contact_role_check", oneOf(t.role, contactRoles))],
 ).enableRLS();
 
-// One ongoing deal with one counterparty (UI: 專案 / 合作案).
+// One ongoing deal with one counterparty (UI: Project).
 export const project = pgTable(
   "project",
   {
@@ -275,7 +275,7 @@ export const auditLog = pgTable(
 
 // Money ----------------------------------------------------------------------------
 
-export const paymentDirections = ["in", "out"] as const; // 收入 / 成本
+export const paymentDirections = ["in", "out"] as const; // income / cost
 export const paymentInstallments = ["regular", "deposit", "balance"] as const;
 export const paymentStatuses = ["expected", "settled", "cancelled"] as const;
 
@@ -297,7 +297,7 @@ export const payment = pgTable(
     currency: char({ length: 3 }).notNull().default("TWD"),
     taxRate: numeric({ precision: 5, scale: 2, mode: "number" }).notNull().default(0),
     taxIncluded: boolean().notNull().default(false),
-    recordedOn: date().notNull(), // 登錄日期
+    recordedOn: date().notNull(), // recorded on
     dueOn: date(),
     status: text({ enum: paymentStatuses }).notNull().default("expected"),
     settledAmount: numeric({ precision: 12, scale: 2, mode: "number" }),
@@ -305,7 +305,7 @@ export const payment = pgTable(
     method: text(),
     invoiceRef: text(),
     notes: text(),
-    // Void (作廢): entered by mistake or duplicated — out of every total, kept and restorable.
+    // Void: entered by mistake or duplicated — out of every total, kept and restorable.
     voidedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

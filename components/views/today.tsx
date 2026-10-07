@@ -1,6 +1,6 @@
 "use client";
 
-// 今日總覽: a welcome for a new workspace, then the overview's widgets
+// Today: a welcome for a new workspace, then the overview's widgets
 // (components/overview). The date sits beside the page title.
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";

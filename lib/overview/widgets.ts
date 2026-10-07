@@ -1,4 +1,4 @@
-// 今日總覽's widgets: what exists, how many spots each column has, and the
+// Today's widgets: what exists, how many spots each column has, and the
 // default arrangement per role. Adding a widget: an id and an entry here, its data as
 // a pure function beside this file, and its view in components/overview/widgets
 // (the view registry there must cover every id, so the compiler catches a gap).

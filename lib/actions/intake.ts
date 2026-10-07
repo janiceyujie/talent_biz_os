@@ -13,6 +13,7 @@ import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { requestCalendarSync } from "@/lib/calendar/google/sync";
 import { requireTalent } from "@/lib/auth";
 import { getAppData } from "@/lib/data";
+import { getProject } from "@/lib/data/projects";
 import { db } from "@/lib/db";
 import { auditLog, calendarEvent, contact, contract, message, messageAnalysis, payment, person as personTable, project, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
@@ -64,7 +65,8 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
   const input = parsed.data;
 
   const data = await getAppData();
-  const target = data.projects.find((p) => p.id === input.projectId);
+  // The layout's summary lacks the details a proposal compares against: load this one in full.
+  const target = await getProject(talent.id, input.projectId, data.talent.name);
   if (!target) return fail("projectNotFound");
   if (target.archived) return fail("projectArchived");
   const [row] = await db
@@ -336,7 +338,7 @@ const newProjectInput = z.object({
 export type NewProjectInput = z.input<typeof newProjectInput>;
 
 /**
- * Create a project from a message (建立新合作案): the project as the person
+ * Create a project from a message: the project as the person
  * edited it, its contact, a reply to-do, and the to-confirm list, together.
  * Returns the new project's id, or an error.
  */
@@ -428,7 +430,7 @@ export async function createProjectFromMessage(raw: NewProjectInput): Promise<{ 
   return result;
 }
 
-/** The reply-by default for messages that state none: N days after receiving (設定). */
+/** The reply-by default for messages that state none: N days after receiving (Settings). */
 export async function setReplyWithinDays(days: number): Promise<string | null> {
   const { person } = await requireTalent();
   const fail = await errorText();

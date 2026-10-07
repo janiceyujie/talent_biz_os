@@ -357,7 +357,7 @@ button:disabled {
 }
 .phase-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)); /* 洽談, 執行, 結算, 已結束 */
+  grid-template-columns: repeat(4, minmax(0, 1fr)); /* Negotiation, Execution, Settlement, Ended */
   border-bottom: 1px solid var(--line);
   padding: 16px 18px 0;
   gap: 8px;
@@ -2228,49 +2228,142 @@ summary:focus-visible {
   }
 }
 
-/* Phase 2: case files and financial review, scoped to their existing views. */
+/* Projects (components/views/projects.tsx): a scannable list beside one project's
+   header, stage, summary strip, and tabs. Spacing on a 4/8/12/16/24 scale. */
 .deal-controls {
-  margin-bottom: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.deal-phase-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .deal-controls .phase-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 0;
-  max-width: 680px;
+  border: 0;
 }
 .deal-controls .phase-tabs button {
-  min-height: 56px;
-  padding: 12px 20px;
+  min-height: 44px;
+  padding: 8px 12px 10px;
+  margin-bottom: -1px;
+  gap: 8px;
 }
 .deal-controls .phase-tabs button strong {
-  font-size: 18px;
-}
-.deal-controls .phase-caption {
-  margin: 16px 0 24px;
-  color: var(--muted);
-  line-height: 1.6;
+  font-size: var(--text-body);
 }
 .deal-controls .toolbar {
-  display: grid;
-  grid-template-columns: minmax(160px, 1fr) 150px auto auto;
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
 }
-.deal-controls .toolbar input:not([type="checkbox"]),
+.deal-controls .toolbar input {
+  width: 220px;
+  max-width: 100%;
+}
 .deal-controls .toolbar select {
-  width: 100%;
-  max-width: none;
+  width: auto;
 }
-.deal-controls .check-line {
-  width: fit-content;
-  min-height: 44px;
-  margin: 0;
+/* Archived: after the phases, set apart by a rule — a separate place, with a banner while you're in it. */
+.deal-controls .phase-tabs .archive-tab {
+  margin-left: 8px;
+  position: relative;
+  color: var(--muted);
+}
+.deal-controls .phase-tabs .archive-tab::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 12px;
+  bottom: 14px;
+  border-left: 1px solid var(--line);
+}
+.deal-controls .phase-tabs .archive-tab strong {
+  font-weight: 500;
+}
+.deal-controls .phase-tabs .archive-tab.active {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+.deal-controls .phase-tabs .archive-tab.active strong {
+  font-weight: 700;
+}
+.archive-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px dashed var(--muted);
+  border-radius: 10px;
+  background: var(--paper);
+  font-size: var(--text-meta);
+}
+.archive-banner > span {
+  flex: 1;
+  min-width: 200px;
 }
 .deals-workspace .deals-layout {
   display: grid;
-  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.65fr);
-  gap: 24px;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 16px;
   align-items: start;
 }
+
+/* The list: two lines per project — what and how much, then who and when. */
 .deal-list-panel {
-  padding: 8px;
+  padding: 4px;
+  position: sticky;
+  top: 72px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+/* Count and sort, pinned while the list scrolls under them. */
+.deal-list-header {
+  position: sticky;
+  top: -4px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+}
+.deal-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 8px;
+  border-radius: 8px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.deal-sort:hover {
+  background: var(--paper);
+}
+.deal-list-header select {
+  width: auto;
+  min-height: 32px;
+  padding: 4px 8px 4px 4px;
+  border-color: transparent;
+  cursor: pointer;
+  background-color: transparent;
+  color: var(--ink);
+  font-size: 13px;
 }
 .deal-list {
   list-style: none;
@@ -2280,13 +2373,19 @@ summary:focus-visible {
 .deal-list li + li {
   border-top: 1px solid var(--line);
 }
+.deal-list .deal-list-more {
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
 .deal-list-item {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  gap: 4px;
   width: 100%;
-  padding: 20px 16px;
-  border: 1px solid transparent;
+  padding: 12px;
+  border: 0;
   border-radius: 10px;
   background: transparent;
   color: var(--ink);
@@ -2298,61 +2397,60 @@ summary:focus-visible {
 }
 .deal-list-item.is-selected {
   background: var(--accent-soft);
-  border-color: var(--accent);
   box-shadow: inset 3px 0 var(--accent);
 }
-.deal-list-status {
+.deal-list-line {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 14px;
+  gap: 12px;
+  min-width: 0;
 }
-.deal-status {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  padding: 4px 8px;
-  border-radius: 6px;
-  color: var(--accent);
+.deal-list-title,
+.deal-list-partner {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .deal-list-title {
-  font-size: 18px;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 650;
 }
-.deal-list-partner {
-  font-size: 14px;
-  color: var(--muted);
-  line-height: 1.6;
-  overflow-wrap: anywhere;
-}
-.deal-list-facts {
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 12px 16px;
+.deal-list-amount {
+  flex-shrink: 0;
+  font-size: var(--text-meta);
   font-variant-numeric: tabular-nums;
 }
-.deal-list-facts > span {
-  display: grid;
-  gap: 4px;
-}
-.deal-list-facts small {
-  font-size: 14px;
+.deal-list-meta {
+  font-size: 13px;
   color: var(--muted);
 }
-.deal-list-facts strong,
-.deal-list-facts > span > span {
-  font-size: 15px;
-  overflow-wrap: anywhere;
+.due {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--muted);
 }
+.due.soon {
+  color: #b25a00;
+  font-weight: 600;
+}
+.due.overdue {
+  color: var(--red);
+  font-weight: 650;
+}
+
+/* The project. */
 .deals-workspace .deal-dossier {
-  padding: 28px;
-  max-height: none;
-  overflow: visible;
-  position: static;
+  padding: 24px;
+  min-width: 0;
+}
+.deal-back {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
 }
 .deal-dossier-header {
   display: flex;
@@ -2360,171 +2458,522 @@ summary:focus-visible {
   align-items: flex-start;
   gap: 16px;
 }
-.deal-dossier-header > div {
+.deal-dossier-header > div:first-child {
   min-width: 0;
 }
 .deal-dossier-header h2 {
-  font-size: 28px;
-  line-height: 1.35;
-  margin: 12px 0;
+  margin: 0 0 4px;
+  font-size: 24px;
+  line-height: 1.3;
+  letter-spacing: 0;
   overflow-wrap: anywhere;
-  scroll-margin-top: 24px;
 }
 .deal-dossier-header p {
   margin: 0;
   color: var(--muted);
-  font-size: 15px;
-  line-height: 1.7;
-  overflow-wrap: anywhere;
+  font-size: var(--text-meta);
 }
-.deal-dossier-header > button {
-  flex-shrink: 0;
-}
-.deal-dossier .detail-next {
-  margin: 24px 0;
-  padding: 20px;
-  border-left: 3px solid var(--accent);
-  background: var(--accent-soft);
-  border-radius: 0 10px 10px 0;
-}
-.deal-dossier .detail-next strong {
-  font-size: 20px;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-.deal-stage-section {
-  margin-bottom: 20px;
-}
-.deal-stage-section > label {
+.deal-header-actions {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-size: 15px;
-  color: var(--muted);
+  gap: 8px;
 }
-.deal-stage-section select {
+.deal-detail .deal-header-actions .secondary,
+.deal-detail .deal-tab-actions .secondary,
+.deal-detail .deal-sign-prompt .secondary {
   width: auto;
-  min-width: 180px;
 }
+.more-menu {
+  position: relative;
+}
+.deal-detail .more-menu .icon-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: inherit;
+}
+.more-menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(21, 23, 17, 0.12);
+  display: grid;
+}
+.more-menu-list button {
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.more-menu-list button:hover,
+.more-menu-list button:focus-visible {
+  background: var(--paper);
+}
+
+/* One stage control: a step bar whose steps are buttons. */
 .deal-dossier .stage-progress {
-  margin-top: 20px;
-  gap: 12px;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  margin: 20px 0 0;
 }
 .deal-dossier .stage-progress li {
-  padding: 8px 0;
-  line-height: 1.5;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0;
+  border-top: 3px solid var(--line);
+}
+.deal-dossier .stage-progress li button,
+.deal-dossier .stage-progress li > span {
+  display: block;
+  width: 100%;
+  padding: 6px 0 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.deal-dossier .stage-progress li button:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.deal-dossier .stage-progress li button:not(:disabled):hover {
+  color: var(--ink);
 }
 .deal-dossier .stage-progress li.complete {
-  color: var(--accent);
   border-color: var(--accent);
 }
 .deal-dossier .stage-progress li.current {
   border-color: var(--accent);
-  background: var(--accent-soft);
 }
-.deal-dossier .stage-note {
-  margin-top: 12px;
-  line-height: 1.7;
+.deal-dossier .stage-progress li.current button {
+  color: var(--accent);
+  font-weight: 700;
 }
-.deal-primary-actions {
+.deal-dossier .stage-progress li.exited {
+  border-color: var(--red);
+}
+.deal-dossier .stage-progress li.exited span {
+  color: var(--red);
+  font-weight: 700;
+}
+.deal-dossier .stage-progress li.stage-hint {
+  flex: 0 0 auto;
+  border: 0;
+}
+.deal-sign-prompt {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding-bottom: 24px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--paper);
+  font-size: var(--text-meta);
+}
+
+/* Next step, money, and what's open — the three things to know before the details. */
+.deal-summary-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 16px;
+}
+.deal-next,
+.deal-money {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+.deal-next {
+  border-left: 3px solid var(--accent);
+}
+.deal-money {
+  cursor: pointer;
+}
+.deal-money:hover {
+  background: var(--paper);
+}
+.deal-next small,
+.deal-money small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.deal-next strong,
+.deal-money strong {
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.deal-next .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  justify-self: start;
+  margin-top: 2px;
+  font-size: 13px;
+}
+.meter {
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+.meter > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.deal-check-chip {
+  align-self: stretch;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.deal-check-chip.has-checks {
+  border-color: #f0c9a8;
+  background: var(--orange-soft);
+  color: #a24a14;
+  font-weight: 600;
+}
+
+/* Tabs: only the chosen section shows. */
+.deal-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 24px;
   border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.deal-dossier .deal-primary-actions .secondary {
-  flex: 1 1 150px;
-  width: auto;
+.deal-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-meta);
+  white-space: nowrap;
+  cursor: pointer;
 }
-.deal-primary-actions .stage-action-note {
-  flex-basis: 100%;
+.deal-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+  font-weight: 650;
 }
-.deal-workflow {
-  padding: 24px 0;
+.deal-tabs button span {
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--paper);
+  font-size: 12px;
+  line-height: 18px;
 }
-.deal-workflow h3 {
-  margin: 24px 0 12px;
-  font-size: 18px;
-  line-height: 1.5;
+.deal-tab-panel {
+  padding-top: 16px;
+  font-size: var(--text-meta);
 }
-.deal-workflow > h3:first-child {
-  margin-top: 0;
+.deal-tab-panel h3 {
+  margin: 20px 0 8px;
+  font-size: var(--text-meta);
+  font-weight: 650;
 }
+.deal-tab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.deal-tab-actions .secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.deal-tab-actions p {
+  margin: 0;
+}
+
+/* Overview */
+.deal-facts {
+  display: grid;
+  grid-template-columns: minmax(72px, max-content) minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 0;
+}
+.deal-facts > div {
+  display: contents;
+}
+.deal-facts dt {
+  color: var(--muted);
+}
+.deal-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.deal-missing {
+  margin: 16px 0 0;
+  color: var(--muted);
+}
+.deal-check-list {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.8;
+}
+.deal-reference {
+  margin-top: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.deal-reference summary {
+  color: var(--muted);
+  cursor: pointer;
+}
+.deal-reference ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  line-height: 1.8;
+}
+.deal-records {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.deal-records li + li {
+  border-top: 1px solid var(--line);
+}
+.deal-record {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+button.deal-record {
+  cursor: pointer;
+}
+button.deal-record:hover {
+  background: var(--paper);
+}
+.deal-record > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deal-record small {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.deal-record strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Money */
 .deal-workflow > dl {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin: 16px 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
+  margin: 0 0 16px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
 }
 .deal-workflow > dl > div {
   display: grid;
-  gap: 8px;
-  padding: 16px;
+  gap: 4px;
+  padding: 12px;
 }
-.deal-workflow > dl > div:nth-child(2n) {
+.deal-workflow > dl > div + div {
   border-left: 1px solid var(--line);
-}
-.deal-workflow > dl > div:nth-child(n + 3) {
-  border-top: 1px solid var(--line);
-  background: var(--paper);
 }
 .deal-workflow dt {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 .deal-workflow dd {
   margin: 0;
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-.deal-workflow ul {
-  padding-left: 20px;
-  margin: 12px 0 20px;
-  font-size: 15px;
-  line-height: 1.8;
+
+/* Messages, travel, contract inside a tab */
+.deal-tab-panel .project-timeline,
+.deal-tab-panel .contract-versions {
+  margin: 0;
 }
-.deal-workflow > .secondary + .secondary {
-  margin-top: 12px;
+.deal-tab-panel .project-timeline ol > li::before {
+  top: 14px;
 }
-.deal-workflow > p {
-  margin: 12px 0;
-  font-size: 14px;
-  line-height: 1.7;
-}
-.deal-reference {
-  margin-top: 24px;
-  padding: 16px 0;
-  border-block: 1px solid var(--line);
-}
-.deal-reference summary {
-  font-weight: 600;
-  min-height: 24px;
+.project-timeline details > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 8px 0;
   cursor: pointer;
+  list-style: none;
 }
-.deal-dossier .deal-files {
-  margin-top: 0;
+.project-timeline details > summary::-webkit-details-marker {
+  display: none;
 }
-.deal-dossier .deal-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+.project-timeline details > summary strong {
+  flex: 1;
+  min-width: 0;
 }
-.deal-dossier .deal-summary details:last-child {
-  grid-column: 1 / -1;
+.project-timeline details[open] > :not(summary) {
+  margin-bottom: 6px;
 }
-.deal-dossier .deal-summary summary {
-  line-height: 1.5;
+.deal-tab-panel .travel-itinerary {
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
-.deal-dossier > .muted {
-  margin-top: 24px;
+
+@media (max-width: 1000px) {
+  /* List and project take turns: the list, then the project with a way back. */
+  .deals-workspace .deals-layout {
+    grid-template-columns: 1fr;
+  }
+  .deal-list-panel {
+    position: static;
+    max-height: none;
+  }
+  .deals-workspace.is-detail-open .deal-list-panel,
+  .deals-workspace.is-detail-open .deal-controls,
+  .deals-workspace.is-detail-open .archive-banner {
+    display: none;
+  }
+  .deals-workspace:not(.is-detail-open) .deal-dossier {
+    display: none;
+  }
+  .deal-back {
+    display: inline-flex;
+  }
+}
+@media (max-width: 600px) {
+  .deal-phase-row,
+  .deal-controls .phase-tabs {
+    flex: 1;
+    min-width: 0;
+  }
+  .deal-controls .phase-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .deal-phase-row > .info-hint {
+    display: none;
+  }
+  .deal-controls .phase-tabs button {
+    flex: 1;
+    justify-content: center;
+    gap: 4px;
+    padding-inline: 2px;
+  }
+  .deal-controls .phase-tabs button span {
+    padding-inline: 5px;
+  }
+  /* Five tabs on a phone: Archived keeps its icon and count; the banner names it once open. */
+  .deal-controls .phase-tabs .archive-tab {
+    flex: 0 0 auto;
+    margin-left: 6px;
+  }
+  .deal-controls .phase-tabs .archive-tab strong {
+    display: none;
+  }
+  .deal-controls .toolbar {
+    width: 100%;
+  }
+  .deal-controls .toolbar input {
+    flex: 1 1 100%;
+    width: auto;
+  }
+  .deal-controls .toolbar .primary {
+    margin-left: auto;
+  }
+  .deals-workspace .deal-dossier {
+    padding: 16px;
+  }
+  .deal-dossier-header {
+    flex-direction: column;
+  }
+  .deal-dossier-header h2 {
+    font-size: 20px;
+  }
+  .deal-dossier .stage-progress li:not(.current):not(.exited):not(.stage-hint) button {
+    color: transparent;
+  }
+  .deal-summary-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+  .deal-next {
+    grid-column: 1 / -1;
+  }
+  .deal-check-chip {
+    padding: 10px 12px;
+  }
+  .deal-workflow > dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .deal-workflow > dl > div:nth-child(odd) {
+    border-left: 0;
+  }
+  .deal-workflow > dl > div:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
 }
 .finance-workspace {
   --chart-income: var(--accent);
@@ -2709,34 +3158,12 @@ summary:focus-visible {
 .finance-workspace .ledger-card td .row-actions {
   flex-wrap: nowrap;
 }
-@media (min-width: 1500px) {
-  .deal-dossier .stage-progress {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-}
 @media (max-width: 1200px) {
-  .deal-dossier-header {
-    flex-direction: column;
-  }
   .finance-workspace .finance-insights-grid {
     grid-template-columns: 1fr;
   }
 }
 @media (max-width: 1000px) {
-  .deals-workspace .deals-layout {
-    grid-template-columns: 1fr;
-  }
-  .deal-list {
-    max-height: 420px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-  .deal-list-item {
-    padding: 20px;
-  }
-  .deal-dossier-header {
-    flex-direction: row;
-  }
   .finance-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2752,54 +3179,6 @@ summary:focus-visible {
   }
 }
 @media (max-width: 600px) {
-  .deal-controls .phase-tabs {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0;
-  }
-  .deal-controls .phase-tabs button {
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 12px 4px;
-    gap: 8px;
-  }
-  .deal-controls .phase-tabs button strong {
-    font-size: 16px;
-  }
-  .deal-controls .toolbar {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .deal-controls .toolbar input:not([type="checkbox"]) {
-    grid-column: 1 / -1;
-  }
-  .deal-controls .toolbar .check-line {
-    grid-column: 1 / -1;
-    grid-row: 3;
-  }
-  .deals-workspace .deal-dossier {
-    padding: 20px;
-  }
-  .deal-dossier-header {
-    flex-direction: column;
-  }
-  .deal-dossier-header h2 {
-    font-size: 26px;
-  }
-  .deal-stage-section select {
-    width: 100%;
-  }
-  .deal-dossier .detail-next {
-    padding: 16px;
-  }
-  .deal-dossier .deal-summary {
-    grid-template-columns: 1fr;
-  }
-  .deal-workflow > dl > div {
-    padding: 12px;
-  }
-  .deal-workflow dd {
-    font-size: 20px;
-  }
   .finance-workspace .finance-toolbar {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2856,9 +3235,6 @@ summary:focus-visible {
 }
 
 @media (max-width: 360px) {
-  .deal-controls .phase-tabs button strong {
-    font-size: 15px;
-  }
   .finance-summary {
     grid-template-columns: 1fr;
   }

@@ -6,7 +6,7 @@ import { monthIncome } from "@/lib/overview/income";
 import type { OverviewContext } from "../context";
 import { Widget } from "../widget";
 
-/** 本月收入: cash received this month, with last month beside it (zero included). */
+/** Received this month: cash received this month, with last month beside it (zero included). */
 export function IncomeWidget({ ctx: { data, today } }: { ctx: OverviewContext }) {
   const t = useTranslations("today");
   const money = useMoney();

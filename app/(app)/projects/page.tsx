@@ -1,14 +1,12 @@
 import { PageHeader } from "@/components/app/page-header";
 import { ProjectsView } from "@/components/views/projects";
-import { phases } from "@/lib/domain/phases";
 
-export default async function Page({ searchParams }: PageProps<"/projects">) {
-  const { id, phase } = await searchParams;
-  const initialPhase = phases.find((p) => p === phase);
+// The list's view, filters, order, and open project live in the address; the view reads them there.
+export default function Page() {
   return (
     <>
       <PageHeader titleKey="projects" />
-      <ProjectsView selectedId={typeof id === "string" ? id : ""} initialPhase={initialPhase} />
+      <ProjectsView />
     </>
   );
 }

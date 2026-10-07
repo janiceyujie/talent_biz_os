@@ -23,7 +23,7 @@ export async function savePreference(key: string, value: unknown): Promise<strin
   return null;
 }
 
-/** Forget a setting, so the defaults apply again (恢復預設). */
+/** Forget a setting, so the defaults apply again (Restore defaults). */
 export async function resetPreference(key: string): Promise<string | null> {
   const { person, talent } = await requireTalent();
   const fail = await errorText();

@@ -46,7 +46,7 @@ export function findInstructions(text: string) {
 const zhWeekday: Record<string, number> = { 日: 0, 天: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6 };
 const enWeekday = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
-/** The weekday a phrase states ("（五）", "週五", "Friday"), or null. 0 = Sunday. */
+/** The weekday a phrase states (a Chinese weekday, in parentheses or after a word for "week", or "Friday"), or null. 0 = Sunday. */
 export function statedWeekday(phrase: string) {
   const zh = /(?:[（(]\s*|週|周|星期|禮拜)([一二三四五六日天])/.exec(phrase);
   if (zh) return zhWeekday[zh[1]];
@@ -56,7 +56,7 @@ export function statedWeekday(phrase: string) {
 
 const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
-/** Month and day a phrase states without a year ("12/24", "11月21日", "November 21", "21 Nov"), or null. */
+/** Month and day a phrase states without a year ("12/24", the Chinese month-day form, "November 21", "21 Nov"), or null. */
 function yearlessMonthDay(phrase: string) {
   if (/\d{4}/.test(phrase)) return null;
   const numeric = /(\d{1,2})\s*[/月.-]\s*(\d{1,2})/.exec(phrase);
@@ -67,7 +67,7 @@ function yearlessMonthDay(phrase: string) {
 }
 
 /**
- * Fixes yearless dates a model placed months in the past ("12/24（三）" put in
+ * Fixes yearless dates a model placed months in the past ("12/24 (Wed)" put in
  * the previous year, where it falls on a Wednesday): they move to this year's
  * occurrence when that's upcoming or recent, otherwise next year's. Recent past
  * references ("the shoot on 9/28") are left alone. Run the weekday check after
@@ -86,7 +86,7 @@ export function rollForwardYearless(date: string, asStated: string, today: strin
   return thisYear >= cutoff.toISOString().slice(0, 10) ? thisYear : `${Number(today.slice(0, 4)) + 1}${monthDay}`;
 }
 
-/** Dates whose stated weekday doesn't match the date ("11/14（五）" when 11/14 is a Saturday). */
+/** Dates whose stated weekday doesn't match the date ("11/14 (Fri)" when 11/14 is a Saturday). */
 export function weekdayMismatches<D extends { date: string; asStated: string }>(dates: readonly D[]) {
   return dates.filter((d) => {
     if (!d.date || !d.asStated) return false;

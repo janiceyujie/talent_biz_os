@@ -2,7 +2,7 @@
 // Pure functions over AppData so they run on the server or in the browser.
 import { projectTypes } from "@/lib/project-types";
 import { contentWords, displayName, placeholderKey, type PlaceholderKey } from "@/lib/templates/placeholders";
-import type { AppData, Payment, Project, ReplyTemplate } from "@/lib/types";
+import type { AppData, Payment, Project, ProjectSummary, ReplyTemplate } from "@/lib/types";
 import { dateInZone } from "./dates";
 import { isSigned } from "./phases";
 import { minorUnits, quote } from "./money";
@@ -13,8 +13,8 @@ export const paymentTotal = (p: Pick<Payment, "amount" | "taxRate" | "taxInclude
 /** Cash that actually moved for a settled payment: the settled amount, or the full total. */
 export const paymentCash = (p: Payment) => (p.status === "settled" ? (p.settledAmount ?? paymentTotal(p)) : 0);
 
-/** The tax-inclusive quote, or null while the fee isn't decided (報價未定). */
-export const projectQuoteTotal = (p: Project) =>
+/** The tax-inclusive quote, or null while the fee isn't decided (quote not set). */
+export const projectQuoteTotal = (p: Pick<Project, "quotedAmount" | "taxRate" | "taxIncluded" | "currency">) =>
   p.quotedAmount === null ? null : quote(p.quotedAmount, p.taxRate, p.taxIncluded, p.currency).total;
 
 /**
@@ -22,7 +22,7 @@ export const projectQuoteTotal = (p: Project) =>
  * closing. `shortfall` is billed income that settled for less than its total
  * (withholding, fees) — shown on its own rather than left as outstanding.
  */
-export function projectSettlement(data: AppData, project: Project) {
+export function projectSettlement(data: AppData, project: ProjectSummary) {
   const rows = data.payments.filter((p) => p.projectId === project.id && !p.voided && p.status !== "cancelled");
   const income = rows.filter((p) => p.direction === "in");
   const units = (n: number) => minorUnits(n, project.currency);
@@ -102,4 +102,4 @@ export function summarize(data: Pick<AppData, "payments">, from = "", to = "9999
 }
 
 /** Signed and not finished: execution, or settlement still collecting. */
-export const isSignedOpen = (p: Project) => !p.archived && isSigned(p.stage) && p.stage !== "closed";
+export const isSignedOpen = (p: ProjectSummary) => !p.archived && isSigned(p.stage) && p.stage !== "closed";

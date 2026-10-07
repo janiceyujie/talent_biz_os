@@ -1,6 +1,6 @@
 "use client";
 
-// 設定 → 連結的服務 → Google 日曆 (decision 0009). Connecting asks Google for one
+// Settings → Connected services → Google Calendar (decision 0009). Connecting asks Google for one
 // more permission on the linked Google account; coming back finishes the
 // connection, and the first sync runs in the background.
 import { CalendarDays, Unlink } from "lucide-react";
@@ -25,7 +25,7 @@ import { SettingsRow } from "./settings-row";
 const DEFAULT_GOOGLE_COLOR = "#7986cb";
 const MINUTE_MS = 60_000; // how often "n minutes ago" updates
 
-/** 設定 → 連結的服務 → Google 日曆: one row (status, connect or 管理), the details in a dialog. */
+/** Settings → Connected services → Google Calendar: one row (status, connect or Manage), the details in a dialog. */
 export function GoogleCalendarSettings({ onNotice }: { onNotice: (text: string) => void }) {
   const data = useAppData();
   const t = useTranslations("googleCalendar");

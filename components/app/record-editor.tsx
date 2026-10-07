@@ -25,7 +25,7 @@ import {
   type TransportMode,
 } from "@/lib/types";
 import { useAppData } from "./app-data";
-import { ContactPicker } from "./contact-picker";
+import { ContactPicker, type NewContact } from "./contact-picker";
 import { TimeZonePicker } from "./time-zone-picker";
 import { Modal } from "./modal";
 
@@ -56,7 +56,7 @@ type Option = readonly [value: string, label: string];
 const options = <K extends string>(keys: readonly K[], label: (k: K) => string): Option[] =>
   keys.map((k) => [k, label(k)] as const);
 
-type Saver = (data: RecordData) => Promise<string | null>;
+type Saver = (data: Record<string, unknown>) => Promise<string | null>; // the record, plus a project's new contact
 
 // Kinds whose table is built. The rest open read-only until wired.
 const savers: Partial<Record<EditorKind, Saver>> = {
@@ -101,7 +101,7 @@ export function RecordEditor({
       counterpartyId: "",
       type: defaultProjectType,
       stage: "offer",
-      quotedAmount: "", // blank = 報價未定
+      quotedAmount: "", // blank = quote not set
       currency: "TWD",
       taxRate: 5,
       taxIncluded: false,
@@ -154,6 +154,7 @@ export function RecordEditor({
   };
   const kind = editor.kind;
   const onSave = savers[kind];
+  const [newContact, setNewContact] = useState<NewContact | null>(null); // a project's partner, added to contacts on save
   const [data, setData] = useState<RecordData>(() => {
     const initial = { ...defaults[kind], ...editor.item };
     // Templates are stored with neutral placeholders; edit them in the reader's language.
@@ -274,7 +275,7 @@ export function RecordEditor({
           e.preventDefault();
           if (!onSave) return;
           setPending(true);
-          const failure = await onSave(data);
+          const failure = await onSave(newContact ? { ...data, newContact: { ...newContact, name: String(data.counterparty) } } : data);
           setPending(false);
           if (failure) setError(failure);
           else {
@@ -300,9 +301,15 @@ export function RecordEditor({
                 <ContactPicker
                   label={t("field.counterparty")}
                   contacts={data$.contacts}
-                  name={String(data.counterparty ?? "")}
-                  contactId={String(data.counterpartyId ?? "")}
-                  onChange={({ name, contactId }) => setData((d) => ({ ...d, counterparty: name, counterpartyId: contactId }))}
+                  value={{
+                    name: String(data.counterparty ?? ""),
+                    contactId: String(data.counterpartyId ?? ""),
+                    newContact,
+                  }}
+                  onChange={(v) => {
+                    setData((d) => ({ ...d, counterparty: v.name, counterpartyId: v.contactId }));
+                    setNewContact(v.newContact);
+                  }}
                 />
               </fieldset>
               {pricing("quotedAmount", false, t("section.quote"), t("field.quotedAmount"))}

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { loadProject } from "@/components/app/project-detail";
 import { projectRecord, RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { archiveContact } from "@/lib/actions/contacts";
 import { useLabels } from "@/lib/i18n/labels";
@@ -65,7 +66,8 @@ export function ContactsView() {
               {data.projects
                 .filter((p) => !p.archived && p.counterpartyId === c.id)
                 .map((p) => (
-                  <button className="text-button" key={p.id} onClick={() => setEditor({ kind: "project", item: projectRecord(p) })}>
+                  // The editor needs the full project (details, notes): fetched first.
+                  <button className="text-button" key={p.id} onClick={() => loadProject(p).then((full) => setEditor({ kind: "project", item: projectRecord(full) }))}>
                     {p.title}
                   </button>
                 ))}

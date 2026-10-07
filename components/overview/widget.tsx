@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 /**
  * The frame every widget shares: a title (with an optional count and link)
  * and its body on a card. A widget that's turned on always shows, saying so
- * when it has nothing — hiding is only for widgets turned off in 自訂今日總覽.
+ * when it has nothing — hiding is only for widgets turned off in Customize Today.
  */
 export function Widget({
   id,

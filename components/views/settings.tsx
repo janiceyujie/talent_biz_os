@@ -142,7 +142,7 @@ function Workspace({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-/** The reply-by default for messages that state none: 「收到後 [n] 天」, saved once the number settles. */
+/** The reply-by default for messages that state none: "[n] days after receiving", saved once the number settles. */
 function ReplyDays({ onSaved }: { onSaved: () => void }) {
   const data = useAppData();
   const t = useTranslations("settings");

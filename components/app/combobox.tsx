@@ -25,6 +25,7 @@ export function Combobox({
   hint,
   explicitPick = false,
   hideLabel = false,
+  placeholder,
 }: {
   label: string;
   required?: boolean;
@@ -38,6 +39,7 @@ export function Combobox({
   hint?: ReactNode;
   explicitPick?: boolean;
   hideLabel?: boolean; // the label is beside it (a settings row): kept for screen readers only
+  placeholder?: string;
 }) {
   const listId = useId();
   const [open, setOpen] = useState(false);
@@ -72,7 +74,8 @@ export function Combobox({
           <input
             role="combobox"
             aria-label={label}
-            aria-required={required}
+            required={required}
+            placeholder={placeholder}
             aria-expanded={shown}
             aria-controls={listId}
             aria-autocomplete="list"
@@ -123,7 +126,8 @@ export function Combobox({
           </ul>
         </div>
       )}
-      {hint && <small className="muted">{hint}</small>}
+      {/* The open list covers the same choices: show the hint only when it is closed. */}
+      {hint && !shown && <small className="muted">{hint}</small>}
     </div>
   );
 }

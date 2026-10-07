@@ -1,6 +1,6 @@
 "use client";
 
-import { CarFront, Hotel, MapPin, Plane, TrainFront } from "lucide-react";
+import { CarFront, Hotel, MapPin, Plane, Plus, TrainFront } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAppData } from "@/components/app/app-data";
 import { calendarRecord, type Editor } from "@/components/app/record-editor";
@@ -9,7 +9,7 @@ import { YourTime } from "@/components/app/your-time";
 import { calendarPoints, pointKind, type CalendarPoint } from "@/lib/calendar/points";
 import { dateInZone } from "@/lib/domain/dates";
 import { isSigned } from "@/lib/domain/phases";
-import type { Project } from "@/lib/types";
+import type { ProjectSummary } from "@/lib/types";
 
 const icon = (p: CalendarPoint) => {
   const { kind, travel } = p.item;
@@ -21,7 +21,7 @@ const icon = (p: CalendarPoint) => {
 };
 
 /** A project's travel, stays, and performances in time order, each marker in its own local time. */
-export function TravelItinerary({ project, edit }: { project: Project; edit: (e: Editor) => void }) {
+export function TravelItinerary({ project, edit }: { project: ProjectSummary; edit: (e: Editor) => void }) {
   const data = useAppData();
   const t = useTranslations("itinerary");
   const tCalendar = useTranslations("calendar");
@@ -38,18 +38,19 @@ export function TravelItinerary({ project, edit }: { project: Project; edit: (e:
     });
 
   return (
-    <section className="travel-itinerary">
-      <div className="section-header">
-        <h3>{t("title")}</h3>
-        <div className="toolbar wrap">
-          <button className="secondary" disabled={!canAdd} onClick={() => add("travel")}>
+    <section className="travel-itinerary" aria-label={t("title")}>
+      {canAdd && (
+        <div className="deal-tab-actions">
+          <button className="secondary" onClick={() => add("travel")}>
+            <Plus size={16} aria-hidden="true" />
             {t("addTravel")}
           </button>
-          <button className="secondary" disabled={!canAdd} onClick={() => add("accommodation")}>
+          <button className="secondary" onClick={() => add("accommodation")}>
+            <Plus size={16} aria-hidden="true" />
             {t("addStay")}
           </button>
         </div>
-      </div>
+      )}
       {!points.length && <p className="muted">{t("empty")}</p>}
       <div className="travel-timeline">
         {points.map((p) => {

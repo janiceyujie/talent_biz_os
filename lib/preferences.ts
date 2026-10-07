@@ -8,7 +8,7 @@ import { widgetIds } from "@/lib/overview/widgets";
 const MAX_IDS = 50;
 
 export const preferences = {
-  /** 今日總覽's arrangement: only what differs from the role's defaults (lib/overview/layout). */
+  /** Today's arrangement: only what differs from the role's defaults (lib/overview/layout). */
   "overview.layout": {
     read: z.object({
       version: z.literal(1),

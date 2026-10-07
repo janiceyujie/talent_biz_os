@@ -1,4 +1,4 @@
-// A performance or event appearance (演出).
+// A performance or event appearance (Gig).
 export const gig = {
   key: "gig",
   eventKind: "performance",

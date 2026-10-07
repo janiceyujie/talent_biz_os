@@ -1,11 +1,12 @@
 "use client";
 
-import { Archive, ArrowDownUp, ArrowLeft, Ellipsis, Plus } from "lucide-react";
+import { Archive, ArrowDownUp, ArrowLeft, Ellipsis, Funnel, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { InfoHint } from "@/components/app/info-hint";
+import { PageHeader } from "@/components/app/page-header";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { useProjectPages } from "@/components/app/project-pages";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
@@ -14,7 +15,7 @@ import { dateInZone } from "@/lib/domain/dates";
 import { daysBetween } from "@/lib/domain/insights";
 import { useMoney } from "@/lib/i18n/format";
 import { isSigned, mainStages, phaseOf, phases, type Phase } from "@/lib/domain/phases";
-import { listSorts, type ListSort } from "@/lib/domain/project-list";
+import { listSorts, type ListSort, type ListView } from "@/lib/domain/project-list";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
 import { calendarPoints } from "@/lib/calendar/points";
 import { useLabels } from "@/lib/i18n/labels";
@@ -46,6 +47,7 @@ function writePlace(place: Place) {
 }
 
 type Tab = "overview" | "timeline" | "money" | "travel" | "contract";
+type Scope = "phase" | "all" | "archived";
 
 /** "In 3 days", "Tomorrow", "2 days overdue", and how urgent that is, from a due date. */
 function useDue() {
@@ -64,7 +66,7 @@ function useDue() {
 
 /**
  * The list's view, filters, order, and open project come from the address and stay in it as they change:
- * `?id=` opens a project (and its phase), `?phase=` a phase tab (as Today's Deals by phase links),
+ * `?id=` opens a project (and its phase), `?phase=` a phase tab (as Today's Deals by phase links) or `all`,
  * `?archived=1`, `?type=`, `?q=`, and `?sort=` the rest. Read from the live address, not the page's props:
  * the address changes in place (history.replaceState), so props cached for Back would be stale.
  */
@@ -73,7 +75,7 @@ export function ProjectsView() {
   const [initial] = useState(() => ({
     selectedId: address.get("id") ?? "",
     phase: phases.find((p) => p === address.get("phase")),
-    archived: address.get("archived") === "1",
+    scope: (address.get("archived") === "1" ? "archived" : address.get("phase") === "all" ? "all" : "phase") as Scope,
     type: projectTypes.find((pt) => pt.key === address.get("type"))?.key ?? "all",
     q: (address.get("q") ?? "").slice(0, 200),
     sort: listSorts.find((s) => s === address.get("sort")) ?? "due",
@@ -87,7 +89,28 @@ export function ProjectsView() {
   const [editor, setEditor] = useState<Editor | null>(null);
   const [search, setSearch] = useState(initial.q);
   const [type, setType] = useState<string>(initial.type);
-  const [archived, setArchived] = useState(initial.archived);
+  // Which projects the list covers: one phase, every active project, or the archived ones.
+  const [scope, setScope] = useState<Scope>(initial.scope);
+  const archived = scope === "archived";
+  // Typing a search widens one phase to every active project, since people search without knowing the stage;
+  // clearing it goes back to that phase. A tab picked mid-search is the person's choice and stays.
+  const widened = useRef(false);
+  const searchFor = (text: string) => {
+    setSearch(text);
+    if (text.trim() && scope === "phase") {
+      widened.current = true;
+      setScope("all");
+    } else if (!text.trim() && widened.current) {
+      widened.current = false;
+      setScope("phase");
+    }
+  };
+  const showScope = (next: Scope, nextPhase?: Phase) => {
+    widened.current = false;
+    setScope(next);
+    if (nextPhase) setPhase(nextPhase);
+    setSelected("");
+  };
   const [sort, setSort] = useState<ListSort>(initial.sort);
   const [selected, setSelected] = useState(selectedId);
   // On narrow screens the list and the detail take turns; a linked project opens straight to its detail.
@@ -102,7 +125,7 @@ export function ProjectsView() {
     return order.find((ph) => live.some((p) => phaseOf(p.stage) === ph)) ?? "execution";
   });
   // A page at a time from the server (decision 0011). Archived is its own view, not a filter on a phase.
-  const view = archived ? "archived" : phase;
+  const view: ListView = scope === "phase" ? phase : scope;
   const listId = `${view}|${type}|${search.trim()}|${sort}`;
   const [arrival] = useState(() => (typeof window === "undefined" ? null : readPlace(listId)));
   const list = useProjectPages({ view, type, q: search, sort }, data.projects, arrival?.rows ?? 0);
@@ -127,16 +150,35 @@ export function ProjectsView() {
     return () => watch.disconnect();
   }, [loadMore, list.hasMore]);
 
+  // On a phone the tabs scroll sideways: keep the chosen one in sight (again once the counts widen the tabs).
+  const tabsRow = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    tabsRow.current?.querySelector(".active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [scope, phase, list.counts]);
+  // The right edge fades only while there are tabs past it.
+  useEffect(() => {
+    const row = tabsRow.current;
+    if (!row) return;
+    const mark = () => row.classList.toggle("has-more", row.scrollLeft + row.clientWidth < row.scrollWidth - 1);
+    mark();
+    row.addEventListener("scroll", mark, { passive: true });
+    window.addEventListener("resize", mark);
+    return () => {
+      row.removeEventListener("scroll", mark);
+      window.removeEventListener("resize", mark);
+    };
+  }, [list.counts]);
+
   // The address follows the list (replacing, so filters don't pile up in Back).
   useEffect(() => {
-    const params = new URLSearchParams(archived ? { archived: "1" } : { phase });
+    const params = new URLSearchParams(archived ? { archived: "1" } : { phase: scope === "all" ? "all" : phase });
     if (type !== "all") params.set("type", type);
     if (search.trim()) params.set("q", search.trim());
     if (sort !== "due") params.set("sort", sort);
     if (selected) params.set("id", selected);
     const next = `${window.location.pathname}?${params}`;
     if (next !== window.location.pathname + window.location.search) window.history.replaceState(null, "", next);
-  }, [archived, phase, type, search, sort, selected]);
+  }, [archived, scope, phase, type, search, sort, selected]);
 
   // The scroll area: the list panel on wide screens, the page on narrow ones.
   const scroller = () => (window.matchMedia(NARROW).matches ? document.scrollingElement : panel.current);
@@ -190,19 +232,27 @@ export function ProjectsView() {
 
   return (
     <div className={`deals-workspace ${detailOpen && active ? "is-detail-open" : ""}`}>
+      {/* Creating is the page's own action, beside the title as on Today and Intake; the controls below only shape the list. */}
+      <PageHeader titleKey="projects">
+        <button className="primary" onClick={() => setEditor({ kind: "project" })}>
+          <Plus size={16} aria-hidden="true" />
+          {t("newProject")}
+        </button>
+      </PageHeader>
       <section className="deal-controls">
         <div className="deal-phase-row">
-          <div className="phase-tabs" role="group" aria-label={t("phases")}>
+          <div ref={tabsRow} className="phase-tabs" role="group" aria-label={t("phases")}>
+            {/* Every active project, whatever its stage: where a search lands. */}
+            <button aria-pressed={scope === "all"} className={scope === "all" ? "active" : ""} onClick={() => showScope("all")}>
+              <strong>{t("allPhases")}</strong>
+              <span>{list.counts?.all ?? "–"}</span>
+            </button>
             {phases.map((p) => (
               <button
                 key={p}
-                aria-pressed={!archived && phase === p}
-                className={!archived && phase === p ? "active" : ""}
-                onClick={() => {
-                  setPhase(p);
-                  setArchived(false);
-                  setSelected("");
-                }}
+                aria-pressed={scope === "phase" && phase === p}
+                className={scope === "phase" && phase === p ? "active" : ""}
+                onClick={() => showScope("phase", p)}
               >
                 <strong>{t(`phase.${p}`)}</strong>
                 <span>{list.counts?.[p] ?? "–"}</span>
@@ -213,17 +263,15 @@ export function ProjectsView() {
               aria-pressed={archived}
               className={`archive-tab ${archived ? "active" : ""}`}
               aria-label={`${t("archivedOnly")} ${list.counts?.archived ?? ""}`}
-              onClick={() => {
-                setArchived(true);
-                setSelected("");
-              }}
+              onClick={() => showScope("archived")}
             >
               <Archive size={16} aria-hidden="true" />
               <strong>{t("archivedOnly")}</strong>
               <span>{list.counts?.archived ?? "–"}</span>
             </button>
           </div>
-          {!archived && <InfoHint notes={[t(`phaseCaption.${phase}`)]} />}
+          {/* Above: opening downward would cover the list it explains. */}
+          {!archived && <InfoHint above notes={[scope === "all" ? t("allCaption") : t(`phaseCaption.${phase}`)]} />}
         </div>
         <div className="toolbar">
           <input
@@ -231,20 +279,20 @@ export function ProjectsView() {
             aria-label={t("search")}
             placeholder={t("searchPlaceholder")}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => searchFor(e.target.value)}
           />
-          <select aria-label={t("typeFilter")} value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="all">{t("all")}</option>
-            {projectTypes.map((pt) => (
-              <option key={pt.key} value={pt.key}>
-                {labels.projectType(pt.key)}
-              </option>
-            ))}
-          </select>
-          <button className="primary" onClick={() => setEditor({ kind: "project" })}>
-            <Plus size={16} aria-hidden="true" />
-            {t("newProject")}
-          </button>
+          {/* A funnel says it narrows the list; it's highlighted while a type is chosen. */}
+          <label className={`type-filter ${type !== "all" ? "active" : ""}`}>
+            <Funnel size={16} aria-hidden="true" />
+            <select aria-label={t("typeFilter")} value={type} onChange={(e) => setType(e.target.value)}>
+              <option value="all">{t("allTypes")}</option>
+              {projectTypes.map((pt) => (
+                <option key={pt.key} value={pt.key}>
+                  {labels.projectType(pt.key)}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </section>
       {archived && (
@@ -253,7 +301,7 @@ export function ProjectsView() {
           <span>
             <strong>{t("archivedBanner")}</strong> {t("archivedBannerNote")}
           </span>
-          <button className="text-button" onClick={() => setArchived(false)}>
+          <button className="text-button" onClick={() => showScope("phase")}>
             {t("archivedBack")}
           </button>
         </div>
@@ -324,9 +372,9 @@ export function ProjectsView() {
               </button>
             </p>
           )}
-          {!visible.length && !list.loading && !list.failed && <p className="empty">{t(archived ? "archivedEmpty" : "empty")}</p>}
+          {!visible.length && !list.loading && !list.failed && <p className="empty">{t(archived ? "archivedEmpty" : search.trim() ? "noMatches" : "empty")}</p>}
         </section>
-        {active && <ProjectDetail key={active.id} project={active} edit={setEditor} onBack={backToList} onMoved={setPhase} />}
+        {active && <ProjectDetail key={active.id} project={active} edit={setEditor} onBack={backToList} onMoved={(next) => scope === "phase" && setPhase(next)} />}
       </div>
       {editor && (
         <RecordEditor

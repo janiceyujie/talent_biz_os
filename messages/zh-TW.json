@@ -396,7 +396,6 @@
     "search": "搜尋合作案",
     "searchPlaceholder": "搜尋案件或公司",
     "typeFilter": "商案分類篩選",
-    "all": "全部",
     "newProject": "新增合作案",
     "archivedOnly": "已歸檔",
     "empty": "沒有符合條件的案件。新增第一筆合作或調整篩選。",
@@ -479,7 +478,11 @@
     "archivedEmpty": "沒有已歸檔的合作案。",
     "loadMore": "載入更多",
     "listFailed": "無法載入合作案清單。",
-    "retry": "重試"
+    "retry": "重試",
+    "allTypes": "所有類型",
+    "allPhases": "全部",
+    "allCaption": "所有進行中的合作案，不分階段；已歸檔的另外列在「已歸檔」。",
+    "noMatches": "沒有符合的合作案。試試其他關鍵字，或看看「已歸檔」。"
   },
   "workflow": {
     "section": "案件流程與收款",

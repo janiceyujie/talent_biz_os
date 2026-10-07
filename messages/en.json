@@ -396,7 +396,6 @@
     "search": "Search projects",
     "searchPlaceholder": "Search projects or companies",
     "typeFilter": "Filter by type",
-    "all": "All",
     "newProject": "New project",
     "archivedOnly": "Archived",
     "empty": "No matching projects. Add your first one or adjust the filters.",
@@ -479,7 +478,11 @@
     "archivedEmpty": "No archived projects.",
     "loadMore": "Load more",
     "listFailed": "Couldn't load the projects.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "allTypes": "All types",
+    "allPhases": "All",
+    "allCaption": "Every active project, whatever its stage. Archived ones are under Archived.",
+    "noMatches": "No matching projects. Try other words, or check Archived."
   },
   "workflow": {
     "section": "Project workflow and payments",

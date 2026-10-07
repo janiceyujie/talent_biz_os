@@ -2273,7 +2273,7 @@ summary:focus-visible {
   margin: 0 0 12px;
 }
 .deal-controls .toolbar input {
-  width: 220px;
+  width: 320px;
   max-width: 100%;
 }
 .deal-controls .toolbar select {
@@ -2318,6 +2318,30 @@ summary:focus-visible {
 .archive-banner > span {
   flex: 1;
   min-width: 200px;
+}
+/* Type filter: a funnel inside the field; tinted while a type is chosen. */
+.type-filter {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.type-filter svg {
+  position: absolute;
+  left: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.deal-controls .toolbar .type-filter select {
+  padding-left: 36px;
+}
+.type-filter.active svg {
+  color: var(--accent);
+}
+.deal-controls .toolbar .type-filter.active select {
+  border-color: var(--accent);
+  background-color: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
 }
 .deals-workspace .deals-layout {
   display: grid;
@@ -2916,9 +2940,13 @@ button.deal-record:hover {
     flex: 1;
     min-width: 0;
   }
+  /* More tabs than fit: they scroll sideways, and the right edge fades while there are more. */
   .deal-controls .phase-tabs {
     overflow-x: auto;
     scrollbar-width: none;
+  }
+  .deal-controls .phase-tabs.has-more {
+    mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
   }
   .deal-phase-row > .info-hint {
     display: none;
@@ -2943,12 +2971,14 @@ button.deal-record:hover {
   .deal-controls .toolbar {
     width: 100%;
   }
-  .deal-controls .toolbar input {
-    flex: 1 1 100%;
-    width: auto;
+  /* Search and the type filter share one row. */
+  .deal-controls .toolbar {
+    flex-wrap: nowrap;
   }
-  .deal-controls .toolbar .primary {
-    margin-left: auto;
+  .deal-controls .toolbar input {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
   }
   .deals-workspace .deal-dossier {
     padding: 16px;

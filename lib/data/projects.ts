@@ -3,8 +3,8 @@ import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, sql, 
 import { db } from "@/lib/db";
 import { project, todo } from "@/lib/db/schema";
 import { identifyingFields } from "@/lib/domain/intake";
-import { phaseOf, phases } from "@/lib/domain/phases";
-import { PAGE_MAX, type ListSort, type ListView, type ProjectPage } from "@/lib/domain/project-list";
+import { phaseOf } from "@/lib/domain/phases";
+import { listViews, PAGE_MAX, type ListSort, type ListView, type ProjectPage } from "@/lib/domain/project-list";
 import { isProjectType } from "@/lib/project-types";
 import { stages, type Project, type ProjectSummary } from "@/lib/types";
 
@@ -82,7 +82,9 @@ function decodeCursor(cursor: string): [string, string] | null {
 const viewFilter = (view: ListView) =>
   view === "archived"
     ? isNotNull(project.archivedAt)
-    : and(isNull(project.archivedAt), inArray(project.stage, stages.filter((s) => phaseOf(s) === view)));
+    : view === "all"
+      ? isNull(project.archivedAt)
+      : and(isNull(project.archivedAt), inArray(project.stage, stages.filter((s) => phaseOf(s) === view)));
 
 /** `%` and `_` typed in a search are literal characters, not patterns. */
 const likeText = (q: string) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
@@ -91,8 +93,8 @@ const likeText = (q: string) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 /**
  * One page of the projects list: a view (a phase, or archived), optionally
  * one type and a search of title and partner, in one of four orders. The
- * counts are per view, over the whole workspace, ignoring type and search
- * (as the phase tabs show them).
+ * counts are per view under the same type and search, so a tab's number
+ * always matches the list it opens.
  */
 export async function listProjects(
   talentId: string,
@@ -102,21 +104,21 @@ export async function listProjects(
   const { key, dir, cast } = sortKeys[params.sort];
   const after = params.cursor ? decodeCursor(params.cursor) : null;
   const q = params.q.trim();
-  const matching = and(
+  const filtered = and(
     eq(project.talentId, talentId),
-    viewFilter(params.view),
     params.type !== "all" ? eq(project.type, params.type) : undefined,
     q ? or(ilike(project.title, likeText(q)), ilike(project.counterparty, likeText(q))) : undefined,
   );
   const where = and(
-    matching,
+    filtered,
+    viewFilter(params.view),
     after
       ? sql`(${key} ${sql.raw(dir === "asc" ? ">" : "<")} ${after[0]}::${sql.raw(cast)} or (${key} = ${after[0]}::${sql.raw(cast)} and ${project.id} > ${after[1]}))`
       : undefined,
   );
   const limit = Math.min(Math.max(params.limit, 1), PAGE_MAX);
 
-  const [rows, [{ total }], countRows] = await Promise.all([
+  const [rows, countRows] = await Promise.all([
     db
       .select({
         project,
@@ -128,16 +130,18 @@ export async function listProjects(
       .where(where)
       .orderBy(dir === "asc" ? asc(key) : desc(key), asc(project.id))
       .limit(limit + 1), // one more than shown says whether there's a next page
-    db.select({ total: count() }).from(project).where(matching),
     db
       .select({ stage: project.stage, archived: sql<boolean>`${project.archivedAt} is not null`, n: count() })
       .from(project)
-      .where(eq(project.talentId, talentId))
+      .where(filtered)
       .groupBy(project.stage, sql`${project.archivedAt} is not null`),
   ]);
 
-  const counts = Object.fromEntries([...phases, "archived"].map((v) => [v, 0])) as Record<ListView, number>;
-  for (const r of countRows) counts[r.archived ? "archived" : phaseOf(r.stage)] += r.n;
+  const counts = Object.fromEntries(listViews.map((v) => [v, 0])) as Record<ListView, number>;
+  for (const r of countRows) {
+    counts[r.archived ? "archived" : phaseOf(r.stage)] += r.n;
+    if (!r.archived) counts.all += r.n;
+  }
 
   const shown = rows.slice(0, limit);
   const last = shown.at(-1);
@@ -146,7 +150,7 @@ export async function listProjects(
       summaryOf(r.project, r.nextTitle ? { title: r.nextTitle, dueDate: r.nextDue || null } : null, artist),
     ),
     nextCursor: rows.length > limit && last ? encodeCursor(last.sortKey, last.project.id) : null,
-    total,
+    total: counts[params.view],
     counts,
   };
 }

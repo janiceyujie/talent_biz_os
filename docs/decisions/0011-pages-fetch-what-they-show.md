@@ -27,7 +27,7 @@ None of them needs every project in the browser. Each one needs either the proje
 
 ### First step: projects
 
-- **`GET /api/projects`** returns the list. It takes `view` (a phase or `archived`), `type`, `q` (title or partner), `sort` (`due`, `updated`, `amount`, or `title`), and `cursor`. It returns 50 rows, the next cursor, and the count for each view, so the phase tabs show totals without loading every project.
+- **`GET /api/projects`** returns the list. It takes `view` (a phase, `all` for every active project, or `archived`), `type`, `q` (title or partner), `sort` (`due`, `updated`, `amount`, or `title`), and `cursor`. It returns 50 rows, the next cursor, and the count for each view under the same type and search, so the phase tabs show totals without loading every project, and a tab's number always matches the list it opens.
 - **`GET /api/projects/[id]`** returns everything only a project's own screen shows: its details, notes, offer text (the earliest message filed under it), and timeline.
 - **For now, the layout keeps a summary of every project** for the other screens: no notes, and of the details only the parts intake matching scores (the type's identifying fields and the dates). The full project comes from the detail endpoint in the browser, or from its own query on the server, for intake's proposal and for applying a message.
 

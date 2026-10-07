@@ -2,11 +2,10 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { getCurrentTalent, getSession } from "@/lib/auth";
 import { listProjects } from "@/lib/data/projects";
-import { listSorts, PAGE_MAX, PAGE_SIZE } from "@/lib/domain/project-list";
-import { phases } from "@/lib/domain/phases";
+import { listSorts, listViews, PAGE_MAX, PAGE_SIZE } from "@/lib/domain/project-list";
 
 const params = z.object({
-  view: z.enum([...phases, "archived"]).catch("execution"),
+  view: z.enum(listViews).catch("execution"),
   type: z.string().max(40).catch("all"),
   q: z.string().max(200).catch(""),
   sort: z.enum(listSorts).catch("due"),
@@ -16,7 +15,7 @@ const params = z.object({
 
 /**
  * One page of the signed-in talent's projects (decision 0011): a view (a
- * phase, or archived), an optional type and search, an order, and a cursor
+ * phase, every active project, or archived), an optional type and search, an order, and a cursor
  * from the previous page. Unknown values fall back to the defaults.
  */
 export async function GET(req: NextRequest) {

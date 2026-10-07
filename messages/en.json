@@ -446,13 +446,12 @@
     "dueTomorrow": "Tomorrow",
     "dueIn": "{days, plural, one {In # day} other {In # days}}",
     "overdue": "{days, plural, one {# day overdue} other {# days overdue}}",
-    "signPrompt": "Once it's signed, you can add to-dos, travel, and payment requests.",
+    "signPrompt": "Once signed, it moves to Execution, where you can add to-dos, travel, and payment requests.",
     "markSigned": "Mark as signed",
     "markDeclined": "Mark as declined",
     "markCancelled": "Mark as cancelled",
     "checks": "{count, plural, one {# thing to check} other {# things to check}}",
     "allClear": "Nothing to check",
-    "missingDetails": "Missing: {list}",
     "back": "Back to list",
     "tabs": "Project sections",
     "tab": {
@@ -482,7 +481,21 @@
     "allTypes": "All types",
     "allPhases": "All",
     "allCaption": "Every active project, whatever its stage. Archived ones are under Archived.",
-    "noMatches": "No matching projects. Try other words, or check Archived."
+    "noMatches": "No matching projects. Try other words, or check Archived.",
+    "card": {
+      "deal": "Deal details",
+      "dealEmpty": "No deal details recorded yet.",
+      "missing": "Missing",
+      "questions": "Questions for them",
+      "questionsCount": "Questions for them ({count})",
+      "questionsEmpty": "Their messages left no open questions.",
+      "suggestions": "Also worth asking ({count})",
+      "offer": "Original offer",
+      "showAll": "Show all",
+      "showLess": "Show less"
+    },
+    "checksTitle": "Before this can close",
+    "movedTo": "Moved to {phase}"
   },
   "workflow": {
     "section": "Project workflow and payments",

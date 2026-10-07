@@ -2498,6 +2498,10 @@ summary:focus-visible {
   letter-spacing: 0;
   overflow-wrap: anywhere;
 }
+/* Focus moves to the title when a phone opens a project (for screen readers); no ring for that. */
+.deal-dossier-header h2:focus:not(:focus-visible) {
+  outline: none;
+}
 .deal-dossier-header p {
   margin: 0;
   color: var(--muted);
@@ -2554,12 +2558,53 @@ summary:focus-visible {
   background: var(--paper);
 }
 
-/* One stage control: a step bar whose steps are buttons. */
+/* One stage control: a step bar whose steps are buttons, grouped under the phases the tabs
+   show, so a stage's tab is the label over it. */
+.stage-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+.stage-groups {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.stage-group {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+.stage-phase {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.stage-group.current .stage-phase {
+  color: var(--accent);
+}
+.stage-exited {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border: 1px solid var(--red);
+  border-radius: 999px;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 700;
+}
 .deal-dossier .stage-progress {
   display: flex;
   align-items: stretch;
   gap: 4px;
-  margin: 20px 0 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 .deal-dossier .stage-progress li {
   flex: 1 1 0;
@@ -2599,17 +2644,6 @@ summary:focus-visible {
 .deal-dossier .stage-progress li.current button {
   color: var(--accent);
   font-weight: 700;
-}
-.deal-dossier .stage-progress li.exited {
-  border-color: var(--red);
-}
-.deal-dossier .stage-progress li.exited span {
-  color: var(--red);
-  font-weight: 700;
-}
-.deal-dossier .stage-progress li.stage-hint {
-  flex: 0 0 auto;
-  border: 0;
 }
 .deal-sign-prompt {
   display: flex;
@@ -2688,6 +2722,9 @@ summary:focus-visible {
   background: var(--accent);
 }
 .deal-check-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   align-self: stretch;
   padding: 0 14px;
   border: 1px solid var(--line);
@@ -2704,13 +2741,36 @@ summary:focus-visible {
   color: #a24a14;
   font-weight: 600;
 }
+span.deal-check-chip {
+  cursor: default;
+}
+/* The chip opens its list in place: the menu wrapper fills the strip's cell. */
+.deal-summary-strip > .more-menu {
+  display: flex;
+}
+.more-menu-heading {
+  margin: 0;
+  padding: 8px 12px 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.deal-summary-strip .more-menu-list {
+  min-width: 260px;
+}
 
-/* Tabs: only the chosen section shows. */
+/* Tabs: navigation, set apart from the content. The bar sticks under the top bar while the
+   panel scrolls; the chosen tab's content sits in a tinted well of white cards. */
 .deal-tabs {
+  position: sticky;
+  top: var(--topbar);
+  z-index: 5;
   display: flex;
   gap: 4px;
-  margin-top: 24px;
+  margin: 24px -24px 0;
+  padding: 0 20px;
   border-bottom: 1px solid var(--line);
+  background: var(--surface);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -2718,7 +2778,7 @@ summary:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 12px;
   margin-bottom: -1px;
   border: 0;
@@ -2726,30 +2786,76 @@ summary:focus-visible {
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: var(--text-meta);
+  font-size: var(--text-body);
+  font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
 }
+.deal-tabs button:hover {
+  color: var(--ink);
+}
 .deal-tabs button[aria-selected="true"] {
   border-bottom-color: var(--accent);
-  color: var(--ink);
+  color: var(--accent);
   font-weight: 650;
 }
 .deal-tabs button span {
+  min-width: 20px;
   padding: 0 6px;
-  border-radius: 6px;
+  border-radius: 999px;
   background: var(--paper);
+  color: var(--muted);
   font-size: 12px;
-  line-height: 18px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}
+.deal-tabs button[aria-selected="true"] span {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .deal-tab-panel {
-  padding-top: 16px;
+  margin: 0 -24px -24px;
+  padding: 16px 24px 24px;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--paper);
   font-size: var(--text-meta);
 }
 .deal-tab-panel h3 {
   margin: 20px 0 8px;
   font-size: var(--text-meta);
   font-weight: 650;
+}
+
+/* A project's sections: white cards with a title row, stacked in the tinted well. */
+.deal-cards {
+  display: grid;
+  gap: 12px;
+}
+.deal-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.deal-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.deal-tab-panel .deal-card-header h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 650;
+}
+.deal-card-header .text-button {
+  font-size: 13px;
+}
+.deal-card > :last-child {
+  margin-bottom: 0;
 }
 .deal-tab-actions {
   display: flex;
@@ -2784,9 +2890,46 @@ summary:focus-visible {
   margin: 0;
   overflow-wrap: anywhere;
 }
+/* Each missing term is a chip that opens the form at that field. */
 .deal-missing {
-  margin: 16px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.deal-missing > span {
   color: var(--muted);
+  font-size: 13px;
+}
+.add-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 10px;
+  border: 1px dashed var(--accent);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.add-chip:hover {
+  background: var(--accent-soft);
+}
+/* The original offer: two lines until opened. */
+.deal-offer {
+  margin: 0;
+  line-height: 1.7;
+}
+.deal-offer.clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 .deal-check-list {
   margin: 0;
@@ -2794,8 +2937,8 @@ summary:focus-visible {
   line-height: 1.8;
 }
 .deal-reference {
-  margin-top: 16px;
-  padding: 12px 0;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 .deal-reference summary {
@@ -2851,7 +2994,7 @@ button.deal-record:hover {
 }
 
 /* Money */
-.deal-workflow > dl {
+.deal-workflow dl {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
@@ -2860,12 +3003,12 @@ button.deal-record:hover {
   border-radius: 10px;
   overflow: hidden;
 }
-.deal-workflow > dl > div {
+.deal-workflow dl > div {
   display: grid;
   gap: 4px;
   padding: 12px;
 }
-.deal-workflow > dl > div + div {
+.deal-workflow dl > div + div {
   border-left: 1px solid var(--line);
 }
 .deal-workflow dt {
@@ -2983,13 +3126,25 @@ button.deal-record:hover {
   .deals-workspace .deal-dossier {
     padding: 16px;
   }
+  .deal-tabs {
+    margin: 16px -16px 0;
+    padding: 0 8px;
+  }
+  .deal-tab-panel {
+    margin: 0 -16px -16px;
+    padding: 12px 12px 16px;
+  }
+  .deal-card {
+    padding: 14px;
+  }
   .deal-dossier-header {
     flex-direction: column;
   }
   .deal-dossier-header h2 {
     font-size: 20px;
   }
-  .deal-dossier .stage-progress li:not(.current):not(.exited):not(.stage-hint) button {
+  /* Phones: the phase names stay; of the stages, only the current one is named. */
+  .deal-dossier .stage-progress li:not(.current) button {
     color: transparent;
   }
   .deal-summary-strip {
@@ -3001,13 +3156,13 @@ button.deal-record:hover {
   .deal-check-chip {
     padding: 10px 12px;
   }
-  .deal-workflow > dl {
+  .deal-workflow dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .deal-workflow > dl > div:nth-child(odd) {
+  .deal-workflow dl > div:nth-child(odd) {
     border-left: 0;
   }
-  .deal-workflow > dl > div:nth-child(n + 3) {
+  .deal-workflow dl > div:nth-child(n + 3) {
     border-top: 1px solid var(--line);
   }
 }

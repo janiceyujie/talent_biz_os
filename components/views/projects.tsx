@@ -1,12 +1,13 @@
 "use client";
 
-import { Archive, ArrowDownUp, ArrowLeft, Ellipsis, Funnel, Plus } from "lucide-react";
+import { Archive, ArrowDownUp, ArrowLeft, Ellipsis, Funnel, Plus, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { InfoHint } from "@/components/app/info-hint";
 import { PageHeader } from "@/components/app/page-header";
+import { Toast } from "@/components/app/toast";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { useProjectPages } from "@/components/app/project-pages";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
@@ -22,7 +23,7 @@ import { useLabels } from "@/lib/i18n/labels";
 import { projectTypes } from "@/lib/project-types";
 import type { ProjectSummary, Stage } from "@/lib/types";
 import { useClosingChecks, ProjectWorkflowPanel } from "./project-workflow-panel";
-import { ProjectOverview } from "./project-overview";
+import { DealCard, ProjectOverview } from "./project-overview";
 import { TravelItinerary } from "./travel-itinerary";
 import { ContractVersions, ProjectTimeline } from "./project-timeline";
 
@@ -87,6 +88,7 @@ export function ProjectsView() {
   const t = useTranslations("projects");
   const labels = useLabels();
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [moved, setMoved] = useState<string | null>(null);
   const [search, setSearch] = useState(initial.q);
   const [type, setType] = useState<string>(initial.type);
   // Which projects the list covers: one phase, every active project, or the archived ones.
@@ -374,8 +376,21 @@ export function ProjectsView() {
           )}
           {!visible.length && !list.loading && !list.failed && <p className="empty">{t(archived ? "archivedEmpty" : search.trim() ? "noMatches" : "empty")}</p>}
         </section>
-        {active && <ProjectDetail key={active.id} project={active} edit={setEditor} onBack={backToList} onMoved={(next) => scope === "phase" && setPhase(next)} />}
+        {active && (
+          <ProjectDetail
+            key={active.id}
+            project={active}
+            edit={setEditor}
+            onBack={backToList}
+            onMoved={(next, from) => {
+              if (scope === "phase") setPhase(next);
+              // A new phase means a different tab: say where it went, so the switch isn't a surprise.
+              if (next !== from) setMoved(t("movedTo", { phase: t(`phase.${next}`) }));
+            }}
+          />
+        )}
       </div>
+      {moved && <Toast message={moved} onClose={() => setMoved(null)} />}
       {editor && (
         <RecordEditor
           editor={editor}
@@ -398,7 +413,8 @@ function ProjectDetail({
   project: ProjectSummary;
   edit: (e: Editor) => void;
   onBack: () => void;
-  onMoved: (phase: Phase) => void;
+  /** After a stage change: the project's phase now, and before. */
+  onMoved: (phase: Phase, from: Phase) => void;
 }) {
   const data = useAppData();
   const money = useMoney();
@@ -440,7 +456,7 @@ function ProjectDetail({
       const failure = await setProjectStage(project.id, stage);
       setError(failure);
       // Follow the project to its new phase tab.
-      if (!failure) onMoved(phaseOf(stage));
+      if (!failure) onMoved(phaseOf(stage), phaseOf(project.stage));
     });
 
   return (
@@ -490,26 +506,37 @@ function ProjectDetail({
       </header>
 
       {/* One stage control: each step is a button that moves the project there. */}
-      <ol className="stage-progress" aria-label={t("stageProgress")}>
+      {/* The stages, grouped under the phases the tabs show: a stage's tab is the label over it. */}
+      <div className="stage-bar">
         {exited && (
-          <li className="exited" aria-current="step">
-            <span>{labels.stage(project.stage)}</span>
-          </li>
+          <span className="stage-exited" aria-current="step">
+            {labels.stage(project.stage)}
+          </span>
         )}
-        {mainStages.map((stage, i) => {
-          const at = mainStages.indexOf(project.stage); // -1 for declined / cancelled
-          return (
-            <li key={stage} aria-current={stage === project.stage ? "step" : undefined} className={at >= 0 && i < at ? "complete" : stage === project.stage ? "current" : ""}>
-              <button disabled={pending || project.archived} onClick={() => stage !== project.stage && moveTo(stage)}>
-                {labels.stage(stage)}
-              </button>
+        <ol className="stage-groups" aria-label={t("stageProgress")}>
+          {(["negotiation", "execution", "settlement"] as const).map((ph) => (
+            <li key={ph} className={`stage-group ${phaseOf(project.stage) === ph ? "current" : ""}`}>
+              <span className="stage-phase">{t(`phase.${ph}`)}</span>
+              <ol className="stage-progress">
+                {mainStages
+                  .filter((stage) => phaseOf(stage) === ph)
+                  .map((stage) => {
+                    const at = mainStages.indexOf(project.stage); // -1 for declined / cancelled
+                    const i = mainStages.indexOf(stage);
+                    return (
+                      <li key={stage} aria-current={stage === project.stage ? "step" : undefined} className={at >= 0 && i < at ? "complete" : stage === project.stage ? "current" : ""}>
+                        <button disabled={pending || project.archived} onClick={() => stage !== project.stage && moveTo(stage)}>
+                          {labels.stage(stage)}
+                        </button>
+                      </li>
+                    );
+                  })}
+              </ol>
             </li>
-          );
-        })}
-        <li className="stage-hint">
-          <InfoHint notes={[t(`stageNote.${project.stage}`), tWorkflow("stageNote")]} />
-        </li>
-      </ol>
+          ))}
+        </ol>
+        <InfoHint notes={[t(`stageNote.${project.stage}`), tWorkflow("stageNote")]} />
+      </div>
       {error && (
         <p className="notice error" role="alert">
           {error}
@@ -558,11 +585,33 @@ function ProjectDetail({
           )}
         </button>
         {/* The closing check only means something once there's signed work to close. */}
-        {isSigned(project.stage) && full && (
-          <button className={`deal-check-chip ${checks.length ? "has-checks" : ""}`} onClick={() => setTab("money")}>
-            {checks.length ? t("checks", { count: checks.length }) : t("allClear")}
-          </button>
-        )}
+        {/* What's still open, listed right here; each item goes to where it's fixed. */}
+        {isSigned(project.stage) && full &&
+          (checks.length ? (
+            <MoreMenu
+              label={t("checksTitle")}
+              heading={t("checksTitle")}
+              className="deal-check-chip has-checks"
+              button={
+                <>
+                  <TriangleAlert size={14} aria-hidden="true" />
+                  {t("checks", { count: checks.length })}
+                </>
+              }
+            >
+              {checks.map((c) => (
+                <button
+                  key={c.text}
+                  role="menuitem"
+                  onClick={() => (c.place === "edit" ? edit({ kind: "project", item: projectRecord(full) }) : setTab(c.place))}
+                >
+                  {c.text}
+                </button>
+              ))}
+            </MoreMenu>
+          ) : (
+            <span className="deal-check-chip">{t("allClear")}</span>
+          ))}
       </div>
 
       <div className="deal-tabs" role="tablist" aria-label={t("tabs")}>
@@ -584,17 +633,44 @@ function ProjectDetail({
         {failed && (tab === "overview" || tab === "timeline") && <p className="notice error">{t("detailFailed")}</p>}
         {(tab === "overview" || tab === "money") && !full && !failed && <p className="muted">{t("loading")}</p>}
         {tab === "overview" && full && <ProjectOverview project={full} offerText={detail!.offerText} edit={edit} />}
-        {tab === "timeline" && (loading ? <p className="muted">{t("loading")}</p> : <ProjectTimeline project={project} entries={detail?.timeline ?? []} />)}
+        {tab === "timeline" && (
+          <DealCard title={t("tab.timeline")}>
+            {loading ? <p className="muted">{t("loading")}</p> : <ProjectTimeline project={project} entries={detail?.timeline ?? []} />}
+          </DealCard>
+        )}
         {tab === "money" && full && <ProjectWorkflowPanel project={full} edit={edit} />}
-        {tab === "travel" && <TravelItinerary project={project} edit={edit} />}
-        {tab === "contract" && <ContractVersions project={project} />}
+        {tab === "travel" && (
+          <DealCard title={t("tab.travel")}>
+            <TravelItinerary project={project} edit={edit} />
+          </DealCard>
+        )}
+        {tab === "contract" && (
+          <DealCard title={t("tab.contract")}>
+            <ContractVersions project={project} />
+          </DealCard>
+        )}
       </div>
     </article>
   );
 }
 
-/** A ⋯ button and its menu of less frequent actions. Escape or a click elsewhere closes it. */
-function MoreMenu({ label, children }: { label: string; children: ReactNode }) {
+/**
+ * A button and its menu: by default ⋯ with less frequent actions; `button` and `className` give it
+ * other content (e.g. the closing-check chip). Escape or a click elsewhere closes it.
+ */
+function MoreMenu({
+  label,
+  button,
+  className = "secondary icon-button",
+  heading,
+  children,
+}: {
+  label: string;
+  button?: ReactNode;
+  className?: string;
+  heading?: ReactNode;
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -606,11 +682,12 @@ function MoreMenu({ label, children }: { label: string; children: ReactNode }) {
   }, [open]);
   return (
     <div className="more-menu" ref={root} onKeyDown={(e) => e.key === "Escape" && setOpen(false)}>
-      <button className="secondary icon-button" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Ellipsis size={18} aria-hidden="true" />
+      <button className={className} aria-label={button ? undefined : label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {button ?? <Ellipsis size={18} aria-hidden="true" />}
       </button>
       {open && (
         <div className="more-menu-list" role="menu" aria-label={label} onClick={() => setOpen(false)}>
+          {heading && <p className="more-menu-heading">{heading}</p>}
           {children}
         </div>
       )}

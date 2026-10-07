@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
+import { DealCard } from "./project-overview";
 import { toRecord, type Editor } from "@/components/app/record-editor";
 import { createPaymentPlan } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
@@ -15,26 +16,31 @@ import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
 import type { Project } from "@/lib/types";
 
+/** Where a check gets fixed: a tab of the project's screen, or its edit form. */
+export type CheckPlace = "overview" | "money" | "travel" | "edit";
+export type ClosingCheck = { text: string; place: CheckPlace };
+
 /** What's still open on a project before it can close: shown as one count in the summary, listed under Money. */
-export function useClosingChecks(project: Project | null) {
+export function useClosingChecks(project: Project | null): ClosingCheck[] {
   const data = useAppData();
   const t = useTranslations("workflow");
   const money = useMoney();
   if (!project) return []; // until the full project has loaded
   const settlement = projectSettlement(data, project);
   const items = data.calendar.filter((c) => c.projectId === project.id && !c.archived);
-  return [
-    project.quotedAmount === null && t("warn.quoteNotSet"),
-    !project.details.contractNotes && t("warn.noContract"),
-    !project.details.deliverables && t("warn.noDeliverables"),
-    !items.length && t("warn.noItems"),
-    settlement.openItems.length > 0 && t("warn.openTodos", { count: settlement.openItems.length }),
-    settlement.unbilled > 0 && t("warn.unbilled", { amount: money(settlement.unbilled) }),
-    settlement.unbilled < 0 && t("warn.overbilled", { amount: money(-settlement.unbilled) }),
-    settlement.pending > 0 && t("warn.pending", { amount: money(settlement.pending) }),
-    settlement.shortfall > 0 && t("warn.shortfall", { amount: money(settlement.shortfall) }),
-    settlement.unpaidCosts.length > 0 && t("warn.unpaidCosts", { count: settlement.unpaidCosts.length }),
-  ].filter((w): w is string => !!w);
+  const checks: [boolean, string, CheckPlace][] = [
+    [project.quotedAmount === null, t("warn.quoteNotSet"), "edit"],
+    [!project.details.contractNotes, t("warn.noContract"), "overview"],
+    [!project.details.deliverables, t("warn.noDeliverables"), "overview"],
+    [!items.length, t("warn.noItems"), "travel"],
+    [settlement.openItems.length > 0, t("warn.openTodos", { count: settlement.openItems.length }), "overview"],
+    [settlement.unbilled > 0, t("warn.unbilled", { amount: money(settlement.unbilled) }), "money"],
+    [settlement.unbilled < 0, t("warn.overbilled", { amount: money(-settlement.unbilled) }), "money"],
+    [settlement.pending > 0, t("warn.pending", { amount: money(settlement.pending) }), "money"],
+    [settlement.shortfall > 0, t("warn.shortfall", { amount: money(settlement.shortfall) }), "money"],
+    [settlement.unpaidCosts.length > 0, t("warn.unpaidCosts", { count: settlement.unpaidCosts.length }), "money"],
+  ];
+  return checks.filter(([open]) => open).map(([, text, place]) => ({ text, place }));
 }
 
 /** A project's money: settlement totals, its payments, the deposit/balance split, and the closing check. */
@@ -65,73 +71,76 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
   } catch {}
 
   return (
-    <section className="deal-workflow" aria-label={t("section")}>
-      <dl>
-        {[
-          [t("quoted"), settlement.quoted ?? tProjects("quoteNotSet")],
-          [t("billed"), settlement.billed],
-          [t("received"), settlement.received],
-          [t("outstanding"), settlement.pending],
-          ...(settlement.shortfall > 0 ? [[t("shortfall"), settlement.shortfall] as const] : []),
-        ].map(([label, value]) => (
-          <div key={String(label)}>
-            <dt>{label}</dt>
-            <dd>{typeof value === "number" ? money(value) : value}</dd>
-          </div>
-        ))}
-      </dl>
-      {canAdd && (
-        <div className="deal-tab-actions">
-          <button
-            className="secondary"
-            onClick={() =>
-              edit({
-                kind: "payment",
-                item: {
-                  projectId: project.id,
-                  label: tProjects("paymentLabel", { title: project.title.slice(0, 190) }),
-                  amount: project.quotedAmount === null ? "" : Math.max(0, settlement.unbilled),
-                  taxRate: project.taxRate,
-                  taxIncluded: true,
-                },
-              })
-            }
-          >
-            <Plus size={16} aria-hidden="true" />
-            {tProjects("addPayment")}
-          </button>
-          {/* A split only makes sense once, on a set quote, before any payment exists. */}
-          {!hasIncome && quoteSet && project.quotedAmount! > 0 && (
-            <button className="secondary" onClick={() => setPlan(true)}>
-              {t("createPlan")}
+    <section className="deal-workflow deal-cards" aria-label={t("section")}>
+      <DealCard title={t("payments")}>
+        <dl>
+          {[
+            [t("quoted"), settlement.quoted ?? tProjects("quoteNotSet")],
+            [t("billed"), settlement.billed],
+            [t("received"), settlement.received],
+            [t("outstanding"), settlement.pending],
+            ...(settlement.shortfall > 0 ? [[t("shortfall"), settlement.shortfall] as const] : []),
+          ].map(([label, value]) => (
+            <div key={String(label)}>
+              <dt>{label}</dt>
+              <dd>{typeof value === "number" ? money(value) : value}</dd>
+            </div>
+          ))}
+        </dl>
+        {canAdd && (
+          <div className="deal-tab-actions">
+            <button
+              className="secondary"
+              onClick={() =>
+                edit({
+                  kind: "payment",
+                  item: {
+                    projectId: project.id,
+                    label: tProjects("paymentLabel", { title: project.title.slice(0, 190) }),
+                    amount: project.quotedAmount === null ? "" : Math.max(0, settlement.unbilled),
+                    taxRate: project.taxRate,
+                    taxIncluded: true,
+                  },
+                })
+              }
+            >
+              <Plus size={16} aria-hidden="true" />
+              {tProjects("addPayment")}
             </button>
-          )}
-          {!quoteSet && <p className="muted">{t("planNeedsQuote")}</p>}
-        </div>
-      )}
-      {payments.length > 0 && (
-        <ul className="deal-records">
-          {payments.map((p) => (
-            <li key={p.id}>
-              <button className="deal-record" onClick={() => edit({ kind: "payment", item: toRecord(p) })}>
-                <span>{p.label}</span>
-                <small>{labels.paymentStatus(p)}</small>
-                <strong>{money(p.amount)}</strong>
+            {/* A split only makes sense once, on a set quote, before any payment exists. */}
+            {!hasIncome && quoteSet && project.quotedAmount! > 0 && (
+              <button className="secondary" onClick={() => setPlan(true)}>
+                {t("createPlan")}
               </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <h3>{t("closingCheck")}</h3>
-      {checks.length ? (
-        <ul className="deal-check-list">
-          {checks.map((w) => (
-            <li key={w}>{w}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="muted">{t("allClear")}</p>
-      )}
+            )}
+            {!quoteSet && <p className="muted">{t("planNeedsQuote")}</p>}
+          </div>
+        )}
+        {payments.length > 0 && (
+          <ul className="deal-records">
+            {payments.map((p) => (
+              <li key={p.id}>
+                <button className="deal-record" onClick={() => edit({ kind: "payment", item: toRecord(p) })}>
+                  <span>{p.label}</span>
+                  <small>{labels.paymentStatus(p)}</small>
+                  <strong>{money(p.amount)}</strong>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </DealCard>
+      <DealCard title={t("closingCheck")}>
+        {checks.length ? (
+          <ul className="deal-check-list">
+            {checks.map((c) => (
+              <li key={c.text}>{c.text}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">{t("allClear")}</p>
+        )}
+      </DealCard>
       {plan && (
         <Modal title={t("planTitle")} onClose={() => setPlan(false)}>
           <form

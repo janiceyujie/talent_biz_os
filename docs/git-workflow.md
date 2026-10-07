@@ -160,8 +160,8 @@ One or two paragraphs. Link the issue or decision record.
 ## How it was tested
 Automated tests added or changed; what you checked by hand, and how.
 
-## Screenshots
-For UI changes: before and after, in English and Traditional Chinese.
+## Screenshots (optional)
+Add one when it helps a reviewer see a UI change faster; leave the section out otherwise.
 
 ## Follow-ups
 Anything deliberately left out.

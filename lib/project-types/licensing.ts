@@ -1,4 +1,4 @@
-// Licensing existing work (授權).
+// Licensing existing work.
 export const licensing = {
   key: "licensing",
   eventKind: "meeting",

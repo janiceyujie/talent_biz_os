@@ -3,7 +3,6 @@
 import { ArrowDown, ArrowUp, FileText, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
-import { useAppData } from "@/components/app/app-data";
 import { DataNotice } from "@/components/app/data-notice";
 import { Modal } from "@/components/app/modal";
 import { prepareUpload, registerUpload } from "@/lib/actions/uploads";
@@ -107,6 +106,7 @@ export function UploadDialog({ onClose, onSubmitted }: { onClose: () => void; on
           <ol className="upload-list" aria-label={t("uploadOrder")}>
             {picked.map((p, i) => (
               <li key={p.key}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- a local preview (blob: URL) of a file not yet uploaded; next/image can't optimize it */}
                 {p.preview ? <img src={p.preview} alt="" /> : <FileText size={28} aria-hidden="true" />}
                 <span>
                   <strong>

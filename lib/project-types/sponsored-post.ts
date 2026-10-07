@@ -1,4 +1,4 @@
-// A paid post or product review (業配).
+// A paid post or product review (Sponsored post).
 export const sponsoredPost = {
   key: "sponsored_post",
   eventKind: "meeting",

@@ -6,7 +6,7 @@ import { pipeline } from "@/lib/overview/pipeline";
 import type { OverviewContext } from "../context";
 import { Widget } from "../widget";
 
-/** 合作案進度: live deals per phase (zeros included), each opening that tab of 合作案. */
+/** Deals by phase: live deals per phase (zeros included), each opening that tab of Projects. */
 export function PipelineWidget({ ctx: { data } }: { ctx: OverviewContext }) {
   const t = useTranslations("today");
   const tProjects = useTranslations("projects");

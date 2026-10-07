@@ -16,9 +16,19 @@ const projectInput = z
     title: z.string().trim().min(1, "projectTitleRequired").max(200),
     counterparty: z.string().trim().max(200).default(""),
     counterpartyId: optionalId,
+    // A partner not yet in contacts, added as one with the project (when nothing is linked).
+    newContact: z
+      .object({
+        name: z.string().trim().min(1, "contactNameRequired").max(200),
+        company: optionalText,
+        email: z.union([z.literal(""), z.email("emailInvalid")]).transform((v) => v || null),
+        phone: optionalText,
+      })
+      .nullable()
+      .optional(),
     type: z.enum(projectTypeKeys, "typeRequired"),
     stage: z.enum(stages),
-    // Blank is 報價未定 (not decided), stored as null; 0 is an explicit free project.
+    // Blank is "quote not set" (not decided), stored as null; 0 is an explicit free project.
     // "" must be tried first: z.coerce.number() would turn "" into 0.
     quotedAmount: z
       .union([
@@ -36,7 +46,7 @@ const projectInput = z
     contractNotes: optionalText,
     notes: optionalText,
   })
-  .refine((p) => p.counterpartyId || p.counterparty, { message: "counterpartyRequired" });
+  .refine((p) => p.counterpartyId || p.counterparty || p.newContact, { message: "counterpartyRequired" });
 
 /** Create or update a project. Returns an error message, or null on success. */
 export async function saveProject(data: Record<string, unknown>): Promise<string | null> {
@@ -75,6 +85,14 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
   };
 
   const failure = await db.transaction(async (tx) => {
+    if (!input.counterpartyId && input.newContact) {
+      const [created] = await tx
+        .insert(contact)
+        .values({ ...input.newContact, talentId: talent.id, role: "counterparty" })
+        .returning({ id: contact.id });
+      values.counterpartyId = created.id;
+      values.counterparty = input.newContact.name;
+    }
     if (!input.id) {
       const [created] = await tx
         .insert(project)

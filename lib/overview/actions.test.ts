@@ -1,4 +1,4 @@
-// 今日總覽's action list. Run: npm test
+// Today's action list. Run: npm test
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { PlanItem } from "@/lib/calendar/planner";

@@ -42,7 +42,7 @@ export function InboxView() {
   const readerHeading = useRef<HTMLHeadingElement>(null);
   const lastMessageButton = useRef<HTMLButtonElement | null>(null);
 
-  // ?paste=1 / ?upload=1 (the header's 匯入邀約 here, Today's 上傳邀約) open a dialog —
+  // ?paste=1 / ?upload=1 (the header's Import offer here, Today's Upload an offer) open a dialog —
   // also when already on this page, where the address changes without a reload —
   // then leave the address so a reload doesn't open it again.
   useEffect(() => {

@@ -20,6 +20,13 @@ export const stages = [
 ] as const;
 export type Stage = (typeof stages)[number];
 
+/**
+ * A project as every page sees it (decision 0011): no notes, and of the
+ * details only what intake matching scores — the type's identifying fields
+ * and the dates. The full project loads when it's opened.
+ */
+export type ProjectSummary = Omit<Project, "details" | "notes"> & { details: Pick<ProjectDetails, "fields" | "dates"> };
+
 export type Project = {
   id: string;
   title: string;
@@ -28,12 +35,11 @@ export type Project = {
   artist: string; // display only until manager accounts pick a talent per project
   type: ProjectType;
   stage: Stage;
-  quotedAmount: number | null; // null = 報價未定 (not decided yet), not zero
+  quotedAmount: number | null; // null = quote not set (not decided yet), not zero
   currency: "TWD";
   taxRate: number;
   taxIncluded: boolean;
   details: ProjectDetails;
-  offerText: string; // from the project's source message
   notes: string;
   nextAction: { title: string; dueDate: string | null } | null; // the next open to-do
   archived: boolean;
@@ -55,7 +61,7 @@ export type ProjectDetails = {
   contractNotes?: string;
   fields?: Record<string, string>;
   dates?: ProjectDate[];
-  toConfirm?: string[]; // 需向對方確認: open questions for the other side
+  toConfirm?: string[]; // To confirm with them: open questions for the other side
 };
 
 /** A contract's terms as extracted from it, for comparing versions. Empty or null = not stated. */
@@ -157,14 +163,14 @@ export type Payment = {
   currency: "TWD";
   taxRate: number;
   taxIncluded: boolean;
-  recordedDate: string; // 登錄日期
+  recordedDate: string; // recorded on
   dueDate: string | null;
   status: "expected" | "settled" | "cancelled";
   settledAmount: number | null; // what actually arrived or was paid; null = the full total
   settledDate: string | null;
   invoiceRef: string;
   notes: string;
-  voided: boolean; // 作廢: a mistaken or duplicate entry, out of every total
+  voided: boolean; // Void: a mistaken or duplicate entry, out of every total
 };
 
 export type ReplyTemplate = {
@@ -213,6 +219,15 @@ export type InboxMessage = {
   files: { id: string; contentType: string; filename: string; sizeBytes: number }[]; // screenshots, photos, PDFs, in order
 };
 
+/** What only a project's own screen shows, loaded when it's opened (lib/data/project-detail.ts). */
+export type ProjectDetail = {
+  projectId: string;
+  details: ProjectDetails;
+  notes: string;
+  offerText: string; // the earliest message filed under it
+  timeline: TimelineEntry[]; // newest first
+};
+
 /** One message on a project's timeline, with what applying it changed (audit_log `message.applied`). */
 export type TimelineEntry = {
   messageId: string;
@@ -249,7 +264,7 @@ export type AppData = {
   talent: { id: string; name: string; timeZone: string };
   person: { displayName: string; email: string; role: Role; appearance: Appearance; replyWithinDays: number; workspaceOwner: boolean };
   calendarFeed: boolean; // a subscription link exists (the URL itself is only shown once)
-  projects: Project[];
+  projects: ProjectSummary[]; // the full project: GET /api/projects/[id]
   contacts: Contact[];
   calendar: CalendarItem[];
   payments: Payment[];
@@ -257,7 +272,6 @@ export type AppData = {
   drafts: ReplyDraft[];
   files: StoredFile[];
   inbox: InboxMessage[];
-  timeline: TimelineEntry[]; // newest first
   contracts: Contract[]; // newest version first
   notificationState: NotificationState; // this person's read and snooze marks
   preferences: Preferences; // this person's settings in this workspace (lib/preferences)

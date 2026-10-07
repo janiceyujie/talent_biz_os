@@ -10,8 +10,9 @@ const SCREEN_MARGIN = 16; // px kept clear of the window's right edge
  * An ⓘ beside a title, with that section's explanation behind it: shown on
  * hover and keyboard focus, and toggled by a tap (phones have no hover).
  * Notes are plain text, one per line, so it can sit inside a heading.
+ * `above` opens it upward, where below would cover what it explains.
  */
-export function InfoHint({ notes }: { notes: string[] }) {
+export function InfoHint({ notes, above = false }: { notes: string[]; above?: boolean }) {
   const t = useTranslations("common");
   const [open, setOpen] = useState(false); // tapped open; stays until a tap elsewhere
   const [peek, setPeek] = useState(false); // hovered or focused
@@ -45,7 +46,7 @@ export function InfoHint({ notes }: { notes: string[] }) {
   return (
     <span
       ref={ref}
-      className={`info-hint ${shown ? "is-open" : ""}`}
+      className={`info-hint ${above ? "above" : ""} ${shown ? "is-open" : ""}`}
       onMouseEnter={() => setPeek(true)}
       onMouseLeave={() => setPeek(false)}
       onFocus={() => setPeek(true)}

@@ -105,7 +105,7 @@ export async function savePayment(data: Record<string, unknown>): Promise<string
   return null;
 }
 
-/** Void (作廢) or restore a payment entered by mistake; voided entries leave every total. */
+/** Void or restore a payment entered by mistake; voided entries leave every total. */
 export async function voidPayment(id: string, voided: boolean): Promise<string | null> {
   const { talent: current } = await requireTalent();
   const fail = await errorText();

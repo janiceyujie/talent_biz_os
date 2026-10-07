@@ -9,7 +9,7 @@ import { Widget } from "../widget";
 
 const SHOWN = 5;
 
-/** 待跟進: deals in negotiation with no news for a while, quietest first; otherwise says all is moving (or that there are none). */
+/** Gone quiet: deals in negotiation with no news for a while, quietest first; otherwise says all is moving (or that there are none). */
 export function StalledWidget({ ctx: { data, today } }: { ctx: OverviewContext }) {
   const t = useTranslations("today");
   const router = useRouter();

@@ -12,9 +12,9 @@ import { widgetTitleKey } from "./registry";
 const LAYOUT_KEY = "overview.layout";
 
 /**
- * 自訂今日總覽: show or hide each widget and reorder them — with ↑/↓ (keyboard,
+ * Customize Today: show or hide each widget and reorder them — with ↑/↓ (keyboard,
  * touch) or by dragging, across both columns; each column keeps its number of
- * spots. Saved per person and workspace; 恢復預設 forgets the save.
+ * spots. Saved per person and workspace; Restore defaults forgets the save.
  */
 export function CustomizeOverview({
   role,

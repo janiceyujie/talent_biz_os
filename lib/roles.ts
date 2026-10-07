@@ -1,6 +1,6 @@
 // The onboarding role ("what's your role?") is a working preference, saved
 // onto two existing settings rather than as a field of its own:
-// 經紀人 → person.account_type = manager; every other role → talent.vertical.
+// Manager → person.account_type = manager; every other role → talent.vertical.
 // It never grants or limits access — permissions come from membership.role.
 // See docs/architecture.md, "Roles and verticals".
 import type { verticals } from "@/lib/db/schema";

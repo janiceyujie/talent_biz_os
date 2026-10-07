@@ -10,7 +10,7 @@ import { todayActions, type TodayAction } from "@/lib/overview/actions";
 import type { OverviewContext } from "../context";
 import { Widget } from "../widget";
 
-/** 需要你處理: one list, most urgent first. Its empty state is news, so it always shows. */
+/** Needs you: one list, most urgent first. Its empty state is news, so it always shows. */
 export function ActionsWidget({ ctx: { data, today, items } }: { ctx: OverviewContext }) {
   const t = useTranslations("today");
   const { list } = useNotifications();
@@ -65,7 +65,7 @@ function ActionRow({ action: a, today }: { action: TodayAction; today: string })
   );
 }
 
-/** 「今天」, 「明天」, or the weekday and date. */
+/** "Today", "Tomorrow", or the weekday and date. */
 function useWhen(today: string) {
   const t = useTranslations("today");
   const format = useFormatter();

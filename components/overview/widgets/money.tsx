@@ -7,7 +7,7 @@ import { outstandingMoney } from "@/lib/overview/money";
 import type { OverviewContext } from "../context";
 import { Widget } from "../widget";
 
-/** 款項: money still expected — overdue first; zero rows left out; says so when nothing is open. */
+/** Money: money still expected — overdue first; zero rows left out; says so when nothing is open. */
 export function MoneyWidget({ ctx: { data, today } }: { ctx: OverviewContext }) {
   const t = useTranslations("today");
   const money = useMoney();

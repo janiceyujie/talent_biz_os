@@ -9,7 +9,7 @@ import { Modal } from "./modal";
 /** How often a page looks again while a message is being analyzed (it runs in the background). */
 export const ANALYSIS_POLL_MS = 2500;
 
-/** Paste an offer's text to have it analyzed: from 進件分類, and from the page header's 匯入邀約 wherever it is. */
+/** Paste an offer's text to have it analyzed: from Intake, and from the page header's Import offer wherever it is. */
 export function PasteDialog({ onClose, onSubmitted }: { onClose: () => void; onSubmitted: (id: string, duplicate: boolean) => void }) {
   const t = useTranslations("inbox");
   const [text, setText] = useState("");

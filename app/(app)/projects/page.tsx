@@ -1,14 +1,7 @@
-import { PageHeader } from "@/components/app/page-header";
 import { ProjectsView } from "@/components/views/projects";
-import { phases } from "@/lib/domain/phases";
 
-export default async function Page({ searchParams }: PageProps<"/projects">) {
-  const { id, phase } = await searchParams;
-  const initialPhase = phases.find((p) => p === phase);
-  return (
-    <>
-      <PageHeader titleKey="projects" />
-      <ProjectsView selectedId={typeof id === "string" ? id : ""} initialPhase={initialPhase} />
-    </>
-  );
+// The list's view, filters, order, and open project live in the address; the view reads them there.
+// The view renders the page header too, since its New project button opens the view's editor.
+export default function Page() {
+  return <ProjectsView />;
 }

@@ -1,4 +1,4 @@
-// 今日總覽's 需要你處理: what's yours to act on, in one list, most urgent first.
+// Today's Needs you: what's yours to act on, in one list, most urgent first.
 // Built from the reminders (payments and to-dos, not events: those are in
 // the schedule beside it), messages waiting for review, and clashes in the
 // coming week. Pure; the view words each row.

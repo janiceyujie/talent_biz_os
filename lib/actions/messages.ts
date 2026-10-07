@@ -20,7 +20,7 @@ const dedupKey = (text: string) =>
   `paste:${createHash("sha256").update(text.replace(/\r\n?/g, "\n").replace(/[ \t]+/g, " ").trim()).digest("hex")}`;
 
 /**
- * Take in pasted text (匯入邀約) and analyze it in the background. Pasting the
+ * Take in pasted text (Import offer) and analyze it in the background. Pasting the
  * same text again returns the existing message rather than analyzing twice.
  */
 export async function submitPastedMessage(
@@ -76,7 +76,7 @@ export async function reanalyzeMessage(id: string): Promise<string | null> {
   return null;
 }
 
-/** Set a message aside (略過), or bring it back. */
+/** Set a message aside (Dismiss), or bring it back. */
 export async function dismissMessage(id: string, dismissed: boolean): Promise<string | null> {
   const { talent } = await requireTalent();
   const fail = await errorText();

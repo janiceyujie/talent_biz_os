@@ -1,6 +1,6 @@
 // Reply-template placeholders. Templates are stored with language-neutral
 // keys ({{counterparty}}); people read and type them in their own language
-// ({{合作方}}), and either spelling is accepted when typed.
+// (e.g. the Chinese word for "partner" in braces), and either spelling is accepted when typed.
 //
 // The per-language names live here, not in the message catalogs: they're part
 // of how saved templates are read, so rewording a translation must never stop
@@ -63,7 +63,7 @@ export const toDisplay = (body: string, locale: Locale) =>
     return key ? `{{${names[locale][key]}}}` : whole;
   });
 
-/** How one placeholder reads in a language, e.g. "{{合作方}}". */
+/** How one placeholder reads in a language, e.g. "{{counterparty}}" in English. */
 export const placeholderName = (key: PlaceholderKey, locale: Locale) => `{{${names[locale][key]}}}`;
 
 /** Wording that goes into a rendered reply follows the template's language, not the UI's. */

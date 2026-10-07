@@ -1,14 +1,14 @@
-// 待跟進: deals still being negotiated where nothing has happened for a while —
+// Gone quiet: deals still being negotiated where nothing has happened for a while —
 // no edit to the project and no new message about it.
 import { dateInZone } from "@/lib/domain/dates";
 import { daysBetween } from "@/lib/domain/insights";
 import { phaseOf } from "@/lib/domain/phases";
-import type { InboxMessage, Project } from "@/lib/types";
+import type { InboxMessage, ProjectSummary } from "@/lib/types";
 
 /** How long without news before a deal counts as quiet (phase 3 makes it a setting). */
 export const STALLED_DAYS = 7;
 
-export type StalledDeal = { project: Project; lastActivity: string; quietDays: number };
+export type StalledDeal = { project: ProjectSummary; lastActivity: string; quietDays: number };
 
 export function stalledDeals({
   projects,
@@ -17,7 +17,7 @@ export function stalledDeals({
   timeZone,
   days = STALLED_DAYS,
 }: {
-  projects: Project[];
+  projects: ProjectSummary[];
   inbox: InboxMessage[];
   today: string;
   timeZone: string;

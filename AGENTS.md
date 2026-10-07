@@ -29,6 +29,8 @@ Changes here can lose data, leak data, or lock people out, so make them only whe
 
 - **Every user-facing string** goes in `messages/en.json` and `messages/zh-TW.json` with the same keys; `npm run i18n:check` enforces it.
 - **Follow the code around you** — its naming, structure, and comment style — over introducing new patterns or libraries. Ask before adding a dependency.
+- **Comments are in English only.** Refer to a screen or label by its English UI name (from `messages/en.json`), and describe Chinese input in words rather than quoting it. Chinese belongs only in `messages/zh-TW.json` and in code that has to match Chinese text (regexes, test fixtures, placeholder names).
+- **Git**: before any branch, commit, rebase, push, or pull request, read and follow `docs/git-workflow.md` — branch naming, commit message format, merging, and the rules for coding agents.
 
 ## Related
 

@@ -46,7 +46,7 @@ export async function connectGoogleCalendar(): Promise<string | null> {
   return null;
 }
 
-/** 立即同步: push everything that changed (and re-create the calendar if it was deleted in Google). */
+/** Sync now: push everything that changed (and re-create the calendar if it was deleted in Google). */
 export async function syncGoogleCalendarNow(): Promise<string | null> {
   const { person, talent } = await requireTalent();
   const fail = await errorText();

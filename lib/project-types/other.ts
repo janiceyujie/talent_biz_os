@@ -1,4 +1,4 @@
-// Anything else (其他): only the core fields.
+// Anything else: only the core fields.
 export const other = {
   key: "other",
   eventKind: "meeting",

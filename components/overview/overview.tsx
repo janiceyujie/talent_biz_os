@@ -12,9 +12,9 @@ import { CustomizeOverview } from "./customize";
 import { widgetViews } from "./registry";
 
 /**
- * 今日總覽's widgets in two columns (main: act on; side: time and money),
+ * Today's widgets in two columns (main: act on; side: time and money),
  * arranged by lib/overview/layout: the role's defaults, changed by what the
- * person saved (自訂今日總覽). On narrow screens the columns stack, main first.
+ * person saved (Customize Today). On narrow screens the columns stack, main first.
  * Every widget that's on shows, with its own empty state.
  */
 export function Overview() {

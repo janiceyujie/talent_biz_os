@@ -3,7 +3,6 @@
 import { projectTypes } from "@/lib/project-types";
 import { contentWords, displayName, placeholderKey, type PlaceholderKey } from "@/lib/templates/placeholders";
 import type { AppData, Payment, Project, ProjectSummary, ReplyTemplate } from "@/lib/types";
-import { dateInZone } from "./dates";
 import { isSigned } from "./phases";
 import { minorUnits, quote } from "./money";
 

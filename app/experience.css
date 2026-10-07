@@ -1734,10 +1734,13 @@ td .text-button {
   }
 }
 
-/* The companion stays in its own header lane and never crosses a control. */
+/* The companion stays in its own header lane and never crosses a control.
+   The bar stays at the top while the page scrolls: above the page's own pop-ups
+   (menus, lists), below the phone menu drawer and dialogs. */
 .topbar {
-  position: relative;
-  z-index: 12;
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 .topbar .global-search {
   flex: 1;
@@ -1967,6 +1970,9 @@ html:has(dialog[open]) .assistant-companion .companion-stage * {
   }
 }
 @media (max-width: 800px) {
+  :root {
+    --topbar: 121px; /* two rows here: the bar, then the companion's lane */
+  }
   .topbar {
     flex-wrap: wrap;
     height: auto;
@@ -2324,8 +2330,8 @@ summary:focus-visible {
 .deal-list-panel {
   padding: 4px;
   position: sticky;
-  top: 72px;
-  max-height: calc(100vh - 96px);
+  top: calc(var(--topbar) + 8px);
+  max-height: calc(100vh - var(--topbar) - 32px);
   overflow-y: auto;
 }
 /* Count and sort, pinned while the list scrolls under them. */
@@ -3333,7 +3339,7 @@ button.deal-record:hover {
 }
 .inbox-workspace .inbox-reader {
   position: sticky;
-  top: 24px;
+  top: calc(var(--topbar) + 24px);
 }
 .inbox-workspace .inbox-reader h2 {
   scroll-margin-top: 24px;

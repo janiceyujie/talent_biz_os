@@ -17,6 +17,7 @@
   --violet-soft: #f2edff;
   --red: #d9463e;
   --sidebar: 244px;
+  --topbar: 64px; /* the top bar's height: what sticks below it starts here */
 }
 
 * {
@@ -24,6 +25,8 @@
 }
 html {
   background: var(--paper);
+  /* In-page jumps (focus, anchors, scrollIntoView) land below the sticky top bar, not under it. */
+  scroll-padding-top: calc(var(--topbar) + 8px);
 }
 body {
   margin: 0;

@@ -2355,8 +2355,9 @@ summary:focus-visible {
   padding: 4px;
   position: sticky;
   top: calc(var(--topbar) + 8px);
-  max-height: calc(100vh - var(--topbar) - 32px);
+  max-height: calc(100vh - var(--list-top, calc(var(--topbar) + 8px)) - 24px); /* --list-top: set as the page scrolls */
   overflow-y: auto;
+  overscroll-behavior: contain; /* reaching the end doesn't scroll the page, and the project with it */
 }
 /* Count and sort, pinned while the list scrolls under them. */
 .deal-list-header {

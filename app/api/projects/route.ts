@@ -7,6 +7,7 @@ import { listSorts, listViews, PAGE_MAX, PAGE_SIZE } from "@/lib/domain/project-
 const params = z.object({
   view: z.enum(listViews).catch("execution"),
   type: z.string().max(40).catch("all"),
+  contact: z.union([z.uuid(), z.literal("")]).catch(""),
   q: z.string().max(200).catch(""),
   sort: z.enum(listSorts).catch("due"),
   cursor: z.string().max(1000).catch(""),
@@ -15,7 +16,7 @@ const params = z.object({
 
 /**
  * One page of the signed-in talent's projects (decision 0011): a view (a
- * phase, every active project, or archived), an optional type and search, an order, and a cursor
+ * phase, every active project, or archived), an optional type, contact, and search, an order, and a cursor
  * from the previous page. Unknown values fall back to the defaults.
  */
 export async function GET(req: NextRequest) {
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
   if (!current) return new Response("Not found", { status: 404 });
 
   const search = Object.fromEntries(req.nextUrl.searchParams);
-  const parsed = params.parse({ type: "all", q: "", cursor: "", ...search });
+  const parsed = params.parse({ type: "all", contact: "", q: "", cursor: "", ...search });
   const page = await listProjects(current.id, current.name, parsed);
   return Response.json(page, { headers: { "Cache-Control": "private, no-store" } });
 }

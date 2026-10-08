@@ -1,11 +1,6 @@
-import { PageHeader } from "@/components/app/page-header";
 import { ContactsView } from "@/components/views/contacts";
 
 export default function Page() {
-  return (
-    <>
-      <PageHeader titleKey="contacts" />
-      <ContactsView />
-    </>
-  );
+  // The header is the view's own: its New button adds a contact or an organisation, whichever is shown.
+  return <ContactsView />;
 }

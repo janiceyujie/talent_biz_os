@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArrowDownUp, ArrowLeft, Funnel, Plus } from "lucide-react";
+import { Archive, ArrowDownUp, ArrowLeft, Funnel, Plus, UserRound, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -67,6 +67,7 @@ export function ProjectsView() {
     phase: phases.find((p) => p === address.get("phase")),
     scope: (address.get("archived") === "1" ? "archived" : address.get("phase") === "all" ? "all" : "phase") as Scope,
     type: projectTypes.find((pt) => pt.key === address.get("type"))?.key ?? "all",
+    contact: (address.get("contact") ?? "").slice(0, 40),
     q: (address.get("q") ?? "").slice(0, 200),
     sort: listSorts.find((s) => s === address.get("sort")) ?? "due",
   }));
@@ -83,6 +84,9 @@ export function ProjectsView() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [search, setSearch] = useState(initial.q);
   const [type, setType] = useState<string>(initial.type);
+  // One contact's projects (`?contact=`, from their card in Artists & partners): a chip says so and clears it.
+  const [contact, setContact] = useState(initial.contact);
+  const contactName = data.contacts.find((c) => c.id === contact)?.name;
   // Which projects the list covers: one phase, every active project, or the archived ones.
   const [scope, setScope] = useState<Scope>(initial.scope);
   const archived = scope === "archived";
@@ -120,9 +124,9 @@ export function ProjectsView() {
   });
   // A page at a time from the server (decision 0011). Archived is its own view, not a filter on a phase.
   const view: ListView = scope === "phase" ? phase : scope;
-  const listId = `${view}|${type}|${search.trim()}|${sort}`;
+  const listId = `${view}|${type}|${contact}|${search.trim()}|${sort}`;
   const [arrival] = useState(() => (typeof window === "undefined" ? null : readPlace(listId)));
-  const list = useProjectPages({ view, type, q: search, sort }, data.projects, arrival?.rows ?? 0);
+  const list = useProjectPages({ view, type, contact, q: search, sort }, data.projects, arrival?.rows ?? 0);
   const visible = list.items;
   // A linked project shows even before its page has loaded (the layout's summary has it).
   const linked = selected ? visible.find((p) => p.id === selected) ?? data.projects.find((p) => p.id === selected && p.archived === archived) : undefined;
@@ -185,12 +189,13 @@ export function ProjectsView() {
   useEffect(() => {
     const params = new URLSearchParams(archived ? { archived: "1" } : { phase: scope === "all" ? "all" : phase });
     if (type !== "all") params.set("type", type);
+    if (contact) params.set("contact", contact);
     if (search.trim()) params.set("q", search.trim());
     if (sort !== "due") params.set("sort", sort);
     if (selected) params.set("id", selected);
     const next = `${window.location.pathname}?${params}`;
     if (next !== window.location.pathname + window.location.search) window.history.replaceState(null, "", next);
-  }, [archived, scope, phase, type, search, sort, selected]);
+  }, [archived, scope, phase, type, contact, search, sort, selected]);
 
   // The scroll area: the list panel on wide screens, the page on narrow ones.
   const scroller = () => (window.matchMedia(NARROW).matches ? document.scrollingElement : panel.current);
@@ -305,6 +310,15 @@ export function ProjectsView() {
               ))}
             </select>
           </label>
+          {contact && (
+            <span className="filter-chip">
+              <UserRound size={14} aria-hidden="true" />
+              {t("contactFilter", { name: contactName ?? "…" })}
+              <button aria-label={t("clearContactFilter")} onClick={() => setContact("")}>
+                <X size={14} aria-hidden="true" />
+              </button>
+            </span>
+          )}
         </div>
       </section>
       {archived && (

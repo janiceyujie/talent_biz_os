@@ -1,15 +1,19 @@
 "use client";
 
+import { Archive, FolderOpen, Funnel, Mail, Phone, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useAppData } from "@/components/app/app-data";
-import { loadProject } from "@/components/app/project-detail";
-import { projectRecord, RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
+import { PageHeader } from "@/components/app/page-header";
+import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { archiveContact } from "@/lib/actions/contacts";
+import { orderContactProjects } from "@/lib/domain/contact-projects";
+import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
-import { contactRoles } from "@/lib/types";
+import { contactRoles, type Contact } from "@/lib/types";
+import { MoreMenu } from "./more-menu";
 import { EditOrganization } from "./organization";
 import { OrganizationDuplicates } from "./organization-duplicates";
 
@@ -22,8 +26,17 @@ export function ContactsView() {
     window.history.replaceState(null, "", next === "organizations" ? "?view=organizations" : window.location.pathname);
   };
   const t = useTranslations("contacts");
+  const tOrg = useTranslations("organizations");
+  // Adding is the page's own action, beside the title as on Projects: a contact or an organisation, by view.
+  const [adding, setAdding] = useState(false);
   return (
     <>
+      <PageHeader titleKey="contacts">
+        <button className="primary" onClick={() => setAdding(true)}>
+          <Plus size={16} aria-hidden="true" />
+          {view === "people" ? t("new") : tOrg("newTitle")}
+        </button>
+      </PageHeader>
       <div className="view-switch" role="group" aria-label={t("views")}>
         <button aria-pressed={view === "people"} onClick={() => show("people")}>
           {t("viewPeople")}
@@ -32,12 +45,19 @@ export function ContactsView() {
           {t("viewOrganizations")}
         </button>
       </div>
-      {view === "people" ? <PeopleView /> : <OrganizationsView />}
+      {view === "people" ? (
+        <PeopleView adding={adding} doneAdding={() => setAdding(false)} />
+      ) : (
+        <OrganizationsView adding={adding} doneAdding={() => setAdding(false)} />
+      )}
     </>
   );
 }
 
-function PeopleView() {
+const SHOWN_PROJECTS = 3; // on a contact's card before "N more"
+const EXPAND_UP_TO = 10; // past this, "See all" opens Projects filtered to them rather than a long list on the card
+
+function PeopleView({ adding, doneAdding }: { adding: boolean; doneAdding: () => void }) {
   const data = useAppData();
   const t = useTranslations("contacts");
   const labels = useLabels();
@@ -53,79 +73,166 @@ function PeopleView() {
       (role === "all" || c.role === role) &&
       `${c.name} ${c.company} ${c.email}`.toLowerCase().includes(q.toLowerCase()),
   );
+  const editAt = (c: Contact, focus?: string) => setEditor({ kind: "contact", item: toRecord(c), focus });
+  // Their projects: as main contact or among a project's people. Ongoing first by what comes next,
+  // then finished ones by when they happened (lib/domain/contact-projects); a few on the card.
+  const onProjects = new Map<string, Set<string>>();
+  for (const { projectId, contactId } of data.projectPeople) onProjects.set(contactId, (onProjects.get(contactId) ?? new Set()).add(projectId));
+  const datesByProject = new Map<string, string[]>();
+  for (const item of data.calendar)
+    if (item.projectId && !item.archived && item.date) datesByProject.set(item.projectId, [...(datesByProject.get(item.projectId) ?? []), item.date]);
+  const today = dateInZone(data.talent.timeZone);
+  const projectsOf = (c: Contact) =>
+    orderContactProjects(
+      data.projects.filter((p) => !p.archived && (p.counterpartyId === c.id || onProjects.get(c.id)?.has(p.id))),
+      (p) => [...(p.details.dates ?? []).map((d) => d.date), ...(datesByProject.get(p.id) ?? [])],
+      today,
+    );
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleProjects = (id: string) =>
+    setExpanded((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   return (
     <>
-      <div className="toolbar wrap">
-        <input aria-label={t("search")} placeholder={t("searchPlaceholder")} value={q} onChange={(e) => setQ(e.target.value)} />
-        <select aria-label={t("roleFilter")} value={role} onChange={(e) => setRole(e.target.value)}>
-          <option value="all">{t("all")}</option>
-          {contactRoles.map((r) => (
-            <option key={r} value={r}>
-              {labels.contactRole(r)}
-            </option>
-          ))}
-        </select>
-        <button className="primary" onClick={() => setEditor({ kind: "contact" })}>
-          {t("new")}
-        </button>
-        <label className="check-line">
-          <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
-          {t("archivedOnly")}
+      <ListControls
+        search={q}
+        onSearch={setQ}
+        searchLabel={t("search")}
+        searchPlaceholder={t("searchPlaceholder")}
+        archived={archived}
+        onArchived={setArchived}
+      >
+        {/* A funnel says it narrows the list, as on Projects; tinted while a type is chosen. */}
+        <label className={`type-filter ${role !== "all" ? "active" : ""}`}>
+          <Funnel size={16} aria-hidden="true" />
+          <select aria-label={t("roleFilter")} value={role} onChange={(e) => setRole(e.target.value)}>
+            <option value="all">{t("allTypes")}</option>
+            {contactRoles.map((r) => (
+              <option key={r} value={r}>
+                {labels.contactRole(r)}
+              </option>
+            ))}
+          </select>
         </label>
-      </div>
+      </ListControls>
       {error && (
         <p className="notice error" role="alert">
           {error}
         </p>
       )}
       <div className="contact-grid">
-        {visible.map((c) => (
-          <article className="surface contact-card" key={c.id}>
-            <div className="contact-avatar">{c.name.slice(0, 1)}</div>
-            <span className="category">{labels.contactRole(c.role)}</span>
-            <h2>{c.name}</h2>
-            {/* Where they work: the organisation, linked, else the company as typed. */}
-            {(() => {
-              const org = data.organizations.find((o) => o.id === c.organizationId);
-              return org ? (
-                <Link className="contact-org" href={`/contacts/organizations/${org.id}`}>
-                  {org.name}
-                </Link>
-              ) : (
-                <p className="muted">{c.company || t("noCompany")}</p>
-              );
-            })()}
-            <p>{c.email ? <a href={`mailto:${c.email}`}>{c.email}</a> : t("noEmail")}</p>
-            <p>{c.phone || t("noPhone")}</p>
-            <p className="prewrap">{c.notes}</p>
-            <div className="related-deals">
-              <small>{t("related")}</small>
-              {data.projects
-                .filter((p) => !p.archived && p.counterpartyId === c.id)
-                .map((p) => (
-                  // The editor needs the full project (details, notes): fetched first.
-                  <button className="text-button" key={p.id} onClick={() => loadProject(p).then((full) => setEditor({ kind: "project", item: projectRecord(full) }))}>
-                    {p.title}
+        {visible.map((c) => {
+          const org = data.organizations.find((o) => o.id === c.organizationId);
+          const projects = projectsOf(c);
+          const open = expanded.has(c.id);
+          // What's not filled in yet, each a chip that opens the form at it, rather than a line saying it's missing.
+          const missing = [
+            !org && !c.company && (["organizationName", t("addCompany")] as const),
+            !c.email && (["email", t("addEmail")] as const),
+            !c.phone && (["phone", t("addPhone")] as const),
+          ].filter((m) => !!m);
+          return (
+            <article className="surface contact-card" key={c.id}>
+              <header className="contact-head">
+                <div className="contact-avatar" aria-hidden="true">
+                  {c.name.slice(0, 1)}
+                </div>
+                <div className="contact-who">
+                  {/* One line: a long name is cut short (whole on hover) so the type stays beside it. */}
+                  <h2>
+                    <span className="contact-name" title={c.name}>
+                      {c.name}
+                    </span>
+                    <span className={`person-role role-${c.role}`}>{labels.contactRole(c.role)}</span>
+                  </h2>
+                  {/* Where they work: the organisation, linked, else the company as typed. */}
+                  {org ? (
+                    <Link href={`/contacts/organizations/${org.id}`}>{org.name}</Link>
+                  ) : (
+                    c.company && <p>{c.company}</p>
+                  )}
+                </div>
+                <MoreMenu label={t("more", { name: c.name })}>
+                  <button role="menuitem" onClick={() => editAt(c)}>
+                    {t("edit")}
                   </button>
-                ))}
-            </div>
-            <div className="row-actions">
-              <button className="secondary" onClick={() => setEditor({ kind: "contact", item: toRecord(c) })}>
-                {t("edit")}
-              </button>
-              <button
-                className="text-button"
-                disabled={pending}
-                onClick={() => startTransition(async () => setError(await archiveContact(c.id, !c.archived)))}
-              >
-                {c.archived ? t("restore") : t("archive")}
-              </button>
-            </div>
-          </article>
-        ))}
+                  <button
+                    role="menuitem"
+                    disabled={pending}
+                    onClick={() => startTransition(async () => setError(await archiveContact(c.id, !c.archived)))}
+                  >
+                    {c.archived ? t("restore") : t("archive")}
+                  </button>
+                </MoreMenu>
+              </header>
+              {(c.email || c.phone) && (
+                <div className="person-reach contact-reach">
+                  {c.email && (
+                    <a href={`mailto:${c.email}`}>
+                      <Mail size={14} aria-hidden="true" />
+                      {c.email}
+                    </a>
+                  )}
+                  {c.phone && (
+                    <a href={`tel:${c.phone}`}>
+                      <Phone size={14} aria-hidden="true" />
+                      {c.phone}
+                    </a>
+                  )}
+                </div>
+              )}
+              {missing.length > 0 && !c.archived && (
+                <div className="contact-missing">
+                  {missing.map(([field, label]) => (
+                    <button key={field} className="add-chip" onClick={() => editAt(c, field)}>
+                      <Plus size={13} aria-hidden="true" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {c.notes && <p className="contact-notes prewrap">{c.notes}</p>}
+              {projects.length > 0 && (
+                <div className="contact-projects">
+                  <small>
+                    {t("related")} · {projects.length}
+                  </small>
+                  <ul>
+                    {(open ? projects : projects.slice(0, SHOWN_PROJECTS)).map(({ project: p, finished, when }) => (
+                      <li key={p.id}>
+                        <Link href={`/projects?id=${p.id}`} className={finished ? "is-ended" : ""}>
+                          <FolderOpen size={14} aria-hidden="true" />
+                          <span>{p.title}</span>
+                          {/* Finished: the year it happened says more than "Closed" on every line. */}
+                          <small title={labels.stage(p.stage)}>{finished ? when.slice(0, 4) : labels.stage(p.stage)}</small>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  {projects.length > EXPAND_UP_TO ? (
+                    <Link className="see-all" href={`/projects?phase=all&contact=${c.id}`}>
+                      {t("seeAllProjects", { count: projects.length })}
+                    </Link>
+                  ) : (
+                    projects.length > SHOWN_PROJECTS && (
+                      <button className="text-button" aria-expanded={open} onClick={() => toggleProjects(c.id)}>
+                        {open ? t("showFewer") : t("moreProjects", { count: projects.length - SHOWN_PROJECTS })}
+                      </button>
+                    )
+                  )}
+                </div>
+              )}
+            </article>
+          );
+        })}
       </div>
-      {!visible.length && (
+      {!visible.length && archived && <p className="surface empty">{t("archivedEmpty")}</p>}
+      {!visible.length && !archived && (
         <div className="surface empty">
           <h2>{t("emptyTitle")}</h2>
           <p>{t("emptyBody")}</p>
@@ -134,35 +241,73 @@ function PeopleView() {
           </button>
         </div>
       )}
-      {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
+      {(editor || adding) && (
+        <RecordEditor
+          editor={editor ?? { kind: "contact" }}
+          onClose={() => {
+            setEditor(null);
+            doneAdding();
+          }}
+        />
+      )}
     </>
   );
 }
 
+/**
+ * Search, filters, and archived, in one row that stays under the top bar while the list scrolls.
+ * Archived is a toggle shaped like the controls beside it, with the archive icon as on Projects.
+ */
+function ListControls({
+  search,
+  onSearch,
+  searchLabel,
+  searchPlaceholder,
+  archived,
+  onArchived,
+  children,
+}: {
+  search: string;
+  onSearch: (q: string) => void;
+  searchLabel: string;
+  searchPlaceholder: string;
+  archived: boolean;
+  onArchived: (archived: boolean) => void;
+  children?: ReactNode;
+}) {
+  const t = useTranslations("contacts");
+  return (
+    <div className="list-controls">
+      <input type="search" aria-label={searchLabel} placeholder={searchPlaceholder} value={search} onChange={(e) => onSearch(e.target.value)} />
+      {children}
+      <button className={`archive-toggle ${archived ? "active" : ""}`} aria-pressed={archived} onClick={() => onArchived(!archived)}>
+        <Archive size={16} aria-hidden="true" />
+        {t("archivedOnly")}
+      </button>
+    </div>
+  );
+}
+
 /** Every organisation, with its people at a glance; each opens its own page. */
-function OrganizationsView() {
+function OrganizationsView({ adding, doneAdding }: { adding: boolean; doneAdding: () => void }) {
   const data = useAppData();
   const t = useTranslations("contacts");
-  const tOrg = useTranslations("organizations");
   const router = useRouter();
   const [q, setQ] = useState("");
   const [archived, setArchived] = useState(false);
-  const [creating, setCreating] = useState(false);
   const visible = data.organizations.filter((o) => o.archived === archived && o.name.toLowerCase().includes(q.toLowerCase()));
   const peopleAt = (id: string) => data.contacts.filter((c) => c.organizationId === id && !c.archived);
 
   return (
     <>
-      <div className="toolbar wrap">
-        <input aria-label={t("searchOrganizations")} placeholder={t("searchOrganizations")} value={q} onChange={(e) => setQ(e.target.value)} />
-        <button className="primary" onClick={() => setCreating(true)}>
-          {tOrg("newTitle")}
-        </button>
-        <label className="check-line">
-          <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
-          {t("archivedOnly")}
-        </label>
-      </div>
+      <ListControls
+        search={q}
+        onSearch={setQ}
+        searchLabel={t("searchOrganizations")}
+        searchPlaceholder={t("searchOrganizations")}
+        archived={archived}
+        onArchived={setArchived}
+      />
       {!archived && <OrganizationDuplicates />}
       <ul className="org-list">
         {visible.map((o) => {
@@ -179,7 +324,7 @@ function OrganizationsView() {
         })}
       </ul>
       {!visible.length && <p className="surface empty">{t("noOrganizations")}</p>}
-      {creating && <EditOrganization onDone={() => setCreating(false)} onSaved={(id) => router.push(`/contacts/organizations/${id}`)} />}
+      {adding && <EditOrganization onDone={doneAdding} onSaved={(id) => router.push(`/contacts/organizations/${id}`)} />}
     </>
   );
 }

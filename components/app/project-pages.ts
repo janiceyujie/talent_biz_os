@@ -5,8 +5,10 @@ import { PAGE_MAX, PAGE_SIZE, type ListSort, type ListView, type ProjectPage as 
 
 const SEARCH_PAUSE = 250; // ms after the last keystroke
 
-const url = (p: { view: ListView; type: string; q: string; sort: ListSort }, cursor: string, limit: number) =>
-  `/api/projects?${new URLSearchParams({ view: p.view, type: p.type, q: p.q, sort: p.sort, cursor, limit: String(limit) })}`;
+type ListParams = { view: ListView; type: string; contact: string; q: string; sort: ListSort };
+
+const url = (p: ListParams, cursor: string, limit: number) =>
+  `/api/projects?${new URLSearchParams({ view: p.view, type: p.type, contact: p.contact, q: p.q, sort: p.sort, cursor, limit: String(limit) })}`;
 
 /**
  * The projects list, a page at a time from app/api/projects (decision 0011).
@@ -16,7 +18,7 @@ const url = (p: { view: ListView; type: string; q: string; sort: ListSort }, cur
  * the list doesn't jump back to the top. `restore` is how many rows to load
  * on arrival, when coming back to a list that had scrolled further.
  */
-export function useProjectPages(params: { view: ListView; type: string; q: string; sort: ListSort }, revision: unknown, restore = 0) {
+export function useProjectPages(params: ListParams, revision: unknown, restore = 0) {
   const [state, setState] = useState<{ page: Page | null; loading: boolean; failed: boolean }>({ page: null, loading: true, failed: false });
   const shown = useRef(0);
   const request = useRef<AbortController | null>(null);
@@ -41,12 +43,12 @@ export function useProjectPages(params: { view: ListView; type: string; q: strin
         )
         .catch(() => !abort.signal.aborted && setState((s) => ({ ...s, loading: false, failed: true })));
     },
-    [params.view, params.type, params.q, params.sort], // eslint-disable-line react-hooks/exhaustive-deps -- the four values are the request
+    [params.view, params.type, params.contact, params.q, params.sort], // eslint-disable-line react-hooks/exhaustive-deps -- the five values are the request
   );
 
   // A new view, filter, or order: the first page (after a pause while typing). On arrival, as many rows as before.
   // Decided by the list, not consumed: effects may run twice (React's development checks) and must agree.
-  const listKey = `${params.view}|${params.type}|${params.q.trim()}|${params.sort}`;
+  const listKey = `${params.view}|${params.type}|${params.contact}|${params.q.trim()}|${params.sort}`;
   const arrivedAt = useRef(listKey);
   const goal = useRef(0); // rows still to load back in
   useEffect(() => {

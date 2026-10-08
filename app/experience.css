@@ -3080,6 +3080,19 @@ summary:focus-visible {
   font-size: 12px;
   line-height: 20px;
 }
+/* A contact's type, told apart at a glance: artists violet, partners blue, managers amber. */
+.person-role.role-artist {
+  background: #efeafb;
+  color: #5b3fa0;
+}
+.person-role.role-counterparty {
+  background: #e6effa;
+  color: #2b5a8a;
+}
+.person-role.role-manager {
+  background: #fbf0e0;
+  color: #85560f;
+}
 .person-role.main {
   background: var(--accent-soft);
   color: var(--accent);
@@ -4140,20 +4153,286 @@ button.deal-record:hover {
   align-self: center;
   color: var(--muted);
 }
-.contact-org {
+/* Search, filters, archived, and New: one row that stays under the top bar while the list scrolls. */
+.list-controls {
+  position: sticky;
+  top: var(--topbar);
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 0;
+  background: var(--paper); /* the page behind it, so rows pass under it cleanly */
+}
+.list-controls input[type="search"] {
+  flex: 1 1 260px;
+  min-width: 0;
+  width: auto;
+}
+.list-controls select {
+  width: auto;
+}
+.list-controls .type-filter select {
+  padding-left: 36px;
+}
+.list-controls .type-filter.active select {
+  border-color: var(--accent);
+  background-color: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+/* Archived: a toggle the same height and border as the fields beside it. */
+.archive-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-meta);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.archive-toggle:hover {
+  color: var(--ink);
+}
+.archive-toggle.active {
+  border-color: var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 650;
+}
+
+/* Cards wide enough for a name and its type tag on one line (three across on a laptop). */
+.contact-grid {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+/* A contact: who and where, then how to reach them, what's missing, and their projects. */
+.contact-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+.contact-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.contact-head .contact-avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  border-radius: 12px;
+}
+.contact-who {
+  flex: 1;
+  min-width: 0;
+}
+.contact-card .contact-who h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.3;
+}
+.contact-who h2 .person-role {
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.contact-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contact-card .contact-who p {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+.contact-who a {
   display: inline-block;
-  margin: 4px 0 8px;
+  margin-top: 2px;
   color: var(--accent);
   font-size: var(--text-meta);
+  text-decoration: none;
+}
+.contact-who a:hover {
+  text-decoration: underline;
+}
+.contact-card .more-menu .icon-button {
+  width: 32px;
+  height: 32px;
+  border-color: transparent;
+}
+.contact-card .more-menu .icon-button:hover {
+  border-color: var(--line);
+}
+.contact-reach {
+  flex-direction: column;
+  gap: 6px;
+}
+.contact-missing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.contact-card .contact-notes {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  color: var(--ink-soft);
+}
+.contact-projects {
+  margin-top: auto; /* along the bottom of the card, level across a row */
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.contact-projects small {
+  color: var(--muted);
+}
+.contact-projects ul {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.contact-projects a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--ink);
+  font-size: var(--text-meta);
+  text-decoration: none;
+}
+.contact-projects a svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.contact-projects a span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contact-projects a small {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+.contact-projects a.is-ended span {
+  color: var(--muted);
+}
+.contact-projects a:hover span {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.contact-projects .see-all {
+  display: inline-block;
+  margin-top: 2px;
+  color: var(--accent);
+  font-size: 13px;
+}
+/* A contact's projects, narrowed on Projects: a chip that says so, with a way out. */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 6px 0 12px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-meta);
+  font-weight: 600;
+}
+.filter-chip button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.filter-chip button:hover {
+  background: var(--surface);
+}
+.contact-projects .text-button {
+  margin-top: 2px;
+  color: var(--accent);
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .list-controls input[type="search"] {
+    flex-basis: 120px;
+  }
+  /* With a filter too, the search takes its own line; alone with Archived, they share one. */
+  .list-controls:has(.type-filter) input[type="search"] {
+    flex-basis: 100%;
+  }
+  .list-controls .type-filter {
+    flex: 1;
+    min-width: 0;
+  }
+  .list-controls .type-filter select {
+    width: 100%;
+  }
+  /* The page's overflow: hidden on phones would stop the row sticking; clip keeps the edges without that. */
+  .page-content:has(.list-controls) {
+    overflow: clip;
+  }
 }
 /* An organisation's page: its header, then cards. */
 .org-page {
   max-width: 960px;
   font-size: var(--text-meta);
 }
-.org-page .back-link {
-  margin-bottom: 12px;
+/* A breadcrumb: quiet links above the page's own title. */
+.breadcrumb ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-meta);
+}
+.breadcrumb li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--muted);
+}
+.breadcrumb a {
+  padding: 2px 4px;
+  border-radius: 6px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.breadcrumb li:first-child a {
+  margin-left: -4px; /* the text, not its hover tint, lines up with the title */
+}
+.breadcrumb a:hover {
+  background: var(--paper);
+  color: var(--ink);
 }
 .org-page-header {
   display: flex;
@@ -4162,10 +4441,18 @@ button.deal-record:hover {
   gap: 16px;
   margin-bottom: 16px;
 }
-.org-page-header h2 {
+.org-page-header h1 {
   display: inline;
   margin: 0 8px 0 0;
-  font-size: 24px;
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+@media (max-width: 600px) {
+  .org-page-header h1 {
+    font-size: 26px;
+  }
 }
 .org-page-header p {
   margin: 6px 0 0;

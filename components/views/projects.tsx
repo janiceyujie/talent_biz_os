@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { Toast } from "@/components/app/toast";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { useProjectPages } from "@/components/app/project-pages";
+import { useFitToWindow } from "@/components/app/use-fit-to-window";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
 import { archiveProject, setProjectStage } from "@/lib/actions/projects";
 import { useMoney } from "@/lib/i18n/format";
@@ -148,23 +149,8 @@ export function ProjectsView() {
     return () => watch.disconnect();
   }, [loadMore, list.hasMore]);
 
-  // Wide screens: the list reaches down to the window's bottom from wherever it starts (lower while the
-  // page header is in view, under the top bar once it sticks), so every row is reached by scrolling the
-  // list alone and the open project beside it stays put.
-  useEffect(() => {
-    const el = panel.current;
-    if (!el) return;
-    const fit = () => el.style.setProperty("--list-top", `${Math.max(0, el.getBoundingClientRect().top)}px`);
-    fit();
-    // Also when what's above it changes height (the tabs' counts, a banner), which moves it without a scroll.
-    const resized = new ResizeObserver(fit);
-    resized.observe(document.body);
-    window.addEventListener("scroll", fit, { passive: true });
-    return () => {
-      resized.disconnect();
-      window.removeEventListener("scroll", fit);
-    };
-  }, []);
+  // Wide screens: the list ends at the window's bottom, so it scrolls alone and the open project stays put.
+  useFitToWindow(panel);
 
   // On a phone the tabs scroll sideways: keep the chosen one in sight (again once the counts widen the tabs).
   const tabsRow = useRef<HTMLDivElement>(null);

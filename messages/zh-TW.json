@@ -1527,7 +1527,27 @@
     "statAvgLate": "逾期款平均天數",
     "statOverdue": "目前逾期待收",
     "counts": "{paid} 筆已收款有完整日期，{late} 筆曾逾期。{unknown} 筆未填付款期限，不納入準時率。",
-    "fewSamples": "目前樣本少於 3 筆，先看個別付款紀錄。",
+    "history": "款項紀錄",
+    "view": "款項顯示方式",
+    "viewByProject": "依合作案",
+    "viewByDate": "依日期",
+    "statusFilter": "顯示",
+    "filter": {
+      "all": "全部",
+      "open": "待收",
+      "overdue": "逾期",
+      "settled": "已收"
+    },
+    "sort": "款項排序",
+    "sortBy": {
+      "dueNew": "到期日：新到舊",
+      "dueOld": "到期日：舊到新",
+      "amount": "金額：高到低",
+      "late": "逾期天數：多到少"
+    },
+    "groupSummary": "已收 {received}／共 {total} · {count} 筆",
+    "noPaymentsYet": "還沒有款項",
+    "filterEmpty": "沒有符合的款項。",
     "colProject": "款項",
     "colDue": "到期日",
     "colSettled": "實際收款日",
@@ -1535,7 +1555,6 @@
     "colLate": "逾期天數",
     "colTotal": "含稅金額",
     "noRows": "尚無有效收款紀錄。",
-    "method": "計算方式",
     "methodBody": "合作次數包含已歸檔的已簽約案件，排除洽談。作廢內帳與成本不計。訂金、尾款各算一筆；平均逾期天數只看已收且逾期的款項。未到期款項不算逾期。"
   },
   "encouragement": {

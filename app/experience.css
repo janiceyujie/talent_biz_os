@@ -1449,19 +1449,130 @@ td .text-button {
   font-size: 24px;
   margin: 0;
 }
-/* Payments under a heading row per project; real lateness stands out. */
+/* The company, its verdict, and how it's worked out (ⓘ). */
+.partner-report-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.partner-report .late {
+  color: var(--red);
+  font-weight: 650;
+}
+/* Payments: a title and the view switch, then status filters and the sort. */
+.partner-history-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+.partner-history-head h3 {
+  margin: 0;
+  font-size: 17px;
+}
+.partner-history-head .view-switch {
+  margin: 0;
+}
+.partner-history-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+.status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.status-chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.status-chips button span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.status-chips button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 650;
+}
+.status-chips button.has-overdue span {
+  color: var(--red);
+  font-weight: 700;
+}
+.partner-history-controls select {
+  width: auto;
+  min-height: 34px;
+  padding: 4px 8px 4px 4px;
+  border-color: transparent;
+  background-color: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+/* By project: each project a tinted bar (name, stage, how much has come in), its payments indented under it. */
 .partner-report tr.partner-group th {
-  padding: 14px 10px 6px;
-  border-bottom: 1px solid var(--line);
+  padding: 16px 0 0;
+  border-bottom: 0;
   background: none;
+  text-align: left;
+}
+.partner-group-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--paper);
   color: var(--ink);
   font-size: var(--text-meta);
   font-weight: 650;
-  text-align: left;
 }
-.partner-report td.late {
-  color: var(--red);
-  font-weight: 650;
+.partner-group-bar a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.partner-group-bar a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.partner-group-bar small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.partner-report table.by-project td:first-child {
+  padding-left: 18px;
+}
+.partner-pay-project {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: none;
+}
+.partner-pay-project:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 /* Phones: each payment stacks, what and how much first, then its dates and status, each named. */
 @media (max-width: 600px) {
@@ -1477,7 +1588,13 @@ td .text-button {
   }
   .partner-report tr.partner-group th {
     display: block;
-    padding: 14px 0 6px;
+    padding: 14px 0 4px;
+  }
+  .partner-report table.by-project td:first-child {
+    padding-left: 0;
+  }
+  .partner-report table.by-project tbody tr:not(.partner-group) {
+    padding-left: 12px;
   }
   .partner-report tbody tr:not(.partner-group) {
     display: flex;

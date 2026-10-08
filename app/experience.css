@@ -1338,44 +1338,99 @@ td .text-button {
   height: 44px;
   margin: 0;
 }
+/* Partner history: companies beside the chosen one's report, as on Projects. */
 .partner-layout {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 16px;
   align-items: start;
 }
+/* The list scrolls on its own and ends at the window's bottom (useFitToWindow sets --list-top). */
 .partner-list {
+  position: sticky;
+  top: calc(var(--topbar) + 8px);
+  max-height: calc(100vh - var(--list-top, calc(var(--topbar) + 8px)) - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+}
+.partner-list-header {
+  position: sticky;
+  top: -4px;
+  z-index: 1;
   display: grid;
-  gap: 8px;
+  gap: 6px;
+  padding: 8px 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.partner-list-header input {
+  width: 100%;
+}
+.partner-list-header span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.partner-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.partner-list li + li {
+  border-top: 1px solid var(--line);
 }
 .partner-list button {
   display: grid;
-  gap: 8px;
-  text-align: left;
-  padding: 16px;
-  border: 1px solid transparent;
+  gap: 6px;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 8px;
   background: none;
-  border-radius: 10px;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
-.partner-list button.selected {
-  background: var(--accent-soft);
-  border-color: var(--accent);
+.partner-list button:hover {
+  background: var(--paper);
 }
-.partner-list span,
-.partner-list small {
+.partner-list button.selected {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+}
+.partner-row-top,
+.partner-row-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.partner-row-top strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.partner-row-top small {
+  flex-shrink: 0;
   color: var(--muted);
-  font-size: var(--text-meta);
+  font-size: 13px;
+}
+.partner-row-bottom .due {
+  font-size: 12px;
 }
 .partner-stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin: 24px 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
 }
 .partner-stats div {
   background: var(--paper);
-  padding: 18px;
+  padding: 14px 16px;
   border-radius: 12px;
 }
 .partner-stats small {
@@ -1383,26 +1438,125 @@ td .text-button {
   color: var(--muted);
 }
 .partner-stats strong {
-  font-size: 26px;
+  font-size: 24px;
   display: block;
-  margin-top: 8px;
+  margin-top: 6px;
+}
+.partner-report {
+  min-width: 0;
 }
 .partner-report h2 {
   font-size: 24px;
   margin: 0;
 }
+/* Payments under a heading row per project; real lateness stands out. */
+.partner-report tr.partner-group th {
+  padding: 14px 10px 6px;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+  font-size: var(--text-meta);
+  font-weight: 650;
+  text-align: left;
+}
+.partner-report td.late {
+  color: var(--red);
+  font-weight: 650;
+}
+/* Phones: each payment stacks, what and how much first, then its dates and status, each named. */
+@media (max-width: 600px) {
+  .partner-report thead {
+    display: none;
+  }
+  .partner-report table,
+  .partner-report tbody {
+    display: block;
+  }
+  .partner-report tr.partner-group {
+    display: block;
+  }
+  .partner-report tr.partner-group th {
+    display: block;
+    padding: 14px 0 6px;
+  }
+  .partner-report tbody tr:not(.partner-group) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .partner-report tbody td {
+    padding: 0;
+    border: 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .partner-report td.partner-pay-label {
+    flex: 1 1 auto;
+    order: -2;
+    color: var(--ink);
+    font-size: var(--text-meta);
+    font-weight: 600;
+  }
+  .partner-report td.partner-pay-total {
+    order: -1;
+    color: var(--ink);
+    font-size: var(--text-meta);
+    font-weight: 600;
+  }
+  .partner-report td[data-label]::before {
+    content: attr(data-label) " ";
+  }
+  .partner-report td.late {
+    color: var(--red);
+  }
+  /* A line break after the first two cells: same order as the total, and after it in source. */
+  .partner-report tbody tr:not(.partner-group)::after {
+    content: "";
+    order: -1;
+    flex-basis: 100%;
+  }
+}
+/* Wide screens: the column names stay under the top bar while a long table scrolls. */
+@media (min-width: 1001px) {
+  .partner-report .table-scroll {
+    overflow: visible;
+  }
+  .partner-report thead th {
+    position: sticky;
+    top: var(--topbar);
+    z-index: 1;
+    background: var(--surface);
+  }
+}
+.partner-report .text-button.partner-back {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+/* Narrow screens: the list, then the chosen report with a way back. */
 @media (max-width: 1000px) {
   .partner-layout {
     grid-template-columns: minmax(0, 1fr);
   }
   .partner-list {
+    position: static;
+    max-height: none;
+  }
+  .partner-layout.is-detail-open .partner-list,
+  .partner-layout:not(.is-detail-open) .partner-report {
+    display: none;
+  }
+  .partner-report .text-button.partner-back {
+    display: inline-flex;
+  }
+  .partner-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 600px) {
-  .partner-list {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .finance-toolbar > button {
     align-self: end;
   }
@@ -1588,21 +1742,6 @@ td .text-button {
 }
 
 @media (max-width: 600px) {
-  .partner-list {
-    display: flex;
-    overflow-x: auto;
-    gap: 10px;
-    scroll-snap-type: x proximity;
-    padding: 14px;
-  }
-  .partner-list button {
-    flex: 0 0 240px;
-    scroll-snap-align: start;
-    align-content: start;
-  }
-  .partner-report {
-    min-width: 0;
-  }
   .partner-stats {
     gap: 10px;
   }

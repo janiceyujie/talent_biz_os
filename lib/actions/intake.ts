@@ -5,7 +5,7 @@
 // as it is now; the browser only says which items are ticked and how their
 // values were edited. Nothing the message proposes is applied unticked.
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { refresh } from "next/cache";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { requestCalendarSync } from "@/lib/calendar/google/sync";
 import { requireTalent } from "@/lib/auth";
 import { getAppData } from "@/lib/data";
+import { organizationNamed, setClient } from "@/lib/data/organizations";
 import { getProject } from "@/lib/data/projects";
 import { db } from "@/lib/db";
 import { auditLog, calendarEvent, contact, contract, message, messageAnalysis, payment, person as personTable, project, todo } from "@/lib/db/schema";
@@ -368,22 +369,27 @@ export async function createProjectFromMessage(raw: NewProjectInput): Promise<{ 
 
     let counterpartyId: string | null = null;
     let counterparty = p.counterparty;
+    let worksAt: string | null = null; // the linked contact's organisation, if any
+    let company = "";
     if (input.contact?.mode === "link") {
       const [linked] = await tx
-        .select({ id: contact.id, name: contact.name })
+        .select({ id: contact.id, name: contact.name, organizationId: contact.organizationId, company: contact.company })
         .from(contact)
         .where(and(eq(contact.id, input.contact.id), eq(contact.talentId, talent.id)));
       if (!linked) return { error: fail("counterpartyNotFound") };
       counterpartyId = linked.id;
+      worksAt = linked.organizationId;
+      company = linked.company ?? "";
       counterparty ||= linked.name;
     } else if (input.contact?.mode === "create") {
-      const { name, company, email, phone } = input.contact;
+      const { name, company: theirCompany, email, phone } = input.contact;
+      company = theirCompany ?? "";
       const [created] = await tx
         .insert(contact)
-        .values({ talentId: talent.id, role: "counterparty", name, company: company || null, email: email || null, phone: phone || null })
+        .values({ talentId: talent.id, role: "counterparty", name, company: theirCompany || null, email: email || null, phone: phone || null })
         .returning({ id: contact.id });
       counterpartyId = created.id;
-      counterparty ||= company || name;
+      counterparty ||= theirCompany || name;
     }
 
     const [created] = await tx
@@ -402,6 +408,19 @@ export async function createProjectFromMessage(raw: NewProjectInput): Promise<{ 
         notes: p.notes || null,
       })
       .returning({ id: project.id });
+    // The client (decision 0012): the partner the message names; without one, the contact's organisation or company.
+    const client = p.counterparty
+      ? await organizationNamed(tx, talent.id, p.counterparty)
+      : worksAt
+        ? { id: worksAt }
+        : await organizationNamed(tx, talent.id, company || counterparty);
+    await setClient(tx, talent.id, created.id, client.id);
+    // A contact without an organisation works at the client.
+    if (counterpartyId)
+      await tx
+        .update(contact)
+        .set({ organizationId: client.id })
+        .where(and(eq(contact.id, counterpartyId), isNull(contact.organizationId)));
     await tx.update(message).set({ projectId: created.id, status: "confirmed" }).where(eq(message.id, input.messageId));
     if (input.replyBy)
       await tx.insert(todo).values({

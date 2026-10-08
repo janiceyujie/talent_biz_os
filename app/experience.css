@@ -2355,8 +2355,9 @@ summary:focus-visible {
   padding: 4px;
   position: sticky;
   top: calc(var(--topbar) + 8px);
-  max-height: calc(100vh - var(--topbar) - 32px);
+  max-height: calc(100vh - var(--list-top, calc(var(--topbar) + 8px)) - 24px); /* --list-top: set as the page scrolls */
   overflow-y: auto;
+  overscroll-behavior: contain; /* reaching the end doesn't scroll the page, and the project with it */
 }
 /* Count and sort, pinned while the list scrolls under them. */
 .deal-list-header {
@@ -2473,8 +2474,16 @@ summary:focus-visible {
 
 /* The project. */
 .deals-workspace .deal-dossier {
-  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0;
   min-width: 0;
+}
+/* Two separate boxes: where it stands and what to do, then the details under tabs. */
+.dossier-box {
+  min-width: 0;
+  padding: 24px;
 }
 .deal-back {
   display: none;
@@ -2498,8 +2507,9 @@ summary:focus-visible {
   letter-spacing: 0;
   overflow-wrap: anywhere;
 }
-/* Focus moves to the title when a phone opens a project (for screen readers); no ring for that. */
-.deal-dossier-header h2:focus:not(:focus-visible) {
+/* Focus moves to the title when a phone opens a project (for screen readers); no ring for that.
+   The title isn't something to act on, so it never needs one. */
+.deal-dossier-header h2:focus {
   outline: none;
 }
 .deal-dossier-header p {
@@ -2566,29 +2576,6 @@ summary:focus-visible {
   gap: 12px;
   margin-top: 20px;
 }
-.stage-groups {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.stage-group {
-  flex: 1 1 0;
-  min-width: 0;
-  display: grid;
-  gap: 6px;
-}
-.stage-phase {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-.stage-group.current .stage-phase {
-  color: var(--accent);
-}
 .stage-exited {
   flex-shrink: 0;
   padding: 2px 10px;
@@ -2598,25 +2585,94 @@ summary:focus-visible {
   font-size: 13px;
   font-weight: 700;
 }
+/* One line through all six stages: the dots are joined across phases. */
+.stepper {
+  flex: 1;
+  min-width: 0;
+}
+/* The phases, each over its two stages (three equal columns over six equal steps). */
+.stepper-phases {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.stepper-phases .current {
+  color: var(--accent);
+}
 .deal-dossier .stage-progress {
   display: flex;
   align-items: stretch;
-  gap: 4px;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
+/* Each stage is a dot on a line: filled with a tick once passed, a ring for where it is now, hollow ahead. */
 .deal-dossier .stage-progress li {
+  position: relative;
   flex: 1 1 0;
   min-width: 0;
   padding: 0;
-  border-top: 3px solid var(--line);
+  border-top: 0; /* the older shared step bar (globals.css) draws a bar here; the dots replace it */
+}
+/* The dot and line are drawn over the step's button, which reaches up behind them: clicking a dot moves there too. */
+.deal-dossier .stage-progress li::before,
+.deal-dossier .stage-progress li::after {
+  pointer-events: none;
+}
+.deal-dossier .stage-progress li::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #c9cfcc;
+  border-radius: 50%;
+  background: var(--surface);
+}
+.deal-dossier .stage-progress li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 14px;
+  right: 0;
+  height: 2px;
+  background: #d8ddda;
+}
+.deal-dossier .stage-progress li.complete::before {
+  content: "✓";
+  display: grid;
+  place-items: center;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+.deal-dossier .stage-progress li.complete::after,
+.deal-dossier .stage-progress li.current::after {
+  background: var(--accent);
+}
+.deal-dossier .stage-progress li.current::before {
+  top: -2px;
+  left: -2px;
+  width: 18px;
+  height: 18px;
+  border: 4px solid var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 .deal-dossier .stage-progress li button,
 .deal-dossier .stage-progress li > span {
   display: block;
   width: 100%;
-  padding: 6px 0 0;
+  padding: 24px 0 0;
   border: 0;
   background: none;
   color: var(--muted);
@@ -2635,11 +2691,11 @@ summary:focus-visible {
 .deal-dossier .stage-progress li button:not(:disabled):hover {
   color: var(--ink);
 }
-.deal-dossier .stage-progress li.complete {
+.deal-dossier .stage-progress li:not(.complete, .current):has(button:not(:disabled):hover)::before {
   border-color: var(--accent);
 }
-.deal-dossier .stage-progress li.current {
-  border-color: var(--accent);
+.deal-dossier .stage-progress li.complete button {
+  color: var(--ink-soft);
 }
 .deal-dossier .stage-progress li.current button {
   color: var(--accent);
@@ -2658,66 +2714,6 @@ summary:focus-visible {
   font-size: var(--text-meta);
 }
 
-/* Next step, money, and what's open — the three things to know before the details. */
-/* Each card as wide as it needs, up to a cap: short facts shouldn't stretch across the panel. */
-.deal-summary-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 8px;
-  margin-top: 16px;
-}
-.deal-summary-strip > .deal-next {
-  flex: 1 1 220px;
-  max-width: 320px;
-}
-.deal-summary-strip > .deal-money {
-  flex: 1 1 200px;
-  max-width: 300px;
-}
-.deal-next,
-.deal-money {
-  display: grid;
-  align-content: start;
-  gap: 4px;
-  min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  text-align: left;
-}
-.deal-next {
-  border-left: 3px solid var(--accent);
-}
-.deal-money {
-  cursor: pointer;
-}
-.deal-money:hover {
-  background: var(--paper);
-}
-.deal-next small,
-.deal-money small {
-  color: var(--muted);
-  font-size: 13px;
-}
-.deal-next strong,
-.deal-money strong {
-  font-size: 15px;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-  font-variant-numeric: tabular-nums;
-}
-.deal-next .text-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  justify-self: start;
-  margin-top: 2px;
-  font-size: 13px;
-}
 .meter {
   display: block;
   height: 4px;
@@ -2731,42 +2727,12 @@ summary:focus-visible {
   height: 100%;
   background: var(--accent);
 }
-.deal-check-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  align-self: stretch;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.deal-check-chip.has-checks {
-  border-color: #f0c9a8;
-  background: var(--orange-soft);
-  color: #a24a14;
-  font-weight: 600;
-}
-span.deal-check-chip {
-  cursor: default;
-}
-/* The chip opens its list in place: the menu wrapper fills the strip's cell. */
-.deal-summary-strip > .more-menu {
-  display: flex;
-}
 .more-menu-heading {
   margin: 0;
   padding: 8px 12px 4px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
-}
-.deal-summary-strip .more-menu-list {
-  min-width: 260px;
 }
 
 /* Tabs: navigation, set apart from the content. The bar sticks under the top bar while the
@@ -2777,9 +2743,10 @@ span.deal-check-chip {
   z-index: 5;
   display: flex;
   gap: 4px;
-  margin: 24px -24px 0;
+  margin: -24px -24px 0; /* flush with the top of its box */
   padding: 0 20px;
   border-bottom: 1px solid var(--line);
+  border-radius: 15px 15px 0 0;
   background: var(--surface);
   overflow-x: auto;
   scrollbar-width: none;
@@ -2855,7 +2822,8 @@ span.deal-check-chip {
   gap: 12px;
   margin-bottom: 12px;
 }
-.deal-tab-panel .deal-card-header h3 {
+.deal-tab-panel .deal-card-header h3,
+.org-page .deal-card-header h3 {
   margin: 0;
   color: var(--ink);
   font-size: 15px;
@@ -2864,7 +2832,8 @@ span.deal-check-chip {
 .deal-card-header .text-button {
   font-size: 13px;
 }
-.deal-card > :last-child {
+/* Not a dialog opened from a card: it centres itself with auto margins. */
+.deal-card > :last-child:not(dialog) {
   margin-bottom: 0;
 }
 .deal-tab-actions {
@@ -2936,6 +2905,144 @@ span.deal-check-chip {
   font-size: var(--text-body);
   font-weight: 650;
 }
+/* Organisations on the project, each with its people under it: the organisation is a tinted
+   header row (icon, name, role, count) that folds; its people sit inside, each with an initial. */
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 12px;
+}
+.org-groups {
+  display: grid;
+  gap: 8px;
+}
+/* Not overflow: hidden (it would clip the ⋯ menu): the header rounds its own corners instead. */
+.org-group {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.org-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 8px 4px 4px;
+  border-radius: 9px;
+  background: var(--paper);
+}
+.org-group.is-open .org-header {
+  border-bottom: 1px solid var(--line);
+  border-radius: 9px 9px 0 0;
+}
+.org-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.org-toggle > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.org-toggle strong {
+  flex-shrink: 0;
+  font-size: 15px;
+}
+.org-chevron {
+  transition: transform 0.15s ease;
+}
+.org-group.is-open .org-chevron {
+  transform: rotate(90deg);
+}
+.org-count {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.org-summary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 13px;
+}
+.org-header .more-menu .icon-button {
+  background: transparent;
+}
+.org-more {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 12px;
+}
+.org-actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+.org-group .people-list {
+  border: 0;
+  border-radius: 0;
+}
+.org-empty {
+  margin: 0;
+  padding: 10px 16px;
+}
+.person-initial {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 650;
+}
+.confirm-body p {
+  margin: 0 0 8px;
+}
+@media (max-width: 600px) {
+  .org-toggle {
+    flex-wrap: wrap;
+  }
+  .org-summary {
+    flex-basis: 100%;
+    padding-left: 48px;
+  }
+}
+/* Row-level ⋯ menus in a card: lighter than the header's. */
+.deal-detail .deal-card .more-menu .icon-button,
+.org-page .deal-card .more-menu .icon-button {
+  width: 32px;
+  height: 32px;
+  border-color: transparent;
+}
+.deal-detail .deal-card .more-menu .icon-button:hover,
+.org-page .deal-card .more-menu .icon-button:hover {
+  border-color: var(--line);
+}
+.org-empty {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+}
 .people-list {
   margin: 0;
   padding: 0;
@@ -2947,8 +3054,8 @@ span.deal-check-chip {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 16px;
-  padding: 10px 12px;
+  gap: 4px 12px;
+  padding: 10px 12px 10px 16px;
 }
 .people-list > li + li {
   border-top: 1px solid var(--line);
@@ -2999,23 +3106,6 @@ span.deal-check-chip {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-}
-/* The next step, done in one tap. */
-.next-done {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  color: var(--ink); /* not the muted form-label colour */
-  font-size: inherit;
-  cursor: pointer;
-}
-.next-done input {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  margin: 1px 0 0;
-  accent-color: var(--accent);
-  cursor: pointer;
 }
 /* Questions for them: ticked ones go into a reply. */
 .question-list {
@@ -3111,7 +3201,7 @@ button.deal-record {
 button.deal-record:hover {
   background: var(--paper);
 }
-.deal-record > span {
+.deal-record > span:first-child {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -3257,10 +3347,13 @@ button.deal-record:hover {
     width: auto;
   }
   .deals-workspace .deal-dossier {
+    gap: 12px;
+  }
+  .dossier-box {
     padding: 16px;
   }
   .deal-tabs {
-    margin: 16px -16px 0;
+    margin: -16px -16px 0;
     padding: 0 8px;
   }
   .deal-tab-panel {
@@ -3279,18 +3372,6 @@ button.deal-record:hover {
   /* Phones: the phase names stay; of the stages, only the current one is named. */
   .deal-dossier .stage-progress li:not(.current) button {
     color: transparent;
-  }
-  /* Phones: the next step gets the full row; money and the checks share the next one. */
-  .deal-summary-strip > .deal-next {
-    flex: 1 1 100%;
-    max-width: none;
-  }
-  .deal-summary-strip > .deal-money {
-    flex: 1 1 0;
-    max-width: none;
-  }
-  .deal-check-chip {
-    padding: 10px 12px;
   }
   .deal-workflow dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3998,5 +4079,458 @@ button.deal-record:hover {
     color: var(--muted);
     font-size: 14px;
     margin-right: 12px;
+  }
+}
+
+/* Artists & partners: contacts or organisations (decision 0012). */
+.view-switch {
+  display: inline-flex;
+  gap: 2px;
+  margin-bottom: 16px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.view-switch button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-meta);
+  cursor: pointer;
+}
+.view-switch button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 650;
+  box-shadow: 0 1px 2px rgba(21, 23, 17, 0.08);
+}
+.org-list {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.org-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 16px;
+  padding: 14px 16px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.org-row:hover {
+  border-color: var(--accent);
+}
+.org-row > span {
+  grid-column: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-meta);
+}
+.org-row > small {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: var(--muted);
+}
+.contact-org {
+  display: inline-block;
+  margin: 4px 0 8px;
+  color: var(--accent);
+  font-size: var(--text-meta);
+}
+/* An organisation's page: its header, then cards. */
+.org-page {
+  max-width: 960px;
+  font-size: var(--text-meta);
+}
+.org-page .back-link {
+  margin-bottom: 12px;
+  color: var(--muted);
+}
+.org-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.org-page-header h2 {
+  display: inline;
+  margin: 0 8px 0 0;
+  font-size: 24px;
+}
+.org-page-header p {
+  margin: 6px 0 0;
+}
+a.deal-record {
+  color: var(--ink);
+  text-decoration: none;
+}
+a.deal-record:hover {
+  background: var(--paper);
+}
+.org-payments {
+  margin-top: 12px;
+}
+
+/* Possible duplicate organisations (decision 0012): a panel above the list. */
+.dup-panel {
+  margin: 16px 0 0;
+  padding: 16px;
+  border-color: #f0c9a8;
+}
+.dup-panel header h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.dup-panel header p {
+  margin: 4px 0 12px;
+  font-size: var(--text-meta);
+}
+.dup-panel ul {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.dup-panel li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.dup-names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  min-width: 0;
+}
+.dup-names small {
+  flex-basis: 100%;
+}
+.dup-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.person-role.warn {
+  background: var(--orange-soft);
+  color: #a24a14;
+  font-weight: 600;
+}
+.distinct-from {
+  margin-top: 16px;
+}
+.distinct-from h3 {
+  margin: 0 0 8px;
+  font-size: var(--text-meta);
+  color: var(--muted);
+}
+.distinct-from ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+.distinct-from li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+/* What needs doing (project-actions.tsx): first thing on a project's screen. To-dos are tasks
+   with checkboxes; checks are conditions (○ open, ✓ met), each with the button that fixes it. */
+.actions-card {
+  margin-top: 24px; /* a section break after the stage bar, not just a gap */
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.actions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.actions-header h3 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 15px;
+}
+.actions-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.actions-chevron {
+  flex-shrink: 0;
+  margin-left: -4px;
+  color: var(--muted);
+  transform: rotate(90deg);
+  transition: transform 0.15s ease;
+}
+.actions-card.is-folded .actions-chevron {
+  transform: none;
+}
+.actions-card.is-folded .actions-header {
+  margin-bottom: 0;
+}
+/* Folded: the next thing to do, on the header's line. */
+.actions-summary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 400;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.count-pill {
+  min-width: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+}
+.todo-list,
+.check-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.todo-list > li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  border-bottom: 1px solid var(--line);
+}
+.todo-list > li:last-child {
+  border-bottom: 0;
+}
+.todo-list input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.todo-title {
+  flex: 0 1 auto; /* as wide as its words, so "Next" sits beside them */
+  min-width: 0;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.todo-list > li > .person-role {
+  flex-shrink: 0;
+}
+/* Due dates line up in a column on the right. */
+.todo-list > li > .due {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.todo-title:hover {
+  text-decoration: underline;
+}
+.todo-list > li.is-ticked .todo-title {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.checks-block {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.checks-block h4 {
+  margin: 0 0 4px;
+  color: #a24a14;
+  font-size: 13px;
+  font-weight: 650;
+}
+.check-items > li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  font-size: var(--text-meta);
+}
+/* The fix sits right after what it fixes, not across the card. */
+.check-items > li > span {
+  min-width: 0;
+}
+.check-icon {
+  flex-shrink: 0;
+  color: #c98a5a;
+}
+.check-items > li.is-met .check-icon {
+  color: var(--accent);
+}
+.check-items > li.is-met {
+  color: var(--muted);
+}
+.deal-detail .fix-button {
+  width: auto;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+.checks-done {
+  margin-top: 6px;
+}
+.checks-done summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+}
+.text-button.add-todo {
+  gap: 12px; /* the label lines up with the to-do titles, the + with their boxes */
+  margin: 4px 0 2px;
+  padding: 6px 0 6px 2px;
+  color: var(--muted);
+}
+.add-todo:hover {
+  color: var(--accent);
+}
+.actions-empty {
+  margin: 4px 0 0;
+}
+
+/* Money, what's coming up, notes: three equal cards (a row; stacked on phones). */
+.glance {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.glance-card {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  min-height: 84px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-meta);
+  text-align: left;
+  cursor: pointer;
+}
+.glance-card:hover:not(:disabled) {
+  background: var(--paper);
+}
+.glance-card small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.glance-card strong {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.glance-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.glance-line b {
+  font-variant-numeric: tabular-nums;
+}
+.glance-notes {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+@media (max-width: 600px) {
+  .glance {
+    grid-template-columns: 1fr;
+  }
+  .glance-card {
+    min-height: 0;
+  }
+}
+
+/* The top of a project: the title on white (what this is), then a tinted status strip ruled
+   off above and below (where it stands), then what to do and the details. */
+.deal-hero {
+  margin: -24px -24px 0;
+  padding: 22px 24px 18px;
+}
+.deal-status {
+  margin: 0 -24px;
+  padding: 14px 24px 16px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+.deal-status .stage-bar {
+  margin-top: 0;
+}
+.deal-status .deal-sign-prompt {
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+@media (max-width: 1000px) {
+  /* The back link sits above the title here, so the title starts below it. */
+  .deal-hero {
+    margin-top: 0;
+    padding-top: 0;
+  }
+}
+@media (max-width: 600px) {
+  .deal-hero {
+    margin: 0 -16px;
+    padding: 0 16px 14px;
+  }
+  .deal-status {
+    margin: 0 -16px;
+    padding: 12px 16px 14px;
   }
 }

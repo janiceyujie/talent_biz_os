@@ -18,6 +18,7 @@ import {
   time,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
@@ -167,6 +168,50 @@ export const membership = pgTable(
 
 // Contacts and projects ----------------------------------------------------------
 
+// A company, organisation, band, or label the talent works with (decision 0012).
+// Its people are contacts linked to it; its part in a project is a role on
+// project_organization. Same name never implies same organisation.
+export const organization = pgTable(
+  "organization",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    notes: text(),
+    archivedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("organization_talent_idx").on(t.talentId)],
+).enableRLS();
+
+// Two organisations someone said are different (decision 0012), so they aren't
+// suggested as duplicates again. Stored once per pair, smaller id first; it goes
+// when either organisation does.
+export const organizationDistinct = pgTable(
+  "organization_distinct",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    organizationAId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    organizationBId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    decidedBy: uuid().references(() => person.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("organization_distinct_pair").on(t.organizationAId, t.organizationBId),
+    check("organization_distinct_order", sql`${t.organizationAId} < ${t.organizationBId}`),
+  ],
+).enableRLS();
+
 // Someone the talent works with. Same name never implies same contact.
 export const contact = pgTable(
   "contact",
@@ -177,7 +222,9 @@ export const contact = pgTable(
       .references(() => talent.id, { onDelete: "cascade" }),
     role: text({ enum: contactRoles }).notNull(),
     name: text().notNull(),
-    company: text(),
+    company: text(), // as typed; the organization link below replaces it over time (decision 0012)
+    // Where they work, if anywhere: an independent has none. Removing the organisation keeps the person.
+    organizationId: uuid().references(() => organization.id, { onDelete: "set null" }),
     email: text(),
     phone: text(),
     notes: text(),
@@ -216,6 +263,35 @@ export const project = pgTable(
     check("project_stage_check", oneOf(t.stage, projectStages)),
     check("project_quote_currency_check", sql`${t.quoteCurrency} = 'TWD'`), // MVP: TWD only
     check("project_tax_rate_check", sql`${t.taxRate} between 0 and 100`),
+  ],
+).enableRLS();
+
+// The organisations on a project (decision 0012), each with its part in it in
+// the person's own words (e.g. "organiser", "agency", "venue"). Exactly one is
+// primary: the client, which the list shows and finance groups by
+// (project.counterparty mirrors its name).
+export const projectOrganization = pgTable(
+  "project_organization",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    projectId: uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    role: text(),
+    isPrimary: boolean().notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("project_organization_project_organization").on(t.projectId, t.organizationId),
+    index("project_organization_organization_idx").on(t.organizationId),
+    // At most one primary per project.
+    uniqueIndex("project_organization_one_primary").on(t.projectId).where(sql`${t.isPrimary}`),
   ],
 ).enableRLS();
 

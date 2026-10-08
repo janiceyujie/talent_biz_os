@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArrowDownUp, ArrowLeft, Funnel, Plus, TriangleAlert } from "lucide-react";
+import { Archive, ArrowDownUp, ArrowLeft, Funnel, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -11,19 +11,18 @@ import { Toast } from "@/components/app/toast";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { useProjectPages } from "@/components/app/project-pages";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
-import { setTodoDone } from "@/lib/actions/calendar";
 import { archiveProject, setProjectStage } from "@/lib/actions/projects";
-import { dateInZone } from "@/lib/domain/dates";
-import { daysBetween } from "@/lib/domain/insights";
 import { useMoney } from "@/lib/i18n/format";
-import { isSigned, mainStages, phaseOf, phases, type Phase } from "@/lib/domain/phases";
+import { mainStages, phaseOf, phases, type Phase } from "@/lib/domain/phases";
 import { listSorts, type ListSort, type ListView } from "@/lib/domain/project-list";
-import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
+import { projectQuoteTotal } from "@/lib/domain/workflow";
 import { calendarPoints } from "@/lib/calendar/points";
 import { useLabels } from "@/lib/i18n/labels";
 import { projectTypes } from "@/lib/project-types";
 import type { ProjectSummary, Stage } from "@/lib/types";
-import { useClosingChecks, ProjectWorkflowPanel } from "./project-workflow-panel";
+import { ProjectActions, ProjectGlance } from "./project-actions";
+import { ProjectWorkflowPanel } from "./project-workflow-panel";
+import { useDue } from "./use-due";
 import { MoreMenu } from "./more-menu";
 import { DealCard } from "./deal-card";
 import { ProjectOverview } from "./project-overview";
@@ -54,20 +53,6 @@ type Tab = "overview" | "timeline" | "money" | "travel" | "contract";
 type Scope = "phase" | "all" | "archived";
 type Notice = { message: string; action?: { label: string; onClick: () => void } };
 
-/** "In 3 days", "Tomorrow", "2 days overdue", and how urgent that is, from a due date. */
-function useDue() {
-  const t = useTranslations("projects");
-  const data = useAppData();
-  const today = dateInZone(data.talent.timeZone);
-  return (due: string | null | undefined) => {
-    if (!due) return null;
-    const days = daysBetween(today, due);
-    if (days < 0) return { text: t("overdue", { days: -days }), tone: "overdue" };
-    if (days === 0) return { text: t("dueToday"), tone: "soon" };
-    if (days === 1) return { text: t("dueTomorrow"), tone: "soon" };
-    return { text: t("dueIn", { days }), tone: days <= 3 ? "soon" : "" };
-  };
-}
 
 /**
  * The list's view, filters, order, and open project come from the address and stay in it as they change:
@@ -88,6 +73,8 @@ export function ProjectsView() {
   const { selectedId, phase: initialPhase } = initial;
   const data = useAppData();
   const money = useMoney();
+  // Kept here, above the detail, so a folded To do list stays folded from one project to the next.
+  const [todosFolded, setTodosFolded] = useState(false);
   const due = useDue();
   const t = useTranslations("projects");
   const labels = useLabels();
@@ -156,6 +143,24 @@ export function ProjectsView() {
     watch.observe(target);
     return () => watch.disconnect();
   }, [loadMore, list.hasMore]);
+
+  // Wide screens: the list reaches down to the window's bottom from wherever it starts (lower while the
+  // page header is in view, under the top bar once it sticks), so every row is reached by scrolling the
+  // list alone and the open project beside it stays put.
+  useEffect(() => {
+    const el = panel.current;
+    if (!el) return;
+    const fit = () => el.style.setProperty("--list-top", `${Math.max(0, el.getBoundingClientRect().top)}px`);
+    fit();
+    // Also when what's above it changes height (the tabs' counts, a banner), which moves it without a scroll.
+    const resized = new ResizeObserver(fit);
+    resized.observe(document.body);
+    window.addEventListener("scroll", fit, { passive: true });
+    return () => {
+      resized.disconnect();
+      window.removeEventListener("scroll", fit);
+    };
+  }, []);
 
   // On a phone the tabs scroll sideways: keep the chosen one in sight (again once the counts widen the tabs).
   const tabsRow = useRef<HTMLDivElement>(null);
@@ -393,6 +398,8 @@ export function ProjectsView() {
               if (next !== from) setNotice({ message: t("movedTo", { phase: t(`phase.${next}`) }) });
             }}
             notify={setNotice}
+            todosFolded={todosFolded}
+            onFoldTodos={setTodosFolded}
           />
         )}
       </div>
@@ -416,6 +423,8 @@ function ProjectDetail({
   onBack,
   onMoved,
   notify,
+  todosFolded,
+  onFoldTodos,
 }: {
   project: ProjectSummary;
   edit: (e: Editor) => void;
@@ -423,10 +432,10 @@ function ProjectDetail({
   /** After a stage change: the project's phase now, and before. */
   onMoved: (phase: Phase, from: Phase) => void;
   notify: (notice: Notice) => void;
+  todosFolded: boolean;
+  onFoldTodos: (folded: boolean) => void;
 }) {
   const data = useAppData();
-  const money = useMoney();
-  const due = useDue();
   const router = useRouter();
   const t = useTranslations("projects");
   const tWorkflow = useTranslations("workflow");
@@ -438,12 +447,7 @@ function ProjectDetail({
   const { detail, loading, failed } = useProjectDetail(project);
   // The full project (details, notes) arrives with the detail; until then the summary shows.
   const full = detail ? withDetail(project, detail) : null;
-  const checks = useClosingChecks(full);
-  const settlement = projectSettlement(data, project);
-  // New linked items need a live, signed project; the server enforces the same rule.
-  const signed = !project.archived && isSigned(project.stage);
   const exited = project.stage === "declined" || project.stage === "cancelled";
-  const next = due(project.nextAction?.dueDate);
   const counts: Record<Tab, number> = {
     overview: 0,
     timeline: detail?.timeline.length ?? 0,
@@ -459,27 +463,28 @@ function ProjectDetail({
     if (window.matchMedia(NARROW).matches) heading.current?.focus({ preventScroll: true });
   }, []);
 
-  // Ticked at once; the following to-do takes its place when the saved data comes back.
-  const [doneId, setDoneId] = useState<string | null>(null);
-  const complete = (step: { id: string; title: string }) => {
-    setDoneId(step.id); // outside the transition, so it shows now rather than when the save returns
-    startTransition(async () => {
-      const failure = await setTodoDone(step.id, true);
-      setError(failure);
-      if (failure) setDoneId(null);
-      else
-        notify({
-          message: t("doneToast", { title: step.title }),
-          action: {
-            label: t("undo"),
-            onClick: () => {
-              setDoneId(null); // the same to-do comes back as the next step, unticked
-              startTransition(async () => setError(await setTodoDone(step.id, false)));
-            },
-          },
-        });
-    });
+  // Tabs differ in height, so after a switch the page could be left anywhere in the new one (or,
+  // after a short tab, with the tabs far down the screen). Bring the box's top up under the top bar
+  // whenever it's scrolled past or the tab doesn't fit below it; a tab that fits where it is stays put.
+  const details = useRef<HTMLElement>(null);
+  const switched = useRef(false);
+  const fitTab = () => {
+    const box = details.current;
+    if (!box) return;
+    const { top, bottom } = box.getBoundingClientRect();
+    const under = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0; // clear of the top bar
+    if (top < under - 1 || (bottom > window.innerHeight && top > under + 1))
+      box.scrollIntoView({ block: "start", behavior: top < under ? "instant" : "smooth" });
   };
+  const openTab = (key: Tab) => {
+    if (key === tab) return fitTab(); // already open (from a card above): just show it
+    switched.current = true;
+    setTab(key);
+  };
+  useEffect(() => {
+    if (switched.current) fitTab();
+    switched.current = false;
+  }, [tab]);
 
   const moveTo = (stage: Stage) =>
     startTransition(async () => {
@@ -490,210 +495,160 @@ function ProjectDetail({
     });
 
   return (
-    <article className="surface deal-detail deal-dossier">
-      <button className="text-button deal-back" onClick={onBack}>
-        <ArrowLeft size={16} aria-hidden="true" />
-        {t("back")}
-      </button>
-      <header className="deal-dossier-header">
-        <div>
-          <h2 ref={heading} tabIndex={-1}>
-            {project.title}
-          </h2>
-          <p>
-            {project.counterparty} · {labels.projectType(project.type)}
-          </p>
-        </div>
-        <div className="deal-header-actions">
-          {!project.archived && (
-            <button className="secondary" onClick={() => router.push(`/drafts?project=${project.id}`)}>
-              {t("draft")}
-            </button>
-          )}
-          <button className="primary" disabled={!full} onClick={() => full && edit({ kind: "project", item: projectRecord(full) })}>
-            {t("editFull")}
-          </button>
-          <MoreMenu label={t("more")}>
-            {!exited && !project.archived && (
-              <>
-                <button role="menuitem" disabled={pending} onClick={() => moveTo("declined")}>
-                  {t("markDeclined")}
-                </button>
-                <button role="menuitem" disabled={pending} onClick={() => moveTo("cancelled")}>
-                  {t("markCancelled")}
-                </button>
-              </>
-            )}
-            <button
-              role="menuitem"
-              disabled={pending}
-              onClick={() => startTransition(async () => setError(await archiveProject(project.id, !project.archived)))}
-            >
-              {project.archived ? t("restore") : t("archive")}
-            </button>
-          </MoreMenu>
-        </div>
-      </header>
-
-      {/* One stage control: each step is a button that moves the project there. */}
-      {/* The stages, grouped under the phases the tabs show: a stage's tab is the label over it. */}
-      <div className="stage-bar">
-        {exited && (
-          <span className="stage-exited" aria-current="step">
-            {labels.stage(project.stage)}
-          </span>
-        )}
-        <ol className="stage-groups" aria-label={t("stageProgress")}>
-          {(["negotiation", "execution", "settlement"] as const).map((ph) => (
-            <li key={ph} className={`stage-group ${phaseOf(project.stage) === ph ? "current" : ""}`}>
-              <span className="stage-phase">{t(`phase.${ph}`)}</span>
-              <ol className="stage-progress">
-                {mainStages
-                  .filter((stage) => phaseOf(stage) === ph)
-                  .map((stage) => {
-                    const at = mainStages.indexOf(project.stage); // -1 for declined / cancelled
-                    const i = mainStages.indexOf(stage);
-                    return (
-                      <li key={stage} aria-current={stage === project.stage ? "step" : undefined} className={at >= 0 && i < at ? "complete" : stage === project.stage ? "current" : ""}>
-                        <button disabled={pending || project.archived} onClick={() => stage !== project.stage && moveTo(stage)}>
-                          {labels.stage(stage)}
-                        </button>
-                      </li>
-                    );
-                  })}
-              </ol>
-            </li>
-          ))}
-        </ol>
-        <InfoHint notes={[t(`stageNote.${project.stage}`), tWorkflow("stageNote")]} />
-      </div>
-      {error && (
-        <p className="notice error" role="alert">
-          {error}
-        </p>
-      )}
-      {!project.archived && phaseOf(project.stage) === "negotiation" && (
-        <div className="deal-sign-prompt">
-          <span>{t("signPrompt")}</span>
-          <button className="secondary" disabled={pending} onClick={() => moveTo("signed")}>
-            {t("markSigned")}
-          </button>
-        </div>
-      )}
-
-      <div className="deal-summary-strip">
-        <div className="deal-next">
-          <small>{t("nextStep")}</small>
-          {project.nextAction ? (
-            // Done in one tap, with Undo in the notice; the following to-do then moves up.
-            <label className="next-done">
-              <input
-                type="checkbox"
-                checked={doneId === project.nextAction.id}
-                disabled={pending || project.archived}
-                aria-label={t("markDone", { title: project.nextAction.title })}
-                onChange={() => complete(project.nextAction!)}
-              />
-              <strong>{project.nextAction.title}</strong>
-            </label>
-          ) : (
-            <strong>{t("noNextStep")}</strong>
-          )}
-          {next && <span className={`due ${next.tone}`}>{next.text}</span>}
-          {signed && (
-            <button
-              className="text-button"
-              onClick={() =>
-                edit({ kind: "calendar", item: { projectId: project.id, title: project.nextAction?.title || project.title } })
-              }
-            >
-              <Plus size={14} aria-hidden="true" />
-              {t("addTodo")}
-            </button>
-          )}
-        </div>
-        <button className="deal-money" onClick={() => setTab("money")}>
-          {/* Before signing, the quote is what matters; after, how much of it has come in. */}
-          <small>{signed ? tWorkflow("payments") : tWorkflow("quoted")}</small>
-          {settlement.quoted === null ? (
-            <strong>{t("quoteNotSet")}</strong>
-          ) : signed ? (
-            <>
-              <strong>{tWorkflow("receivedOf", { received: money(settlement.received), quoted: money(settlement.quoted) })}</strong>
-              <span className="meter" aria-hidden="true">
-                <span style={{ width: `${Math.min(100, settlement.quoted ? (settlement.received / settlement.quoted) * 100 : 0)}%` }} />
-              </span>
-            </>
-          ) : (
-            <strong>{money(settlement.quoted)}</strong>
-          )}
+    <article className="deal-detail deal-dossier">
+      {/* Two boxes: where the project stands and what to do about it, then its details under tabs. */}
+      <section className="surface dossier-box">
+        <button className="text-button deal-back" onClick={onBack}>
+          <ArrowLeft size={16} aria-hidden="true" />
+          {t("back")}
         </button>
-        {/* The closing check only means something once there's signed work to close. */}
-        {/* What's still open, listed right here; each item goes to where it's fixed. */}
-        {isSigned(project.stage) && full &&
-          (checks.length ? (
-            <MoreMenu
-              label={t("checksTitle")}
-              heading={t("checksTitle")}
-              className="deal-check-chip has-checks"
-              button={
-                <>
-                  <TriangleAlert size={14} aria-hidden="true" />
-                  {t("checks", { count: checks.length })}
-                </>
-              }
-            >
-              {checks.map((c) => (
-                <button
-                  key={c.text}
-                  role="menuitem"
-                  onClick={() => (c.place === "edit" ? edit({ kind: "project", item: projectRecord(full) }) : setTab(c.place))}
-                >
-                  {c.text}
+        {/* Who it's with and where it stands, set apart as a band above what to do and the details. */}
+        <div className="deal-hero">
+          <header className="deal-dossier-header">
+            <div>
+              <h2 ref={heading} tabIndex={-1}>
+                {project.title}
+              </h2>
+              <p>
+                {project.counterparty} · {labels.projectType(project.type)}
+              </p>
+            </div>
+            <div className="deal-header-actions">
+              {!project.archived && (
+                <button className="secondary" onClick={() => router.push(`/drafts?project=${project.id}`)}>
+                  {t("draft")}
                 </button>
-              ))}
-            </MoreMenu>
-          ) : (
-            <span className="deal-check-chip">{t("allClear")}</span>
-          ))}
-      </div>
+              )}
+              <button className="primary" disabled={!full} onClick={() => full && edit({ kind: "project", item: projectRecord(full) })}>
+                {t("editFull")}
+              </button>
+              <MoreMenu label={t("more")}>
+                {!exited && !project.archived && (
+                  <>
+                    <button role="menuitem" disabled={pending} onClick={() => moveTo("declined")}>
+                      {t("markDeclined")}
+                    </button>
+                    <button role="menuitem" disabled={pending} onClick={() => moveTo("cancelled")}>
+                      {t("markCancelled")}
+                    </button>
+                  </>
+                )}
+                <button
+                  role="menuitem"
+                  disabled={pending}
+                  onClick={() => startTransition(async () => setError(await archiveProject(project.id, !project.archived)))}
+                >
+                  {project.archived ? t("restore") : t("archive")}
+                </button>
+              </MoreMenu>
+            </div>
+          </header>
+        </div>
 
-      <div className="deal-tabs" role="tablist" aria-label={t("tabs")}>
-        {tabs.map((key) => (
-          <button
-            key={key}
-            role="tab"
-            id={`deal-tab-${key}`}
-            aria-selected={tab === key}
-            aria-controls={`deal-panel-${key}`}
-            onClick={() => setTab(key)}
-          >
-            {t(`tab.${key}`)}
-            {counts[key] > 0 && <span>{counts[key]}</span>}
-          </button>
-        ))}
-      </div>
-      <div className="deal-tab-panel" role="tabpanel" id={`deal-panel-${tab}`} aria-labelledby={`deal-tab-${tab}`}>
-        {failed && (tab === "overview" || tab === "timeline") && <p className="notice error">{t("detailFailed")}</p>}
-        {(tab === "overview" || tab === "money") && !full && !failed && <p className="muted">{t("loading")}</p>}
-        {tab === "overview" && full && <ProjectOverview project={full} people={detail!.people} offerText={detail!.offerText} edit={edit} showTab={setTab} />}
-        {tab === "timeline" && (
-          <DealCard title={t("tab.timeline")}>
-            {loading ? <p className="muted">{t("loading")}</p> : <ProjectTimeline project={project} entries={detail?.timeline ?? []} />}
-          </DealCard>
-        )}
-        {tab === "money" && full && <ProjectWorkflowPanel project={full} edit={edit} />}
-        {tab === "travel" && (
-          <DealCard title={t("tab.travel")}>
-            <TravelItinerary project={project} edit={edit} />
-          </DealCard>
-        )}
-        {tab === "contract" && (
-          <DealCard title={t("tab.contract")}>
-            <ContractVersions project={project} />
-          </DealCard>
-        )}
-      </div>
+        {/* Where it stands, on its own tinted strip: one line through the six stages, the phases the
+            tabs show named above them. Each step is a button that moves the project there. */}
+        <div className="deal-status">
+          <div className="stage-bar">
+            {exited && (
+              <span className="stage-exited" aria-current="step">
+                {labels.stage(project.stage)}
+              </span>
+            )}
+            <div className="stepper">
+              <div className="stepper-phases" aria-hidden="true">
+                {(["negotiation", "execution", "settlement"] as const).map((ph) => (
+                  <span key={ph} className={phaseOf(project.stage) === ph ? "current" : ""}>
+                    {t(`phase.${ph}`)}
+                  </span>
+                ))}
+              </div>
+              <ol className="stage-progress" aria-label={t("stageProgress")}>
+                {mainStages.map((stage, i) => {
+                  const at = mainStages.indexOf(project.stage); // -1 for declined / cancelled
+                  return (
+                    <li
+                      key={stage}
+                      aria-current={stage === project.stage ? "step" : undefined}
+                      className={at >= 0 && i < at ? "complete" : stage === project.stage ? "current" : ""}
+                    >
+                      <button disabled={pending || project.archived} onClick={() => stage !== project.stage && moveTo(stage)}>
+                        {/* The phase row above is visual only; say it here for screen readers. */}
+                        <span className="sr-only">{t(`phase.${phaseOf(stage)}`)} · </span>
+                        {labels.stage(stage)}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+            <InfoHint notes={[t(`stageNote.${project.stage}`), tWorkflow("stageNote")]} />
+          </div>
+          {error && (
+            <p className="notice error" role="alert">
+              {error}
+            </p>
+          )}
+          {!project.archived && phaseOf(project.stage) === "negotiation" && (
+            <div className="deal-sign-prompt">
+              <span>{t("signPrompt")}</span>
+              <button className="secondary" disabled={pending} onClick={() => moveTo("signed")}>
+                {t("markSigned")}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* First, what needs doing; then the money, what's coming up, and the notes, at a glance. */}
+        <ProjectActions
+          project={project}
+          full={full}
+          edit={edit}
+          showTab={openTab}
+          notify={notify}
+          folded={todosFolded}
+          onFold={onFoldTodos}
+        />
+        <ProjectGlance project={project} full={full} edit={edit} showTab={openTab} />
+      </section>
+
+      <section ref={details} className="surface dossier-box dossier-details">
+        <div className="deal-tabs" role="tablist" aria-label={t("tabs")}>
+          {tabs.map((key) => (
+            <button
+              key={key}
+              role="tab"
+              id={`deal-tab-${key}`}
+              aria-selected={tab === key}
+              aria-controls={`deal-panel-${key}`}
+              onClick={() => openTab(key)}
+            >
+              {t(`tab.${key}`)}
+              {counts[key] > 0 && <span>{counts[key]}</span>}
+            </button>
+          ))}
+        </div>
+        <div className="deal-tab-panel" role="tabpanel" id={`deal-panel-${tab}`} aria-labelledby={`deal-tab-${tab}`}>
+          {failed && (tab === "overview" || tab === "timeline") && <p className="notice error">{t("detailFailed")}</p>}
+          {(tab === "overview" || tab === "money") && !full && !failed && <p className="muted">{t("loading")}</p>}
+          {tab === "overview" && full && <ProjectOverview project={full} people={detail!.people} organizations={detail!.organizations} offerText={detail!.offerText} edit={edit} />}
+          {tab === "timeline" && (
+            <DealCard title={t("tab.timeline")}>
+              {loading ? <p className="muted">{t("loading")}</p> : <ProjectTimeline project={project} entries={detail?.timeline ?? []} />}
+            </DealCard>
+          )}
+          {tab === "money" && full && <ProjectWorkflowPanel project={full} edit={edit} />}
+          {tab === "travel" && (
+            <DealCard title={t("tab.travel")}>
+              <TravelItinerary project={project} edit={edit} />
+            </DealCard>
+          )}
+          {tab === "contract" && (
+            <DealCard title={t("tab.contract")}>
+              <ContractVersions project={project} />
+            </DealCard>
+          )}
+        </div>
+      </section>
     </article>
   );
 }

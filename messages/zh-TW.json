@@ -429,14 +429,14 @@
     },
     "stageProgress": "合作案階段",
     "stageNote": {
-      "offer": "剛收到邀約，先確認合作類型與基本資訊。",
-      "negotiating": "回覆郵件並確認條件，暫不列入執行待辦。",
-      "signed": "合約完成，可以安排交付、行程與付款節點。",
-      "in_progress": "執行中，交付、行程與付款節點列入待辦。",
-      "collecting_payment": "交付已完成，追蹤請款、尾款與成本。",
-      "closed": "交付與收付均已核對，案件結束。",
-      "declined": "已婉拒這個邀約。",
-      "cancelled": "合作已取消。仍有款項時請另外處理。"
+      "offer": "剛收到的邀約。先確認合作內容、日期和報酬。",
+      "negotiating": "正在談條件。簽約後就能開始安排待辦、行程和請款。",
+      "signed": "已簽約。接下來安排要交付的內容、行程，以及什麼時候請款。",
+      "in_progress": "進行中。照上方「待辦事項」逐項完成交付、行程和請款。",
+      "collecting_payment": "已交付。接下來請款、追蹤尾款，並記下花費。",
+      "closed": "已結案：工作已交付，款項也都結清了。",
+      "declined": "你已婉拒這個邀約。",
+      "cancelled": "合作已取消。如果有已請款或已收到的款項，請到「款項」逐筆處理。"
     },
     "quoteNotSet": "報價未定",
     "listLabel": "合作案清單",
@@ -506,9 +506,9 @@
     "undo": "復原",
     "people": {
       "title": "合作方",
-      "add": "新增聯絡人",
+      "add": "聯絡人",
       "main": "主要窗口",
-      "empty": "還沒有聯絡人。加入主要窗口後，對方寄來的訊息會用 Email 對應到這個合作案。",
+      "empty": "還沒有組織或聯絡人。加入主要窗口後，對方寄來的訊息會用 Email 對應到這個合作案。",
       "addTitle": "新增聯絡人",
       "person": "聯絡人",
       "role": "在這個合作案的角色",
@@ -520,7 +520,53 @@
       "remove": "從合作案移除",
       "save": "儲存",
       "cancel": "取消",
-      "more": "{name} 的更多動作"
+      "more": "{name} 的更多動作",
+      "addOrg": "組織",
+      "client": "主要客戶",
+      "addTo": "新增 {name} 的聯絡人",
+      "makeClient": "設為主要客戶",
+      "noPeopleHere": "還沒有這個組織的聯絡人。",
+      "others": "其他聯絡人",
+      "addToTitle": "新增 {name} 的聯絡人",
+      "addOrgTitle": "新增組織",
+      "org": "組織",
+      "firstIsClient": "第一個組織會成為主要客戶。",
+      "orgRolePlaceholder": "例如：主辦、經紀、場地、品牌",
+      "count": "{count} 位",
+      "expandAll": "全部展開",
+      "collapseAll": "全部收合",
+      "people": "聯絡人",
+      "editPerson": "編輯",
+      "editPersonTitle": "編輯 {name}",
+      "name": "姓名",
+      "email": "Email",
+      "phone": "電話",
+      "sameEverywhere": "姓名、Email 和電話是這位聯絡人在所有地方共用的資料。",
+      "removePersonTitle": "要把 {name} 從這個合作案移除嗎？",
+      "removePersonBody": "這位聯絡人仍會留在「藝人與合作方」，只是不再列在這個合作案上。",
+      "removeOrgTitle": "要把 {name} 從這個合作案移除嗎？",
+      "removeOrgBody": "這個組織和它的聯絡人仍會留在「藝人與合作方」；已經在合作案上的聯絡人會移到「其他聯絡人」。",
+      "more_n": "+{count}"
+    },
+    "actions": {
+      "title": "待辦事項",
+      "addTodo": "新增待辦",
+      "next": "下一步",
+      "beforeClosing": "結案前還差 {count} 項",
+      "doneCount": "已完成 {count} 項",
+      "fixEdit": "補上",
+      "fixBilling": "建立請款",
+      "fixReceived": "登錄收款",
+      "fixSchedule": "新增行程",
+      "fixMoney": "查看款項",
+      "allClear": "結案前的項目都完成了。",
+      "nothing": "目前沒有要做的事。"
+    },
+    "glance": {
+      "comingUp": "接下來",
+      "nothingComing": "還沒有行程",
+      "notes": "備註",
+      "addNotes": "＋ 新增備註"
     }
   },
   "workflow": {
@@ -544,10 +590,12 @@
       "pending": "尚有待收款 {amount}",
       "shortfall": "實收較請款少 {amount}（扣繳或手續費？請確認）",
       "unpaidCosts": "{count} 筆成本尚未支付",
-      "quoteNotSet": "報價未定"
+      "quoteNotSet": "報價未定",
+      "notBilled": "還沒有建立請款",
+      "nothingReceived": "還沒有收到款項"
     },
     "allClear": "已登錄的待辦與收付已核對；仍請人工確認交付驗收與合約義務。",
-    "stageNote": "階段由你確認，變更階段不會自動記為收款或完成待辦。",
+    "stageNote": "階段由你自己決定：點上方任一步驟，就能把合作案移到那裡。移動階段不會自動記錄收款，也不會勾掉待辦。",
     "related": "相關紀錄",
     "todoDone": "已完成",
     "todoOpen": "待辦",
@@ -565,7 +613,15 @@
     "cancel": "取消",
     "confirmPlan": "確認建立兩筆待收款",
     "planNeedsQuote": "請先確定報價，再拆分訂金與尾款。",
-    "receivedOf": "已收 {received}／{quoted}"
+    "receivedOf": "已收 {received}／{quoted}",
+    "met": {
+      "quote": "報價已設定",
+      "contract": "合約已登錄",
+      "deliverables": "交付項目已登錄",
+      "schedule": "已有行程或待辦",
+      "billing": "請款已建立",
+      "received": "款項已收齊"
+    }
   },
   "inbox": {
     "title": "待確認的邀約",
@@ -805,7 +861,14 @@
     "restore": "還原",
     "emptyTitle": "建立你的合作名單",
     "emptyBody": "藝人、品牌窗口與經紀人的資料都可以在這裡保存。",
-    "addFirst": "新增第一位聯絡人"
+    "addFirst": "新增第一位聯絡人",
+    "views": "檢視",
+    "viewPeople": "聯絡人",
+    "viewOrganizations": "組織",
+    "searchOrganizations": "搜尋組織",
+    "noPeopleYet": "還沒有聯絡人",
+    "peopleCount": "{count} 位聯絡人",
+    "noOrganizations": "沒有符合的組織。"
   },
   "files": {
     "title": "保存每個合作案的檔案",
@@ -1122,7 +1185,8 @@
       "settledDateIn": "實際收款日期",
       "settledDateOut": "實際付款日期",
       "endTime": "結束時間",
-      "endDate": "結束日期"
+      "endDate": "結束日期",
+      "organization": "組織"
     },
     "unlinked": "未關聯",
     "kind": {
@@ -1143,7 +1207,6 @@
     "keepEditing": "繼續編輯",
     "discard": "放棄變更",
     "contactLinked": "已連結聯絡人",
-    "contactUnlinked": "只存在這個合作案",
     "contactClear": "清除合作方",
     "section": {
       "amount": "金額與稅額",
@@ -1156,11 +1219,21 @@
     },
     "paymentHelpIn": "一筆紀錄代表一筆款項。分次收款請分筆登錄；尚未收到時保持「待收」。已收報表依實際收款日期計算。實際入帳少於應收（例如扣繳、二代健保）時，填寫實收金額，差額會另外顯示。",
     "paymentHelpOut": "一筆紀錄代表一筆款項。分次付款請分筆登錄；尚未支付時保持「待付」。已付報表依實際付款日期計算。",
-    "contactAdd": "加入聯絡人",
     "contactCreate": "＋ 新增聯絡人「{name}」",
     "contactPlaceholder": "搜尋聯絡人，或輸入新名稱",
-    "contactNewTitle": "儲存時新增聯絡人「{name}」",
-    "contactNewCancel": "不新增"
+    "clientField": "客戶（組織）",
+    "mainContactField": "主要窗口",
+    "orgPlaceholder": "搜尋組織，或輸入新名稱",
+    "orgNew": "＋ 新增組織「{name}」",
+    "orgLinked": "已有的組織",
+    "orgWillCreate": "會新增這個組織",
+    "contactWillCreate": "儲存時會新增聯絡人「{name}」",
+    "contactWillCreateAt": "儲存時會在 {org} 新增聯絡人「{name}」",
+    "contactSameName": "已經有一位叫「{name}」的聯絡人。",
+    "contactUseExisting": "改選這位",
+    "contactDetails": "聯絡方式（選填）",
+    "contactAlreadyHere": "「{name}」已經在這裡了；確定要再新增一位同名的聯絡人嗎？",
+    "contactSameNameElsewhere": "{org} 已經有一位「{name}」；這會在這裡新增另一位同名的聯絡人。"
   },
   "tone": {
     "natural": "自然專業",
@@ -1305,7 +1378,6 @@
     "splitPartsPositive": "拆分後訂金與尾款都必須大於零。",
     "projectTitleRequired": "請填寫合作案名稱。",
     "typeRequired": "請選擇商案類型。",
-    "counterpartyRequired": "請填寫合作方。",
     "counterpartyNotFound": "找不到這位合作方。",
     "languageRequired": "請選擇回覆使用的語言。",
     "templateTitleRequired": "請填寫範本名稱。",
@@ -1334,7 +1406,12 @@
     "calendarNotConnected": "尚未連結 Google 日曆。",
     "calendarUnreachable": "暫時連不上 Google，請稍後再試。",
     "personRequired": "請選擇一位聯絡人，或新增一位。",
-    "alreadyOnProject": "這位聯絡人已經在這個合作案上。"
+    "alreadyOnProject": "這位聯絡人已經在這個合作案上。",
+    "organizationRequired": "請選擇一個組織，或新增一個。",
+    "organizationNameRequired": "請填寫組織名稱。",
+    "organizationNotFound": "找不到這個組織。",
+    "clientCantBeRemoved": "這是合作案的主要客戶；請先把另一個組織設為主要客戶，再移除它。",
+    "clientRequired": "請填寫客戶（組織）。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",
@@ -1423,7 +1500,7 @@
     "details": "行程詳情"
   },
   "partners": {
-    "intro": "依已簽約合作與內帳紀錄計算。準時率按已收款筆數計算，不是對公司的信用評分。",
+    "intro": "依組織擔任主要客戶的已簽約合作與內帳紀錄計算。準時率按已收款筆數計算，不是對公司的信用評分。",
     "listLabel": "合作方紀錄",
     "evidence": {
       "tooFew": "資料不足",
@@ -1432,7 +1509,7 @@
       "someLate": "有逾期紀錄"
     },
     "summary": "{projects} 次合作 · {overdue} 筆待收逾期",
-    "empty": "新增合作方並關聯案件後，這裡會顯示合作紀錄。",
+    "empty": "合作案有了主要客戶（組織）並簽約後，這裡會顯示該組織的合作紀錄。",
     "statProjects": "合作次數",
     "statOnTime": "已收款準時率",
     "statAvgLate": "逾期款平均天數",
@@ -1520,5 +1597,62 @@
     "body": "這個畫面沒有正常載入。請再試一次，或重新整理頁面。",
     "reload": "重新整理",
     "retry": "再試一次"
+  },
+  "organizations": {
+    "back": "所有組織",
+    "archived": "已歸檔",
+    "edit": "編輯",
+    "more": "更多動作",
+    "archive": "歸檔組織",
+    "restore": "還原組織",
+    "people": "聯絡人（{count}）",
+    "addPerson": "新增聯絡人",
+    "personMore": "{name} 的更多動作",
+    "removePerson": "移出這個組織",
+    "noPeople": "還沒有在這裡工作的聯絡人。",
+    "projects": "合作案（{count}）",
+    "client": "主要客戶",
+    "noProjects": "還沒有和這個組織的合作案。",
+    "money": "款項（擔任主要客戶的合作案）",
+    "received": "已收款",
+    "outstanding": "待收款",
+    "missing": "找不到這個組織。",
+    "editTitle": "編輯組織",
+    "newTitle": "新增組織",
+    "name": "名稱",
+    "notes": "備註",
+    "renameNote": "改名也會更新以它為主要客戶的合作案上顯示的名稱。",
+    "person": "聯絡人",
+    "moveNote": "清單只列出還沒有組織的聯絡人，加入後他們會屬於這個組織。",
+    "cancel": "取消",
+    "save": "儲存",
+    "add": "加入",
+    "removePersonTitle": "要把 {name} 移出 {org} 嗎？",
+    "removePersonBody": "這位聯絡人仍會留在「藝人與合作方」和他的合作案上，只是不再屬於這個組織。",
+    "duplicates": {
+      "title": "可能重複的組織（{count}）",
+      "intro": "這些組織看起來可能是同一個被輸入了兩次。確認後可以合併，或標記為不同。",
+      "strong": "很可能重複",
+      "possible": "可能重複",
+      "reason": {
+        "sameName": "去掉公司類型後名稱相同",
+        "sharedDomain": "聯絡人都用 {domain} 的 Email",
+        "contains": "其中一個名稱包含另一個",
+        "spelling": "拼法只差一兩個字母"
+      },
+      "merge": "合併…",
+      "notSame": "不是同一個",
+      "showAll": "顯示全部（{count}）",
+      "showFewer": "收合",
+      "mergeTitle": "合併組織",
+      "keepWhich": "保留哪一個",
+      "peopleCount": "{count} 位聯絡人",
+      "finalName": "合併後的名稱",
+      "mergeNote": "{remove} 的 {count} 位聯絡人和它所在的合作案會移到「{keep}」，然後刪除 {remove}。合併後無法復原。",
+      "mergeButton": "合併",
+      "cancel": "取消",
+      "distinctTitle": "已標記為不同的組織",
+      "undo": "復原"
+    }
   }
 }

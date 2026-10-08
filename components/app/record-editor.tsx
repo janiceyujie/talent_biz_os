@@ -26,6 +26,7 @@ import {
 } from "@/lib/types";
 import { useAppData } from "./app-data";
 import { ContactPicker, type NewContact } from "./contact-picker";
+import { OrganizationPicker } from "./organization-picker";
 import { TimeZonePicker } from "./time-zone-picker";
 import { Modal } from "./modal";
 
@@ -112,7 +113,7 @@ export function RecordEditor({
       travel: "",
       notes: "",
     },
-    contact: { name: "", role: "counterparty", company: "", email: "", phone: "", notes: "" },
+    contact: { name: "", role: "counterparty", organizationId: "", organizationName: "", email: "", phone: "", notes: "" },
     calendar: {
       title: "",
       date: today,
@@ -166,6 +167,17 @@ export function RecordEditor({
     const initial = { ...defaults[kind], ...editor.item };
     // Templates are stored with neutral placeholders; edit them in the reader's language.
     if (kind === "template") initial.body = toDisplay(String(initial.body), uiLocale);
+    // A contact's organisation, as the picker shows it; a company typed before organisations existed becomes one on save.
+    if (kind === "contact") {
+      initial.organizationId = String(initial.organizationId ?? "");
+      initial.organizationName = data$.organizations.find((o) => o.id === initial.organizationId)?.name ?? String(initial.company ?? "");
+    }
+    // A project's client (decision 0012) and main contact, as the pickers show them.
+    if (kind === "project") {
+      initial.organizationId = String(initial.clientId ?? "");
+      initial.organizationName = String(initial.counterparty ?? "");
+      initial.contactName = data$.contacts.find((c) => c.id === initial.counterpartyId)?.name ?? "";
+    }
     return initial;
   });
   const [pending, setPending] = useState(false);
@@ -207,7 +219,7 @@ export function RecordEditor({
         {label}
         {required ? " *" : ""}
         {options ? (
-          <select aria-label={label} value={String(data[key])} onChange={(e) => change(key, e.target.value)}>
+          <select aria-label={label} data-field={key} value={String(data[key])} onChange={(e) => change(key, e.target.value)}>
             {options.map(([value, text]) => (
               <option key={value} value={value}>
                 {text}
@@ -229,6 +241,7 @@ export function RecordEditor({
         ) : (
           <input
             aria-label={label}
+            data-field={key}
             type={type}
             required={required}
             step={type === "number" ? "0.01" : undefined}
@@ -284,7 +297,11 @@ export function RecordEditor({
           e.preventDefault();
           if (!onSave) return;
           setPending(true);
-          const failure = await onSave(newContact ? { ...data, newContact: { ...newContact, name: String(data.counterparty) } } : data);
+          // A typed main contact who isn't a contact yet is added as one, with any details given.
+          const typedContact = kind === "project" && !data.counterpartyId && String(data.contactName ?? "").trim();
+          const failure = await onSave(
+            typedContact ? { ...data, newContact: { email: "", phone: "", ...newContact, name: typedContact } } : data,
+          );
           setPending(false);
           if (failure) setError(failure);
           else {
@@ -307,16 +324,27 @@ export function RecordEditor({
                     <p className="muted">{tProjects(`stageNote.${stages.includes(data.stage as Stage) ? (data.stage as Stage) : "offer"}`)}</p>
                   </div>
                 </div>
+                {/* The client organisation, then its main contact (optional): decision 0012. */}
+                <OrganizationPicker
+                  label={t("clientField")}
+                  value={{ name: String(data.organizationName ?? ""), organizationId: String(data.organizationId ?? "") }}
+                  onChange={(v) => setData((d) => ({ ...d, organizationName: v.name, organizationId: v.organizationId }))}
+                />
                 <ContactPicker
-                  label={t("field.counterparty")}
-                  contacts={data$.contacts}
+                  label={t("mainContactField")}
+                  required={false}
+                  newAt={String(data.organizationName ?? "").trim() || undefined}
+                  // The client's people first.
+                  contacts={[...data$.contacts].sort(
+                    (a, b) => Number(b.organizationId === data.organizationId) - Number(a.organizationId === data.organizationId),
+                  )}
                   value={{
-                    name: String(data.counterparty ?? ""),
+                    name: String(data.contactName ?? ""),
                     contactId: String(data.counterpartyId ?? ""),
                     newContact,
                   }}
                   onChange={(v) => {
-                    setData((d) => ({ ...d, counterparty: v.name, counterpartyId: v.contactId }));
+                    setData((d) => ({ ...d, contactName: v.name, counterpartyId: v.contactId }));
                     setNewContact(v.newContact);
                   }}
                 />
@@ -338,7 +366,13 @@ export function RecordEditor({
             <>
               {field("name", t("field.name"), "text", true)}
               {field("role", t("field.role"), "text", true, options(contactRoles, labels.contactRole))}
-              {field("company", t("field.company"))}
+              {/* Where they work: an organisation picked or typed new, or none (decision 0012). */}
+              <OrganizationPicker
+                label={t("field.organization")}
+                required={false}
+                value={{ name: String(data.organizationName ?? ""), organizationId: String(data.organizationId ?? "") }}
+                onChange={(v) => setData((d) => ({ ...d, organizationName: v.name, organizationId: v.organizationId }))}
+              />
               <div className="form-grid">
                 {field("email", t("field.email"), "email")}
                 {field("phone", t("field.phone"), "tel")}

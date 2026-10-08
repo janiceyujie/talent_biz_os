@@ -429,14 +429,14 @@
     },
     "stageProgress": "Project stages",
     "stageNote": {
-      "offer": "Just received — confirm the type of work and the basics.",
-      "negotiating": "Replying and settling terms; no execution to-dos yet.",
-      "signed": "Signed — schedule deliverables, travel, and payment milestones.",
-      "in_progress": "Underway — deliverables, travel, and payment milestones are on the to-do list.",
-      "collecting_payment": "Delivered — track invoices, the balance, and costs.",
-      "closed": "Delivery and payments reconciled; the project is done.",
+      "offer": "A new offer. Start by confirming what the work is, the dates, and the fee.",
+      "negotiating": "Settling the terms. Once it's signed, you can plan to-dos, travel, and payments.",
+      "signed": "Signed. Next, plan what you'll deliver, the travel, and when to request payment.",
+      "in_progress": "Underway. Work through To do above: deliverables, travel, and payment requests.",
+      "collecting_payment": "Delivered. Now request payment, follow up on the balance, and record your costs.",
+      "closed": "Closed: the work is delivered and the money is settled.",
       "declined": "You turned this offer down.",
-      "cancelled": "The project was cancelled. Handle any remaining payments on their own."
+      "cancelled": "The project was cancelled. If any payment was requested or received, deal with each one under Money."
     },
     "quoteNotSet": "Quote not set",
     "listLabel": "Projects",
@@ -506,9 +506,9 @@
     "undo": "Undo",
     "people": {
       "title": "Partner",
-      "add": "Add contact",
+      "add": "Contact",
       "main": "Main contact",
-      "empty": "No contacts yet. Once there's a main contact, messages from their email are matched to this project.",
+      "empty": "No organizations or contacts yet. Once there's a main contact, messages from their email are matched to this project.",
       "addTitle": "Add a contact",
       "person": "Contact",
       "role": "Role on this project",
@@ -520,7 +520,53 @@
       "remove": "Remove from project",
       "save": "Save",
       "cancel": "Cancel",
-      "more": "More actions for {name}"
+      "more": "More actions for {name}",
+      "addOrg": "Organization",
+      "client": "Client",
+      "addTo": "Add a contact at {name}",
+      "makeClient": "Make client",
+      "noPeopleHere": "No contacts at this organization yet.",
+      "others": "Other contacts",
+      "addToTitle": "Add a contact at {name}",
+      "addOrgTitle": "Add an organization",
+      "org": "Organization",
+      "firstIsClient": "The first organization becomes the client.",
+      "orgRolePlaceholder": "e.g. organizer, agency, venue, brand",
+      "count": "{count, plural, one {# person} other {# people}}",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "people": "Contacts",
+      "editPerson": "Edit",
+      "editPersonTitle": "Edit {name}",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "sameEverywhere": "Name, email, and phone are this contact's details everywhere, not just on this project.",
+      "removePersonTitle": "Remove {name} from this project?",
+      "removePersonBody": "They stay in Artists & partners; they just won't be listed on this project.",
+      "removeOrgTitle": "Remove {name} from this project?",
+      "removeOrgBody": "The organization and its contacts stay in Artists & partners; anyone of theirs on the project moves to Other contacts.",
+      "more_n": "+{count}"
+    },
+    "actions": {
+      "title": "To do",
+      "addTodo": "Add a to-do",
+      "next": "Next",
+      "beforeClosing": "{count, plural, one {# thing} other {# things}} left before closing",
+      "doneCount": "{count} done",
+      "fixEdit": "Add",
+      "fixBilling": "Request payment",
+      "fixReceived": "Record payment",
+      "fixSchedule": "Add travel",
+      "fixMoney": "See money",
+      "allClear": "Everything's in place for closing.",
+      "nothing": "Nothing to do right now."
+    },
+    "glance": {
+      "comingUp": "Coming up",
+      "nothingComing": "Nothing scheduled",
+      "notes": "Notes",
+      "addNotes": "+ Add notes"
     }
   },
   "workflow": {
@@ -544,10 +590,12 @@
       "pending": "{amount} still outstanding",
       "shortfall": "Received {amount} less than billed (withholding or fees? please check)",
       "unpaidCosts": "{count, plural, one {# cost not paid yet} other {# costs not paid yet}}",
-      "quoteNotSet": "Quote not set yet"
+      "quoteNotSet": "Quote not set yet",
+      "notBilled": "No payment requested yet",
+      "nothingReceived": "Nothing received yet"
     },
     "allClear": "Recorded to-dos and payments reconcile; still confirm deliverables and contract obligations yourself.",
-    "stageNote": "You decide the stage — changing it doesn't record payments or complete to-dos.",
+    "stageNote": "You set the stage yourself: click any step above to move the project there. Moving it doesn't record payments or tick off to-dos.",
     "related": "Related records",
     "todoDone": "Done",
     "todoOpen": "To-do",
@@ -565,7 +613,15 @@
     "cancel": "Cancel",
     "confirmPlan": "Create two outstanding payments",
     "planNeedsQuote": "Set the quote first, then split it into deposit and balance.",
-    "receivedOf": "{received} of {quoted} received"
+    "receivedOf": "{received} of {quoted} received",
+    "met": {
+      "quote": "Quote set",
+      "contract": "Contract recorded",
+      "deliverables": "Deliverables recorded",
+      "schedule": "Schedule or to-dos added",
+      "billing": "Payments requested",
+      "received": "Payments received in full"
+    }
   },
   "inbox": {
     "title": "Offers to review",
@@ -805,7 +861,14 @@
     "restore": "Restore",
     "emptyTitle": "Build your contact list",
     "emptyBody": "Keep details for artists, brand contacts, and managers here.",
-    "addFirst": "Add your first contact"
+    "addFirst": "Add your first contact",
+    "views": "View",
+    "viewPeople": "Contacts",
+    "viewOrganizations": "Organizations",
+    "searchOrganizations": "Search organizations",
+    "noPeopleYet": "No contacts yet",
+    "peopleCount": "{count, plural, one {# contact} other {# contacts}}",
+    "noOrganizations": "No matching organizations."
   },
   "files": {
     "title": "Keep each project's files together",
@@ -1122,7 +1185,8 @@
       "settledDateIn": "Date received",
       "settledDateOut": "Date paid",
       "endTime": "End time",
-      "endDate": "End date"
+      "endDate": "End date",
+      "organization": "Organization"
     },
     "unlinked": "Unlinked",
     "kind": {
@@ -1143,7 +1207,6 @@
     "keepEditing": "Keep editing",
     "discard": "Discard changes",
     "contactLinked": "Linked contact",
-    "contactUnlinked": "Saved on this project only",
     "contactClear": "Clear partner",
     "section": {
       "amount": "Amount and tax",
@@ -1156,11 +1219,21 @@
     },
     "paymentHelpIn": "Record each installment separately. Keep it as Outstanding until it is received. Received income is reported by the date received. If less arrives than billed (withholding tax, the NHI supplementary premium), enter the amount received — the gap is shown separately.",
     "paymentHelpOut": "Record each installment separately. Keep it as To pay until it is paid. Paid expenses are reported by the date paid.",
-    "contactAdd": "Add to contacts",
     "contactCreate": "+ Add “{name}” as a contact",
     "contactPlaceholder": "Search contacts, or type a new name",
-    "contactNewTitle": "New contact “{name}”, added on save",
-    "contactNewCancel": "Don't add"
+    "clientField": "Client (organization)",
+    "mainContactField": "Main contact",
+    "orgPlaceholder": "Search organizations, or type a new name",
+    "orgNew": "+ Add “{name}” as an organization",
+    "orgLinked": "An existing organization",
+    "orgWillCreate": "This adds a new organization",
+    "contactWillCreate": "Saving adds “{name}” as a new contact",
+    "contactWillCreateAt": "Saving adds “{name}” as a new contact at {org}",
+    "contactSameName": "There's already a contact named “{name}”.",
+    "contactUseExisting": "Use them instead",
+    "contactDetails": "Contact details (optional)",
+    "contactAlreadyHere": "“{name}” is already here. Add another contact with the same name?",
+    "contactSameNameElsewhere": "There's a “{name}” at {org}; this adds a different contact with the same name here."
   },
   "tone": {
     "natural": "Natural and professional",
@@ -1305,7 +1378,6 @@
     "splitPartsPositive": "Both deposit and balance must be greater than zero.",
     "projectTitleRequired": "Enter a project name.",
     "typeRequired": "Choose a project type.",
-    "counterpartyRequired": "Enter a partner.",
     "counterpartyNotFound": "Partner not found.",
     "languageRequired": "Choose the language the reply is written in.",
     "templateTitleRequired": "Enter a template name.",
@@ -1334,7 +1406,12 @@
     "calendarNotConnected": "Google Calendar isn't connected.",
     "calendarUnreachable": "Couldn't reach Google. Try again in a moment.",
     "personRequired": "Pick a contact, or add a new one.",
-    "alreadyOnProject": "This contact is already on the project."
+    "alreadyOnProject": "This contact is already on the project.",
+    "organizationRequired": "Pick an organization, or add a new one.",
+    "organizationNameRequired": "Enter the organization's name.",
+    "organizationNotFound": "Organization not found.",
+    "clientCantBeRemoved": "This is the project's client. Make another organization the client first, then remove it.",
+    "clientRequired": "Enter the client organization."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",
@@ -1423,7 +1500,7 @@
     "details": "Details"
   },
   "partners": {
-    "intro": "Built from signed projects and their payments. The on-time rate counts received payments — it isn't a credit score for the company.",
+    "intro": "Built from the signed projects each organization is the client of, and their payments. The on-time rate counts received payments — it isn't a credit score for the company.",
     "listLabel": "Partners",
     "evidence": {
       "tooFew": "Not enough data",
@@ -1432,7 +1509,7 @@
       "someLate": "Some late payments"
     },
     "summary": "{projects, plural, one {# project} other {# projects}} · {overdue} overdue",
-    "empty": "Add partners in Artists & partners and link them to projects to see their history here.",
+    "empty": "Once a signed project has a client organization, its history shows here.",
     "statProjects": "Projects",
     "statOnTime": "Paid on time",
     "statAvgLate": "Average days late",
@@ -1520,5 +1597,62 @@
     "body": "This part of the page couldn't load. Try again, or reload the page.",
     "reload": "Reload",
     "retry": "Try again"
+  },
+  "organizations": {
+    "back": "All organizations",
+    "archived": "Archived",
+    "edit": "Edit",
+    "more": "More actions",
+    "archive": "Archive organization",
+    "restore": "Restore organization",
+    "people": "Contacts ({count})",
+    "addPerson": "Add a contact",
+    "personMore": "More actions for {name}",
+    "removePerson": "Remove from this organization",
+    "noPeople": "Nobody here yet.",
+    "projects": "Projects ({count})",
+    "client": "Client",
+    "noProjects": "No projects with this organization yet.",
+    "money": "Money (projects where it's the client)",
+    "received": "Received",
+    "outstanding": "Outstanding",
+    "missing": "Organization not found.",
+    "editTitle": "Edit organization",
+    "newTitle": "New organization",
+    "name": "Name",
+    "notes": "Notes",
+    "renameNote": "Renaming also updates the name shown on projects where it's the client.",
+    "person": "Contact",
+    "moveNote": "Only contacts without an organization are listed; adding them makes them part of this one.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "add": "Add",
+    "removePersonTitle": "Remove {name} from {org}?",
+    "removePersonBody": "They stay in Artists & partners and on their projects; they just won't belong to this organization.",
+    "duplicates": {
+      "title": "Possible duplicate organizations ({count})",
+      "intro": "These look like the same organization entered twice. Merge them, or mark them as different.",
+      "strong": "Likely duplicate",
+      "possible": "Possible duplicate",
+      "reason": {
+        "sameName": "Same name once the company type is set aside",
+        "sharedDomain": "Their contacts all use {domain} email",
+        "contains": "One name contains the other",
+        "spelling": "Spelled a letter or two apart"
+      },
+      "merge": "Merge…",
+      "notSame": "Not the same",
+      "showAll": "Show all ({count})",
+      "showFewer": "Show fewer",
+      "mergeTitle": "Merge organizations",
+      "keepWhich": "Which one to keep",
+      "peopleCount": "{count, plural, one {# contact} other {# contacts}}",
+      "finalName": "Name after merging",
+      "mergeNote": "{remove}'s {count, plural, one {# contact} other {# contacts}} and its projects move to “{keep}”, then {remove} is deleted. This can't be undone.",
+      "mergeButton": "Merge",
+      "cancel": "Cancel",
+      "distinctTitle": "Marked as different from",
+      "undo": "Undo"
+    }
   }
 }

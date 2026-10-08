@@ -334,6 +334,9 @@ erDiagram
 | `reply_draft` | One drafted reply — from AI, a template, or by hand — with whether it was used and how it was edited | M2 |
 | `project` (UI: 專案) | One ongoing deal with one counterparty, with a type and a stage | M2 (one project per confirmed message); matching in M4 |
 | `project_contact` | People on a project beyond its main contact (`project.counterparty_id`), each with a free-text role there | Built |
+| `organization` | A company, organisation, band, or label the talent works with; contacts link to it (`contact.organization_id`). [Decision 0012](decisions/0012-companies-and-their-roles-on-projects.md) | Built |
+| `project_organization` | The organisations on a project, each with a free-text role; exactly one primary (the client), whose name `project.counterparty` mirrors | Built |
+| `organization_distinct` | Pairs of organisations marked as different, so they aren't suggested as duplicates again | Built |
 | `calendar_event` | Something that happens at a time — performance, load-in, travel | M2 |
 | `todo` | Something the person needs to do; also the source of a message's reply status | M2 |
 | `payment` | Money in or out — usually for a project — expected and actual, with tax | M2 |

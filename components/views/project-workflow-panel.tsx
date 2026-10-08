@@ -16,11 +16,28 @@ import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
 import type { Project } from "@/lib/types";
 
-/** Where a check gets fixed: a tab of the project's screen, or its edit form. */
-export type CheckPlace = "overview" | "money" | "travel" | "edit";
-export type ClosingCheck = { text: string; place: CheckPlace };
+/**
+ * What a check is about, which decides how it's fixed: a field of the
+ * project (`edit`), money (`billing`: request a payment; `received`: record
+ * one coming in), the schedule (`schedule`), or a look at the Money tab
+ * (`money`). To-dos aren't here: they're tasks, listed and ticked on their own.
+ */
+export type CheckFix =
+  | { kind: "edit"; field: string }
+  | { kind: "billing"; amount: number }
+  | { kind: "received"; paymentId: string | null }
+  | { kind: "schedule" }
+  | { kind: "money" };
 
-/** What's still open on a project before it can close: shown as one count in the summary, listed under Money. */
+/** One thing a project needs before it can close: met or not, worded for each, and how it's fixed. */
+export type ClosingCheck = { key: string; met: boolean; open: string; done: string; fix: CheckFix };
+
+/**
+ * Everything a signed project needs before it can close, met or not (the
+ * "what needs doing" list shows both; the Money tab lists what's open). A
+ * money check that can't be met in the usual way (billed too much, received
+ * short, costs unpaid) only shows while it's open.
+ */
 export function useClosingChecks(project: Project | null): ClosingCheck[] {
   const data = useAppData();
   const t = useTranslations("workflow");
@@ -28,19 +45,35 @@ export function useClosingChecks(project: Project | null): ClosingCheck[] {
   if (!project) return []; // until the full project has loaded
   const settlement = projectSettlement(data, project);
   const items = data.calendar.filter((c) => c.projectId === project.id && !c.archived);
-  const checks: [boolean, string, CheckPlace][] = [
-    [project.quotedAmount === null, t("warn.quoteNotSet"), "edit"],
-    [!project.details.contractNotes, t("warn.noContract"), "overview"],
-    [!project.details.deliverables, t("warn.noDeliverables"), "overview"],
-    [!items.length, t("warn.noItems"), "travel"],
-    [settlement.openItems.length > 0, t("warn.openTodos", { count: settlement.openItems.length }), "overview"],
-    [settlement.unbilled > 0, t("warn.unbilled", { amount: money(settlement.unbilled) }), "money"],
-    [settlement.unbilled < 0, t("warn.overbilled", { amount: money(-settlement.unbilled) }), "money"],
-    [settlement.pending > 0, t("warn.pending", { amount: money(settlement.pending) }), "money"],
-    [settlement.shortfall > 0, t("warn.shortfall", { amount: money(settlement.shortfall) }), "money"],
-    [settlement.unpaidCosts.length > 0, t("warn.unpaidCosts", { count: settlement.unpaidCosts.length }), "money"],
+  const expected = data.payments
+    .filter((p) => p.projectId === project.id && !p.voided && p.direction === "in" && p.status === "expected")
+    .sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999"));
+  const all: (ClosingCheck & { always: boolean })[] = [
+    { key: "quote", always: true, met: project.quotedAmount !== null, open: t("warn.quoteNotSet"), done: t("met.quote"), fix: { kind: "edit", field: "quotedAmount" } },
+    { key: "contract", always: true, met: !!project.details.contractNotes, open: t("warn.noContract"), done: t("met.contract"), fix: { kind: "edit", field: "contractNotes" } },
+    { key: "deliverables", always: true, met: !!project.details.deliverables, open: t("warn.noDeliverables"), done: t("met.deliverables"), fix: { kind: "edit", field: "deliverables" } },
+    { key: "schedule", always: true, met: items.length > 0, open: t("warn.noItems"), done: t("met.schedule"), fix: { kind: "schedule" } },
+    {
+      key: "billing",
+      always: true,
+      met: settlement.unbilled <= 0 && settlement.billed > 0,
+      open: settlement.unbilled > 0 ? t("warn.unbilled", { amount: money(settlement.unbilled) }) : t("warn.notBilled"),
+      done: t("met.billing"),
+      fix: { kind: "billing", amount: Math.max(0, settlement.unbilled) },
+    },
+    {
+      key: "received",
+      always: true,
+      met: settlement.pending <= 0 && settlement.received > 0,
+      open: settlement.pending > 0 ? t("warn.pending", { amount: money(settlement.pending) }) : t("warn.nothingReceived"),
+      done: t("met.received"),
+      fix: { kind: "received", paymentId: expected[0]?.id ?? null },
+    },
+    { key: "overbilled", always: false, met: settlement.unbilled >= 0, open: t("warn.overbilled", { amount: money(-settlement.unbilled) }), done: "", fix: { kind: "money" } },
+    { key: "shortfall", always: false, met: settlement.shortfall <= 0, open: t("warn.shortfall", { amount: money(settlement.shortfall) }), done: "", fix: { kind: "money" } },
+    { key: "costs", always: false, met: !settlement.unpaidCosts.length, open: t("warn.unpaidCosts", { count: settlement.unpaidCosts.length }), done: "", fix: { kind: "money" } },
   ];
-  return checks.filter(([open]) => open).map(([, text, place]) => ({ text, place }));
+  return all.filter((c) => c.always || !c.met).map(({ key, met, open, done, fix }) => ({ key, met, open, done, fix }));
 }
 
 /** A project's money: settlement totals, its payments, the deposit/balance split, and the closing check. */
@@ -131,11 +164,13 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
         )}
       </DealCard>
       <DealCard title={t("closingCheck")}>
-        {checks.length ? (
+        {checks.some((c) => !c.met) ? (
           <ul className="deal-check-list">
-            {checks.map((c) => (
-              <li key={c.text}>{c.text}</li>
-            ))}
+            {checks
+              .filter((c) => !c.met)
+              .map((c) => (
+                <li key={c.key}>{c.open}</li>
+              ))}
           </ul>
         ) : (
           <p className="muted">{t("allClear")}</p>

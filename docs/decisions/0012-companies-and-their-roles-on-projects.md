@@ -23,9 +23,25 @@ Deals often involve several organisations: a brand and its agency, an organiser 
 
 A data migration creates organisations from today's text: each distinct `contact.company` and `project.counterparty` per talent, merging exact matches after trimming spaces and ignoring case. It then links contacts and projects to them, making each project's organisation its primary one. The old text columns are kept, so nothing is lost. Near-duplicates ("春浪國際" and "春浪國際股份有限公司") are left for the person to merge; merging organisations is part of the organisation page.
 
+### Near-duplicates
+
+Organisations that may be one entered twice are suggested, never merged on their own (`lib/domain/organizations.ts`):
+
+- **Names are normalised first:** full-width and half-width forms match, case and spacing are ignored, punctuation is dropped, and so are legal suffixes (股份有限公司, 有限公司, 公司, 工作室, Inc., Ltd., Co., Corp., LLC).
+- **Strong matches:** the normalised names are equal, or their people share an email domain (free-mail domains such as gmail.com don't count).
+- **Possible matches:** one normalised name contains the other (at least 3 characters), or two Latin-letter names are a letter or two apart.
+- **Not a match:** names that differ only in their digits ("Studio 1" and "Studio 10").
+- **"Not the same" is stored per pair** in `organization_distinct` (smaller id first, the workspace's decision, gone when either organisation is). A rename doesn't bring a pair back; an organisation's page lists its pairs with an undo.
+- **Merging** asks which organisation to keep and its final name. It moves the other's people and its places on projects (one row where a project had both, the client if either was), mirrors the name into the partner text of projects it's the client of, and deletes the other, in one transaction.
+
+### Moving someone to another organisation
+
+The contact editor has an Organisation field. Mostly it fixes data entered under the wrong organisation (or none); sometimes it records a job change. A project groups its people by their current organisation, so moving someone also changes how they show on past projects. That's right for a correction, and slightly rewrites history for a job change. Recording who someone worked for on each project is left for later, if it matters.
+
 ### Screens
 
-- **Artists & partners** gets an Organisations view. A list leads to an organisation page: its people (add or remove), its projects with its role on each, and its payment history (partner insights move here from contacts).
+- **Artists & partners** gets an Organisations view, with possible duplicates above the list. A list leads to an organisation page: its people (add or remove), its projects with its role on each, and the money on projects it's the client of.
+- **Partner insights** are per organisation: the signed projects it's the client of. Organisations that were never a client of signed work aren't listed.
 - **The project's Partner card** lists organisations, primary first, each with its role and its people under it. It has "+ Add" for an organisation or a person, and a link to each organisation's page.
 - **The new-project form** asks for the client organisation, using the same picker pattern as the partner field (search, or add new), and optionally its main contact.
 

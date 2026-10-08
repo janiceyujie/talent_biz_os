@@ -32,6 +32,7 @@ export type Project = {
   title: string;
   counterparty: string;
   counterpartyId: string | null;
+  clientId: string | null; // the primary organisation (decision 0012); counterparty mirrors its name
   artist: string; // display only until manager accounts pick a talent per project
   type: ProjectType;
   stage: Stage;
@@ -102,7 +103,11 @@ export type Contact = {
   phone: string;
   notes: string;
   archived: boolean;
+  organizationId: string | null; // where they work (decision 0012); none for an independent
 };
+
+/** A company, organisation, band, or label the talent works with (decision 0012). */
+export type Organization = { id: string; name: string; notes: string; archived: boolean };
 
 // One calendar list over two tables: calendar_event (things that happen) and
 // todo (deadlines). `kind` decides which table a new item goes to.
@@ -226,6 +231,8 @@ export type ProjectDetail = {
   notes: string;
   /** Everyone on the project besides its main contact (counterpartyId), with their role there. */
   people: { contactId: string; label: string }[];
+  /** The organisations on the project, the primary one (its client) first, each with its role there. */
+  organizations: { organizationId: string; role: string; primary: boolean }[];
   offerText: string; // the earliest message filed under it
   timeline: TimelineEntry[]; // newest first
 };
@@ -268,6 +275,9 @@ export type AppData = {
   calendarFeed: boolean; // a subscription link exists (the URL itself is only shown once)
   projects: ProjectSummary[]; // the full project: GET /api/projects/[id]
   contacts: Contact[];
+  organizations: Organization[];
+  /** Pairs of organisations someone said are different, as pairKey (lib/domain/organizations): never suggested as duplicates. */
+  distinctOrganizations: string[];
   calendar: CalendarItem[];
   payments: Payment[];
   templates: ReplyTemplate[];

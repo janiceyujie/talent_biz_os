@@ -1,13 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useState } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { partnerInsights } from "@/lib/domain/insights";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 
-/** How each counterparty's signed projects went, and how their payments arrived. */
+/** How each client organisation's signed projects went, and how their payments arrived (decision 0012). */
 export function PartnersView() {
   const data = useAppData();
   const t = useTranslations("partners");
@@ -15,7 +16,7 @@ export function PartnersView() {
   const money = useMoney();
   const [selected, setSelected] = useState("");
   const reports = partnerInsights(data);
-  const active = reports.find((r) => r.contact.id === selected) || reports[0];
+  const active = reports.find((r) => r.organization.id === selected) || reports[0];
   return (
     <>
       <p className="muted">{t("intro")}</p>
@@ -23,12 +24,12 @@ export function PartnersView() {
         <section className="surface padded partner-list" aria-label={t("listLabel")}>
           {reports.map((r) => (
             <button
-              key={r.contact.id}
-              aria-pressed={active?.contact.id === r.contact.id}
-              className={active?.contact.id === r.contact.id ? "selected" : ""}
-              onClick={() => setSelected(r.contact.id)}
+              key={r.organization.id}
+              aria-pressed={active?.organization.id === r.organization.id}
+              className={active?.organization.id === r.organization.id ? "selected" : ""}
+              onClick={() => setSelected(r.organization.id)}
             >
-              <strong>{r.contact.name}</strong>
+              <strong>{r.organization.name}</strong>
               <span>{t(`evidence.${r.evidence}`)}</span>
               <small>{t("summary", { projects: r.projects.length, overdue: r.overdueCount })}</small>
             </button>
@@ -37,7 +38,9 @@ export function PartnersView() {
         </section>
         {active && (
           <section className="surface padded partner-report">
-            <h2>{active.contact.name}</h2>
+            <h2>
+              <Link href={`/contacts/organizations/${active.organization.id}`}>{active.organization.name}</Link>
+            </h2>
             <div className="partner-stats">
               <div>
                 <small>{t("statProjects")}</small>

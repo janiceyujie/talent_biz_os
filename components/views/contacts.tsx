@@ -9,9 +9,10 @@ import { useAppData } from "@/components/app/app-data";
 import { PageHeader } from "@/components/app/page-header";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { archiveContact } from "@/lib/actions/contacts";
-import { phaseOf } from "@/lib/domain/phases";
+import { orderContactProjects } from "@/lib/domain/contact-projects";
+import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
-import { contactRoles, type Contact, type Stage } from "@/lib/types";
+import { contactRoles, type Contact } from "@/lib/types";
 import { MoreMenu } from "./more-menu";
 import { EditOrganization } from "./organization";
 import { OrganizationDuplicates } from "./organization-duplicates";
@@ -54,8 +55,7 @@ export function ContactsView() {
 }
 
 const SHOWN_PROJECTS = 3; // on a contact's card before "N more"
-// Done with: closed (the last step of settlement), declined, or cancelled.
-const finished = (stage: Stage) => stage === "closed" || phaseOf(stage) === "ended";
+const EXPAND_UP_TO = 10; // past this, "See all" opens Projects filtered to them rather than a long list on the card
 
 function PeopleView({ adding, doneAdding }: { adding: boolean; doneAdding: () => void }) {
   const data = useAppData();
@@ -74,14 +74,20 @@ function PeopleView({ adding, doneAdding }: { adding: boolean; doneAdding: () =>
       `${c.name} ${c.company} ${c.email}`.toLowerCase().includes(q.toLowerCase()),
   );
   const editAt = (c: Contact, focus?: string) => setEditor({ kind: "contact", item: toRecord(c), focus });
-  // Their projects: as main contact or among a project's people. Ongoing first, then the latest
-  // (the list comes newest first); a few on the card, the rest a click away.
+  // Their projects: as main contact or among a project's people. Ongoing first by what comes next,
+  // then finished ones by when they happened (lib/domain/contact-projects); a few on the card.
   const onProjects = new Map<string, Set<string>>();
   for (const { projectId, contactId } of data.projectPeople) onProjects.set(contactId, (onProjects.get(contactId) ?? new Set()).add(projectId));
+  const datesByProject = new Map<string, string[]>();
+  for (const item of data.calendar)
+    if (item.projectId && !item.archived && item.date) datesByProject.set(item.projectId, [...(datesByProject.get(item.projectId) ?? []), item.date]);
+  const today = dateInZone(data.talent.timeZone);
   const projectsOf = (c: Contact) =>
-    data.projects
-      .filter((p) => !p.archived && (p.counterpartyId === c.id || onProjects.get(c.id)?.has(p.id)))
-      .sort((a, b) => Number(finished(a.stage)) - Number(finished(b.stage)));
+    orderContactProjects(
+      data.projects.filter((p) => !p.archived && (p.counterpartyId === c.id || onProjects.get(c.id)?.has(p.id))),
+      (p) => [...(p.details.dates ?? []).map((d) => d.date), ...(datesByProject.get(p.id) ?? [])],
+      today,
+    );
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggleProjects = (id: string) =>
     setExpanded((s) => {
@@ -197,20 +203,27 @@ function PeopleView({ adding, doneAdding }: { adding: boolean; doneAdding: () =>
                     {t("related")} · {projects.length}
                   </small>
                   <ul>
-                    {(open ? projects : projects.slice(0, SHOWN_PROJECTS)).map((p) => (
+                    {(open ? projects : projects.slice(0, SHOWN_PROJECTS)).map(({ project: p, finished, when }) => (
                       <li key={p.id}>
-                        <Link href={`/projects?id=${p.id}`} className={finished(p.stage) ? "is-ended" : ""}>
+                        <Link href={`/projects?id=${p.id}`} className={finished ? "is-ended" : ""}>
                           <FolderOpen size={14} aria-hidden="true" />
                           <span>{p.title}</span>
-                          <small>{labels.stage(p.stage)}</small>
+                          {/* Finished: the year it happened says more than "Closed" on every line. */}
+                          <small title={labels.stage(p.stage)}>{finished ? when.slice(0, 4) : labels.stage(p.stage)}</small>
                         </Link>
                       </li>
                     ))}
                   </ul>
-                  {projects.length > SHOWN_PROJECTS && (
-                    <button className="text-button" aria-expanded={open} onClick={() => toggleProjects(c.id)}>
-                      {open ? t("showFewer") : t("moreProjects", { count: projects.length - SHOWN_PROJECTS })}
-                    </button>
+                  {projects.length > EXPAND_UP_TO ? (
+                    <Link className="see-all" href={`/projects?phase=all&contact=${c.id}`}>
+                      {t("seeAllProjects", { count: projects.length })}
+                    </Link>
+                  ) : (
+                    projects.length > SHOWN_PROJECTS && (
+                      <button className="text-button" aria-expanded={open} onClick={() => toggleProjects(c.id)}>
+                        {open ? t("showFewer") : t("moreProjects", { count: projects.length - SHOWN_PROJECTS })}
+                      </button>
+                    )
                   )}
                 </div>
               )}

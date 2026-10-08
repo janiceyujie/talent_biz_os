@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { project, projectOrganization, todo } from "@/lib/db/schema";
+import { project, projectContact, projectOrganization, todo } from "@/lib/db/schema";
 import { identifyingFields } from "@/lib/domain/intake";
 import { phaseOf } from "@/lib/domain/phases";
 import { listViews, PAGE_MAX, type ListSort, type ListView, type ProjectPage } from "@/lib/domain/project-list";
@@ -91,20 +91,27 @@ const viewFilter = (view: ListView) =>
       ? isNull(project.archivedAt)
       : and(isNull(project.archivedAt), inArray(project.stage, stages.filter((s) => phaseOf(s) === view)));
 
+// A contact's projects: they're its main contact or one of its people (project_contact).
+const withContact = (contactId: string) =>
+  or(
+    eq(project.counterpartyId, contactId),
+    sql`exists (select 1 from ${projectContact} pc where pc.project_id = "project"."id" and pc.contact_id = ${contactId})`,
+  );
+
 /** `%` and `_` typed in a search are literal characters, not patterns. */
 const likeText = (q: string) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
 
 /**
  * One page of the projects list: a view (a phase, or archived), optionally
- * one type and a search of title and partner, in one of four orders. The
+ * one type, one contact's projects, and a search of title and partner, in one of four orders. The
  * counts are per view under the same type and search, so a tab's number
  * always matches the list it opens.
  */
 export async function listProjects(
   talentId: string,
   artist: string,
-  params: { view: ListView; type: string; q: string; sort: ListSort; cursor: string; limit: number },
+  params: { view: ListView; type: string; contact: string; q: string; sort: ListSort; cursor: string; limit: number },
 ): Promise<ProjectPage> {
   const { key, dir, cast } = sortKeys[params.sort];
   const after = params.cursor ? decodeCursor(params.cursor) : null;
@@ -112,6 +119,7 @@ export async function listProjects(
   const filtered = and(
     eq(project.talentId, talentId),
     params.type !== "all" ? eq(project.type, params.type) : undefined,
+    params.contact ? withContact(params.contact) : undefined,
     q ? or(ilike(project.title, likeText(q)), ilike(project.counterparty, likeText(q))) : undefined,
   );
   const where = and(

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Mail, Phone, Plus } from "lucide-react";
+import { ChevronRight, Mail, Phone, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState, useTransition } from "react";
@@ -24,6 +24,8 @@ import { MoreMenu } from "./more-menu";
 export function OrganizationView({ id, projects }: { id: string; projects: OrganizationProject[] }) {
   const data = useAppData();
   const t = useTranslations("organizations");
+  const tNav = useTranslations("nav");
+  const tContacts = useTranslations("contacts");
   const labels = useLabels();
   const money = useMoney();
   const [editing, setEditing] = useState(false);
@@ -44,13 +46,21 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
 
   return (
     <div className="org-page">
-      <Link className="text-button with-icon back-link" href="/contacts?view=organizations">
-        <ArrowLeft size={16} aria-hidden="true" />
-        {t("back")}
-      </Link>
+      {/* Where it sits, quietly above its name: the page, then its Organizations view. */}
+      <nav className="breadcrumb" aria-label={t("breadcrumb")}>
+        <ol>
+          <li>
+            <Link href="/contacts">{tNav("contacts")}</Link>
+          </li>
+          <li>
+            <ChevronRight size={14} aria-hidden="true" />
+            <Link href="/contacts?view=organizations">{tContacts("viewOrganizations")}</Link>
+          </li>
+        </ol>
+      </nav>
       <header className="org-page-header">
         <div>
-          <h2>{org.name}</h2>
+          <h1>{org.name}</h1>
           {org.archived && <span className="person-role">{t("archived")}</span>}
           {org.notes && <p className="muted prewrap">{org.notes}</p>}
         </div>

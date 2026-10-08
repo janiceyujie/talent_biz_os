@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { z } from "zod";
-import { PageHeader } from "@/components/app/page-header";
 import { OrganizationView } from "@/components/views/organization";
 import { requireTalent } from "@/lib/auth";
 import { getOrganizationProjects } from "@/lib/data/organizations";
@@ -11,10 +10,6 @@ export default async function Page({ params }: PageProps<"/contacts/organization
   const { talent } = await requireTalent();
   const projects = z.uuid().safeParse(id).success ? await getOrganizationProjects(talent.id, id) : null;
   if (!projects) notFound();
-  return (
-    <>
-      <PageHeader titleKey="contacts" />
-      <OrganizationView id={id} projects={projects} />
-    </>
-  );
+  // The organisation's name is the page's title, under a breadcrumb back to Artists & partners.
+  return <OrganizationView id={id} projects={projects} />;
 }

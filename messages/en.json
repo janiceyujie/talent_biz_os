@@ -1601,7 +1601,7 @@
     "retry": "Try again"
   },
   "organizations": {
-    "back": "All organizations",
+    "breadcrumb": "Breadcrumb",
     "archived": "Archived",
     "edit": "Edit",
     "more": "More actions",

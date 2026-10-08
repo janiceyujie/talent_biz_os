@@ -4333,9 +4333,35 @@ button.deal-record:hover {
   max-width: 960px;
   font-size: var(--text-meta);
 }
-.org-page .back-link {
-  margin-bottom: 12px;
+/* A breadcrumb: quiet links above the page's own title. */
+.breadcrumb ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-meta);
+}
+.breadcrumb li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--muted);
+}
+.breadcrumb a {
+  padding: 2px 4px;
+  border-radius: 6px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.breadcrumb li:first-child a {
+  margin-left: -4px; /* the text, not its hover tint, lines up with the title */
+}
+.breadcrumb a:hover {
+  background: var(--paper);
+  color: var(--ink);
 }
 .org-page-header {
   display: flex;
@@ -4344,10 +4370,18 @@ button.deal-record:hover {
   gap: 16px;
   margin-bottom: 16px;
 }
-.org-page-header h2 {
+.org-page-header h1 {
   display: inline;
   margin: 0 8px 0 0;
-  font-size: 24px;
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+@media (max-width: 600px) {
+  .org-page-header h1 {
+    font-size: 26px;
+  }
 }
 .org-page-header p {
   margin: 6px 0 0;

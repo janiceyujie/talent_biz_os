@@ -1601,7 +1601,7 @@
     "retry": "再試一次"
   },
   "organizations": {
-    "back": "所有公司",
+    "breadcrumb": "頁面路徑",
     "archived": "已歸檔",
     "edit": "編輯",
     "more": "更多動作",

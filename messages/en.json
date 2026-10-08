@@ -820,7 +820,14 @@
     "restore": "Restore",
     "emptyTitle": "Build your contact list",
     "emptyBody": "Keep details for artists, brand contacts, and managers here.",
-    "addFirst": "Add your first contact"
+    "addFirst": "Add your first contact",
+    "views": "View",
+    "viewPeople": "Contacts",
+    "viewOrganizations": "Organizations",
+    "searchOrganizations": "Search organizations",
+    "noPeopleYet": "No contacts yet",
+    "peopleCount": "{count, plural, one {# contact} other {# contacts}}",
+    "noOrganizations": "No matching organizations."
   },
   "files": {
     "title": "Keep each project's files together",
@@ -1539,5 +1546,35 @@
     "body": "This part of the page couldn't load. Try again, or reload the page.",
     "reload": "Reload",
     "retry": "Try again"
+  },
+  "organizations": {
+    "back": "All organizations",
+    "archived": "Archived",
+    "edit": "Edit",
+    "more": "More actions",
+    "archive": "Archive organization",
+    "restore": "Restore organization",
+    "people": "Contacts ({count})",
+    "addPerson": "Add a contact",
+    "personMore": "More actions for {name}",
+    "removePerson": "Remove from this organization",
+    "noPeople": "Nobody here yet.",
+    "projects": "Projects ({count})",
+    "client": "Client",
+    "noProjects": "No projects with this organization yet.",
+    "money": "Money (projects where it's the client)",
+    "received": "Received",
+    "outstanding": "Outstanding",
+    "missing": "Organization not found.",
+    "editTitle": "Edit organization",
+    "newTitle": "New organization",
+    "name": "Name",
+    "notes": "Notes",
+    "renameNote": "Renaming also updates the name shown on projects where it's the client.",
+    "person": "Contact",
+    "moveNote": "A contact at another organization moves here.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "add": "Add"
   }
 }

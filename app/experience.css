@@ -2855,7 +2855,8 @@ span.deal-check-chip {
   gap: 12px;
   margin-bottom: 12px;
 }
-.deal-tab-panel .deal-card-header h3 {
+.deal-tab-panel .deal-card-header h3,
+.org-page .deal-card-header h3 {
   margin: 0;
   color: var(--ink);
   font-size: 15px;
@@ -2864,7 +2865,8 @@ span.deal-check-chip {
 .deal-card-header .text-button {
   font-size: 13px;
 }
-.deal-card > :last-child {
+/* Not a dialog opened from a card: it centres itself with auto margins. */
+.deal-card > :last-child:not(dialog) {
   margin-bottom: 0;
 }
 .deal-tab-actions {
@@ -2961,12 +2963,14 @@ span.deal-check-chip {
   margin-left: auto;
 }
 /* Row-level ⋯ menus in a card: lighter than the header's. */
-.deal-detail .deal-card .more-menu .icon-button {
+.deal-detail .deal-card .more-menu .icon-button,
+.org-page .deal-card .more-menu .icon-button {
   width: 32px;
   height: 32px;
   border-color: transparent;
 }
-.deal-detail .deal-card .more-menu .icon-button:hover {
+.deal-detail .deal-card .more-menu .icon-button:hover,
+.org-page .deal-card .more-menu .icon-button:hover {
   border-color: var(--line);
 }
 .org-empty {
@@ -3150,7 +3154,7 @@ button.deal-record {
 button.deal-record:hover {
   background: var(--paper);
 }
-.deal-record > span {
+.deal-record > span:first-child {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -4038,4 +4042,103 @@ button.deal-record:hover {
     font-size: 14px;
     margin-right: 12px;
   }
+}
+
+/* Artists & partners: contacts or organisations (decision 0012). */
+.view-switch {
+  display: inline-flex;
+  gap: 2px;
+  margin-bottom: 16px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.view-switch button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-meta);
+  cursor: pointer;
+}
+.view-switch button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 650;
+  box-shadow: 0 1px 2px rgba(21, 23, 17, 0.08);
+}
+.org-list {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.org-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 16px;
+  padding: 14px 16px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.org-row:hover {
+  border-color: var(--accent);
+}
+.org-row > span {
+  grid-column: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-meta);
+}
+.org-row > small {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: var(--muted);
+}
+.contact-org {
+  display: inline-block;
+  margin: 4px 0 8px;
+  color: var(--accent);
+  font-size: var(--text-meta);
+}
+/* An organisation's page: its header, then cards. */
+.org-page {
+  max-width: 960px;
+  font-size: var(--text-meta);
+}
+.org-page .back-link {
+  margin-bottom: 12px;
+  color: var(--muted);
+}
+.org-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.org-page-header h2 {
+  display: inline;
+  margin: 0 8px 0 0;
+  font-size: 24px;
+}
+.org-page-header p {
+  margin: 6px 0 0;
+}
+a.deal-record {
+  color: var(--ink);
+  text-decoration: none;
+}
+a.deal-record:hover {
+  background: var(--paper);
+}
+.org-payments {
+  margin-top: 12px;
 }

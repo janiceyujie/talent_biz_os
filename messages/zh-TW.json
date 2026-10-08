@@ -820,7 +820,14 @@
     "restore": "還原",
     "emptyTitle": "建立你的合作名單",
     "emptyBody": "藝人、品牌窗口與經紀人的資料都可以在這裡保存。",
-    "addFirst": "新增第一位聯絡人"
+    "addFirst": "新增第一位聯絡人",
+    "views": "檢視",
+    "viewPeople": "聯絡人",
+    "viewOrganizations": "組織",
+    "searchOrganizations": "搜尋組織",
+    "noPeopleYet": "還沒有聯絡人",
+    "peopleCount": "{count} 位聯絡人",
+    "noOrganizations": "沒有符合的組織。"
   },
   "files": {
     "title": "保存每個合作案的檔案",
@@ -1539,5 +1546,35 @@
     "body": "這個畫面沒有正常載入。請再試一次，或重新整理頁面。",
     "reload": "重新整理",
     "retry": "再試一次"
+  },
+  "organizations": {
+    "back": "所有組織",
+    "archived": "已歸檔",
+    "edit": "編輯",
+    "more": "更多動作",
+    "archive": "歸檔組織",
+    "restore": "還原組織",
+    "people": "聯絡人（{count}）",
+    "addPerson": "新增聯絡人",
+    "personMore": "{name} 的更多動作",
+    "removePerson": "移出這個組織",
+    "noPeople": "還沒有在這裡工作的聯絡人。",
+    "projects": "合作案（{count}）",
+    "client": "主要客戶",
+    "noProjects": "還沒有和這個組織的合作案。",
+    "money": "款項（擔任主要客戶的合作案）",
+    "received": "已收款",
+    "outstanding": "待收款",
+    "missing": "找不到這個組織。",
+    "editTitle": "編輯組織",
+    "newTitle": "新增組織",
+    "name": "名稱",
+    "notes": "備註",
+    "renameNote": "改名也會更新以它為主要客戶的合作案上顯示的名稱。",
+    "person": "聯絡人",
+    "moveNote": "已有組織的聯絡人會改到這個組織。",
+    "cancel": "取消",
+    "save": "儲存",
+    "add": "加入"
   }
 }

@@ -219,7 +219,7 @@ export function RecordEditor({
         {label}
         {required ? " *" : ""}
         {options ? (
-          <select aria-label={label} value={String(data[key])} onChange={(e) => change(key, e.target.value)}>
+          <select aria-label={label} data-field={key} value={String(data[key])} onChange={(e) => change(key, e.target.value)}>
             {options.map(([value, text]) => (
               <option key={value} value={value}>
                 {text}
@@ -241,6 +241,7 @@ export function RecordEditor({
         ) : (
           <input
             aria-label={label}
+            data-field={key}
             type={type}
             required={required}
             step={type === "number" ? "0.01" : undefined}

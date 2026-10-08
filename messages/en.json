@@ -429,14 +429,14 @@
     },
     "stageProgress": "Project stages",
     "stageNote": {
-      "offer": "Just received — confirm the type of work and the basics.",
-      "negotiating": "Replying and settling terms; no execution to-dos yet.",
-      "signed": "Signed — schedule deliverables, travel, and payment milestones.",
-      "in_progress": "Underway — deliverables, travel, and payment milestones are on the to-do list.",
-      "collecting_payment": "Delivered — track invoices, the balance, and costs.",
-      "closed": "Delivery and payments reconciled; the project is done.",
+      "offer": "A new offer. Start by confirming what the work is, the dates, and the fee.",
+      "negotiating": "Settling the terms. Once it's signed, you can plan to-dos, travel, and payments.",
+      "signed": "Signed. Next, plan what you'll deliver, the travel, and when to request payment.",
+      "in_progress": "Underway. Work through To do above: deliverables, travel, and payment requests.",
+      "collecting_payment": "Delivered. Now request payment, follow up on the balance, and record your costs.",
+      "closed": "Closed: the work is delivered and the money is settled.",
       "declined": "You turned this offer down.",
-      "cancelled": "The project was cancelled. Handle any remaining payments on their own."
+      "cancelled": "The project was cancelled. If any payment was requested or received, deal with each one under Money."
     },
     "quoteNotSet": "Quote not set",
     "listLabel": "Projects",
@@ -547,6 +547,26 @@
       "removeOrgTitle": "Remove {name} from this project?",
       "removeOrgBody": "The organization and its contacts stay in Artists & partners; anyone of theirs on the project moves to Other contacts.",
       "more_n": "+{count}"
+    },
+    "actions": {
+      "title": "To do",
+      "addTodo": "Add a to-do",
+      "next": "Next",
+      "beforeClosing": "{count, plural, one {# thing} other {# things}} left before closing",
+      "doneCount": "{count} done",
+      "fixEdit": "Add",
+      "fixBilling": "Request payment",
+      "fixReceived": "Record payment",
+      "fixSchedule": "Add travel",
+      "fixMoney": "See money",
+      "allClear": "Everything's in place for closing.",
+      "nothing": "Nothing to do right now."
+    },
+    "glance": {
+      "comingUp": "Coming up",
+      "nothingComing": "Nothing scheduled",
+      "notes": "Notes",
+      "addNotes": "+ Add notes"
     }
   },
   "workflow": {
@@ -570,10 +590,12 @@
       "pending": "{amount} still outstanding",
       "shortfall": "Received {amount} less than billed (withholding or fees? please check)",
       "unpaidCosts": "{count, plural, one {# cost not paid yet} other {# costs not paid yet}}",
-      "quoteNotSet": "Quote not set yet"
+      "quoteNotSet": "Quote not set yet",
+      "notBilled": "No payment requested yet",
+      "nothingReceived": "Nothing received yet"
     },
     "allClear": "Recorded to-dos and payments reconcile; still confirm deliverables and contract obligations yourself.",
-    "stageNote": "You decide the stage — changing it doesn't record payments or complete to-dos.",
+    "stageNote": "You set the stage yourself: click any step above to move the project there. Moving it doesn't record payments or tick off to-dos.",
     "related": "Related records",
     "todoDone": "Done",
     "todoOpen": "To-do",
@@ -591,7 +613,15 @@
     "cancel": "Cancel",
     "confirmPlan": "Create two outstanding payments",
     "planNeedsQuote": "Set the quote first, then split it into deposit and balance.",
-    "receivedOf": "{received} of {quoted} received"
+    "receivedOf": "{received} of {quoted} received",
+    "met": {
+      "quote": "Quote set",
+      "contract": "Contract recorded",
+      "deliverables": "Deliverables recorded",
+      "schedule": "Schedule or to-dos added",
+      "billing": "Payments requested",
+      "received": "Payments received in full"
+    }
   },
   "inbox": {
     "title": "Offers to review",

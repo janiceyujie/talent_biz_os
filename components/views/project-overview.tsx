@@ -6,37 +6,29 @@ import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { calendarRecord, projectRecord, toRecord, type Editor } from "@/components/app/record-editor";
-import { calendarPoints } from "@/lib/calendar/points";
-import { dateInZone } from "@/lib/domain/dates";
 import { keptFields, projectField } from "@/lib/domain/intake";
 import { phaseOf, type Phase } from "@/lib/domain/phases";
-import { projectSettlement } from "@/lib/domain/workflow";
-import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import type { Project, ProjectDetail } from "@/lib/types";
 import { DealCard } from "./deal-card";
 import { ProjectPeople } from "./project-people";
 
-type Card = "partners" | "upcoming" | "money" | "deal" | "questions" | "offer" | "related";
+type Card = "partners" | "deal" | "questions" | "offer" | "related";
 
-/**
- * The cards in the order a phase needs them: what to send back while
- * negotiating, what's next and when once signed, what's owed when settling.
- */
+/** The cards in the order a phase needs them: the offer and questions first while negotiating, who and what once signed. */
 const cardOrder: Record<Phase, Card[]> = {
   negotiation: ["offer", "partners", "questions", "deal", "related"],
-  execution: ["upcoming", "partners", "deal", "related", "questions", "offer"],
-  settlement: ["money", "partners", "related", "deal", "questions", "offer"],
+  execution: ["partners", "deal", "related", "questions", "offer"],
+  settlement: ["partners", "related", "deal", "questions", "offer"],
   ended: ["partners", "deal", "offer", "questions", "related"],
 };
-
-const UPCOMING = 3; // stops shown in Coming up; the Travel tab has them all
 
 /**
  * A project at a glance, as cards ordered by its phase: who it's with, the deal (what's
  * filled in, and a chip for each term still missing), the questions for the
- * other side (ticked ones go into a reply), the original offer, what's coming
- * up, the money still owed, and the to-dos, drafts, and files linked to it.
+ * other side (ticked ones go into a reply), the original offer, and the
+ * to-dos, drafts, and files linked to it. What needs doing, money, and what's
+ * coming up sit above the tabs (project-actions.tsx).
  */
 export function ProjectOverview({
   project,
@@ -44,18 +36,15 @@ export function ProjectOverview({
   organizations,
   offerText,
   edit,
-  showTab,
 }: {
   project: Project;
   people: ProjectDetail["people"];
   organizations: ProjectDetail["organizations"];
   offerText: string;
   edit: (e: Editor) => void;
-  showTab: (tab: "money" | "travel") => void;
 }) {
   const data = useAppData();
   const router = useRouter();
-  const money = useMoney();
   const t = useTranslations("projects");
   const tTimeline = useTranslations("timeline");
   const tWorkflow = useTranslations("workflow");
@@ -107,64 +96,8 @@ export function ProjectOverview({
   const drafts = data.drafts.filter((d) => d.projectId === project.id && !d.archived);
   const files = data.files.filter((f) => f.projectId === project.id && !f.archived);
 
-  const today = dateInZone(data.talent.timeZone);
-  const upcoming = calendarPoints(
-    data.calendar.filter((c) => c.projectId === project.id && !c.archived && ["travel", "accommodation", "performance"].includes(c.kind)),
-  )
-    .filter((p) => p.date >= today)
-    .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`))
-    .slice(0, UPCOMING);
-  const settlement = projectSettlement(data, project);
-
   const cards: Record<Card, ReactNode> = {
     partners: <ProjectPeople key="partners" project={project} people={people} organizations={organizations} />,
-
-    upcoming: upcoming.length > 0 && (
-      <DealCard
-        key="upcoming"
-        title={t("card.upcoming")}
-        action={
-          <button className="text-button" onClick={() => showTab("travel")}>
-            {t("card.allTravel")}
-          </button>
-        }
-      >
-        <ul className="deal-records">
-          {upcoming.map((p) => (
-            <li key={p.key}>
-              <button className="deal-record" onClick={() => edit({ kind: "calendar", item: calendarRecord(p.item) })}>
-                <span>{p.item.title}</span>
-                <small>{labels.calendarKind(p.item.kind)}</small>
-                <small>{[p.date, p.time].filter(Boolean).join(" ")}</small>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </DealCard>
-    ),
-
-    money: (
-      <DealCard
-        key="money"
-        title={t("card.money")}
-        action={
-          <button className="text-button" onClick={() => showTab("money")}>
-            {t("card.seeMoney")}
-          </button>
-        }
-      >
-        <dl className="deal-facts">
-          <div>
-            <dt>{tWorkflow("received")}</dt>
-            <dd>{money(settlement.received)}</dd>
-          </div>
-          <div>
-            <dt>{tWorkflow("outstanding")}</dt>
-            <dd className={settlement.pending > 0 ? "owed" : ""}>{money(settlement.pending)}</dd>
-          </div>
-        </dl>
-      </DealCard>
-    ),
 
     deal: (
       // Editing the whole project is the header's Edit; here, only a missing term opens the form, at that field.

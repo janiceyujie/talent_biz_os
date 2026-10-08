@@ -2936,6 +2936,45 @@ span.deal-check-chip {
   font-size: var(--text-body);
   font-weight: 650;
 }
+/* Organisations on the project, each with its people under it. */
+.card-actions {
+  display: flex;
+  gap: 12px;
+}
+.org-group + .org-group {
+  margin-top: 14px;
+}
+.org-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-bottom: 8px;
+}
+.org-header > strong {
+  font-size: var(--text-body);
+}
+.org-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+/* Row-level ⋯ menus in a card: lighter than the header's. */
+.deal-detail .deal-card .more-menu .icon-button {
+  width: 32px;
+  height: 32px;
+  border-color: transparent;
+}
+.deal-detail .deal-card .more-menu .icon-button:hover {
+  border-color: var(--line);
+}
+.org-empty {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+}
 .people-list {
   margin: 0;
   padding: 0;

@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { db } from "@/lib/db";
-import { auditLog, message, messageAnalysis, project, projectContact } from "@/lib/db/schema";
+import { auditLog, message, messageAnalysis, project, projectContact, projectOrganization } from "@/lib/db/schema";
 import type { ChangeRecord } from "@/lib/domain/intake";
 import type { ProjectDetail, Stage } from "@/lib/types";
 
@@ -29,6 +29,12 @@ export async function getProjectDetail(talentId: string, projectId: string): Pro
     .from(projectContact)
     .where(and(eq(projectContact.projectId, projectId), eq(projectContact.talentId, talentId)))
     .orderBy(asc(projectContact.createdAt));
+
+  const organizations = await db
+    .select({ organizationId: projectOrganization.organizationId, role: projectOrganization.role, primary: projectOrganization.isPrimary })
+    .from(projectOrganization)
+    .where(and(eq(projectOrganization.projectId, projectId), eq(projectOrganization.talentId, talentId)))
+    .orderBy(desc(projectOrganization.isPrimary), asc(projectOrganization.createdAt));
 
   const messages = await db
     .select({ id: message.id, receivedAt: message.receivedAt, bodyText: message.bodyText, status: message.status })
@@ -63,6 +69,7 @@ export async function getProjectDetail(talentId: string, projectId: string): Pro
     details: owned.details,
     notes: owned.notes ?? "",
     people: people.map((p) => ({ contactId: p.contactId, label: p.label ?? "" })),
+    organizations: organizations.map((o) => ({ organizationId: o.organizationId, role: o.role ?? "", primary: o.primary })),
     offerText: messages[0]?.bodyText ?? "",
     timeline: confirmed.map((m) => {
       const a = latestAnalysis.get(m.id);

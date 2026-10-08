@@ -506,9 +506,9 @@
     "undo": "Undo",
     "people": {
       "title": "Partner",
-      "add": "Add contact",
+      "add": "Contact",
       "main": "Main contact",
-      "empty": "No contacts yet. Once there's a main contact, messages from their email are matched to this project.",
+      "empty": "No organizations or contacts yet. Once there's a main contact, messages from their email are matched to this project.",
       "addTitle": "Add a contact",
       "person": "Contact",
       "role": "Role on this project",
@@ -520,7 +520,22 @@
       "remove": "Remove from project",
       "save": "Save",
       "cancel": "Cancel",
-      "more": "More actions for {name}"
+      "more": "More actions for {name}",
+      "addOrg": "Organization",
+      "client": "Client",
+      "addTo": "Add a contact at {name}",
+      "makeClient": "Make client",
+      "noPeopleHere": "No contacts at this organization yet.",
+      "others": "Other contacts",
+      "addToTitle": "Add a contact at {name}",
+      "addOrgTitle": "Add an organization",
+      "org": "Organization",
+      "orgPlaceholder": "Search organizations, or type a new name",
+      "newOrg": "+ Add “{name}” as an organization",
+      "orgExisting": "An existing organization",
+      "orgNew": "This adds a new organization",
+      "firstIsClient": "The first organization becomes the client.",
+      "orgRolePlaceholder": "e.g. organizer, agency, venue, brand"
     }
   },
   "workflow": {
@@ -1334,7 +1349,11 @@
     "calendarNotConnected": "Google Calendar isn't connected.",
     "calendarUnreachable": "Couldn't reach Google. Try again in a moment.",
     "personRequired": "Pick a contact, or add a new one.",
-    "alreadyOnProject": "This contact is already on the project."
+    "alreadyOnProject": "This contact is already on the project.",
+    "organizationRequired": "Pick an organization, or add a new one.",
+    "organizationNameRequired": "Enter the organization's name.",
+    "organizationNotFound": "Organization not found.",
+    "clientCantBeRemoved": "This is the project's client. Make another organization the client first, then remove it."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",

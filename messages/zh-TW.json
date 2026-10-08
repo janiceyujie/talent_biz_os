@@ -506,9 +506,9 @@
     "undo": "復原",
     "people": {
       "title": "合作方",
-      "add": "新增聯絡人",
+      "add": "聯絡人",
       "main": "主要窗口",
-      "empty": "還沒有聯絡人。加入主要窗口後，對方寄來的訊息會用 Email 對應到這個合作案。",
+      "empty": "還沒有組織或聯絡人。加入主要窗口後，對方寄來的訊息會用 Email 對應到這個合作案。",
       "addTitle": "新增聯絡人",
       "person": "聯絡人",
       "role": "在這個合作案的角色",
@@ -520,7 +520,22 @@
       "remove": "從合作案移除",
       "save": "儲存",
       "cancel": "取消",
-      "more": "{name} 的更多動作"
+      "more": "{name} 的更多動作",
+      "addOrg": "組織",
+      "client": "主要客戶",
+      "addTo": "新增 {name} 的聯絡人",
+      "makeClient": "設為主要客戶",
+      "noPeopleHere": "還沒有這個組織的聯絡人。",
+      "others": "其他聯絡人",
+      "addToTitle": "新增 {name} 的聯絡人",
+      "addOrgTitle": "新增組織",
+      "org": "組織",
+      "orgPlaceholder": "搜尋組織，或輸入新名稱",
+      "newOrg": "＋ 新增組織「{name}」",
+      "orgExisting": "已有的組織",
+      "orgNew": "會新增這個組織",
+      "firstIsClient": "第一個組織會成為主要客戶。",
+      "orgRolePlaceholder": "例如：主辦、經紀、場地、品牌"
     }
   },
   "workflow": {
@@ -1334,7 +1349,11 @@
     "calendarNotConnected": "尚未連結 Google 日曆。",
     "calendarUnreachable": "暫時連不上 Google，請稍後再試。",
     "personRequired": "請選擇一位聯絡人，或新增一位。",
-    "alreadyOnProject": "這位聯絡人已經在這個合作案上。"
+    "alreadyOnProject": "這位聯絡人已經在這個合作案上。",
+    "organizationRequired": "請選擇一個組織，或新增一個。",
+    "organizationNameRequired": "請填寫組織名稱。",
+    "organizationNotFound": "找不到這個組織。",
+    "clientCantBeRemoved": "這是合作案的主要客戶；請先把另一個組織設為主要客戶，再移除它。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",

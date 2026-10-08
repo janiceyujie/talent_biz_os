@@ -57,6 +57,7 @@ const contact = (over: Partial<Contact> = {}): Contact => ({
   phone: "",
   notes: "",
   archived: false,
+  organizationId: null,
   ...over,
 });
 

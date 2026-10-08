@@ -41,12 +41,14 @@ const UPCOMING = 3; // stops shown in Coming up; the Travel tab has them all
 export function ProjectOverview({
   project,
   people,
+  organizations,
   offerText,
   edit,
   showTab,
 }: {
   project: Project;
   people: ProjectDetail["people"];
+  organizations: ProjectDetail["organizations"];
   offerText: string;
   edit: (e: Editor) => void;
   showTab: (tab: "money" | "travel") => void;
@@ -115,7 +117,7 @@ export function ProjectOverview({
   const settlement = projectSettlement(data, project);
 
   const cards: Record<Card, ReactNode> = {
-    partners: <ProjectPeople key="partners" project={project} people={people} />,
+    partners: <ProjectPeople key="partners" project={project} people={people} organizations={organizations} />,
 
     upcoming: upcoming.length > 0 && (
       <DealCard

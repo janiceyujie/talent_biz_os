@@ -676,7 +676,7 @@ function ProjectDetail({
       <div className="deal-tab-panel" role="tabpanel" id={`deal-panel-${tab}`} aria-labelledby={`deal-tab-${tab}`}>
         {failed && (tab === "overview" || tab === "timeline") && <p className="notice error">{t("detailFailed")}</p>}
         {(tab === "overview" || tab === "money") && !full && !failed && <p className="muted">{t("loading")}</p>}
-        {tab === "overview" && full && <ProjectOverview project={full} people={detail!.people} offerText={detail!.offerText} edit={edit} showTab={setTab} />}
+        {tab === "overview" && full && <ProjectOverview project={full} people={detail!.people} organizations={detail!.organizations} offerText={detail!.offerText} edit={edit} showTab={setTab} />}
         {tab === "timeline" && (
           <DealCard title={t("tab.timeline")}>
             {loading ? <p className="muted">{t("loading")}</p> : <ProjectTimeline project={project} entries={detail?.timeline ?? []} />}

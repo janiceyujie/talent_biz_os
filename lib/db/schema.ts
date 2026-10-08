@@ -219,6 +219,29 @@ export const project = pgTable(
   ],
 ).enableRLS();
 
+// The people on a project beyond its main contact (project.counterparty_id): an
+// agency, a venue, a second person at the client. `label` is their role on this
+// project in the person's own words (e.g. "event coordinator"). Removing the project or the
+// contact removes the link; the contact itself stays.
+export const projectContact = pgTable(
+  "project_contact",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    projectId: uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    contactId: uuid()
+      .notNull()
+      .references(() => contact.id, { onDelete: "cascade" }),
+    label: text(),
+    createdAt: createdAt(),
+  },
+  (t) => [unique("project_contact_project_contact").on(t.projectId, t.contactId), index("project_contact_project_idx").on(t.projectId)],
+).enableRLS();
+
 // Who confirmed or changed what, and when.
 // Per-person read and snooze state of derived notifications. Notifications
 // themselves are computed on read, never stored; their ids are stable

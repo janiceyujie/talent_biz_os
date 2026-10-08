@@ -158,11 +158,11 @@ export const getAppData = cache(async (): Promise<AppData> => {
   ];
 
   // A project's next step: its earliest open to-do, undated ones last.
-  const nextAction = new Map<string, { title: string; dueDate: string | null }>();
+  const nextAction = new Map<string, { id: string; title: string; dueDate: string | null }>();
   for (const t of [...todoRows]
     .filter((t) => t.status === "open" && t.projectId)
     .sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999"))) {
-    if (!nextAction.has(t.projectId!)) nextAction.set(t.projectId!, { title: t.title, dueDate: t.dueDate });
+    if (!nextAction.has(t.projectId!)) nextAction.set(t.projectId!, { id: t.id, title: t.title, dueDate: t.dueDate });
   }
 
   return {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
 import { defaultProjectType, projectTypes } from "@/lib/project-types";
@@ -31,7 +31,8 @@ import { Modal } from "./modal";
 
 export type RecordData = Record<string, string | number | boolean>;
 export type EditorKind = "project" | "contact" | "calendar" | "payment" | "template" | "draft";
-export type Editor = { kind: EditorKind; item?: RecordData };
+/** `focus` opens the form at one field (e.g. a project's missing rights), expanding its section. */
+export type Editor = { kind: EditorKind; item?: RecordData; focus?: string };
 
 /** A typed record as form values: nulls become "", nested values are dropped. */
 export function toRecord(o: object): RecordData {
@@ -155,6 +156,12 @@ export function RecordEditor({
   const kind = editor.kind;
   const onSave = savers[kind];
   const [newContact, setNewContact] = useState<NewContact | null>(null); // a project's partner, added to contacts on save
+  // Opening at one field: focus it once the dialog is open (opening it moves focus to its first control).
+  // The dialog is a child, so its effect has run by the time this one does.
+  const form = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (editor.focus) form.current?.querySelector<HTMLElement>(`[data-field="${editor.focus}"]`)?.focus();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on opening
   const [data, setData] = useState<RecordData>(() => {
     const initial = { ...defaults[kind], ...editor.item };
     // Templates are stored with neutral placeholders; edit them in the reader's language.
@@ -210,6 +217,7 @@ export function RecordEditor({
         ) : type === "textarea" ? (
           <textarea
             aria-label={label}
+            data-field={key}
             rows={4}
             required={required}
             maxLength={10000}
@@ -270,6 +278,7 @@ export function RecordEditor({
   return (
     <Modal title={t(editor.item?.id ? "titleEdit" : "titleNew", { kind })} onClose={requestClose}>
       <form
+        ref={form}
         className="editor-form"
         onSubmit={async (e) => {
           e.preventDefault();
@@ -315,7 +324,7 @@ export function RecordEditor({
               {pricing("quotedAmount", false, t("section.quote"), t("field.quotedAmount"))}
               <p className="muted">{t("quoteHelp")}</p>
               {/* Can be filled in later; collapsing keeps what's typed. */}
-              <details className="form-details">
+              <details className="form-details" open={editor.focus ? true : undefined}>
                 <summary>{t("section.dealDetails")}</summary>
                 {field("contractNotes", t("field.contractNotes"), "textarea")}
                 {field("deliverables", t("field.deliverables"), "textarea")}

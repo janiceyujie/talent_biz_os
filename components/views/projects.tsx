@@ -1,15 +1,17 @@
 "use client";
 
-import { Archive, ArrowDownUp, ArrowLeft, Ellipsis, Funnel, Plus } from "lucide-react";
+import { Archive, ArrowDownUp, ArrowLeft, Funnel, Plus, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { InfoHint } from "@/components/app/info-hint";
 import { PageHeader } from "@/components/app/page-header";
+import { Toast } from "@/components/app/toast";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { useProjectPages } from "@/components/app/project-pages";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
+import { setTodoDone } from "@/lib/actions/calendar";
 import { archiveProject, setProjectStage } from "@/lib/actions/projects";
 import { dateInZone } from "@/lib/domain/dates";
 import { daysBetween } from "@/lib/domain/insights";
@@ -22,6 +24,8 @@ import { useLabels } from "@/lib/i18n/labels";
 import { projectTypes } from "@/lib/project-types";
 import type { ProjectSummary, Stage } from "@/lib/types";
 import { useClosingChecks, ProjectWorkflowPanel } from "./project-workflow-panel";
+import { MoreMenu } from "./more-menu";
+import { DealCard } from "./deal-card";
 import { ProjectOverview } from "./project-overview";
 import { TravelItinerary } from "./travel-itinerary";
 import { ContractVersions, ProjectTimeline } from "./project-timeline";
@@ -48,6 +52,7 @@ function writePlace(place: Place) {
 
 type Tab = "overview" | "timeline" | "money" | "travel" | "contract";
 type Scope = "phase" | "all" | "archived";
+type Notice = { message: string; action?: { label: string; onClick: () => void } };
 
 /** "In 3 days", "Tomorrow", "2 days overdue", and how urgent that is, from a due date. */
 function useDue() {
@@ -87,6 +92,8 @@ export function ProjectsView() {
   const t = useTranslations("projects");
   const labels = useLabels();
   const [editor, setEditor] = useState<Editor | null>(null);
+  // What just happened, at the bottom of the screen: a move between tabs, a finished step (with Undo).
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [search, setSearch] = useState(initial.q);
   const [type, setType] = useState<string>(initial.type);
   // Which projects the list covers: one phase, every active project, or the archived ones.
@@ -374,8 +381,22 @@ export function ProjectsView() {
           )}
           {!visible.length && !list.loading && !list.failed && <p className="empty">{t(archived ? "archivedEmpty" : search.trim() ? "noMatches" : "empty")}</p>}
         </section>
-        {active && <ProjectDetail key={active.id} project={active} edit={setEditor} onBack={backToList} onMoved={(next) => scope === "phase" && setPhase(next)} />}
+        {active && (
+          <ProjectDetail
+            key={active.id}
+            project={active}
+            edit={setEditor}
+            onBack={backToList}
+            onMoved={(next, from) => {
+              if (scope === "phase") setPhase(next);
+              // A new phase means a different tab: say where it went, so the switch isn't a surprise.
+              if (next !== from) setNotice({ message: t("movedTo", { phase: t(`phase.${next}`) }) });
+            }}
+            notify={setNotice}
+          />
+        )}
       </div>
+      {notice && <Toast key={notice.message} message={notice.message} action={notice.action} onClose={() => setNotice(null)} />}
       {editor && (
         <RecordEditor
           editor={editor}
@@ -394,11 +415,14 @@ function ProjectDetail({
   edit,
   onBack,
   onMoved,
+  notify,
 }: {
   project: ProjectSummary;
   edit: (e: Editor) => void;
   onBack: () => void;
-  onMoved: (phase: Phase) => void;
+  /** After a stage change: the project's phase now, and before. */
+  onMoved: (phase: Phase, from: Phase) => void;
+  notify: (notice: Notice) => void;
 }) {
   const data = useAppData();
   const money = useMoney();
@@ -435,12 +459,34 @@ function ProjectDetail({
     if (window.matchMedia(NARROW).matches) heading.current?.focus({ preventScroll: true });
   }, []);
 
+  // Ticked at once; the following to-do takes its place when the saved data comes back.
+  const [doneId, setDoneId] = useState<string | null>(null);
+  const complete = (step: { id: string; title: string }) => {
+    setDoneId(step.id); // outside the transition, so it shows now rather than when the save returns
+    startTransition(async () => {
+      const failure = await setTodoDone(step.id, true);
+      setError(failure);
+      if (failure) setDoneId(null);
+      else
+        notify({
+          message: t("doneToast", { title: step.title }),
+          action: {
+            label: t("undo"),
+            onClick: () => {
+              setDoneId(null); // the same to-do comes back as the next step, unticked
+              startTransition(async () => setError(await setTodoDone(step.id, false)));
+            },
+          },
+        });
+    });
+  };
+
   const moveTo = (stage: Stage) =>
     startTransition(async () => {
       const failure = await setProjectStage(project.id, stage);
       setError(failure);
       // Follow the project to its new phase tab.
-      if (!failure) onMoved(phaseOf(stage));
+      if (!failure) onMoved(phaseOf(stage), phaseOf(project.stage));
     });
 
   return (
@@ -490,26 +536,37 @@ function ProjectDetail({
       </header>
 
       {/* One stage control: each step is a button that moves the project there. */}
-      <ol className="stage-progress" aria-label={t("stageProgress")}>
+      {/* The stages, grouped under the phases the tabs show: a stage's tab is the label over it. */}
+      <div className="stage-bar">
         {exited && (
-          <li className="exited" aria-current="step">
-            <span>{labels.stage(project.stage)}</span>
-          </li>
+          <span className="stage-exited" aria-current="step">
+            {labels.stage(project.stage)}
+          </span>
         )}
-        {mainStages.map((stage, i) => {
-          const at = mainStages.indexOf(project.stage); // -1 for declined / cancelled
-          return (
-            <li key={stage} aria-current={stage === project.stage ? "step" : undefined} className={at >= 0 && i < at ? "complete" : stage === project.stage ? "current" : ""}>
-              <button disabled={pending || project.archived} onClick={() => stage !== project.stage && moveTo(stage)}>
-                {labels.stage(stage)}
-              </button>
+        <ol className="stage-groups" aria-label={t("stageProgress")}>
+          {(["negotiation", "execution", "settlement"] as const).map((ph) => (
+            <li key={ph} className={`stage-group ${phaseOf(project.stage) === ph ? "current" : ""}`}>
+              <span className="stage-phase">{t(`phase.${ph}`)}</span>
+              <ol className="stage-progress">
+                {mainStages
+                  .filter((stage) => phaseOf(stage) === ph)
+                  .map((stage) => {
+                    const at = mainStages.indexOf(project.stage); // -1 for declined / cancelled
+                    const i = mainStages.indexOf(stage);
+                    return (
+                      <li key={stage} aria-current={stage === project.stage ? "step" : undefined} className={at >= 0 && i < at ? "complete" : stage === project.stage ? "current" : ""}>
+                        <button disabled={pending || project.archived} onClick={() => stage !== project.stage && moveTo(stage)}>
+                          {labels.stage(stage)}
+                        </button>
+                      </li>
+                    );
+                  })}
+              </ol>
             </li>
-          );
-        })}
-        <li className="stage-hint">
-          <InfoHint notes={[t(`stageNote.${project.stage}`), tWorkflow("stageNote")]} />
-        </li>
-      </ol>
+          ))}
+        </ol>
+        <InfoHint notes={[t(`stageNote.${project.stage}`), tWorkflow("stageNote")]} />
+      </div>
       {error && (
         <p className="notice error" role="alert">
           {error}
@@ -527,7 +584,21 @@ function ProjectDetail({
       <div className="deal-summary-strip">
         <div className="deal-next">
           <small>{t("nextStep")}</small>
-          <strong>{project.nextAction?.title || t("noNextStep")}</strong>
+          {project.nextAction ? (
+            // Done in one tap, with Undo in the notice; the following to-do then moves up.
+            <label className="next-done">
+              <input
+                type="checkbox"
+                checked={doneId === project.nextAction.id}
+                disabled={pending || project.archived}
+                aria-label={t("markDone", { title: project.nextAction.title })}
+                onChange={() => complete(project.nextAction!)}
+              />
+              <strong>{project.nextAction.title}</strong>
+            </label>
+          ) : (
+            <strong>{t("noNextStep")}</strong>
+          )}
           {next && <span className={`due ${next.tone}`}>{next.text}</span>}
           {signed && (
             <button
@@ -558,11 +629,33 @@ function ProjectDetail({
           )}
         </button>
         {/* The closing check only means something once there's signed work to close. */}
-        {isSigned(project.stage) && full && (
-          <button className={`deal-check-chip ${checks.length ? "has-checks" : ""}`} onClick={() => setTab("money")}>
-            {checks.length ? t("checks", { count: checks.length }) : t("allClear")}
-          </button>
-        )}
+        {/* What's still open, listed right here; each item goes to where it's fixed. */}
+        {isSigned(project.stage) && full &&
+          (checks.length ? (
+            <MoreMenu
+              label={t("checksTitle")}
+              heading={t("checksTitle")}
+              className="deal-check-chip has-checks"
+              button={
+                <>
+                  <TriangleAlert size={14} aria-hidden="true" />
+                  {t("checks", { count: checks.length })}
+                </>
+              }
+            >
+              {checks.map((c) => (
+                <button
+                  key={c.text}
+                  role="menuitem"
+                  onClick={() => (c.place === "edit" ? edit({ kind: "project", item: projectRecord(full) }) : setTab(c.place))}
+                >
+                  {c.text}
+                </button>
+              ))}
+            </MoreMenu>
+          ) : (
+            <span className="deal-check-chip">{t("allClear")}</span>
+          ))}
       </div>
 
       <div className="deal-tabs" role="tablist" aria-label={t("tabs")}>
@@ -583,37 +676,24 @@ function ProjectDetail({
       <div className="deal-tab-panel" role="tabpanel" id={`deal-panel-${tab}`} aria-labelledby={`deal-tab-${tab}`}>
         {failed && (tab === "overview" || tab === "timeline") && <p className="notice error">{t("detailFailed")}</p>}
         {(tab === "overview" || tab === "money") && !full && !failed && <p className="muted">{t("loading")}</p>}
-        {tab === "overview" && full && <ProjectOverview project={full} offerText={detail!.offerText} edit={edit} />}
-        {tab === "timeline" && (loading ? <p className="muted">{t("loading")}</p> : <ProjectTimeline project={project} entries={detail?.timeline ?? []} />)}
+        {tab === "overview" && full && <ProjectOverview project={full} people={detail!.people} offerText={detail!.offerText} edit={edit} showTab={setTab} />}
+        {tab === "timeline" && (
+          <DealCard title={t("tab.timeline")}>
+            {loading ? <p className="muted">{t("loading")}</p> : <ProjectTimeline project={project} entries={detail?.timeline ?? []} />}
+          </DealCard>
+        )}
         {tab === "money" && full && <ProjectWorkflowPanel project={full} edit={edit} />}
-        {tab === "travel" && <TravelItinerary project={project} edit={edit} />}
-        {tab === "contract" && <ContractVersions project={project} />}
+        {tab === "travel" && (
+          <DealCard title={t("tab.travel")}>
+            <TravelItinerary project={project} edit={edit} />
+          </DealCard>
+        )}
+        {tab === "contract" && (
+          <DealCard title={t("tab.contract")}>
+            <ContractVersions project={project} />
+          </DealCard>
+        )}
       </div>
     </article>
-  );
-}
-
-/** A ⋯ button and its menu of less frequent actions. Escape or a click elsewhere closes it. */
-function MoreMenu({ label, children }: { label: string; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    root.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
-    const outside = (e: PointerEvent) => !root.current?.contains(e.target as Node) && setOpen(false);
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [open]);
-  return (
-    <div className="more-menu" ref={root} onKeyDown={(e) => e.key === "Escape" && setOpen(false)}>
-      <button className="secondary icon-button" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Ellipsis size={18} aria-hidden="true" />
-      </button>
-      {open && (
-        <div className="more-menu-list" role="menu" aria-label={label} onClick={() => setOpen(false)}>
-          {children}
-        </div>
-      )}
-    </div>
   );
 }

@@ -3429,6 +3429,11 @@ button.primary.danger {
   box-shadow: 0 10px 28px rgba(36, 56, 51, 0.25);
 }
 /* As a popover it's in the top layer; undo the browser's centred-box defaults. */
+/* A toast's one action (e.g. Undo), on the dark toast. */
+.app-toast .text-button {
+  color: #fff;
+  font-weight: 650;
+}
 .app-toast[popover] {
   inset: auto auto 24px 50%;
   margin: 0;

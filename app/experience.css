@@ -2659,11 +2659,21 @@ summary:focus-visible {
 }
 
 /* Next step, money, and what's open — the three things to know before the details. */
+/* Each card as wide as it needs, up to a cap: short facts shouldn't stretch across the panel. */
 .deal-summary-strip {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
   gap: 8px;
   margin-top: 16px;
+}
+.deal-summary-strip > .deal-next {
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+.deal-summary-strip > .deal-money {
+  flex: 1 1 200px;
+  max-width: 300px;
 }
 .deal-next,
 .deal-money {
@@ -2920,6 +2930,129 @@ span.deal-check-chip {
 .add-chip:hover {
   background: var(--accent-soft);
 }
+/* Partner: the organisation, then its people, reachable in a tap. */
+.partner-org {
+  margin: 0 0 10px;
+  font-size: var(--text-body);
+  font-weight: 650;
+}
+.people-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.people-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  padding: 10px 12px;
+}
+.people-list > li + li {
+  border-top: 1px solid var(--line);
+}
+.person-who {
+  flex: 1 1 180px;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.person-who small {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+.person-role {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+.person-role.main {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.person-reach {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+.person-reach a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  text-decoration: none;
+}
+.person-reach a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.text-button.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+/* The next step, done in one tap. */
+.next-done {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--ink); /* not the muted form-label colour */
+  font-size: inherit;
+  cursor: pointer;
+}
+.next-done input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+/* Questions for them: ticked ones go into a reply. */
+.question-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.question-list label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.6;
+  cursor: pointer;
+}
+.question-list input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+}
+.deal-reference .question-list {
+  margin-top: 8px;
+}
+.deal-detail .ask-button {
+  width: auto;
+  min-height: 32px;
+  padding: 0 10px;
+  gap: 4px;
+  font-size: 13px;
+}
+.deal-facts dd.owed {
+  color: #a24a14;
+  font-weight: 600;
+}
 /* The original offer: two lines until opened. */
 .deal-offer {
   margin: 0;
@@ -3147,11 +3280,14 @@ button.deal-record:hover {
   .deal-dossier .stage-progress li:not(.current) button {
     color: transparent;
   }
-  .deal-summary-strip {
-    grid-template-columns: 1fr 1fr;
+  /* Phones: the next step gets the full row; money and the checks share the next one. */
+  .deal-summary-strip > .deal-next {
+    flex: 1 1 100%;
+    max-width: none;
   }
-  .deal-next {
-    grid-column: 1 / -1;
+  .deal-summary-strip > .deal-money {
+    flex: 1 1 0;
+    max-width: none;
   }
   .deal-check-chip {
     padding: 10px 12px;

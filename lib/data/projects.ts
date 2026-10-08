@@ -36,17 +36,17 @@ export function summaryOf(p: Row, nextAction: NextAction, artist: string): Proje
 // A project's next step: its earliest open to-do, undated ones last (as lib/data/index.ts).
 // The outer column is written out in full: in a one-table query Drizzle leaves
 // columns unqualified, and a bare "id" here would mean the to-do's own.
-const nextTodo = (column: "title" | "due_date") =>
+const nextTodo = (column: "id" | "title" | "due_date") =>
   sql`(select ${sql.raw(`t.${column}`)} from ${todo} t where t.project_id = "project"."id" and t.status = 'open' order by t.due_date asc nulls last, t.created_at asc limit 1)`;
 
 /** One project in full, for its own screen and for applying a message to it. Null when it isn't this talent's. */
 export async function getProject(talentId: string, id: string, artist: string): Promise<Project | null> {
   const [row] = await db
-    .select({ project, nextTitle: nextTodo("title").mapWith(String), nextDue: nextTodo("due_date").mapWith(String) })
+    .select({ project, nextId: nextTodo("id").mapWith(String), nextTitle: nextTodo("title").mapWith(String), nextDue: nextTodo("due_date").mapWith(String) })
     .from(project)
     .where(and(eq(project.id, id), eq(project.talentId, talentId)));
   if (!row) return null;
-  const nextAction = row.nextTitle ? { title: row.nextTitle, dueDate: row.nextDue || null } : null;
+  const nextAction = row.nextId ? { id: row.nextId, title: row.nextTitle, dueDate: row.nextDue || null } : null;
   return { ...summaryOf(row.project, nextAction, artist), details: row.project.details, notes: row.project.notes ?? "" };
 }
 
@@ -123,6 +123,7 @@ export async function listProjects(
       .select({
         project,
         sortKey: sql<string>`(${key})::text`,
+        nextId: nextTodo("id").mapWith(String),
         nextTitle: nextTodo("title").mapWith(String),
         nextDue: nextTodo("due_date").mapWith(String),
       })
@@ -147,7 +148,7 @@ export async function listProjects(
   const last = shown.at(-1);
   return {
     items: shown.map((r) =>
-      summaryOf(r.project, r.nextTitle ? { title: r.nextTitle, dueDate: r.nextDue || null } : null, artist),
+      summaryOf(r.project, r.nextId ? { id: r.nextId, title: r.nextTitle, dueDate: r.nextDue || null } : null, artist),
     ),
     nextCursor: rows.length > limit && last ? encodeCursor(last.sortKey, last.project.id) : null,
     total: counts[params.view],

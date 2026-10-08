@@ -41,7 +41,7 @@ export type Project = {
   taxIncluded: boolean;
   details: ProjectDetails;
   notes: string;
-  nextAction: { title: string; dueDate: string | null } | null; // the next open to-do
+  nextAction: { id: string; title: string; dueDate: string | null } | null; // the next open to-do
   archived: boolean;
   updatedAt: string; // ISO instant of the last change (any edit, including stage)
 };
@@ -224,6 +224,8 @@ export type ProjectDetail = {
   projectId: string;
   details: ProjectDetails;
   notes: string;
+  /** Everyone on the project besides its main contact (counterpartyId), with their role there. */
+  people: { contactId: string; label: string }[];
   offerText: string; // the earliest message filed under it
   timeline: TimelineEntry[]; // newest first
 };

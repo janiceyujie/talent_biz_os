@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
-import { DealCard } from "./project-overview";
+import { DealCard } from "./deal-card";
 import { toRecord, type Editor } from "@/components/app/record-editor";
 import { createPaymentPlan } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";

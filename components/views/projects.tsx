@@ -1,9 +1,9 @@
 "use client";
 
-import { Archive, ArrowDownUp, ArrowLeft, Ellipsis, Funnel, Plus, TriangleAlert } from "lucide-react";
+import { Archive, ArrowDownUp, ArrowLeft, Funnel, Plus, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { InfoHint } from "@/components/app/info-hint";
 import { PageHeader } from "@/components/app/page-header";
@@ -11,6 +11,7 @@ import { Toast } from "@/components/app/toast";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { useProjectPages } from "@/components/app/project-pages";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
+import { setTodoDone } from "@/lib/actions/calendar";
 import { archiveProject, setProjectStage } from "@/lib/actions/projects";
 import { dateInZone } from "@/lib/domain/dates";
 import { daysBetween } from "@/lib/domain/insights";
@@ -23,7 +24,9 @@ import { useLabels } from "@/lib/i18n/labels";
 import { projectTypes } from "@/lib/project-types";
 import type { ProjectSummary, Stage } from "@/lib/types";
 import { useClosingChecks, ProjectWorkflowPanel } from "./project-workflow-panel";
-import { DealCard, ProjectOverview } from "./project-overview";
+import { MoreMenu } from "./more-menu";
+import { DealCard } from "./deal-card";
+import { ProjectOverview } from "./project-overview";
 import { TravelItinerary } from "./travel-itinerary";
 import { ContractVersions, ProjectTimeline } from "./project-timeline";
 
@@ -49,6 +52,7 @@ function writePlace(place: Place) {
 
 type Tab = "overview" | "timeline" | "money" | "travel" | "contract";
 type Scope = "phase" | "all" | "archived";
+type Notice = { message: string; action?: { label: string; onClick: () => void } };
 
 /** "In 3 days", "Tomorrow", "2 days overdue", and how urgent that is, from a due date. */
 function useDue() {
@@ -88,7 +92,8 @@ export function ProjectsView() {
   const t = useTranslations("projects");
   const labels = useLabels();
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [moved, setMoved] = useState<string | null>(null);
+  // What just happened, at the bottom of the screen: a move between tabs, a finished step (with Undo).
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [search, setSearch] = useState(initial.q);
   const [type, setType] = useState<string>(initial.type);
   // Which projects the list covers: one phase, every active project, or the archived ones.
@@ -385,12 +390,13 @@ export function ProjectsView() {
             onMoved={(next, from) => {
               if (scope === "phase") setPhase(next);
               // A new phase means a different tab: say where it went, so the switch isn't a surprise.
-              if (next !== from) setMoved(t("movedTo", { phase: t(`phase.${next}`) }));
+              if (next !== from) setNotice({ message: t("movedTo", { phase: t(`phase.${next}`) }) });
             }}
+            notify={setNotice}
           />
         )}
       </div>
-      {moved && <Toast message={moved} onClose={() => setMoved(null)} />}
+      {notice && <Toast key={notice.message} message={notice.message} action={notice.action} onClose={() => setNotice(null)} />}
       {editor && (
         <RecordEditor
           editor={editor}
@@ -409,12 +415,14 @@ function ProjectDetail({
   edit,
   onBack,
   onMoved,
+  notify,
 }: {
   project: ProjectSummary;
   edit: (e: Editor) => void;
   onBack: () => void;
   /** After a stage change: the project's phase now, and before. */
   onMoved: (phase: Phase, from: Phase) => void;
+  notify: (notice: Notice) => void;
 }) {
   const data = useAppData();
   const money = useMoney();
@@ -450,6 +458,28 @@ function ProjectDetail({
   useEffect(() => {
     if (window.matchMedia(NARROW).matches) heading.current?.focus({ preventScroll: true });
   }, []);
+
+  // Ticked at once; the following to-do takes its place when the saved data comes back.
+  const [doneId, setDoneId] = useState<string | null>(null);
+  const complete = (step: { id: string; title: string }) => {
+    setDoneId(step.id); // outside the transition, so it shows now rather than when the save returns
+    startTransition(async () => {
+      const failure = await setTodoDone(step.id, true);
+      setError(failure);
+      if (failure) setDoneId(null);
+      else
+        notify({
+          message: t("doneToast", { title: step.title }),
+          action: {
+            label: t("undo"),
+            onClick: () => {
+              setDoneId(null); // the same to-do comes back as the next step, unticked
+              startTransition(async () => setError(await setTodoDone(step.id, false)));
+            },
+          },
+        });
+    });
+  };
 
   const moveTo = (stage: Stage) =>
     startTransition(async () => {
@@ -554,7 +584,21 @@ function ProjectDetail({
       <div className="deal-summary-strip">
         <div className="deal-next">
           <small>{t("nextStep")}</small>
-          <strong>{project.nextAction?.title || t("noNextStep")}</strong>
+          {project.nextAction ? (
+            // Done in one tap, with Undo in the notice; the following to-do then moves up.
+            <label className="next-done">
+              <input
+                type="checkbox"
+                checked={doneId === project.nextAction.id}
+                disabled={pending || project.archived}
+                aria-label={t("markDone", { title: project.nextAction.title })}
+                onChange={() => complete(project.nextAction!)}
+              />
+              <strong>{project.nextAction.title}</strong>
+            </label>
+          ) : (
+            <strong>{t("noNextStep")}</strong>
+          )}
           {next && <span className={`due ${next.tone}`}>{next.text}</span>}
           {signed && (
             <button
@@ -632,7 +676,7 @@ function ProjectDetail({
       <div className="deal-tab-panel" role="tabpanel" id={`deal-panel-${tab}`} aria-labelledby={`deal-tab-${tab}`}>
         {failed && (tab === "overview" || tab === "timeline") && <p className="notice error">{t("detailFailed")}</p>}
         {(tab === "overview" || tab === "money") && !full && !failed && <p className="muted">{t("loading")}</p>}
-        {tab === "overview" && full && <ProjectOverview project={full} offerText={detail!.offerText} edit={edit} />}
+        {tab === "overview" && full && <ProjectOverview project={full} people={detail!.people} offerText={detail!.offerText} edit={edit} showTab={setTab} />}
         {tab === "timeline" && (
           <DealCard title={t("tab.timeline")}>
             {loading ? <p className="muted">{t("loading")}</p> : <ProjectTimeline project={project} entries={detail?.timeline ?? []} />}
@@ -651,46 +695,5 @@ function ProjectDetail({
         )}
       </div>
     </article>
-  );
-}
-
-/**
- * A button and its menu: by default ⋯ with less frequent actions; `button` and `className` give it
- * other content (e.g. the closing-check chip). Escape or a click elsewhere closes it.
- */
-function MoreMenu({
-  label,
-  button,
-  className = "secondary icon-button",
-  heading,
-  children,
-}: {
-  label: string;
-  button?: ReactNode;
-  className?: string;
-  heading?: ReactNode;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    root.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
-    const outside = (e: PointerEvent) => !root.current?.contains(e.target as Node) && setOpen(false);
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [open]);
-  return (
-    <div className="more-menu" ref={root} onKeyDown={(e) => e.key === "Escape" && setOpen(false)}>
-      <button className={className} aria-label={button ? undefined : label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {button ?? <Ellipsis size={18} aria-hidden="true" />}
-      </button>
-      {open && (
-        <div className="more-menu-list" role="menu" aria-label={label} onClick={() => setOpen(false)}>
-          {heading && <p className="more-menu-heading">{heading}</p>}
-          {children}
-        </div>
-      )}
-    </div>
   );
 }

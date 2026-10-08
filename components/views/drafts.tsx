@@ -18,7 +18,8 @@ import type { ReplyDraft } from "@/lib/types";
 const gmailComposeUrl = (to: string, subject: string, body: string) =>
   `https://mail.google.com/mail/?${new URLSearchParams({ view: "cm", to, su: subject, body })}`;
 
-export function DraftsView({ initialProjectId = "" }: { initialProjectId?: string }) {
+/** `initialAsks`: questions to start the reply with, sent from a project's Questions for them. */
+export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initialProjectId?: string; initialAsks?: string[] }) {
   const data = useAppData();
   const t = useTranslations("drafts");
   const tEyebrow = useTranslations("eyebrow");
@@ -41,7 +42,8 @@ export function DraftsView({ initialProjectId = "" }: { initialProjectId?: strin
   const [source, setSource] = useState("");
   // The project whose offer text is still on its way, to prefill the source with.
   const [prefill, setPrefill] = useState(initial?.id || "");
-  const [body, setBody] = useState("");
+  // Part of the starting point (the baseline below), so arriving with questions isn't an unsaved change.
+  const [body, setBody] = useState(() => (initialAsks.length ? `${t("asksIntro")}\n${initialAsks.map((q) => `- ${q}`).join("\n")}` : ""));
   const [subject, setSubject] = useState(initial ? `Re: ${initial.title}`.slice(0, 200) : t("defaultSubject"));
   const [recipient, setRecipient] = useState(recipientFor(initial?.counterpartyId));
   const [mode, setMode] = useState("");

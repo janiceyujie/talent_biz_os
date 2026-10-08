@@ -492,10 +492,36 @@
       "suggestions": "Also worth asking ({count})",
       "offer": "Original offer",
       "showAll": "Show all",
-      "showLess": "Show less"
+      "showLess": "Show less",
+      "upcoming": "Coming up",
+      "allTravel": "All travel",
+      "money": "Money",
+      "seeMoney": "See money",
+      "askInReply": "Ask in a reply ({count})"
     },
     "checksTitle": "Before this can close",
-    "movedTo": "Moved to {phase}"
+    "movedTo": "Moved to {phase}",
+    "markDone": "Mark “{title}” done",
+    "doneToast": "Done: {title}",
+    "undo": "Undo",
+    "people": {
+      "title": "Partner",
+      "add": "Add contact",
+      "main": "Main contact",
+      "empty": "No contacts yet. Once there's a main contact, messages from their email are matched to this project.",
+      "addTitle": "Add a contact",
+      "person": "Contact",
+      "role": "Role on this project",
+      "rolePlaceholder": "e.g. event coordinator, agent, venue contact",
+      "firstIsMain": "The first contact becomes the main contact.",
+      "addButton": "Add",
+      "makeMain": "Make main contact",
+      "editRole": "Edit role",
+      "remove": "Remove from project",
+      "save": "Save",
+      "cancel": "Cancel",
+      "more": "More actions for {name}"
+    }
   },
   "workflow": {
     "section": "Project workflow and payments",
@@ -1200,7 +1226,8 @@
     "confirmTitle": "You have unsaved text",
     "leaveMessage": "If you leave, these changes won't be kept.",
     "replaceMessage": "Applying the template replaces the current reply; the other fields stay. Continue?",
-    "confirmReplace": "Replace"
+    "confirmReplace": "Replace",
+    "asksIntro": "Could you confirm the following:"
   },
   "auth": {
     "signIn": "Sign in",
@@ -1305,7 +1332,9 @@
     "calendarNotGranted": "Google didn't grant calendar access. Press Connect Google Calendar again and allow it.",
     "calendarNoOffline": "Google didn't grant offline access. Press Connect Google Calendar again to re-authorize.",
     "calendarNotConnected": "Google Calendar isn't connected.",
-    "calendarUnreachable": "Couldn't reach Google. Try again in a moment."
+    "calendarUnreachable": "Couldn't reach Google. Try again in a moment.",
+    "personRequired": "Pick a contact, or add a new one.",
+    "alreadyOnProject": "This contact is already on the project."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",

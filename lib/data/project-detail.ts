@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { db } from "@/lib/db";
-import { auditLog, message, messageAnalysis, project } from "@/lib/db/schema";
+import { auditLog, message, messageAnalysis, project, projectContact } from "@/lib/db/schema";
 import type { ChangeRecord } from "@/lib/domain/intake";
 import type { ProjectDetail, Stage } from "@/lib/types";
 
@@ -13,7 +13,7 @@ const records = (items: unknown[] | undefined) =>
 
 /**
  * What only one project's own screen shows, loaded when it's opened rather
- * than with every page: its details and notes, its offer text (the earliest message filed under it) and
+ * than with every page: its details and notes, the people on it, its offer text (the earliest message filed under it) and
  * its timeline (every confirmed message on it, however old, with what
  * applying each one changed). Null when the project isn't this talent's.
  */
@@ -23,6 +23,12 @@ export async function getProjectDetail(talentId: string, projectId: string): Pro
     .from(project)
     .where(and(eq(project.id, projectId), eq(project.talentId, talentId)));
   if (!owned) return null;
+
+  const people = await db
+    .select({ contactId: projectContact.contactId, label: projectContact.label })
+    .from(projectContact)
+    .where(and(eq(projectContact.projectId, projectId), eq(projectContact.talentId, talentId)))
+    .orderBy(asc(projectContact.createdAt));
 
   const messages = await db
     .select({ id: message.id, receivedAt: message.receivedAt, bodyText: message.bodyText, status: message.status })
@@ -56,6 +62,7 @@ export async function getProjectDetail(talentId: string, projectId: string): Pro
     projectId,
     details: owned.details,
     notes: owned.notes ?? "",
+    people: people.map((p) => ({ contactId: p.contactId, label: p.label ?? "" })),
     offerText: messages[0]?.bodyText ?? "",
     timeline: confirmed.map((m) => {
       const a = latestAnalysis.get(m.id);

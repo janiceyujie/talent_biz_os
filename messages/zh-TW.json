@@ -492,10 +492,36 @@
       "suggestions": "建議再確認（{count}）",
       "offer": "邀約原文",
       "showAll": "展開全文",
-      "showLess": "收合"
+      "showLess": "收合",
+      "upcoming": "接下來的行程",
+      "allTravel": "全部行程",
+      "money": "款項",
+      "seeMoney": "查看款項",
+      "askInReply": "帶入回覆（{count}）"
     },
     "checksTitle": "結案前還差這些",
-    "movedTo": "已移到「{phase}」"
+    "movedTo": "已移到「{phase}」",
+    "markDone": "完成「{title}」",
+    "doneToast": "已完成「{title}」",
+    "undo": "復原",
+    "people": {
+      "title": "合作方",
+      "add": "新增聯絡人",
+      "main": "主要窗口",
+      "empty": "還沒有聯絡人。加入主要窗口後，對方寄來的訊息會用 Email 對應到這個合作案。",
+      "addTitle": "新增聯絡人",
+      "person": "聯絡人",
+      "role": "在這個合作案的角色",
+      "rolePlaceholder": "例如：活動統籌、經紀、場地窗口",
+      "firstIsMain": "第一位聯絡人會成為主要窗口。",
+      "addButton": "加入",
+      "makeMain": "設為主要窗口",
+      "editRole": "編輯角色",
+      "remove": "從合作案移除",
+      "save": "儲存",
+      "cancel": "取消",
+      "more": "{name} 的更多動作"
+    }
   },
   "workflow": {
     "section": "案件流程與收款",
@@ -1200,7 +1226,8 @@
     "confirmTitle": "還有尚未保留的內容",
     "leaveMessage": "離開後，本次修改將不會保留。",
     "replaceMessage": "套用範本會取代目前的回覆內容，其他欄位會保留。要繼續嗎？",
-    "confirmReplace": "確認取代"
+    "confirmReplace": "確認取代",
+    "asksIntro": "想跟您確認以下幾點："
   },
   "auth": {
     "signIn": "登入",
@@ -1305,7 +1332,9 @@
     "calendarNotGranted": "Google 沒有授權日曆存取，請再按一次「連結 Google 日曆」並允許。",
     "calendarNoOffline": "Google 沒有提供離線存取權，請再按一次「連結 Google 日曆」重新授權。",
     "calendarNotConnected": "尚未連結 Google 日曆。",
-    "calendarUnreachable": "暫時連不上 Google，請稍後再試。"
+    "calendarUnreachable": "暫時連不上 Google，請稍後再試。",
+    "personRequired": "請選擇一位聯絡人，或新增一位。",
+    "alreadyOnProject": "這位聯絡人已經在這個合作案上。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",

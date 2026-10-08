@@ -853,6 +853,8 @@
     "new": "New artist / partner",
     "archivedOnly": "Archived",
     "related": "Related projects",
+    "moreProjects": "{count, plural, one {# more project} other {# more projects}}",
+    "showFewer": "Show fewer",
     "addCompany": "Company",
     "addEmail": "Email",
     "addPhone": "Phone",

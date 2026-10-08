@@ -853,6 +853,8 @@
     "new": "新增藝人／合作方",
     "archivedOnly": "已歸檔",
     "related": "相關合作案",
+    "moreProjects": "還有 {count} 個合作案",
+    "showFewer": "收合",
     "addCompany": "公司",
     "addEmail": "Email",
     "addPhone": "電話",

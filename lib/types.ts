@@ -278,6 +278,8 @@ export type AppData = {
   organizations: Organization[];
   /** Pairs of organisations someone said are different, as pairKey (lib/domain/organizations): never suggested as duplicates. */
   distinctOrganizations: string[];
+  /** Who is on each project besides its main contact (project_contact): a contact's projects include these. */
+  projectPeople: { projectId: string; contactId: string }[];
   calendar: CalendarItem[];
   payments: Payment[];
   templates: ReplyTemplate[];

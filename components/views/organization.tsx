@@ -97,7 +97,7 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
                 <li key={c.id}>
                   <div className="person-who">
                     <strong>{c.name}</strong>
-                    <span className="person-role">{labels.contactRole(c.role)}</span>
+                    <span className={`person-role role-${c.role}`}>{labels.contactRole(c.role)}</span>
                   </div>
                   <div className="person-reach">
                     {c.email && (

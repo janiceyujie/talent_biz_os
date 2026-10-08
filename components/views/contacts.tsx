@@ -137,9 +137,12 @@ function PeopleView({ adding, doneAdding }: { adding: boolean; doneAdding: () =>
                   {c.name.slice(0, 1)}
                 </div>
                 <div className="contact-who">
+                  {/* One line: a long name is cut short (whole on hover) so the type stays beside it. */}
                   <h2>
-                    {c.name}
-                    <span className="person-role">{labels.contactRole(c.role)}</span>
+                    <span className="contact-name" title={c.name}>
+                      {c.name}
+                    </span>
+                    <span className={`person-role role-${c.role}`}>{labels.contactRole(c.role)}</span>
                   </h2>
                   {/* Where they work: the organisation, linked, else the company as typed. */}
                   {org ? (

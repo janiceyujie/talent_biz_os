@@ -3080,6 +3080,19 @@ summary:focus-visible {
   font-size: 12px;
   line-height: 20px;
 }
+/* A contact's type, told apart at a glance: artists violet, partners blue, managers amber. */
+.person-role.role-artist {
+  background: #efeafb;
+  color: #5b3fa0;
+}
+.person-role.role-counterparty {
+  background: #e6effa;
+  color: #2b5a8a;
+}
+.person-role.role-manager {
+  background: #fbf0e0;
+  color: #85560f;
+}
 .person-role.main {
   background: var(--accent-soft);
   color: var(--accent);
@@ -4196,6 +4209,10 @@ button.deal-record:hover {
   font-weight: 650;
 }
 
+/* Cards wide enough for a name and its type tag on one line (three across on a laptop). */
+.contact-grid {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
 /* A contact: who and where, then how to reach them, what's missing, and their projects. */
 .contact-card {
   display: flex;
@@ -4221,15 +4238,21 @@ button.deal-record:hover {
 }
 .contact-card .contact-who h2 {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
+  gap: 8px;
   margin: 0;
   font-size: 18px;
   line-height: 1.3;
 }
 .contact-who h2 .person-role {
+  flex-shrink: 0;
   font-weight: 500;
+}
+.contact-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .contact-card .contact-who p {
   margin: 2px 0 0;

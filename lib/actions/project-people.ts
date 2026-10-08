@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { contact, organization, project, projectContact, projectOrganization } from "@/lib/db/schema";
+import { setClient } from "@/lib/data/organizations";
 import { errorText, firstIssue, optionalText } from "./validation";
 
 // Who a project is with (decision 0012): its organisations (project_organization,
@@ -267,13 +268,12 @@ export async function setClientOrganization(projectId: string, organizationId: s
   const fail = await errorText();
   if (!z.uuid().safeParse(projectId).success || !z.uuid().safeParse(organizationId).success) return fail("invalid");
   const failure = await db.transaction(async (tx) => {
-    const scope = and(eq(projectOrganization.projectId, projectId), eq(projectOrganization.talentId, talent.id));
-    const [onIt] = await tx.select({ id: projectOrganization.id }).from(projectOrganization).where(and(scope, eq(projectOrganization.organizationId, organizationId)));
+    const [onIt] = await tx
+      .select({ id: projectOrganization.id })
+      .from(projectOrganization)
+      .where(and(eq(projectOrganization.projectId, projectId), eq(projectOrganization.talentId, talent.id), eq(projectOrganization.organizationId, organizationId)));
     if (!onIt) return fail("organizationNotFound");
-    // One primary at a time (a unique index holds it): clear the old one first.
-    await tx.update(projectOrganization).set({ isPrimary: false }).where(and(scope, eq(projectOrganization.isPrimary, true)));
-    await tx.update(projectOrganization).set({ isPrimary: true }).where(eq(projectOrganization.id, onIt.id));
-    await mirrorClient(tx, talent.id, projectId);
+    await setClient(tx, talent.id, projectId, organizationId);
     await touch(tx, talent.id, projectId);
     return null;
   });

@@ -33,6 +33,7 @@ const project = (over: Partial<Project> = {}): Project => ({
   title: "Blue Room 11/14 演出",
   counterparty: "Blue Room",
   counterpartyId: "c1",
+  clientId: null,
   artist: "",
   type: "gig",
   stage: "negotiating",

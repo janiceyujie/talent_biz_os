@@ -966,6 +966,10 @@ select:focus-visible {
 .deal-detail .secondary {
   width: 100%;
 }
+/* Not a dialog's buttons, though: a dialog opened from the panel sizes its own. */
+.deal-detail .modal-actions > button {
+  width: auto;
+}
 .stage-progress {
   margin: 12px 0 0;
   padding: 0;
@@ -2156,6 +2160,14 @@ summary {
 .contact-status.linked {
   gap: 4px;
   color: var(--accent);
+}
+.contact-status.new {
+  gap: 4px;
+  color: var(--ink-soft);
+}
+/* Same name as an existing contact: worth a second look before adding a duplicate. */
+.contact-status.warn {
+  color: #a24a14;
 }
 .contact-status .text-button {
   display: inline-flex;

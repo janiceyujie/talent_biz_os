@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { ContactPicker, type ContactValue } from "@/components/app/contact-picker";
 import { Modal } from "@/components/app/modal";
 import { addOrganizationPerson, archiveOrganization, removeOrganizationPerson, saveOrganization } from "@/lib/actions/organizations";
@@ -26,6 +27,7 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
   const money = useMoney();
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [leaving, setLeaving] = useState<{ id: string; name: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const run = (action: () => Promise<string | null>) => startTransition(async () => setError(await action()));
@@ -101,7 +103,7 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
                     )}
                   </div>
                   <MoreMenu label={t("personMore", { name: c.name })}>
-                    <button role="menuitem" disabled={pending} onClick={() => run(() => removeOrganizationPerson(c.id))}>
+                    <button role="menuitem" className="danger-text" onClick={() => setLeaving({ id: c.id, name: c.name })}>
                       {t("removePerson")}
                     </button>
                   </MoreMenu>
@@ -161,6 +163,23 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
         )}
       </div>
 
+      {leaving && (
+        <ConfirmDialog
+          title={t("removePersonTitle", { name: leaving.name, org: org.name })}
+          confirmLabel={t("removePerson")}
+          pending={pending}
+          onClose={() => setLeaving(null)}
+          onConfirm={() =>
+            startTransition(async () => {
+              const failure = await removeOrganizationPerson(leaving.id);
+              setError(failure);
+              if (!failure) setLeaving(null);
+            })
+          }
+        >
+          <p>{t("removePersonBody")}</p>
+        </ConfirmDialog>
+      )}
       {editing && <EditOrganization id={id} name={org.name} notes={org.notes} onDone={() => setEditing(false)} />}
       {adding && <AddPerson organizationId={id} taken={people.map((c) => c.id)} onDone={() => setAdding(false)} />}
     </div>
@@ -247,7 +266,14 @@ function AddPerson({ organizationId, taken, onDone }: { organizationId: string; 
           });
         }}
       >
-        <ContactPicker label={t("person")} contacts={data.contacts.filter((c) => !taken.includes(c.id))} value={value} onChange={setValue} />
+        <ContactPicker
+          label={t("person")}
+          // Only contacts without an organisation: adding them here makes them part of it. Someone who works elsewhere isn't moved here as a side effect.
+          contacts={data.contacts.filter((c) => !taken.includes(c.id) && !c.organizationId)}
+          value={value}
+          onChange={setValue}
+          newAt={data.organizations.find((o) => o.id === organizationId)?.name}
+        />
         <p className="muted">{t("moveNote")}</p>
         {error && (
           <p className="notice error" role="alert">

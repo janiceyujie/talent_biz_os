@@ -2938,29 +2938,126 @@ span.deal-check-chip {
   font-size: var(--text-body);
   font-weight: 650;
 }
-/* Organisations on the project, each with its people under it. */
+/* Organisations on the project, each with its people under it: the organisation is a tinted
+   header row (icon, name, role, count) that folds; its people sit inside, each with an initial. */
 .card-actions {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 12px;
 }
-.org-group + .org-group {
-  margin-top: 14px;
+.org-groups {
+  display: grid;
+  gap: 8px;
+}
+/* Not overflow: hidden (it would clip the ⋯ menu): the header rounds its own corners instead. */
+.org-group {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
 }
 .org-header {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px 8px;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 8px 4px 4px;
+  border-radius: 9px;
+  background: var(--paper);
 }
-.org-header > strong {
-  font-size: var(--text-body);
+.org-group.is-open .org-header {
+  border-bottom: 1px solid var(--line);
+  border-radius: 9px 9px 0 0;
+}
+.org-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.org-toggle > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.org-toggle strong {
+  flex-shrink: 0;
+  font-size: 15px;
+}
+.org-chevron {
+  transition: transform 0.15s ease;
+}
+.org-group.is-open .org-chevron {
+  transform: rotate(90deg);
+}
+.org-count {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.org-summary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 13px;
+}
+.org-header .more-menu .icon-button {
+  background: transparent;
+}
+.org-more {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 12px;
 }
 .org-actions {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
-  gap: 8px;
-  margin-left: auto;
+  gap: 4px;
+}
+.org-group .people-list {
+  border: 0;
+  border-radius: 0;
+}
+.org-empty {
+  margin: 0;
+  padding: 10px 16px;
+}
+.person-initial {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 650;
+}
+.confirm-body p {
+  margin: 0 0 8px;
+}
+@media (max-width: 600px) {
+  .org-toggle {
+    flex-wrap: wrap;
+  }
+  .org-summary {
+    flex-basis: 100%;
+    padding-left: 48px;
+  }
 }
 /* Row-level ⋯ menus in a card: lighter than the header's. */
 .deal-detail .deal-card .more-menu .icon-button,
@@ -2990,8 +3087,8 @@ span.deal-check-chip {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 16px;
-  padding: 10px 12px;
+  gap: 4px 12px;
+  padding: 10px 12px 10px 16px;
 }
 .people-list > li + li {
   border-top: 1px solid var(--line);

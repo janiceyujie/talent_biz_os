@@ -1,11 +1,12 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { auditLog, contact, project } from "@/lib/db/schema";
+import { auditLog, contact, organization, project } from "@/lib/db/schema";
+import { organizationNamed, setClient } from "@/lib/data/organizations";
 import { projectTypeKeys } from "@/lib/project-types";
 import { stages, type Stage } from "@/lib/types";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
@@ -15,6 +16,9 @@ const projectInput = z
     id: optionalId,
     title: z.string().trim().min(1, "projectTitleRequired").max(200),
     counterparty: z.string().trim().max(200).default(""),
+    // The client (decision 0012): an organisation picked, or a name typed for a new one.
+    organizationId: optionalId,
+    organizationName: z.string().trim().max(200).default(""),
     counterpartyId: optionalId,
     // A partner not yet in contacts, added as one with the project (when nothing is linked).
     newContact: z
@@ -46,7 +50,7 @@ const projectInput = z
     contractNotes: optionalText,
     notes: optionalText,
   })
-  .refine((p) => p.counterpartyId || p.counterparty || p.newContact, { message: "counterpartyRequired" });
+  .refine((p) => p.organizationId || p.organizationName || p.counterparty, { message: "clientRequired" });
 
 /** Create or update a project. Returns an error message, or null on success. */
 export async function saveProject(data: Record<string, unknown>): Promise<string | null> {
@@ -56,19 +60,18 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
   if (!parsed.success) return fail(firstIssue(parsed.error));
   const input = parsed.data;
 
-  let counterparty = input.counterparty;
+  // The main contact, if one is picked, must be this talent's.
   if (input.counterpartyId) {
     const [linked] = await db
-      .select({ name: contact.name })
+      .select({ id: contact.id })
       .from(contact)
       .where(and(eq(contact.id, input.counterpartyId), eq(contact.talentId, talent.id)));
     if (!linked) return fail("counterpartyNotFound");
-    counterparty = linked.name;
   }
 
   const values = {
     title: input.title,
-    counterparty,
+    counterparty: input.organizationName || input.counterparty, // replaced by the client's own name below
     counterpartyId: input.counterpartyId,
     type: input.type,
     stage: input.stage,
@@ -85,19 +88,37 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
   };
 
   const failure = await db.transaction(async (tx) => {
+    // The client: the organisation picked, else the one with the typed name (made if there's none).
+    let client: { id: string; name: string };
+    if (input.organizationId) {
+      const [org] = await tx
+        .select({ id: organization.id, name: organization.name })
+        .from(organization)
+        .where(and(eq(organization.id, input.organizationId), eq(organization.talentId, talent.id)));
+      if (!org) return fail("organizationNotFound");
+      client = org;
+    } else client = await organizationNamed(tx, talent.id, input.organizationName || input.counterparty);
+    values.counterparty = client.name;
+
+    // The main contact works at the client: a new one is made there, an existing one without an organisation moves there.
     if (!input.counterpartyId && input.newContact) {
       const [created] = await tx
         .insert(contact)
-        .values({ ...input.newContact, talentId: talent.id, role: "counterparty" })
+        .values({ ...input.newContact, talentId: talent.id, role: "counterparty", organizationId: client.id })
         .returning({ id: contact.id });
       values.counterpartyId = created.id;
-      values.counterparty = input.newContact.name;
-    }
+    } else if (input.counterpartyId)
+      await tx
+        .update(contact)
+        .set({ organizationId: client.id })
+        .where(and(eq(contact.id, input.counterpartyId), eq(contact.talentId, talent.id), isNull(contact.organizationId)));
+
     if (!input.id) {
       const [created] = await tx
         .insert(project)
         .values({ ...values, talentId: talent.id })
         .returning({ id: project.id });
+      await setClient(tx, talent.id, created.id, client.id);
       await tx.insert(auditLog).values({
         talentId: talent.id,
         actorPersonId: person.personId,
@@ -115,6 +136,7 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
     // The form edits only some details; keep the rest (deal fields, dates, to-confirm list from messages).
     const details = { ...existing.details, ...values.details };
     await tx.update(project).set({ ...values, details }).where(and(eq(project.id, input.id), eq(project.talentId, talent.id)));
+    await setClient(tx, talent.id, input.id, client.id);
     if (existing.stage !== input.stage)
       await logStageChange(tx, talent.id, person.personId, input.id, existing.stage, input.stage);
     return null;

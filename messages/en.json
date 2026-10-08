@@ -530,12 +530,23 @@
       "addToTitle": "Add a contact at {name}",
       "addOrgTitle": "Add an organization",
       "org": "Organization",
-      "orgPlaceholder": "Search organizations, or type a new name",
-      "newOrg": "+ Add “{name}” as an organization",
-      "orgExisting": "An existing organization",
-      "orgNew": "This adds a new organization",
       "firstIsClient": "The first organization becomes the client.",
-      "orgRolePlaceholder": "e.g. organizer, agency, venue, brand"
+      "orgRolePlaceholder": "e.g. organizer, agency, venue, brand",
+      "count": "{count, plural, one {# person} other {# people}}",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "people": "Contacts",
+      "editPerson": "Edit",
+      "editPersonTitle": "Edit {name}",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "sameEverywhere": "Name, email, and phone are this contact's details everywhere, not just on this project.",
+      "removePersonTitle": "Remove {name} from this project?",
+      "removePersonBody": "They stay in Artists & partners; they just won't be listed on this project.",
+      "removeOrgTitle": "Remove {name} from this project?",
+      "removeOrgBody": "The organization and its contacts stay in Artists & partners; anyone of theirs on the project moves to Other contacts.",
+      "more_n": "+{count}"
     }
   },
   "workflow": {
@@ -1165,7 +1176,6 @@
     "keepEditing": "Keep editing",
     "discard": "Discard changes",
     "contactLinked": "Linked contact",
-    "contactUnlinked": "Saved on this project only",
     "contactClear": "Clear partner",
     "section": {
       "amount": "Amount and tax",
@@ -1178,11 +1188,21 @@
     },
     "paymentHelpIn": "Record each installment separately. Keep it as Outstanding until it is received. Received income is reported by the date received. If less arrives than billed (withholding tax, the NHI supplementary premium), enter the amount received — the gap is shown separately.",
     "paymentHelpOut": "Record each installment separately. Keep it as To pay until it is paid. Paid expenses are reported by the date paid.",
-    "contactAdd": "Add to contacts",
     "contactCreate": "+ Add “{name}” as a contact",
     "contactPlaceholder": "Search contacts, or type a new name",
-    "contactNewTitle": "New contact “{name}”, added on save",
-    "contactNewCancel": "Don't add"
+    "clientField": "Client (organization)",
+    "mainContactField": "Main contact",
+    "orgPlaceholder": "Search organizations, or type a new name",
+    "orgNew": "+ Add “{name}” as an organization",
+    "orgLinked": "An existing organization",
+    "orgWillCreate": "This adds a new organization",
+    "contactWillCreate": "Saving adds “{name}” as a new contact",
+    "contactWillCreateAt": "Saving adds “{name}” as a new contact at {org}",
+    "contactSameName": "There's already a contact named “{name}”.",
+    "contactUseExisting": "Use them instead",
+    "contactDetails": "Contact details (optional)",
+    "contactAlreadyHere": "“{name}” is already here. Add another contact with the same name?",
+    "contactSameNameElsewhere": "There's a “{name}” at {org}; this adds a different contact with the same name here."
   },
   "tone": {
     "natural": "Natural and professional",
@@ -1327,7 +1347,6 @@
     "splitPartsPositive": "Both deposit and balance must be greater than zero.",
     "projectTitleRequired": "Enter a project name.",
     "typeRequired": "Choose a project type.",
-    "counterpartyRequired": "Enter a partner.",
     "counterpartyNotFound": "Partner not found.",
     "languageRequired": "Choose the language the reply is written in.",
     "templateTitleRequired": "Enter a template name.",
@@ -1360,7 +1379,8 @@
     "organizationRequired": "Pick an organization, or add a new one.",
     "organizationNameRequired": "Enter the organization's name.",
     "organizationNotFound": "Organization not found.",
-    "clientCantBeRemoved": "This is the project's client. Make another organization the client first, then remove it."
+    "clientCantBeRemoved": "This is the project's client. Make another organization the client first, then remove it.",
+    "clientRequired": "Enter the client organization."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",
@@ -1572,9 +1592,11 @@
     "notes": "Notes",
     "renameNote": "Renaming also updates the name shown on projects where it's the client.",
     "person": "Contact",
-    "moveNote": "A contact at another organization moves here.",
+    "moveNote": "Only contacts without an organization are listed; adding them makes them part of this one.",
     "cancel": "Cancel",
     "save": "Save",
-    "add": "Add"
+    "add": "Add",
+    "removePersonTitle": "Remove {name} from {org}?",
+    "removePersonBody": "They stay in Artists & partners and on their projects; they just won't belong to this organization."
   }
 }

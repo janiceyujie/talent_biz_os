@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { project, todo } from "@/lib/db/schema";
+import { project, projectOrganization, todo } from "@/lib/db/schema";
 import { identifyingFields } from "@/lib/domain/intake";
 import { phaseOf } from "@/lib/domain/phases";
 import { listViews, PAGE_MAX, type ListSort, type ListView, type ProjectPage } from "@/lib/domain/project-list";
@@ -12,13 +12,14 @@ type Row = typeof project.$inferSelect;
 type NextAction = Project["nextAction"];
 
 /** The fields every page sees (decision 0011): no notes, and only the details intake matching scores. */
-export function summaryOf(p: Row, nextAction: NextAction, artist: string): ProjectSummary {
+export function summaryOf(p: Row, nextAction: NextAction, artist: string, clientId: string | null): ProjectSummary {
   const fields = Object.fromEntries(Object.entries(p.details.fields ?? {}).filter(([k]) => identifyingFields.includes(k)));
   return {
     id: p.id,
     title: p.title,
     counterparty: p.counterparty,
     counterpartyId: p.counterpartyId,
+    clientId,
     artist,
     type: isProjectType(p.type) ? p.type : "other",
     stage: p.stage,
@@ -33,6 +34,10 @@ export function summaryOf(p: Row, nextAction: NextAction, artist: string): Proje
   };
 }
 
+// A project's client: its primary organisation. Written out in full for the same reason as below.
+const clientOf = () =>
+  sql<string | null>`(select po.organization_id from ${projectOrganization} po where po.project_id = "project"."id" and po.is_primary)`;
+
 // A project's next step: its earliest open to-do, undated ones last (as lib/data/index.ts).
 // The outer column is written out in full: in a one-table query Drizzle leaves
 // columns unqualified, and a bare "id" here would mean the to-do's own.
@@ -42,12 +47,12 @@ const nextTodo = (column: "id" | "title" | "due_date") =>
 /** One project in full, for its own screen and for applying a message to it. Null when it isn't this talent's. */
 export async function getProject(talentId: string, id: string, artist: string): Promise<Project | null> {
   const [row] = await db
-    .select({ project, nextId: nextTodo("id").mapWith(String), nextTitle: nextTodo("title").mapWith(String), nextDue: nextTodo("due_date").mapWith(String) })
+    .select({ project, clientId: clientOf(), nextId: nextTodo("id").mapWith(String), nextTitle: nextTodo("title").mapWith(String), nextDue: nextTodo("due_date").mapWith(String) })
     .from(project)
     .where(and(eq(project.id, id), eq(project.talentId, talentId)));
   if (!row) return null;
   const nextAction = row.nextId ? { id: row.nextId, title: row.nextTitle, dueDate: row.nextDue || null } : null;
-  return { ...summaryOf(row.project, nextAction, artist), details: row.project.details, notes: row.project.notes ?? "" };
+  return { ...summaryOf(row.project, nextAction, artist, row.clientId), details: row.project.details, notes: row.project.notes ?? "" };
 }
 
 
@@ -123,6 +128,7 @@ export async function listProjects(
       .select({
         project,
         sortKey: sql<string>`(${key})::text`,
+        clientId: clientOf(),
         nextId: nextTodo("id").mapWith(String),
         nextTitle: nextTodo("title").mapWith(String),
         nextDue: nextTodo("due_date").mapWith(String),
@@ -148,7 +154,7 @@ export async function listProjects(
   const last = shown.at(-1);
   return {
     items: shown.map((r) =>
-      summaryOf(r.project, r.nextId ? { id: r.nextId, title: r.nextTitle, dueDate: r.nextDue || null } : null, artist),
+      summaryOf(r.project, r.nextId ? { id: r.nextId, title: r.nextTitle, dueDate: r.nextDue || null } : null, artist, r.clientId),
     ),
     nextCursor: rows.length > limit && last ? encodeCursor(last.sortKey, last.project.id) : null,
     total: counts[params.view],

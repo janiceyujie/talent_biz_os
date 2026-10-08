@@ -530,12 +530,23 @@
       "addToTitle": "新增 {name} 的聯絡人",
       "addOrgTitle": "新增組織",
       "org": "組織",
-      "orgPlaceholder": "搜尋組織，或輸入新名稱",
-      "newOrg": "＋ 新增組織「{name}」",
-      "orgExisting": "已有的組織",
-      "orgNew": "會新增這個組織",
       "firstIsClient": "第一個組織會成為主要客戶。",
-      "orgRolePlaceholder": "例如：主辦、經紀、場地、品牌"
+      "orgRolePlaceholder": "例如：主辦、經紀、場地、品牌",
+      "count": "{count} 位",
+      "expandAll": "全部展開",
+      "collapseAll": "全部收合",
+      "people": "聯絡人",
+      "editPerson": "編輯",
+      "editPersonTitle": "編輯 {name}",
+      "name": "姓名",
+      "email": "Email",
+      "phone": "電話",
+      "sameEverywhere": "姓名、Email 和電話是這位聯絡人在所有地方共用的資料。",
+      "removePersonTitle": "要把 {name} 從這個合作案移除嗎？",
+      "removePersonBody": "這位聯絡人仍會留在「藝人與合作方」，只是不再列在這個合作案上。",
+      "removeOrgTitle": "要把 {name} 從這個合作案移除嗎？",
+      "removeOrgBody": "這個組織和它的聯絡人仍會留在「藝人與合作方」；已經在合作案上的聯絡人會移到「其他聯絡人」。",
+      "more_n": "+{count}"
     }
   },
   "workflow": {
@@ -1165,7 +1176,6 @@
     "keepEditing": "繼續編輯",
     "discard": "放棄變更",
     "contactLinked": "已連結聯絡人",
-    "contactUnlinked": "只存在這個合作案",
     "contactClear": "清除合作方",
     "section": {
       "amount": "金額與稅額",
@@ -1178,11 +1188,21 @@
     },
     "paymentHelpIn": "一筆紀錄代表一筆款項。分次收款請分筆登錄；尚未收到時保持「待收」。已收報表依實際收款日期計算。實際入帳少於應收（例如扣繳、二代健保）時，填寫實收金額，差額會另外顯示。",
     "paymentHelpOut": "一筆紀錄代表一筆款項。分次付款請分筆登錄；尚未支付時保持「待付」。已付報表依實際付款日期計算。",
-    "contactAdd": "加入聯絡人",
     "contactCreate": "＋ 新增聯絡人「{name}」",
     "contactPlaceholder": "搜尋聯絡人，或輸入新名稱",
-    "contactNewTitle": "儲存時新增聯絡人「{name}」",
-    "contactNewCancel": "不新增"
+    "clientField": "客戶（組織）",
+    "mainContactField": "主要窗口",
+    "orgPlaceholder": "搜尋組織，或輸入新名稱",
+    "orgNew": "＋ 新增組織「{name}」",
+    "orgLinked": "已有的組織",
+    "orgWillCreate": "會新增這個組織",
+    "contactWillCreate": "儲存時會新增聯絡人「{name}」",
+    "contactWillCreateAt": "儲存時會在 {org} 新增聯絡人「{name}」",
+    "contactSameName": "已經有一位叫「{name}」的聯絡人。",
+    "contactUseExisting": "改選這位",
+    "contactDetails": "聯絡方式（選填）",
+    "contactAlreadyHere": "「{name}」已經在這裡了；確定要再新增一位同名的聯絡人嗎？",
+    "contactSameNameElsewhere": "{org} 已經有一位「{name}」；這會在這裡新增另一位同名的聯絡人。"
   },
   "tone": {
     "natural": "自然專業",
@@ -1327,7 +1347,6 @@
     "splitPartsPositive": "拆分後訂金與尾款都必須大於零。",
     "projectTitleRequired": "請填寫合作案名稱。",
     "typeRequired": "請選擇商案類型。",
-    "counterpartyRequired": "請填寫合作方。",
     "counterpartyNotFound": "找不到這位合作方。",
     "languageRequired": "請選擇回覆使用的語言。",
     "templateTitleRequired": "請填寫範本名稱。",
@@ -1360,7 +1379,8 @@
     "organizationRequired": "請選擇一個組織，或新增一個。",
     "organizationNameRequired": "請填寫組織名稱。",
     "organizationNotFound": "找不到這個組織。",
-    "clientCantBeRemoved": "這是合作案的主要客戶；請先把另一個組織設為主要客戶，再移除它。"
+    "clientCantBeRemoved": "這是合作案的主要客戶；請先把另一個組織設為主要客戶，再移除它。",
+    "clientRequired": "請填寫客戶（組織）。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",
@@ -1572,9 +1592,11 @@
     "notes": "備註",
     "renameNote": "改名也會更新以它為主要客戶的合作案上顯示的名稱。",
     "person": "聯絡人",
-    "moveNote": "已有組織的聯絡人會改到這個組織。",
+    "moveNote": "清單只列出還沒有組織的聯絡人，加入後他們會屬於這個組織。",
     "cancel": "取消",
     "save": "儲存",
-    "add": "加入"
+    "add": "加入",
+    "removePersonTitle": "要把 {name} 移出 {org} 嗎？",
+    "removePersonBody": "這位聯絡人仍會留在「藝人與合作方」和他的合作案上，只是不再屬於這個組織。"
   }
 }

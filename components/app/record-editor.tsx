@@ -26,6 +26,7 @@ import {
 } from "@/lib/types";
 import { useAppData } from "./app-data";
 import { ContactPicker, type NewContact } from "./contact-picker";
+import { OrganizationPicker } from "./organization-picker";
 import { TimeZonePicker } from "./time-zone-picker";
 import { Modal } from "./modal";
 
@@ -166,6 +167,12 @@ export function RecordEditor({
     const initial = { ...defaults[kind], ...editor.item };
     // Templates are stored with neutral placeholders; edit them in the reader's language.
     if (kind === "template") initial.body = toDisplay(String(initial.body), uiLocale);
+    // A project's client (decision 0012) and main contact, as the pickers show them.
+    if (kind === "project") {
+      initial.organizationId = String(initial.clientId ?? "");
+      initial.organizationName = String(initial.counterparty ?? "");
+      initial.contactName = data$.contacts.find((c) => c.id === initial.counterpartyId)?.name ?? "";
+    }
     return initial;
   });
   const [pending, setPending] = useState(false);
@@ -284,7 +291,11 @@ export function RecordEditor({
           e.preventDefault();
           if (!onSave) return;
           setPending(true);
-          const failure = await onSave(newContact ? { ...data, newContact: { ...newContact, name: String(data.counterparty) } } : data);
+          // A typed main contact who isn't a contact yet is added as one, with any details given.
+          const typedContact = kind === "project" && !data.counterpartyId && String(data.contactName ?? "").trim();
+          const failure = await onSave(
+            typedContact ? { ...data, newContact: { email: "", phone: "", ...newContact, name: typedContact } } : data,
+          );
           setPending(false);
           if (failure) setError(failure);
           else {
@@ -307,16 +318,27 @@ export function RecordEditor({
                     <p className="muted">{tProjects(`stageNote.${stages.includes(data.stage as Stage) ? (data.stage as Stage) : "offer"}`)}</p>
                   </div>
                 </div>
+                {/* The client organisation, then its main contact (optional): decision 0012. */}
+                <OrganizationPicker
+                  label={t("clientField")}
+                  value={{ name: String(data.organizationName ?? ""), organizationId: String(data.organizationId ?? "") }}
+                  onChange={(v) => setData((d) => ({ ...d, organizationName: v.name, organizationId: v.organizationId }))}
+                />
                 <ContactPicker
-                  label={t("field.counterparty")}
-                  contacts={data$.contacts}
+                  label={t("mainContactField")}
+                  required={false}
+                  newAt={String(data.organizationName ?? "").trim() || undefined}
+                  // The client's people first.
+                  contacts={[...data$.contacts].sort(
+                    (a, b) => Number(b.organizationId === data.organizationId) - Number(a.organizationId === data.organizationId),
+                  )}
                   value={{
-                    name: String(data.counterparty ?? ""),
+                    name: String(data.contactName ?? ""),
                     contactId: String(data.counterpartyId ?? ""),
                     newContact,
                   }}
                   onChange={(v) => {
-                    setData((d) => ({ ...d, counterparty: v.name, counterpartyId: v.contactId }));
+                    setData((d) => ({ ...d, contactName: v.name, counterpartyId: v.contactId }));
                     setNewContact(v.newContact);
                   }}
                 />

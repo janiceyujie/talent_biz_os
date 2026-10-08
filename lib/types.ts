@@ -32,6 +32,7 @@ export type Project = {
   title: string;
   counterparty: string;
   counterpartyId: string | null;
+  clientId: string | null; // the primary organisation (decision 0012); counterparty mirrors its name
   artist: string; // display only until manager accounts pick a talent per project
   type: ProjectType;
   stage: Stage;

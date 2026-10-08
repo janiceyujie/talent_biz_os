@@ -155,6 +155,20 @@
       "when": 1791357082015,
       "tag": "0021_project_contact",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791430209500,
+      "tag": "0022_organization",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791430230258,
+      "tag": "0023_organizations_from_text",
+      "breakpoints": true
     }
   ]
 }

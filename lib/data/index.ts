@@ -7,8 +7,9 @@ import { CALENDAR_SCOPE, hasScopes, IMPORT_SCOPES } from "@/lib/calendar/google/
 import { isGoogleConfigured, isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { readPreferences } from "@/lib/preferences";
+import { pairKey } from "@/lib/domain/organizations";
 import { summaryOf } from "./projects";
-import { authAccount, organization, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { authAccount, organization, organizationDistinct, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
@@ -26,7 +27,7 @@ const eventKind = (k: string): CalendarKind => (calendarKinds.includes(k as Cale
  */
 export const getAppData = cache(async (): Promise<AppData> => {
   const { person, talent: current } = await requireTalent();
-  const [[talentRow], [memberRow], projectRows, contactRows, organizationRows, clientRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows, messageRows, preferenceRows] = await Promise.all([
+  const [[talentRow], [memberRow], projectRows, contactRows, organizationRows, distinctRows, clientRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows, messageRows, preferenceRows] = await Promise.all([
     db
       .select({ id: talent.id, name: talent.name, timeZone: talent.timeZone, vertical: talent.vertical })
       .from(talent)
@@ -44,6 +45,10 @@ export const getAppData = cache(async (): Promise<AppData> => {
     db.select().from(project).where(eq(project.talentId, current.id)).orderBy(desc(project.updatedAt)),
     db.select().from(contact).where(eq(contact.talentId, current.id)).orderBy(contact.name),
     db.select().from(organization).where(eq(organization.talentId, current.id)).orderBy(organization.name),
+    db
+      .select({ a: organizationDistinct.organizationAId, b: organizationDistinct.organizationBId })
+      .from(organizationDistinct)
+      .where(eq(organizationDistinct.talentId, current.id)),
     db
       .select({ projectId: projectOrganization.projectId, organizationId: projectOrganization.organizationId })
       .from(projectOrganization)
@@ -239,6 +244,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       organizationId: c.organizationId,
     })),
     organizations: organizationRows.map((o) => ({ id: o.id, name: o.name, notes: o.notes ?? "", archived: o.archivedAt !== null })),
+    distinctOrganizations: distinctRows.map((r) => pairKey(r.a, r.b)),
     calendar,
     payments: paymentRows.map((p) => ({
       id: p.id,

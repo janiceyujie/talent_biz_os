@@ -14,6 +14,7 @@ import { paymentCash, paymentTotal } from "@/lib/domain/workflow";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { DealCard } from "./deal-card";
+import { DistinctFrom } from "./organization-duplicates";
 import { MoreMenu } from "./more-menu";
 
 /**
@@ -163,6 +164,7 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
         )}
       </div>
 
+      <DistinctFrom organizationId={id} />
       {leaving && (
         <ConfirmDialog
           title={t("removePersonTitle", { name: leaving.name, org: org.name })}

@@ -11,6 +11,7 @@ import { archiveContact } from "@/lib/actions/contacts";
 import { useLabels } from "@/lib/i18n/labels";
 import { contactRoles } from "@/lib/types";
 import { EditOrganization } from "./organization";
+import { OrganizationDuplicates } from "./organization-duplicates";
 
 /** People and organisations (decision 0012), one at a time: `?view=organizations` shows organisations. */
 export function ContactsView() {
@@ -162,6 +163,7 @@ function OrganizationsView() {
           {t("archivedOnly")}
         </label>
       </div>
+      {!archived && <OrganizationDuplicates />}
       <ul className="org-list">
         {visible.map((o) => {
           const people = peopleAt(o.id);

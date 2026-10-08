@@ -1155,7 +1155,8 @@
       "settledDateIn": "Date received",
       "settledDateOut": "Date paid",
       "endTime": "End time",
-      "endDate": "End date"
+      "endDate": "End date",
+      "organization": "Organization"
     },
     "unlinked": "Unlinked",
     "kind": {
@@ -1469,7 +1470,7 @@
     "details": "Details"
   },
   "partners": {
-    "intro": "Built from signed projects and their payments. The on-time rate counts received payments — it isn't a credit score for the company.",
+    "intro": "Built from the signed projects each organization is the client of, and their payments. The on-time rate counts received payments — it isn't a credit score for the company.",
     "listLabel": "Partners",
     "evidence": {
       "tooFew": "Not enough data",
@@ -1478,7 +1479,7 @@
       "someLate": "Some late payments"
     },
     "summary": "{projects, plural, one {# project} other {# projects}} · {overdue} overdue",
-    "empty": "Add partners in Artists & partners and link them to projects to see their history here.",
+    "empty": "Once a signed project has a client organization, its history shows here.",
     "statProjects": "Projects",
     "statOnTime": "Paid on time",
     "statAvgLate": "Average days late",
@@ -1597,6 +1598,31 @@
     "save": "Save",
     "add": "Add",
     "removePersonTitle": "Remove {name} from {org}?",
-    "removePersonBody": "They stay in Artists & partners and on their projects; they just won't belong to this organization."
+    "removePersonBody": "They stay in Artists & partners and on their projects; they just won't belong to this organization.",
+    "duplicates": {
+      "title": "Possible duplicate organizations ({count})",
+      "intro": "These look like the same organization entered twice. Merge them, or mark them as different.",
+      "strong": "Likely duplicate",
+      "possible": "Possible duplicate",
+      "reason": {
+        "sameName": "Same name once the company type is set aside",
+        "sharedDomain": "Their contacts all use {domain} email",
+        "contains": "One name contains the other",
+        "spelling": "Spelled a letter or two apart"
+      },
+      "merge": "Merge…",
+      "notSame": "Not the same",
+      "showAll": "Show all ({count})",
+      "showFewer": "Show fewer",
+      "mergeTitle": "Merge organizations",
+      "keepWhich": "Which one to keep",
+      "peopleCount": "{count, plural, one {# contact} other {# contacts}}",
+      "finalName": "Name after merging",
+      "mergeNote": "{remove}'s {count, plural, one {# contact} other {# contacts}} and its projects move to “{keep}”, then {remove} is deleted. This can't be undone.",
+      "mergeButton": "Merge",
+      "cancel": "Cancel",
+      "distinctTitle": "Marked as different from",
+      "undo": "Undo"
+    }
   }
 }

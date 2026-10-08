@@ -4239,3 +4239,75 @@ a.deal-record:hover {
 .org-payments {
   margin-top: 12px;
 }
+
+/* Possible duplicate organisations (decision 0012): a panel above the list. */
+.dup-panel {
+  margin: 16px 0 0;
+  padding: 16px;
+  border-color: #f0c9a8;
+}
+.dup-panel header h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.dup-panel header p {
+  margin: 4px 0 12px;
+  font-size: var(--text-meta);
+}
+.dup-panel ul {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.dup-panel li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.dup-names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  min-width: 0;
+}
+.dup-names small {
+  flex-basis: 100%;
+}
+.dup-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.person-role.warn {
+  background: var(--orange-soft);
+  color: #a24a14;
+  font-weight: 600;
+}
+.distinct-from {
+  margin-top: 16px;
+}
+.distinct-from h3 {
+  margin: 0 0 8px;
+  font-size: var(--text-meta);
+  color: var(--muted);
+}
+.distinct-from ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+.distinct-from li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}

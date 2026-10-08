@@ -1155,7 +1155,8 @@
       "settledDateIn": "實際收款日期",
       "settledDateOut": "實際付款日期",
       "endTime": "結束時間",
-      "endDate": "結束日期"
+      "endDate": "結束日期",
+      "organization": "組織"
     },
     "unlinked": "未關聯",
     "kind": {
@@ -1469,7 +1470,7 @@
     "details": "行程詳情"
   },
   "partners": {
-    "intro": "依已簽約合作與內帳紀錄計算。準時率按已收款筆數計算，不是對公司的信用評分。",
+    "intro": "依組織擔任主要客戶的已簽約合作與內帳紀錄計算。準時率按已收款筆數計算，不是對公司的信用評分。",
     "listLabel": "合作方紀錄",
     "evidence": {
       "tooFew": "資料不足",
@@ -1478,7 +1479,7 @@
       "someLate": "有逾期紀錄"
     },
     "summary": "{projects} 次合作 · {overdue} 筆待收逾期",
-    "empty": "新增合作方並關聯案件後，這裡會顯示合作紀錄。",
+    "empty": "合作案有了主要客戶（組織）並簽約後，這裡會顯示該組織的合作紀錄。",
     "statProjects": "合作次數",
     "statOnTime": "已收款準時率",
     "statAvgLate": "逾期款平均天數",
@@ -1597,6 +1598,31 @@
     "save": "儲存",
     "add": "加入",
     "removePersonTitle": "要把 {name} 移出 {org} 嗎？",
-    "removePersonBody": "這位聯絡人仍會留在「藝人與合作方」和他的合作案上，只是不再屬於這個組織。"
+    "removePersonBody": "這位聯絡人仍會留在「藝人與合作方」和他的合作案上，只是不再屬於這個組織。",
+    "duplicates": {
+      "title": "可能重複的組織（{count}）",
+      "intro": "這些組織看起來可能是同一個被輸入了兩次。確認後可以合併，或標記為不同。",
+      "strong": "很可能重複",
+      "possible": "可能重複",
+      "reason": {
+        "sameName": "去掉公司類型後名稱相同",
+        "sharedDomain": "聯絡人都用 {domain} 的 Email",
+        "contains": "其中一個名稱包含另一個",
+        "spelling": "拼法只差一兩個字母"
+      },
+      "merge": "合併…",
+      "notSame": "不是同一個",
+      "showAll": "顯示全部（{count}）",
+      "showFewer": "收合",
+      "mergeTitle": "合併組織",
+      "keepWhich": "保留哪一個",
+      "peopleCount": "{count} 位聯絡人",
+      "finalName": "合併後的名稱",
+      "mergeNote": "{remove} 的 {count} 位聯絡人和它所在的合作案會移到「{keep}」，然後刪除 {remove}。合併後無法復原。",
+      "mergeButton": "合併",
+      "cancel": "取消",
+      "distinctTitle": "已標記為不同的組織",
+      "undo": "復原"
+    }
   }
 }

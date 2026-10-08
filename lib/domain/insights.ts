@@ -1,6 +1,6 @@
 // Finance and partner reports over AppData. TWD only for the MVP, like every
 // other summary. Pure functions; run anywhere.
-import type { AppData, Contact, Payment, ProjectSummary } from "@/lib/types";
+import type { AppData, Organization, Payment, ProjectSummary } from "@/lib/types";
 import { dateInZone } from "./dates";
 import { minorUnits } from "./money";
 import { isSigned } from "./phases";
@@ -60,17 +60,19 @@ export function financeInsights(data: AppData, now = new Date()) {
 export const evidenceLevels = ["tooFew", "manyLate", "allOnTime", "someLate"] as const;
 
 /**
- * Per counterparty: signed projects (archived ones too — they're history) and
- * how their income payments arrived against their due dates. A record of what
- * happened, not a credit score. Only projects linked to the contact count:
- * the same name never implies the same contact.
+ * Per organisation (decision 0012): the signed projects it's the client of
+ * (archived ones too — they're history) and how their income payments arrived
+ * against their due dates. A record of what happened, not a credit score.
+ * Only projects linked to the organisation count: the same name never implies
+ * the same organisation. Organisations that were never a client of signed work
+ * (an agency, a venue) have nothing to show and aren't listed.
  */
 export function partnerInsights(data: AppData, now = new Date()) {
   const today = dateInZone(data.talent.timeZone, 0, now);
-  return data.contacts
-    .filter((c) => c.role === "counterparty" && !c.archived)
-    .map((contact: Contact) => {
-      const projects = data.projects.filter((p) => isSigned(p.stage) && p.counterpartyId === contact.id);
+  return data.organizations
+    .filter((o) => !o.archived)
+    .map((organization: Organization) => {
+      const projects = data.projects.filter((p) => isSigned(p.stage) && p.clientId === organization.id);
       const titles = new Map(projects.map((p) => [p.id, p.title]));
       const rows = data.payments
         .filter((x) => live(x) && x.direction === "in" && x.projectId && titles.has(x.projectId) && x.amount > 0)
@@ -87,7 +89,7 @@ export function partnerInsights(data: AppData, now = new Date()) {
       const late = paid.filter((x) => x.lateDays! > 0);
       const overdue = rows.filter((x) => x.status === "expected" && x.dueDate && x.dueDate < today);
       return {
-        contact,
+        organization,
         projects,
         rows,
         paidCount: paid.length,
@@ -106,5 +108,6 @@ export function partnerInsights(data: AppData, now = new Date()) {
               : "someLate") as (typeof evidenceLevels)[number],
       };
     })
+    .filter((r) => r.projects.length > 0)
     .sort((a, b) => b.overdueAmount - a.overdueAmount || b.projects.length - a.projects.length);
 }

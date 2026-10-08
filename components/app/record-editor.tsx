@@ -113,7 +113,7 @@ export function RecordEditor({
       travel: "",
       notes: "",
     },
-    contact: { name: "", role: "counterparty", company: "", email: "", phone: "", notes: "" },
+    contact: { name: "", role: "counterparty", organizationId: "", organizationName: "", email: "", phone: "", notes: "" },
     calendar: {
       title: "",
       date: today,
@@ -167,6 +167,11 @@ export function RecordEditor({
     const initial = { ...defaults[kind], ...editor.item };
     // Templates are stored with neutral placeholders; edit them in the reader's language.
     if (kind === "template") initial.body = toDisplay(String(initial.body), uiLocale);
+    // A contact's organisation, as the picker shows it; a company typed before organisations existed becomes one on save.
+    if (kind === "contact") {
+      initial.organizationId = String(initial.organizationId ?? "");
+      initial.organizationName = data$.organizations.find((o) => o.id === initial.organizationId)?.name ?? String(initial.company ?? "");
+    }
     // A project's client (decision 0012) and main contact, as the pickers show them.
     if (kind === "project") {
       initial.organizationId = String(initial.clientId ?? "");
@@ -360,7 +365,13 @@ export function RecordEditor({
             <>
               {field("name", t("field.name"), "text", true)}
               {field("role", t("field.role"), "text", true, options(contactRoles, labels.contactRole))}
-              {field("company", t("field.company"))}
+              {/* Where they work: an organisation picked or typed new, or none (decision 0012). */}
+              <OrganizationPicker
+                label={t("field.organization")}
+                required={false}
+                value={{ name: String(data.organizationName ?? ""), organizationId: String(data.organizationId ?? "") }}
+                onChange={(v) => setData((d) => ({ ...d, organizationName: v.name, organizationId: v.organizationId }))}
+              />
               <div className="form-grid">
                 {field("email", t("field.email"), "email")}
                 {field("phone", t("field.phone"), "tel")}

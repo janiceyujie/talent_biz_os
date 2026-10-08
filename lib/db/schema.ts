@@ -187,6 +187,31 @@ export const organization = pgTable(
   (t) => [index("organization_talent_idx").on(t.talentId)],
 ).enableRLS();
 
+// Two organisations someone said are different (decision 0012), so they aren't
+// suggested as duplicates again. Stored once per pair, smaller id first; it goes
+// when either organisation does.
+export const organizationDistinct = pgTable(
+  "organization_distinct",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    organizationAId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    organizationBId: uuid()
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    decidedBy: uuid().references(() => person.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("organization_distinct_pair").on(t.organizationAId, t.organizationBId),
+    check("organization_distinct_order", sql`${t.organizationAId} < ${t.organizationBId}`),
+  ],
+).enableRLS();
+
 // Someone the talent works with. Same name never implies same contact.
 export const contact = pgTable(
   "contact",

@@ -276,6 +276,8 @@ export type AppData = {
   projects: ProjectSummary[]; // the full project: GET /api/projects/[id]
   contacts: Contact[];
   organizations: Organization[];
+  /** Pairs of organisations someone said are different, as pairKey (lib/domain/organizations): never suggested as duplicates. */
+  distinctOrganizations: string[];
   calendar: CalendarItem[];
   payments: Payment[];
   templates: ReplyTemplate[];

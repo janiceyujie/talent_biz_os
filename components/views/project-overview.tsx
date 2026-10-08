@@ -100,8 +100,19 @@ export function ProjectOverview({
     partners: <ProjectPeople key="partners" project={project} people={people} organizations={organizations} />,
 
     deal: (
-      // Editing the whole project is the header's Edit; here, only a missing term opens the form, at that field.
-      <DealCard key="deal" title={t("card.deal")}>
+      // Its own Edit as well as the one at the top of the screen, which is out of sight by the time you read this far.
+      // It opens the form at the deal terms (their section unfolded); a missing term's chip, at that term.
+      <DealCard
+        key="deal"
+        title={t("card.deal")}
+        action={
+          !project.archived && (
+            <button className="text-button" onClick={() => editAt(terms[0][0])}>
+              {t("editFull")}
+            </button>
+          )
+        }
+      >
         {filled.length > 0 ? (
           <dl className="deal-facts">
             {filled.map(([label, value], i) => (

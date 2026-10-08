@@ -33,3 +33,4 @@ When a choice is easy to get wrong later, was argued over, or trades something a
 | [0009](0009-google-calendar-sync.md) | Syncing with Google Calendar: phases, permission, ownership, storage | Accepted |
 | [0010](0010-per-person-preferences.md) | Per-person settings in a key–value table | Accepted |
 | [0011](0011-pages-fetch-what-they-show.md) | Pages fetch what they show; the layout carries only what every page needs | Accepted |
+| [0012](0012-companies-and-their-roles-on-projects.md) | Companies, their people, and their roles on projects | Accepted |

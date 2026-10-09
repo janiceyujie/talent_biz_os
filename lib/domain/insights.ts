@@ -1,12 +1,10 @@
-// Finance and partner reports over AppData. TWD only for the MVP, like every
-// other summary. Pure functions; run anywhere.
+// Currency-aware finance and partner reports over AppData. Pure functions; run anywhere.
 import type { AppData, Organization, Payment, ProjectSummary } from "@/lib/types";
 import { dateInZone } from "./dates";
-import { minorUnits } from "./money";
+import { minorUnitFactor, minorUnits, totalsByCurrency, type Currency } from "./money";
 import { isSigned } from "./phases";
 import { paymentCash, paymentTotal, projectQuoteTotal } from "./workflow";
 
-const units = (n: number) => minorUnits(n, "TWD");
 const live = (p: Payment) => !p.voided && p.status !== "cancelled";
 
 /** Whole days from one local date to another. */
@@ -20,10 +18,12 @@ export const agingBuckets = ["notDue", "late1to30", "late31plus", "noDueDate"] a
  * contract isn't income), outstanding income by age, and six months of cash
  * actually moved.
  */
-export function financeInsights(data: AppData, now = new Date()) {
+export function financeInsights(data: AppData, now = new Date(), currency: Currency = "TWD") {
   const today = dateInZone(data.talent.timeZone, 0, now);
-  const payments = data.payments.filter(live);
-  const signed = data.projects.filter((p) => !p.archived && isSigned(p.stage));
+  const factor = minorUnitFactor(currency);
+  const units = (n: number) => minorUnits(n, currency);
+  const payments = data.payments.filter((p) => live(p) && p.currency === currency);
+  const signed = data.projects.filter((p) => !p.archived && p.currency === currency && isSigned(p.stage));
   const quoted = signed.filter((p) => p.quotedAmount !== null);
   const billedFor = (p: ProjectSummary) =>
     payments.filter((x) => x.projectId === p.id && x.direction === "in").reduce((n, x) => n + units(paymentTotal(x)), 0);
@@ -44,15 +44,15 @@ export function financeInsights(data: AppData, now = new Date()) {
     const cash = (direction: Payment["direction"]) =>
       payments
         .filter((x) => x.direction === direction && x.status === "settled" && (x.settledDate ?? "").startsWith(month))
-        .reduce((n, x) => n + units(paymentCash(x)), 0) / 100;
+        .reduce((n, x) => n + units(paymentCash(x)), 0) / factor;
     return { month, received: cash("in"), paid: cash("out") };
   });
 
   return {
-    contracted: contracted / 100,
-    unbilled: unbilled / 100,
+    contracted: contracted / factor,
+    unbilled: unbilled / factor,
     unknownQuotes: signed.length - quoted.length,
-    aging: agingBuckets.map((bucket) => ({ bucket, amount: aging[bucket] / 100 })),
+    aging: agingBuckets.map((bucket) => ({ bucket, amount: aging[bucket] / factor })),
     monthly,
   };
 }
@@ -80,6 +80,7 @@ export function partnerInsights(data: AppData, now = new Date()) {
           ...x,
           projectTitle: titles.get(x.projectId!)!,
           total: paymentTotal(x),
+          currency: x.currency,
           lateDays: x.dueDate
             ? Math.max(0, daysBetween(x.dueDate, x.status === "settled" ? (x.settledDate ?? today) : today))
             : null,
@@ -97,7 +98,7 @@ export function partnerInsights(data: AppData, now = new Date()) {
         onTimeRate: paid.length ? Math.round(((paid.length - late.length) / paid.length) * 100) : null,
         averageLateDays: late.length ? Math.round(late.reduce((n, x) => n + x.lateDays!, 0) / late.length) : 0,
         overdueCount: overdue.length,
-        overdueAmount: overdue.reduce((n, x) => n + units(x.total), 0) / 100,
+        overdueByCurrency: totalsByCurrency(overdue, (x) => x.total),
         unknownDue: rows.filter((x) => !x.dueDate).length,
         evidence: (paid.length < 3
           ? "tooFew"
@@ -109,5 +110,5 @@ export function partnerInsights(data: AppData, now = new Date()) {
       };
     })
     .filter((r) => r.projects.length > 0)
-    .sort((a, b) => b.overdueAmount - a.overdueAmount || b.projects.length - a.projects.length);
+    .sort((a, b) => b.overdueCount - a.overdueCount || b.projects.length - a.projects.length);
 }

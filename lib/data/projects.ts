@@ -24,7 +24,7 @@ export function summaryOf(p: Row, nextAction: NextAction, artist: string, client
     type: isProjectType(p.type) ? p.type : "other",
     stage: p.stage,
     quotedAmount: p.quotedAmount,
-    currency: "TWD",
+    currency: p.quoteCurrency.trim() as Project["currency"],
     taxRate: p.taxRate,
     taxIncluded: p.taxIncluded,
     details: { fields, dates: p.details.dates ?? [] },

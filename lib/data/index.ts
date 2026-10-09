@@ -13,7 +13,7 @@ import { authAccount, organization, organizationDistinct, projectContact, projec
 import { toLocale } from "@/lib/i18n/config";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
-import { calendarKinds, type AppData, type CalendarItem, type CalendarKind, type TravelDetails } from "@/lib/types";
+import { calendarKinds, type AppData, type CalendarItem, type CalendarKind, type Payment, type TravelDetails } from "@/lib/types";
 
 
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : "");
@@ -259,7 +259,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       installment: p.installment,
       label: p.label,
       amount: p.amount,
-      currency: "TWD",
+      currency: p.currency as Payment["currency"],
       taxRate: p.taxRate,
       taxIncluded: p.taxIncluded,
       recordedDate: p.recordedOn,

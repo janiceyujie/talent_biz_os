@@ -174,7 +174,9 @@ function PartnerReport({ report, onBack }: { report: Report; onBack: () => void 
         </div>
         <div>
           <small>{t("statOverdue")}</small>
-          <strong className={report.overdueAmount > 0 ? "late" : ""}>{money(report.overdueAmount)}</strong>
+          <strong className={report.overdueByCurrency.length ? "late" : ""}>
+            {report.overdueByCurrency.map((item) => money(item.amount, item.currency)).join(" · ") || money(0)}
+          </strong>
         </div>
       </div>
 
@@ -266,4 +268,3 @@ function PartnerReport({ report, onBack }: { report: Report; onBack: () => void 
     </section>
   );
 }
-

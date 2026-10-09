@@ -13,6 +13,7 @@ import { Modal } from "@/components/app/modal";
 import { addOrganizationPerson as addOrganizationPersonRemote, archiveOrganization as archiveOrganizationRemote, removeOrganizationPerson as removeOrganizationPersonRemote, saveOrganization } from "@/lib/actions/organizations";
 import type { OrganizationProject } from "@/lib/data/organizations";
 import { paymentCash, paymentTotal } from "@/lib/domain/workflow";
+import { totalsByCurrency } from "@/lib/domain/money";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { DealCard } from "./deal-card";
@@ -44,8 +45,8 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
   const people = data.contacts.filter((c) => c.organizationId === id);
   const clientOf = new Set(projects.filter((p) => p.primary).map((p) => p.projectId));
   const payments = data.payments.filter((p) => p.projectId && clientOf.has(p.projectId) && p.direction === "in" && !p.voided && p.status !== "cancelled");
-  const received = payments.reduce((n, p) => n + paymentCash(p), 0);
-  const outstanding = payments.filter((p) => p.status === "expected").reduce((n, p) => n + paymentTotal(p), 0);
+  const received = totalsByCurrency(payments, paymentCash);
+  const outstanding = totalsByCurrency(payments.filter((p) => p.status === "expected"), paymentTotal);
   const titleOf = (projectId: string | null) => projects.find((p) => p.projectId === projectId)?.title ?? "";
 
   return (
@@ -155,11 +156,11 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
             <dl className="deal-facts">
               <div>
                 <dt>{t("received")}</dt>
-                <dd>{money(received)}</dd>
+                <dd>{received.map((item) => money(item.amount, item.currency)).join(" · ") || money(0)}</dd>
               </div>
               <div>
                 <dt>{t("outstanding")}</dt>
-                <dd className={outstanding > 0 ? "owed" : ""}>{money(outstanding)}</dd>
+                <dd className={outstanding.length ? "owed" : ""}>{outstanding.map((item) => money(item.amount, item.currency)).join(" · ") || money(0)}</dd>
               </div>
             </dl>
             {payments.length > 0 && (
@@ -169,7 +170,7 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
                     <span>{p.label}</span>
                     <small>{titleOf(p.projectId)}</small>
                     <small>{labels.paymentStatus(p)}</small>
-                    <strong>{money(paymentTotal(p))}</strong>
+                    <strong>{money(paymentTotal(p), p.currency)}</strong>
                   </li>
                 ))}
               </ul>

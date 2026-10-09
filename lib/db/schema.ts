@@ -23,6 +23,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
+import { supportedCurrencies } from "../domain/money";
 import { contactRoles, stages as projectStages, transportModes, type ContractTerms, type ProjectDetails, type TermChange } from "../types"; // relative: drizzle-kit loads this file too
 
 const id = () => uuid().primaryKey().defaultRandom();
@@ -261,7 +262,7 @@ export const project = pgTable(
   (t) => [
     index("project_talent_stage_idx").on(t.talentId, t.stage),
     check("project_stage_check", oneOf(t.stage, projectStages)),
-    check("project_quote_currency_check", sql`${t.quoteCurrency} = 'TWD'`), // MVP: TWD only
+    check("project_quote_currency_check", oneOf(t.quoteCurrency, supportedCurrencies)),
     check("project_tax_rate_check", sql`${t.taxRate} between 0 and 100`),
   ],
 ).enableRLS();
@@ -415,7 +416,7 @@ export const payment = pgTable(
     check("payment_direction_check", oneOf(t.direction, paymentDirections)),
     check("payment_installment_check", oneOf(t.installment, paymentInstallments)),
     check("payment_status_check", oneOf(t.status, paymentStatuses)),
-    check("payment_currency_check", sql`${t.currency} = 'TWD'`), // MVP: TWD only
+    check("payment_currency_check", oneOf(t.currency, supportedCurrencies)),
     check("payment_tax_rate_check", sql`${t.taxRate} between 0 and 100`),
     check("payment_amount_check", sql`${t.amount} >= 0 and (${t.settledAmount} is null or ${t.settledAmount} >= 0)`),
     check("payment_settled_check", sql`(${t.status} = 'settled') = (${t.settledOn} is not null)`),

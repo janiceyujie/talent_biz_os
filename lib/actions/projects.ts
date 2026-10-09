@@ -5,9 +5,10 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { auditLog, contact, organization, project } from "@/lib/db/schema";
+import { auditLog, contact, organization, payment, project } from "@/lib/db/schema";
 import { organizationNamed, setClient } from "@/lib/data/organizations";
 import { projectTypeKeys } from "@/lib/project-types";
+import { supportedCurrencies } from "@/lib/domain/money";
 import { stages, type Stage } from "@/lib/types";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
@@ -42,6 +43,7 @@ const projectInput = z
       ])
       .optional()
       .transform((v) => (v === "" || v === undefined ? null : v)),
+    currency: z.enum(supportedCurrencies),
     taxRate: z.coerce.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
     taxIncluded: z.boolean(),
     deliverables: optionalText,
@@ -76,6 +78,7 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
     type: input.type,
     stage: input.stage,
     quotedAmount: input.quotedAmount,
+    quoteCurrency: input.currency,
     taxRate: input.taxRate,
     taxIncluded: input.taxIncluded,
     details: {
@@ -129,10 +132,15 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
       return null;
     }
     const [existing] = await tx
-      .select({ stage: project.stage, details: project.details })
+      .select({ stage: project.stage, details: project.details, quoteCurrency: project.quoteCurrency })
       .from(project)
       .where(and(eq(project.id, input.id), eq(project.talentId, talent.id)));
     if (!existing) return fail("projectNotFound");
+    if (existing.quoteCurrency !== input.currency) {
+      const [linkedPayment] = await tx.select({ id: payment.id }).from(payment)
+        .where(and(eq(payment.projectId, input.id), eq(payment.talentId, talent.id))).limit(1);
+      if (linkedPayment) return fail("projectCurrencyLocked");
+    }
     // The form edits only some details; keep the rest (deal fields, dates, to-confirm list from messages).
     const details = { ...existing.details, ...values.details };
     await tx.update(project).set({ ...values, details }).where(and(eq(project.id, input.id), eq(project.talentId, talent.id)));

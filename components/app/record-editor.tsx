@@ -13,6 +13,7 @@ import { saveTemplate } from "@/lib/actions/templates";
 import { localeNames, locales, toLocale } from "@/lib/i18n/config";
 import { placeholderKeys, placeholderName, toDisplay, toStored } from "@/lib/templates/placeholders";
 import { isSigned } from "@/lib/domain/phases";
+import { supportedCurrencies } from "@/lib/domain/money";
 import { placeSuggestions } from "@/lib/calendar/places";
 import {
   calendarKinds,
@@ -90,6 +91,7 @@ export function RecordEditor({
   const localTemplates = usePreviewTemplates();
   const tPreview = useTranslations("preview");
   const t = useTranslations("editor");
+  const tFinance = useTranslations("finance");
   const tProjects = useTranslations("projects");
   const tTone = useTranslations("tone");
   const labels = useLabels();
@@ -208,6 +210,7 @@ export function RecordEditor({
       ...d,
       [key]: value,
       ...(key === "status" ? { settledDate: value === "settled" ? d.settledDate || today : "" } : {}),
+      ...(key === "projectId" && value ? { currency: data$.projects.find((p) => p.id === String(value))?.currency ?? d.currency } : {}),
       // An arrival or check-out usually happens in the same zone; start from it.
       ...(key === "endDate" && value ? { endTimeZone: d.endTimeZone || d.timeZone } : {}),
       // A trip's arrival or a stay's check-out isn't another kind's end time: drop it on switching.
@@ -216,13 +219,13 @@ export function RecordEditor({
         : {}),
     }));
 
-  function field(key: string, label: string, type = "text", required = false, options?: Option[], list?: string) {
+  function field(key: string, label: string, type = "text", required = false, options?: Option[], list?: string, disabled = false) {
     return (
       <label key={key}>
         {label}
         {required ? " *" : ""}
         {options ? (
-          <select aria-label={label} data-field={key} value={String(data[key])} onChange={(e) => change(key, e.target.value)}>
+          <select aria-label={label} data-field={key} value={String(data[key])} disabled={disabled} onChange={(e) => change(key, e.target.value)}>
             {options.map(([value, text]) => (
               <option key={value} value={value}>
                 {text}
@@ -247,7 +250,7 @@ export function RecordEditor({
             data-field={key}
             type={type}
             required={required}
-            step={type === "number" ? "0.01" : undefined}
+            step={type === "number" ? (key === "amount" || key === "quotedAmount" || key === "settledAmount") && data.currency === "JPY" ? "1" : "0.01" : undefined}
             min={type === "number" ? 0 : undefined}
             max={key === "taxRate" ? 100 : undefined}
             maxLength={200}
@@ -277,15 +280,18 @@ export function RecordEditor({
     </div>
   );
 
+  const currencyOptions = supportedCurrencies.map((currency) => [currency, `${currency} · ${tFinance(`currencyNames.${currency}`)}`] as const);
+  const projectCurrencyLocked = kind === "project" && Boolean(data.id) && data$.payments.some((p) => p.projectId === data.id);
   const pricing = (amountKey: string, amountRequired = true, legend = t("section.amount"), amountLabel = t("field.amount")) => (
     <fieldset className="form-section">
       <legend>{legend}</legend>
       <div className="form-grid">
         {field(amountKey, amountLabel, "number", amountRequired)}
-        {field("currency", t("field.currency"), "text", true, [["TWD", "TWD"]])}
+        {field("currency", t("field.currency"), "text", true, currencyOptions, undefined, amountKey === "quotedAmount" && projectCurrencyLocked)}
         {field("taxRate", t("field.taxRate"), "number", true)}
         {field("taxIncluded", t("field.taxIncluded"), "checkbox")}
       </div>
+      {amountKey === "quotedAmount" && projectCurrencyLocked && <small className="muted">{t("projectCurrencyLocked")}</small>}
     </fieldset>
   );
   // Income is collected, a cost is paid: the payment form's words follow the direction.

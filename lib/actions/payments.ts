@@ -8,7 +8,7 @@ import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { payment, project, talent } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
-import { quote, SplitError, splitPayments } from "@/lib/domain/money";
+import { quote, SplitError, splitPayments, supportedCurrencies } from "@/lib/domain/money";
 import { isSigned } from "@/lib/domain/phases";
 import { checkProjectLink } from "./project-link";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
@@ -33,6 +33,7 @@ const paymentInput = z
     direction: z.enum(["in", "out"]),
     installment: z.enum(["regular", "deposit", "balance"]),
     amount: money,
+    currency: z.enum(supportedCurrencies),
     taxRate: z.coerce.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
     taxIncluded: z.boolean(),
     recordedDate: day,
@@ -68,7 +69,7 @@ export async function savePayment(data: Record<string, unknown>): Promise<string
       .where(and(eq(payment.id, id), eq(payment.talentId, current.id)));
     currentLink = row?.projectId ?? null;
   }
-  const linkError = await checkProjectLink(current.id, input.projectId, currentLink);
+  const linkError = await checkProjectLink(current.id, input.projectId, currentLink, input.currency);
   if (linkError) return fail(linkError);
   const settled = input.status === "settled";
   if (settled && input.settledDate! > (await today(current.id))) return fail("settledDateFuture");
@@ -79,6 +80,7 @@ export async function savePayment(data: Record<string, unknown>): Promise<string
     direction: input.direction,
     installment: input.installment,
     amount: input.amount,
+    currency: input.currency,
     taxRate: input.taxRate,
     taxIncluded: input.taxIncluded,
     recordedOn: input.recordedDate,

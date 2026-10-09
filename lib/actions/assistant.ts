@@ -15,7 +15,7 @@ import { dailyUsage } from "@/lib/ai/usage";
 import { dateInZone } from "@/lib/domain/dates";
 import { openAIResponse } from "@/lib/ai/openai";
 import { LocalAIError, assertLocalExperiment } from "@/lib/ai/local-budget";
-import { assistantContext, ASSISTANT_INSTRUCTIONS, ASSISTANT_PROMPT_VERSION } from "@/lib/ai/assistant-context";
+import { assistantContext, assistantRequestContext, ASSISTANT_INSTRUCTIONS, ASSISTANT_PROMPT_VERSION } from "@/lib/ai/assistant-context";
 import { assistantSamples } from "@/lib/ai/assistant-samples";
 const input = z.object({ conversationId:z.string().uuid(), query:z.string().trim().min(1).max(12000), projectId:z.string().max(100).optional(), sample:z.boolean(), history:z.array(z.object({role:z.enum(["user","assistant"]),content:z.string().max(6000)})).max(8) });
 const active = new Set<string>();
@@ -50,7 +50,7 @@ export async function askAssistant(value: unknown) {
       return { text: localText, usage: LOCAL_USAGE, estimatedCostUSD: 0, record, historySaved };
     }
     if((await dailyUsage(talent.id)).remaining<=0) return {error:"usage_limit" as const};
-    const request=JSON.stringify({language:await getLocale(),context,query});
+    const request=JSON.stringify({language:await getLocale(),context:assistantRequestContext(context,query,history),query});
     if(history.reduce((n,t)=>n+t.content.length,0)+request.length>32000) return {error:"too_long" as const};
     const result=await openAIResponse({instructions:ASSISTANT_INSTRUCTIONS,input:[...history,{role:"user",content:request}]});
     await db.insert(aiCall).values({talentId:talent.id,personId:person.personId,task:"assistant",provider:"openai",model:result.model,promptVersion:ASSISTANT_PROMPT_VERSION,status:"ok",inputTokens:result.usage.inputTokens,outputTokens:result.usage.outputTokens,latencyMs:result.latencyMs}).catch(()=>{});

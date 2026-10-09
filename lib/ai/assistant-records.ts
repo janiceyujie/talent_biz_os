@@ -8,7 +8,7 @@ export type EvaluationRow = {
   usage?: TokenUsage; estimatedCostUSD?: number; error?: string;
 };
 export type EvaluationRun = { id: string; model: string; updatedAt: string; rows: EvaluationRow[] };
-export type AssistantArchive = { records: AssistantRecord[]; runs: EvaluationRun[]; budgetUsedUSD: number; truncated: boolean };
+export type AssistantArchive = { records: AssistantRecord[]; truncated: boolean; nextCursor: string | null };
 export function usageTotals(rows: { usage?: TokenUsage; estimatedCostUSD?: number }[]) {
   return rows.reduce((sum, row) => ({
     input: sum.input + (row.usage?.inputTokens ?? 0),

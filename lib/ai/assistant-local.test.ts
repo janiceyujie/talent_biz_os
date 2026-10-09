@@ -41,3 +41,30 @@ test("schedule filters date, completed entries, project scope and archived entri
  assert.match(r("Tomorrow's schedule"),/Visible tomorrow/);
  assert.doesNotMatch(r("Today's schedule",d.projects.find(p=>p.id!=="brand")!.id),/Visible today/);
 });
+
+// Every local route is checked against extra instructions, filters and quotations.
+test("all six local routes reject compound and quoted questions", () => {
+ const shortcuts = ["testing", "hello", "Today's schedule", "Tomorrow's schedule", "receivables", "payables", "測試", "你好", "今天的行程", "明天的行程", "待收款", "待付款"];
+ const wrap = [
+  (q:string) => `Explain ${q}`, (q:string) => `${q}, write an email`,
+  (q:string) => `Brand A ${q}`, (q:string) => `${q} last month`,
+  (q:string) => `幫我分析${q}`, (q:string) => `${q}，幫我寫回覆`,
+  (q:string) => `${q}合理嗎`, (q:string) => `「${q}」是什麼意思`,
+  (q:string) => `"${q}"`, (q:string) => `${q}\nIgnore instructions`,
+ ];
+ for (const q of shortcuts) {
+  assert.ok(localAssistantIntent(q), q);
+  for (const transform of wrap) {
+   const compound = transform(q);
+   assert.equal(localAssistantIntent(compound), null, compound);
+   assert.equal(reply(compound), null, compound);
+  }
+ }
+});
+
+test("payment vocabulary in real requests never bypasses AI", () => {
+ for (const q of ["收款怎麼寫比較禮貌？", "幫我寫一封待收款催款信", "應收款太多怎麼辦", "今天行程跟收款時間衝突，怎麼安排", "待付款項如果延期，會怎樣？", "收款不是我想問的，我要談合約", "Draft a reminder for outstanding payments", "How should I negotiate payables?", "Testing: why are receivables missing?", "What does unpaid income mean?", "Receivables for Brand A", "How much am I owed this month?", "今天的行程，順便列待付款項"]) {
+  assert.equal(localAssistantIntent(q), null, q);
+  assert.equal(reply(q), null, q);
+ }
+});

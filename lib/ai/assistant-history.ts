@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { assertLocalExperiment } from "./local-budget";
 import type { AssistantArchive, AssistantRecord, EvaluationRun } from "./assistant-records";
@@ -23,21 +23,36 @@ async function optionalJSON(file: string) {
   try { return JSON.parse(await readFile(file, "utf8")); }
   catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
 }
-export async function readAssistantArchive(personId: string, talentId: string): Promise<AssistantArchive> {
+export async function readAssistantArchive(personId: string, talentId: string, cursor?: string): Promise<AssistantArchive> {
   assertLocalExperiment();
+  if (cursor && !/^[a-f0-9-]{36}\.json$/.test(cursor)) throw Error("Invalid history cursor");
   const dir = directory(personId, talentId);
   let files: string[] = [];
   try { files = await readdir(dir); }
   catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
-  const records = (await Promise.all(files.filter(f => /^[a-f0-9-]{36}\.json$/.test(f)).map(f => optionalJSON(path.join(dir, f)))))
+  // Inspect metadata, not every transcript. Read at most one page of contents.
+  const entries = await Promise.all(files.filter(f => /^[a-f0-9-]{36}\.json$/.test(f)).map(async file => ({ file, modified: (await stat(path.join(dir, file))).mtimeMs })));
+  entries.sort((a, b) => b.modified - a.modified || b.file.localeCompare(a.file));
+  const position = cursor ? entries.findIndex(e => e.file === cursor) : -1;
+  if (cursor && position === -1) throw Error("History cursor unavailable");
+  const page = entries.slice(position + 1, position + 51);
+  const records = (await Promise.all(page.map(e => optionalJSON(path.join(dir, e.file)))))
     .filter(Boolean).sort((a: AssistantRecord, b: AssistantRecord) => a.at.localeCompare(b.at)) as AssistantRecord[];
-  // Only fixed synthetic evaluation files are exposed; never arbitrary paths or recordings.
+  const truncated = position + 1 + page.length < entries.length;
+  return { records, truncated, nextCursor: truncated ? page.at(-1)!.file : null };
+}
+
+// Internal reports have a separate server entrypoint and explicit local opt-in.
+export function assertInternalAssistantReports() {
+  assertLocalExperiment();
+  if (process.env.AI_INTERNAL_REPORTS !== "1") throw Error("Internal reports are disabled");
+}
+export async function readAssistantEvaluations(): Promise<EvaluationRun[]> {
+  assertInternalAssistantReports();
   const runs: EvaluationRun[] = [];
-  for (const id of ["luna-100", "luna-100-v2", "luna-daily-100-v3", "luna-followup-100-v3"]) {
+  for (const id of ["luna-100", "luna-100-v2", "luna-daily-100-v3", "luna-followup-100-v3", "luna-100-context-v3", "luna-daily-100-context-v3", "luna-followup-100-context-v3"]) {
     const run = await optionalJSON(path.resolve("evals/results/assistant", `${id}.json`));
     if (run) runs.push({ id, model: run.model, updatedAt: run.updatedAt, rows: run.rows });
   }
-  const ledger = await optionalJSON(path.resolve(".ai-local/budget.json")) ?? [];
-  return { records: records.slice(-500), truncated: records.length > 500, runs,
-    budgetUsedUSD: ledger.reduce((n: number, entry: { chargedUSD: number }) => n + entry.chargedUSD, 0) };
+  return runs;
 }

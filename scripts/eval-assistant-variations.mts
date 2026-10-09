@@ -2,7 +2,7 @@ import nextEnv from "@next/env";
 import {createTranslator} from "use-intl/core";
 import {readFileSync,writeFileSync,mkdirSync,existsSync,renameSync} from "node:fs";
 import {createHash} from "node:crypto";
-import {assistantContext,ASSISTANT_INSTRUCTIONS,ASSISTANT_PROMPT_VERSION} from "../lib/ai/assistant-context";
+import {assistantContext,assistantRequestContext,ASSISTANT_INSTRUCTIONS,ASSISTANT_PROMPT_VERSION} from "../lib/ai/assistant-context";
 import {assistantSamples} from "../lib/ai/assistant-samples";
 import {localAssistantReply,LOCAL_USAGE} from "../lib/ai/assistant-local";
 import type {Turn} from "../lib/ai/openai";
@@ -21,8 +21,8 @@ if(!["daily","followup"].includes(suite))throw Error("Choose daily or followup")
 const cases:Case[]=JSON.parse(readFileSync(`evals/assistant/${suite}-100.json`,"utf8"));
 if(cases.length!==100||new Set(cases.map(c=>c.id)).size!==100)throw Error("Expected 100 unique cases");
 const fixture=assistantSamples();const date="2026-10-07";
-const fingerprint=createHash("sha256").update(JSON.stringify({cases,fixture,date,instructions:ASSISTANT_INSTRUCTIONS,local:readFileSync("lib/ai/assistant-local.ts","utf8"),en:en.assistant.local,zh:zh.assistant.local})).digest("hex");
-const id=`luna-${suite}-100-v3`;const dir="evals/results/assistant";mkdirSync(dir,{recursive:true});const output=`${dir}/${id}.json`;
+const fingerprint=createHash("sha256").update(JSON.stringify({cases,fixture,date,instructions:ASSISTANT_INSTRUCTIONS,contextCode:readFileSync("lib/ai/assistant-context.ts","utf8"),local:readFileSync("lib/ai/assistant-local.ts","utf8"),en:en.assistant.local,zh:zh.assistant.local})).digest("hex");
+const id=`luna-${suite}-100-context-v3`;const dir="evals/results/assistant";mkdirSync(dir,{recursive:true});const output=`${dir}/${id}.json`;
 const previous=existsSync(output)?JSON.parse(readFileSync(output,"utf8")):null;
 if(previous&&previous.fingerprint!==fingerprint)throw Error("Changed inputs; choose a new output ID");
 const rows:Row[]=previous?.rows??[];
@@ -39,7 +39,7 @@ for(const c of cases){
  const local=localAssistantReply(fixture,c.query,c.projectId??undefined,true,date,t);
  const mode=local===null?"ai":"local";
  try{
-  const request=JSON.stringify({language:c.locale,context:assistantContext(fixture,c.projectId??undefined,true,date),query:c.query});
+  const request=JSON.stringify({language:c.locale,context:assistantRequestContext(assistantContext(fixture,c.projectId??undefined,true,date),c.query,history),query:c.query});
   if(c.query.length>12000||history.reduce((n,t)=>n+t.content.length,0)+request.length>32000)throw Error("Exceeded app input limits");
   const result=local!==null?{text:local,usage:LOCAL_USAGE,estimatedCostUSD:0,model:"local",latencyMs:Date.now()-start}:await openAIResponse({instructions:ASSISTANT_INSTRUCTIONS,input:[...history,{role:"user",content:request}]});
   rows.push({...c,...result,status:"completed",mode,historyTurns:history.length,requestBytes:Buffer.byteLength(JSON.stringify({instructions:ASSISTANT_INSTRUCTIONS,input:[...history,{role:"user",content:request}]}))});

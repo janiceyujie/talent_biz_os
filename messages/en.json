@@ -1764,6 +1764,353 @@
     "analysis": "Sample analysis (prewritten, no AI call)",
     "localTemplates": "Preview templates stay in this browser session and are cleared on reload."
   },
+  "documentLibrary": {
+    "title": "Contracts and quotations",
+    "intro": "Choose a scenario to preview, copy, or download an editable Word document.",
+    "notice": "These are editable starting templates, not lawyer-reviewed agreements. Review the terms for your project and jurisdiction before signing.",
+    "all": "All roles",
+    "role": "Role",
+    "language": "Document language",
+    "contract": "Contract",
+    "quote": "Quotation",
+    "preview": "Preview content",
+    "download": "Download Word",
+    "copy": "Copy text",
+    "copied": "Copied",
+    "copyFailed": "Copy failed. Select and copy the preview text manually.",
+    "sources": "Reference material",
+    "empty": "No templates have been published yet.",
+    "roles": {
+      "musician": "Music artist",
+      "manager": "Manager",
+      "model": "Model",
+      "influencer": "Influencer / creator",
+      "video": "Video creator",
+      "other": "Other / Podcast"
+    },
+    "documents": {
+      "live": {
+        "title": "Live performance",
+        "scope": "Date [date], venue [address], soundcheck [time], performance [time and duration], lineup [names]. Organizer provides [stage, sound, lighting, security and permits]. Artist provides [equipment]. Attach the agreed technical rider.",
+        "rights": "Fee covers only the live performance. Recording, streaming, broadcast, paid advertising and merchandise are excluded unless separately approved in writing with media, territory, term and additional fee. Confirm travel, accommodation and overtime [terms].",
+        "lines": "Performance fee | Additional set or overtime | Travel and accommodation | Recording or streaming license",
+        "contract": {
+          "title": "Live Performance Agreement",
+          "partyA": "Organizer",
+          "partyB": "Performer",
+          "term": "Performance, rehearsal and stage times follow Article 1 and the technical rider. Access, load-out and overtime rules: [terms].",
+          "acceptance": "Confirm performance against [personnel, program, duration and agreed on-site duties]. Designated contacts [names] confirm completion at [time].",
+          "rightsTitle": "Performance Rights and Additional Fees"
+        }
+      },
+      "license": {
+        "title": "Music license",
+        "scope": "Identify composition [title, writers, publishers and shares] and recording [version, owner, identifier]. Licensed use [production and placement], media [list], territory [list], term [start and end], edit length [seconds].",
+        "rights": "The licensor grants only the rights it controls as listed here: [composition synchronization / master use / other]. Any additional rights require separate clearance. No ownership transfer, AI training, voice cloning, sublicensing or new campaign use without written approval. Credit [wording].",
+        "lines": "Composition license | Master recording license | Additional territory or media | Extension of term",
+        "contract": {
+          "title": "Music License Agreement",
+          "partyA": "Licensee",
+          "partyB": "Licensor",
+          "term": "License term: [start] to [end]. Effective upon [signature, payment or other condition]. Takedown, existing productions and archival use after expiry: [terms].",
+          "acceptance": "Licensor supplies [audio, rights evidence and license documents] by [date]. Licensee checks [version, specifications and license scope] within [days] and identifies missing or disputed items in writing.",
+          "rightsTitle": "License Scope and Reserved Rights"
+        }
+      },
+      "management": {
+        "title": "Talent management services",
+        "scope": "Talent [name] appoints manager [name] for [services and territories] from [start] to [end]. Exclusivity is [none / precisely listed activities]. Manager may negotiate but may not sign, collect money or commit expenses for talent without written authority.",
+        "rights": "Compensation is [retainer / commission rate and eligible receipts]. Exclude [taxes, refunds, pass-through costs, pre-existing deals]. Statements are due [frequency], payable [days] after actual receipt. Post-term commission, if any, applies only to listed deals for [limited duration and declining rate]. Conflicts and expenses above [cap] require prior consent.",
+        "lines": "Monthly service retainer | Project management fee | Approved expenses | Commission basis and rate",
+        "contract": {
+          "title": "Artist Management Agreement",
+          "partyA": "Artist",
+          "partyB": "Manager",
+          "term": "Appointment runs from [start] to [end]. Territories and exclusivity follow Article 1. Renewal conditions and notice period: [terms].",
+          "acceptance": "Manager supplies [negotiation updates, deal and financial statements] every [period]. Both parties review performance against [services and reporting standards]. Questions and supplemental explanations are due within [days].",
+          "rightsTitle": "Management Authority and Commissions"
+        }
+      },
+      "model": {
+        "title": "Model booking and image use",
+        "scope": "Shoot [date, location and call time], working hours [hours], fitting [details], wardrobe and styling [details], deliverables [stills and video]. Overtime [rate and billing unit]. Any sensitive content must be specifically agreed before the shoot; changes require consent.",
+        "rights": "Image use is limited to [client, campaign, media, territory and term]. Paid ads, outdoor media, exclusivity and renewals are priced separately unless listed. No AI training, digital replica, face replacement or sublicensing without separate written consent. Retouching restrictions [details].",
+        "lines": "Shoot or day rate | Fitting and overtime | Image usage license | Exclusivity or renewal",
+        "contract": {
+          "title": "Model Booking and Image Use Agreement",
+          "partyA": "Client",
+          "partyB": "Model",
+          "term": "Shoot, fitting and working hours follow Article 1. Image use has a separate term under Article 6; completing the shoot does not extend that term.",
+          "acceptance": "Confirm [attendance, working hours, agreed shoot content and duties] through contacts [names]. Selection, retouching and sensitive-content approval procedures: [terms].",
+          "rightsTitle": "Image Use and Restrictions"
+        }
+      },
+      "brand": {
+        "title": "Brand content collaboration",
+        "scope": "Deliver [number and format] on [accounts and platforms] by [dates]. Brief and verified product claims supplied by brand [date]. Included revisions [rounds]; approval feedback due [days]. No guaranteed sales, views or engagement unless a separate measurable commitment is agreed.",
+        "rights": "Creator retains ownership except for the agreed license [media, territory, term]. Paid amplification, account advertising access, exclusivity and raw files require explicit terms and fees. Both parties will ensure clear sponsorship disclosure as required by applicable rules; brand cannot require misleading claims or concealed sponsorship.",
+        "lines": "Content production | Publishing fee | Paid advertising license | Exclusivity and additional revisions",
+        "contract": {
+          "title": "Branded Content Collaboration Agreement",
+          "partyA": "Brand",
+          "partyB": "Creator",
+          "term": "Review, delivery and publication dates follow [schedule]. Post retention: [duration]. License and exclusivity periods are specified separately in Article 6.",
+          "acceptance": "Reviewer [name and contact] responds within [days]. Check [brief, format, quantity and publication evidence]. Unspecified traffic or sales outcomes are not acceptance criteria.",
+          "rightsTitle": "Copyright and Commercial Use"
+        }
+      },
+      "video": {
+        "title": "Video production services",
+        "scope": "Produce [videos, lengths, formats and languages]. Milestones: brief [date], storyboard [date], shoot [date], first cut [date], final delivery [date]. Included shoot days [days], crew and equipment [list], revision rounds [number]. Changes to the approved brief need a written change order with cost and schedule impact.",
+        "rights": "Final deliverable rights [license or assignment] take effect [conditions]. Raw footage, project files and third-party assets are [included / excluded with details]. Client supplies necessary approvals for its materials; producer clears only assets listed in scope. Archive retention [duration] and reshoot responsibility [conditions].",
+        "lines": "Pre-production | Shoot days and crew | Editing and revision rounds | Licenses and additional deliverables",
+        "contract": {
+          "title": "Video Production Agreement",
+          "partyA": "Client",
+          "partyB": "Producer",
+          "term": "Script, shoot, first cut and final delivery follow Article 1. Client materials and review responses are due [dates or days]. Schedule changes require written agreement.",
+          "acceptance": "Reviewer [name] provides written comments within [days] of receiving [final files], against [specifications, length, formats and approved script]. Included revisions: [rounds]; out-of-scope work is agreed separately.",
+          "rightsTitle": "Deliverable Rights and Source Materials"
+        }
+      },
+      "podcast": {
+        "title": "Podcast sponsorship",
+        "scope": "Show [name], episodes [list], publication dates [dates], placement [pre-roll / mid-roll / post-roll], ad length [seconds], host-read or supplied audio [choice]. Delivery measure [published episodes / agreed impressions and measurement window].",
+        "rights": "Sponsor supplies substantiated claims by [date]; host controls editorial content outside the approved ad. Disclose sponsorship clearly. Ad retention [duration]; download reporting source [source]. Any shortfall remedy [replacement placement / proportional refund] is agreed in writing. No endorsement reuse or voice cloning without separate permission.",
+        "lines": "Host-read ad placements | Episode package | Production or edit fee | Additional usage rights",
+        "contract": {
+          "title": "Podcast Sponsorship Agreement",
+          "partyA": "Sponsor",
+          "partyB": "Publisher",
+          "term": "Sponsorship term, episodes and release dates follow Article 1. Ad retention: [duration]. Reporting date: [date].",
+          "acceptance": "Publisher provides [episode links, ad position, duration and agreed metrics]. Sponsor checks [published episodes or agreed impressions] within [days]. Shortfall remedies follow Article 6.",
+          "rightsTitle": "Editorial Control and Advertising Use"
+        }
+      },
+      "general": {
+        "title": "Creative project services",
+        "scope": "Service [description], deliverables [list and formats], milestones [dates], client inputs [list and due dates], acceptance criteria [objective criteria]. Client reviews within [days]. Included revisions [number]; scope changes require written fee and schedule approval.",
+        "rights": "Background tools and pre-existing materials remain with their owners. Final deliverables are provided under [license or assignment, media, territory and term] after [payment condition]. Source files, third-party costs, ongoing support and portfolio use are [explicit terms].",
+        "lines": "Project service fee | Additional deliverables | Revision or support hours | Approved third-party costs",
+        "contract": {
+          "title": "Creative Services Agreement",
+          "partyA": "Client",
+          "partyB": "Service Provider",
+          "term": "Services run from [start] to [end]. Milestones and client input dates follow [schedule]. Changes require written agreement.",
+          "acceptance": "Reviewer [name] provides written comments within [days] of delivery against [deliverable list and objective criteria]. Revisions follow Article 1; additional requests are agreed separately.",
+          "rightsTitle": "Deliverable Rights and Further Use"
+        }
+      },
+      "session": {
+        "title": "Session recording",
+        "scope": "Record [instruments or vocals] for [tracks] during [hours and dates] at [studio]. Include [takes and pickups]; overtime and new arrangements require written approval. Producer supplies scores and safe recording conditions.",
+        "rights": "Specify release media, territory, term and fee for the recorded performance. Publishing/songwriting shares and master ownership are separate and must be agreed if applicable. Reuse, samples and synthetic voice or AI training require separate written consent. Credit: [wording].",
+        "lines": "Session fee | Overtime and pickups | Agreed recording use",
+        "contract": {
+          "title": "Session Recording Agreement",
+          "partyA": "Producer",
+          "partyB": "Session musician",
+          "term": "Deliver performances by [date]; pickups within [days]. Further sessions require a new schedule and fee.",
+          "acceptance": "Check files and performances against [technical brief] within [days]. Included pickups correct agreed performance issues; composition changes are extra.",
+          "rightsTitle": "Recording and Performer Rights"
+        }
+      },
+      "booking": {
+        "title": "Single engagement booking",
+        "scope": "Arrange [named engagement] and coordinate offer, schedule and contracting. Talent approves the final fee and agreement; representative cannot sign or collect money without separate written authority.",
+        "rights": "Commission applies only to the identified booking and expressly agreed renewals. Exclude taxes, reimbursements and unrelated work unless specifically agreed. Protect contact and fee information; no license to talent content is granted.",
+        "lines": "Booking service fee | Agreed commission | Approved expenses",
+        "contract": {
+          "title": "Single Engagement Booking Services Agreement",
+          "partyA": "Talent",
+          "partyB": "Booking representative",
+          "term": "Applies only to [engagement and dates]. No continuing exclusive representation is created.",
+          "acceptance": "Provide [booking confirmation and handover] by [date]. Confirm commission [rate or amount], eligible receipts and payment date; cancelled or refunded fees follow [written rule].",
+          "rightsTitle": "Authority and Commission Scope"
+        }
+      },
+      "campaign-management": {
+        "title": "Campaign coordination",
+        "scope": "Coordinate [talent, deliverables and platforms] for [campaign]. Define [reporting, approvals and liaison duties]. Client contracts and pays talent directly unless an approved attachment states otherwise.",
+        "rights": "No authority to bind talent or client outside [written mandate]. Talent and brand content licenses are separate; client secures required approvals. Share only necessary contact data and return or remove it under [retention rule].",
+        "lines": "Coordination fee | Additional talent coordination | Approved expenses",
+        "contract": {
+          "title": "Talent Campaign Coordination Agreement",
+          "partyA": "Client",
+          "partyB": "Campaign manager",
+          "term": "Service runs [start to end], with milestones [dates]. Extra campaigns or extended support require a change order.",
+          "acceptance": "Deliver [status reports, approval log and handover] for review within [days]. Manager is responsible for agreed coordination, not guaranteed sales or third-party performance.",
+          "rightsTitle": "Materials and Representation"
+        }
+      },
+      "runway": {
+        "title": "Runway and event appearance",
+        "scope": "Attend [fitting, rehearsal and show] at [location, dates and hours]. Specify [looks and appearance duties], breaks, transport and overtime. Unsafe tasks or unagreed nudity are excluded.",
+        "rights": "Event documentation use is limited to [channels, territory and term]. Paid ads, product endorsements, resale and AI likeness use require separate written consent and fees. No indefinite exclusivity is implied.",
+        "lines": "Fitting and rehearsal | Show or appearance fee | Overtime and travel",
+        "contract": {
+          "title": "Runway and Event Appearance Agreement",
+          "partyA": "Organizer",
+          "partyB": "Model",
+          "term": "Attendance follows [call sheet]. Delays beyond [hours] and rescheduling require agreement; weather and cancellation follow Article 7.",
+          "acceptance": "Confirm attendance and completion of agreed appearances. Organizer records any issue promptly; changes to looks or duties must be approved.",
+          "rightsTitle": "Event Recording and Image Use"
+        }
+      },
+      "ambassador": {
+        "title": "Brand ambassador",
+        "scope": "Provide [shoot days, appearances and approved endorsements] during [campaign]. Brand supplies substantiated claims; ambassador gives truthful opinions. Define category exclusivity narrowly as [products and competitors].",
+        "rights": "License approved images, name and voice only for [media, territory, term]. Edits must not misrepresent endorsement. Clear commercial disclosures are required where applicable. No sublicensing, digital replica or AI training without separate consent. Agree removal of ads at expiry and any existing-stock exception.",
+        "lines": "Ambassador fee | Shoot and appearances | Media license and exclusivity",
+        "contract": {
+          "title": "Brand Ambassador and Likeness License Agreement",
+          "partyA": "Brand",
+          "partyB": "Ambassador",
+          "term": "Engagement [start to end]; image license [period]; exclusivity [period]. Renewal requires written consent and a new fee.",
+          "acceptance": "Review agreed deliverables within [days] against [brief]. No promise of sales or reach. Material changes in product claims require renewed approval.",
+          "rightsTitle": "Likeness and Endorsement Rights"
+        }
+      },
+      "ugc": {
+        "title": "UGC content production",
+        "scope": "Create [number, format, length and aspect ratios] for brand channels. Creator posting is excluded unless listed. Brand supplies [products and approved claims]; include [revision rounds], with reshoots caused by brief changes charged separately.",
+        "rights": "Creator retains copyright; brand receives [media, territory and term] license after agreed payment. Raw footage, paid ads, creator-account ad access and AI reuse are separate choices with fees. No password sharing; any platform ad permission expires [date]. Endorsements must reflect actual experience and disclose the relationship where required.",
+        "lines": "Production fee | Agreed usage license | Raw files or additional versions",
+        "contract": {
+          "title": "UGC Content Production and License Agreement",
+          "partyA": "Brand",
+          "partyB": "Creator",
+          "term": "Draft [date], feedback [days], final [date]. The license begins [trigger] and lasts [term].",
+          "acceptance": "Assess files against [brief and technical specifications]. Brand provides one consolidated response per round within [days]; subjective changes outside the brief are additional work.",
+          "rightsTitle": "Content License and Advertising Access"
+        }
+      },
+      "affiliate": {
+        "title": "Affiliate and livestream promotion",
+        "scope": "Promote [products] through [links, codes, platforms or livestream slots]. Merchant handles fulfillment, returns and customer service. Define guaranteed fee [amount, if any] separately from commission [rate and eligible net sales].",
+        "rights": "Disclose commissions, gifts and sponsorship where required. Merchant substantiates claims; creator cannot promise unverified results. Usage license [media, territory and term]; ad access and exclusivity require separate terms. Do not share unnecessary buyer data. Agree code deactivation and treatment of later refunds.",
+        "lines": "Guaranteed content fee | Estimated commission basis | Livestream and usage add-ons",
+        "contract": {
+          "title": "Affiliate and Livestream Promotion Agreement",
+          "partyA": "Merchant",
+          "partyB": "Creator",
+          "term": "Campaign [dates]; attribution window [days and rule]. Post retention [term]; final settlement covers eligible orders placed before termination under the same window.",
+          "acceptance": "Merchant supplies [frequency] sales statements, refund deductions and payment within [days]. Creator may query discrepancies within [days] and inspect relevant redacted records. No sales target is guaranteed unless separately agreed.",
+          "rightsTitle": "Promotion and Customer Data"
+        }
+      },
+      "editing": {
+        "title": "Post-production editing",
+        "scope": "Edit client-supplied [footage length] into [deliverables, duration, formats and versions]. Include [color, audio, captions and revision rounds]. Client supplies organized, usable and cleared materials by [date]; extra footage, VFX and new cuts require approval.",
+        "rights": "Client warrants rights to supplied footage, music and releases. Final-edit license or assignment: [terms and payment trigger]. Editor tools remain theirs; editable project files and third-party asset licenses are included only if listed. Source retention [days], then agreed deletion or paid archive.",
+        "lines": "Editing fee | Captions and versions | Extra revisions and project files",
+        "contract": {
+          "title": "Video Editing and Post Production Agreement",
+          "partyA": "Client",
+          "partyB": "Editor",
+          "term": "First cut [date], feedback [days], final [date]. Late source files or feedback require a mutually revised schedule.",
+          "acceptance": "Check technical export and agreed edit brief within [days]. Provide consolidated timecoded notes; changes to an approved structure beyond included rounds are extra.",
+          "rightsTitle": "Source Materials and Project Files"
+        }
+      },
+      "event-video": {
+        "title": "Event filming",
+        "scope": "Film [event, location, hours and crew] and deliver [highlight and full-length files]. Specify essential shots and venue access. Live events cannot be recreated; no guarantee for moments blocked by guests, access restrictions or unsafe conditions.",
+        "rights": "Organizer obtains venue, performer, attendee and music permissions needed for agreed uses. Final footage license [media, territory and term]; raw files and portfolio permission [choice]. Footage retention [days]. No unrelated sale or AI training without separate consent.",
+        "lines": "Crew and filming | Editing and delivery | Overtime and travel",
+        "contract": {
+          "title": "Event Filming Services Agreement",
+          "partyA": "Organizer",
+          "partyB": "Production team",
+          "term": "Call time [time], filming [hours], draft [date], final [date]. Overtime and weather contingency [terms]; cancellation follows Article 7.",
+          "acceptance": "Review files and listed deliverables within [days], with [rounds] of editing changes. Reshoots or additional event coverage are separate; document equipment or access problems promptly.",
+          "rightsTitle": "Event Permissions and Footage"
+        }
+      },
+      "podcast-guest": {
+        "title": "Podcast guest recording",
+        "scope": "Record an interview on [topic] for [program] at [time and location], with agreed fee or no-fee arrangement [choice]. Define excluded topics, attribution and review rights before recording.",
+        "rights": "Guest permits recording, editing and publishing on [channels, territory and term], including clips up to [length] for program promotion. Separate approval is required for paid endorsement, unrelated advertising, voice cloning or AI training. Each party clears materials they supply; sensitive personal information needs explicit approval.",
+        "lines": "Guest fee or no-fee basis | Approved travel expenses | Separately approved reuse",
+        "contract": {
+          "title": "Podcast Guest Recording and Release Agreement",
+          "partyA": "Producer",
+          "partyB": "Guest",
+          "term": "Recording [date]; proposed release [date]. Corrections requested by [deadline]. Withdrawal before release and treatment after publication follow [agreed process].",
+          "acceptance": "Guest may check [factual corrections or specified excerpts] within [days]; this does not grant an unlimited editorial veto. Producer will not materially distort the guest’s statements through editing.",
+          "rightsTitle": "Recording and Promotional Clips"
+        }
+      }
+    },
+    "common": {
+      "contractIntro": "Complete every [placeholder], remove unused options and confirm attachments. Once agreed and signed by both parties, this document records the project terms.",
+      "quoteIntro": "Quote number [ID]. Issued [date]. Valid until [date]. Currency [currency]. Subject to written confirmation; this quotation does not itself reserve dates or grant rights.",
+      "partiesTitle": "Parties",
+      "parties": "Client [legal name, address, contact and email]\nService provider [legal name, address, contact and email]\nProject [name]. Agreement date [date].",
+      "scopeTitle": "Scope and schedule",
+      "rightsTitle": "Usage and special terms",
+      "paymentTitle": "Fees and payment",
+      "payment": "Service fee [amount and currency], taxes [amount or method], total including tax [amount]. Deposit [amount] due [date]; balance [amount] due [milestone and date]. Invoicing, withholding and transfer fees: [agreed allocation]. Additional expenses require advance written approval.",
+      "cancelTitle": "Cancellation and termination",
+      "cancel": "Cancellation notice [days]. Payment for completed work, approved non-refundable costs and any deposit refund follow [explicit calculation]. For events beyond reasonable control, promptly notify and agree rescheduling or termination and cost allocation. Material breach may be terminated after [days] written notice and opportunity to cure. Delivery and license consequences of termination: [terms].",
+      "legalTitle": "Confidentiality and disputes",
+      "legal": "Use non-public pricing, personal data and project information only to perform this agreement, except disclosures required by law. Agreed liability allocation and reasonable cap [complete], without excluding liability that cannot lawfully be limited. Governing law [jurisdiction]; dispute process and forum [complete]. Attachments [list] and order of precedence [complete]. Changes require both parties written agreement.",
+      "signTitle": "Signatures",
+      "sign": "Client representative [name and title]   Signature [signature]   Date [date]\nProvider representative [name and title]   Signature [signature]   Date [date]",
+      "lineTitle": "Price breakdown",
+      "lineHelp": "For each item, enter scope, quantity, unit, unit price and amount. If commission applies, specify the calculation basis and rate. Identify estimates separately from fixed fees.",
+      "totals": "Subtotal excluding tax [amount]\nDiscount [amount]\nTax rate and tax [rate and amount]\nTotal including tax [amount and currency]\nDeposit [amount and due date]\nBalance [amount and payment terms]",
+      "quoteTermsTitle": "Quotation conditions",
+      "quoteTerms": "Unlisted deliverables, extra revisions, travel and usage rights are excluded. Scope changes or acceptance after expiry require a revised price and availability check. Confirm cancellation, acceptance, rights and full engagement terms in writing before work begins."
+    },
+    "zh": "繁體中文",
+    "en": "English",
+    "mu": "Musicians’ Union",
+    "artsLaw": "Arts Law",
+    "ftc": "FTC",
+    "expand": "Browse templates",
+    "collapse": "Collapse templates",
+    "summary": "{scenarios} scenarios · {documents} editable Word files · English / Chinese",
+    "contractCommon": {
+      "partiesTitle": "Parties",
+      "partyA": "Party A",
+      "partyB": "Party B",
+      "legalName": "[legal name]",
+      "partySuffix": "referred to as",
+      "intro": "The parties agree to the following terms governing the engagement described below.",
+      "article": "Article {number}",
+      "scopeTitle": "Scope of Engagement",
+      "termTitle": "Term and Schedule",
+      "acceptanceTitle": "Performance Review and Acceptance",
+      "feesTitle": "Fees",
+      "paymentTitle": "Payment Method",
+      "cancelTitle": "Cancellation and Termination",
+      "legalTitle": "Confidentiality and Disputes",
+      "otherTitle": "Other Provisions",
+      "fees": "Pricing method [fixed fee / per item / commission / other], with calculation basis [details].\nFee excluding tax [amount and currency]; tax rate or treatment [details]; tax [amount]; total including tax [amount].\nAdditional expenses require prior written approval. Items, limits and supporting records: [terms].",
+      "payment": "Payer [Party A / Party B / other], payee [name]. Deposit or first installment [amount and date]; balance or recurring settlement [calculation, conditions and deadline].\nPayment by [bank transfer / other]. Invoicing, withholding and transfer fees: [agreed allocation].\nRaise invoice disputes in writing within [days]; pay undisputed sums on time. For overdue payment, allow [days] after written notice before pausing work; agree any late fee and revised schedule in writing, subject to applicable law.",
+      "bank": "Bank and branch [details]   Bank or routing code [details]\nAccount holder [name]   Account number [details]",
+      "legal": "Use non-public pricing, personal data and engagement information only to perform this agreement, except disclosures required by law.\nLiability allocation and reasonable cap [complete], without excluding liability that cannot lawfully be limited.\nGoverning law [jurisdiction]; dispute process and forum [complete].",
+      "other": "Attachments [list] form part of this agreement; precedence if terms conflict [order].\nChanges require both parties’ written agreement. Send notices to the email or address in the execution page; receipt is confirmed by [method].\nEach party confirms authority to sign and permission to supply its materials. Prepare [number] counterparts; sign by [wet ink / electronic signature / other].",
+      "signTitle": "Execution by the Parties",
+      "signFields": "Legal name [complete]\nResponsible person or authorized representative [name and title]\nAddress [complete]\nBusiness or company registration number [if applicable]\nContact person [name]\nTelephone [complete]   Email [complete]",
+      "signature": "Signature or seal",
+      "date": "Date signed [year / month / day]",
+      "executionDate": "Agreement date [year / month / day]",
+      "numberLabels": "1|2|3|4|5|6|7|8|9"
+    },
+    "table": {
+      "item": "Item",
+      "quantity": "Qty / unit",
+      "unitPrice": "Unit price",
+      "amount": "Amount"
+    },
+    "commonPaper": "Common Paper open professional services agreement",
+    "freelancersUnion": "Freelancers Union contract essentials",
+    "loading": "Loading templates…",
+    "loadFailed": "Templates could not be loaded.",
+    "retry": "Try again"
+  },
   "assistantCosts": {
     "title": "Assistant usage and pricing",
     "back": "Back to Assistant",

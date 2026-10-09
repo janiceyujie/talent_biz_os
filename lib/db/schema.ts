@@ -802,3 +802,36 @@ export const externalEvent = pgTable(
   },
   (t) => [unique("external_event_source_event").on(t.sourceId, t.externalEventId), index("external_event_source_start_idx").on(t.sourceId, t.startDate)],
 ).enableRLS();
+
+// Shared, curated templates contain no workspace or signed-contract data.
+// Private customer files continue to use file/contract with talent ownership.
+export const documentTemplate = pgTable(
+  "document_template",
+  {
+    id: id(),
+    scenario: text().notNull(),
+    role: text().notNull(),
+    kind: text({ enum: ["contract", "quote"] }).notNull(),
+    locale: text({ enum: ["en", "zh-TW"] }).notNull(),
+    version: integer().notNull(),
+    title: text().notNull(),
+    intro: text().notNull(),
+    sections: jsonb().$type<string[][]>().notNull(),
+    body: text().notNull(),
+    storageKey: text().notNull(),
+    filename: text().notNull(),
+    sizeBytes: integer().notNull(),
+    contentHash: char({ length: 64 }).notNull(),
+    published: boolean().notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("document_template_version").on(t.scenario, t.kind, t.locale, t.version),
+    unique("document_template_content").on(t.scenario, t.kind, t.locale, t.contentHash),
+    uniqueIndex("document_template_published").on(t.scenario, t.kind, t.locale).where(sql`${t.published}`),
+    check("document_template_kind_check", oneOf(t.kind, ["contract", "quote"])),
+    check("document_template_locale_check", oneOf(t.locale, ["en", "zh-TW"])),
+    check("document_template_version_check", sql`${t.version} > 0`),
+    check("document_template_size_check", sql`${t.sizeBytes} > 0`),
+  ],
+).enableRLS();

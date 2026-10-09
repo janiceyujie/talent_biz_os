@@ -2,6 +2,7 @@
 
 import { InfoHint } from "@/components/app/info-hint";
 
+import { DocumentLibrary } from "./document-library";
 
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -172,6 +173,7 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
 
   return (
     <div className="draft-workspace">
+      <DocumentLibrary />
       <fieldset className="draft-edit-fields" disabled={!!pendingChange}>
         <div className="draft-layout">
           <section className="surface draft-memory">

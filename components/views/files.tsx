@@ -1,5 +1,9 @@
 "use client";
 
+import { InfoHint } from "@/components/app/info-hint";
+
+import { DocumentLibrary } from "./document-library";
+
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useAppData } from "@/components/app/app-data";
@@ -22,14 +26,16 @@ export function FilesView() {
   );
 
   return (
-    <section className="surface padded">
+    <>
+    <DocumentLibrary />
+    <section className="surface padded section-gap">
       <div className="section-header">
         <div>
           <span>{tEyebrow("files")}</span>
-          <h2>{t("title")}</h2>
+          <h2>{t("title")} <InfoHint label={t("title")} notes={[t("intro")]} /></h2>
         </div>
       </div>
-      <p className="muted">{t("intro")}</p>
+
       <div className="toolbar wrap">
         <input aria-label={t("search")} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchPlaceholder")} />
         <select aria-label={t("projectFilter")} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
@@ -42,7 +48,7 @@ export function FilesView() {
               </option>
             ))}
         </select>
-        <button className="primary" disabled>
+        <button className="primary" disabled title={t("uploadSoon")}>
           {t("upload")}
         </button>
         <label className="check-line">
@@ -50,6 +56,7 @@ export function FilesView() {
           {t("archivedOnly")}
         </label>
       </div>
+      <p className="muted">{t("uploadSoon")}</p>
       <div className="table-scroll">
         <table>
           <thead>
@@ -75,5 +82,6 @@ export function FilesView() {
       </div>
       {!files.length && <p className="empty">{t("empty")}</p>}
     </section>
+    </>
   );
 }

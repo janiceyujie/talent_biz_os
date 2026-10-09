@@ -5117,6 +5117,34 @@ a.deal-record:hover {
 .preview-banner button { flex-shrink:0; }
 @media(max-width:600px) { .preview-banner { align-items:flex-start; flex-direction:column; padding:16px; } }
 
+/* Editable document downloads use the existing product surfaces and controls. */
+.document-library { margin-bottom: 1.5rem; }
+.document-library-body > p { margin: 0 0 .75rem; }
+.document-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr)); gap: 1rem; }
+.document-card { border: 1px solid var(--line, #dce5e1); border-radius: .75rem; padding: 1rem; min-width: 0; }
+.document-card h3 { margin: 0 0 .75rem; font-size: 1rem; }
+.document-card details { margin-bottom: 1rem; }
+.document-card .prewrap { max-height: 24rem; overflow: auto; padding: .75rem 0; line-height: 1.7; overflow-wrap: anywhere; }
+.document-library .toolbar label { display: grid; gap: .4rem; }
+
+/* Keep the template library secondary to the drafting workspace. */
+.document-library-heading { margin: 0; }
+.document-library-toggle { display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; min-height: 72px; padding: 1rem 1.5rem; border: 0; border-radius: inherit; background: transparent; color: var(--ink); text-align: start; cursor: pointer; }
+.document-library-toggle:hover { background: var(--paper); }
+.document-library-toggle:focus-visible { outline-offset: -4px; }
+.document-library-label { display: grid; gap: .25rem; min-width: 0; font-size: 1rem; font-weight: 600; }
+.document-library-summary { color: var(--muted); font-size: .875rem; font-weight: 400; line-height: 1.5; }
+.document-library-toggle-label { display: inline-flex; align-items: center; gap: .5rem; flex-shrink: 0; font-size: .875rem; font-weight: 600; }
+.document-library-toggle-label svg { flex-shrink: 0; }
+.document-library-body { border-top: 1px solid var(--line); padding: 1.5rem; }
+.document-library-body[hidden] { display: none; }
+.document-library-footer { display: flex; justify-content: flex-end; margin-top: 1rem; }
+.document-library-footer button { min-height: 44px; }
+@media (max-width: 600px) {
+  .document-library-toggle { align-items: flex-start; flex-wrap: wrap; gap: .75rem; padding: 1rem; }
+  .document-library-body { padding: 1rem; }
+}
+
 /* Keep secondary guidance compact without hiding actions or warnings. */
 .info-hint .info-hint-button { min-width: 28px; min-height: 28px; padding: 6px; }
 .info-hint-button:focus-visible, .compact-disclosure > summary:focus-visible,
@@ -5140,6 +5168,21 @@ a.deal-record:hover {
   .info-hint .info-hint-button { min-width: 44px; min-height: 44px; }
 }
 
+/* Align labelled filters with their action controls at a shared baseline. */
+.document-toolbar { align-items: flex-end; gap: 16px; }
+.document-toolbar > label { min-width: 0; }
+.document-toolbar select, .document-toolbar .row-actions button { min-height: 44px; margin: 0; }
+.document-toolbar .row-actions { margin: 0; align-self: flex-end; }
+.toolbar > :is(input, select, button) { min-height: 44px; margin-top: 0; margin-bottom: 0; }
+.toolbar > label.check-line { min-height: 44px; margin: 0; display: inline-flex; align-items: center; }
+@media (max-width: 600px) {
+ .document-toolbar > label { flex: 1 1 140px; }
+ .document-toolbar .row-actions { flex-basis: 100%; }
+ .toolbar > :is(input, select) { min-width: 0; max-width: 100%; }
+}
+
+/* Keep action baselines stable when contract names wrap. */
+.document-card h3 { min-height: 3.25rem; }
 .cost-analysis { display: grid; gap: 1.25rem; min-width: 0; }
 .cost-analysis > .surface { padding: clamp(16px, 2vw, 28px); min-width: 0; }
 .cost-analysis h2 { margin: 0 0 12px; }

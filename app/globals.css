@@ -293,7 +293,7 @@ select:focus-visible {
   margin-bottom: 28px;
 }
 .section-header > div > span,
-.assistant-panel header span,
+.assistant-panel > header > div > span,
 .classification-card > span,
 .draft-output > span {
   color: var(--orange);
@@ -451,11 +451,11 @@ select:focus-visible {
   color: var(--ink);
   background: var(--lime);
 }
-.assistant-panel header span,
-.assistant-panel header small {
+.assistant-panel > header > div > span,
+.assistant-panel > header > div > small {
   display: block;
 }
-.assistant-panel header small {
+.assistant-panel > header > div > small {
   margin-top: 3px;
   color: #879082;
   font-size: var(--text-meta);

@@ -1,5 +1,7 @@
 "use client";
 
+import { usePreviewAction } from "@/components/app/preview-action";
+
 import { Archive, ArrowDownUp, ArrowLeft, Funnel, Plus, UserRound, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12,7 +14,7 @@ import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { useProjectPages } from "@/components/app/project-pages";
 import { useFitToWindow } from "@/components/app/use-fit-to-window";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
-import { archiveProject, setProjectStage } from "@/lib/actions/projects";
+import { archiveProject as archiveProjectRemote, setProjectStage as setProjectStageRemote } from "@/lib/actions/projects";
 import { useMoney } from "@/lib/i18n/format";
 import { mainStages, phaseOf, phases, type Phase } from "@/lib/domain/phases";
 import { listSorts, type ListSort, type ListView } from "@/lib/domain/project-list";
@@ -440,6 +442,8 @@ function ProjectDetail({
   const t = useTranslations("projects");
   const tWorkflow = useTranslations("workflow");
   const labels = useLabels();
+  const archiveProject = usePreviewAction(archiveProjectRemote);
+  const setProjectStage = usePreviewAction(setProjectStageRemote);
   const [tab, setTab] = useState<Tab>("overview");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);

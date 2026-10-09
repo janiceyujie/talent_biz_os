@@ -1,11 +1,13 @@
 "use client";
 
+import { usePreviewAction } from "@/components/app/preview-action";
+
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
-import { markOrganizationsDistinct, mergeOrganizations, unmarkOrganizationsDistinct } from "@/lib/actions/organizations";
+import { markOrganizationsDistinct as markOrganizationsDistinctRemote, mergeOrganizations as mergeOrganizationsRemote, unmarkOrganizationsDistinct as unmarkOrganizationsDistinctRemote } from "@/lib/actions/organizations";
 import { duplicateSuggestions, type DuplicateSuggestion } from "@/lib/domain/organizations";
 import type { Organization } from "@/lib/types";
 
@@ -16,6 +18,7 @@ const SHOWN = 3; // suggestions before "show all"
  * first: merge them, or say they're different so they aren't suggested again.
  */
 export function OrganizationDuplicates() {
+  const markOrganizationsDistinct = usePreviewAction(markOrganizationsDistinctRemote);
   const data = useAppData();
   const t = useTranslations("organizations.duplicates");
   const [all, setAll] = useState(false);
@@ -74,6 +77,7 @@ export function OrganizationDuplicates() {
 
 /** Choose which to keep and its final name; the other's people and projects move to it, and it's deleted. */
 function MergeDialog({ suggestion, onDone }: { suggestion: DuplicateSuggestion; onDone: () => void }) {
+  const mergeOrganizations = usePreviewAction(mergeOrganizationsRemote);
   const data = useAppData();
   const t = useTranslations("organizations.duplicates");
   const peopleAt = (o: Organization) => data.contacts.filter((c) => c.organizationId === o.id).length;
@@ -139,6 +143,7 @@ function MergeDialog({ suggestion, onDone }: { suggestion: DuplicateSuggestion; 
 
 /** On an organisation's page: the ones it was marked different from, each with an undo. */
 export function DistinctFrom({ organizationId }: { organizationId: string }) {
+  const unmarkOrganizationsDistinct = usePreviewAction(unmarkOrganizationsDistinctRemote);
   const data = useAppData();
   const t = useTranslations("organizations.duplicates");
   const [pending, startTransition] = useTransition();

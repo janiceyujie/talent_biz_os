@@ -11,7 +11,7 @@ import { savePayment } from "@/lib/actions/payments";
 import { saveProject } from "@/lib/actions/projects";
 import { saveTemplate } from "@/lib/actions/templates";
 import { localeNames, locales, toLocale } from "@/lib/i18n/config";
-import { placeholderKeys, placeholderName, toDisplay } from "@/lib/templates/placeholders";
+import { placeholderKeys, placeholderName, toDisplay, toStored } from "@/lib/templates/placeholders";
 import { isSigned } from "@/lib/domain/phases";
 import { placeSuggestions } from "@/lib/calendar/places";
 import {
@@ -19,12 +19,13 @@ import {
   contactRoles,
   stages,
   transportModes,
+  type ReplyTemplate,
   type CalendarItem,
   type Project,
   type Stage,
   type TransportMode,
 } from "@/lib/types";
-import { useAppData } from "./app-data";
+import { useAppData, usePreviewTemplates } from "./app-data";
 import { ContactPicker, type NewContact } from "./contact-picker";
 import { OrganizationPicker } from "./organization-picker";
 import { TimeZonePicker } from "./time-zone-picker";
@@ -86,6 +87,8 @@ export function RecordEditor({
   onSaved?: (data: RecordData) => void;
 }) {
   const data$ = useAppData();
+  const localTemplates = usePreviewTemplates();
+  const tPreview = useTranslations("preview");
   const t = useTranslations("editor");
   const tProjects = useTranslations("projects");
   const tTone = useTranslations("tone");
@@ -296,6 +299,13 @@ export function RecordEditor({
         onSubmit={async (e) => {
           e.preventDefault();
           if (!onSave) return;
+          if (data$.preview) {
+            if (kind !== "template") { setError(tPreview("readOnly")); return; }
+            localTemplates.save({...data, id: String(data.id || crypto.randomUUID()), body: toStored(String(data.body)), archived: false} as ReplyTemplate);
+            onSaved?.(data);
+            onClose();
+            return;
+          }
           setPending(true);
           // A typed main contact who isn't a contact yet is added as one, with any details given.
           const typedContact = kind === "project" && !data.counterpartyId && String(data.contactName ?? "").trim();
@@ -543,6 +553,7 @@ export function RecordEditor({
             {error}
           </p>
         )}
+        {data$.preview && <p className="muted">{tPreview(kind === "template" ? "localTemplates" : "readOnly")}</p>}
         {!onSave && <p className="muted">{t("notWired")}</p>}
         {confirming ? (
           <footer className="modal-actions" role="alertdialog" aria-label={t("unsaved")}>
@@ -559,7 +570,7 @@ export function RecordEditor({
             <button type="button" className="secondary" disabled={pending} onClick={requestClose}>
               {t("cancel")}
             </button>
-            <button disabled={!onSave || pending} type="submit" className="primary">
+            <button disabled={!onSave || pending || (!!data$.preview && kind !== "template")} type="submit" className="primary">
               {pending ? t("saving") : t("save")}
             </button>
           </footer>

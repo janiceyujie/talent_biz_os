@@ -35,3 +35,9 @@ Changes here can lose data, leak data, or lock people out, so make them only whe
 ## Related
 
 - **Product strategy**: sibling repo `talent-business-os-internal`.
+
+## Timothy local development
+
+- Write new code, comments, developer documentation and commit messages in English. UI copy belongs in both locale catalogs; multilingual evaluation inputs are intentional test data.
+- Use `user/timothy0324/<feature>` for new branches, following `docs/git-workflow.md`. The existing local `user/Timothy0324/luna-assistant-eval` branch predates this rule; normalize it before any future push. Never push directly to `main`; do not bypass the local push guard.
+- The Luna assistant is a local-only experiment. Do not deploy or enable it against a remote database. Keep the shared experiment spend ceiling at USD 5 unless the user explicitly increases it.

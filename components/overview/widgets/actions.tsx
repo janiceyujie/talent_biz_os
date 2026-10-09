@@ -55,7 +55,7 @@ function ActionRow({ action: a, today }: { action: TodayAction; today: string })
             href: `/calendar?date=${a.date}`,
           };
   return (
-    <button className="today-action" onClick={() => router.push(row.href)}>
+    <button data-preview-safe="true" className="today-action" onClick={() => router.push(row.href)}>
       {row.tag}
       <span>
         <strong>{row.title}</strong>

@@ -12,5 +12,5 @@ export type OverviewContext = { data: AppData; today: string; items: PlanItem[] 
 export function useOverviewContext(): OverviewContext {
   const data = useAppData();
   const items = useMemo(() => planItems(data), [data]);
-  return { data, today: dateInZone(data.talent.timeZone), items };
+  return { data, today: data.previewDate ?? dateInZone(data.talent.timeZone), items };
 }

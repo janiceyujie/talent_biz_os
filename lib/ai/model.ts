@@ -5,11 +5,14 @@ import path from "node:path";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { aiCall } from "@/lib/db/schema";
+import { openAIResponse } from "./openai";
+import { LocalAIError } from "./local-budget";
 import type { ModelErrorCode } from "./errors";
 
 // The one place that talks to a language model. The pipeline asks for an
 // object matching a zod schema; which model answers is configuration:
 //
+//   AI_PROVIDER=openai     local-only Luna experiment; OPENAI_API_KEY and USD 5 shared cap
 //   AI_PROVIDER=gemini     Google's Gemini API; GEMINI_API_KEY, AI_MODEL — one model or a fallback
 //                          list tried in order when one is busy (e.g. gemini-3.5-flash-lite,gemini-3.1-flash-lite).
 //                          On the free tier Google may keep and use what's sent (AI_PROVIDER_KEEPS_DATA).
@@ -86,7 +89,9 @@ export async function generateObject<T>(request: StructuredRequest<T>): Promise<
   }
   try {
     const result =
-      provider === "gemini"
+      provider === "openai"
+        ? await openai(request)
+        : provider === "gemini"
         ? await gemini(request)
         : provider === "ollama"
           ? await ollama(request)
@@ -115,6 +120,8 @@ function replayMode(): "off" | "record" | "only" {
 // system prompt is left out because it carries today's date.
 function recordingKey(request: StructuredRequest<unknown>) {
   const hash = createHash("sha256");
+  hash.update(process.env.AI_PROVIDER || "ollama");
+  hash.update(process.env.AI_MODEL || "default");
   hash.update(request.trace.promptVersion);
   hash.update(request.prompt);
   hash.update(JSON.stringify(z.toJSONSchema(request.schema)));
@@ -266,4 +273,13 @@ function parseAgainst<T>(schema: z.ZodType<T>, text: string): T {
   const parsed = schema.safeParse(raw);
   if (!parsed.success) throw new ModelError("invalid_output", `The model's answer didn't match the schema: ${parsed.error.issues[0]?.message}`);
   return parsed.data;
+}
+
+async function openai<T>({system,prompt,schema,attachments=[]}: StructuredRequest<T>): Promise<ProviderResult<T>> {
+  // The paid local experiment covers text only. Do not silently omit files.
+  if(attachments.length) throw new ModelError("unsupported_file", "OpenAI local evaluation supports text only");
+  try {
+    const result=await openAIResponse({instructions:system,input:prompt,schema:z.toJSONSchema(schema),maxOutputTokens:4000});
+    return {object:parseAgainst(schema,result.text),modelVersion:`openai:${result.model}`,inputTokens:result.usage.inputTokens,outputTokens:result.usage.outputTokens};
+  } catch(e) { if(e instanceof LocalAIError) throw new ModelError(e.code,e.message); throw e; }
 }

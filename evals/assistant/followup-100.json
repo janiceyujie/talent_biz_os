@@ -1,0 +1,902 @@
+[
+  {
+    "id": "followup-001",
+    "category": "negotiation",
+    "query": "Hypothetical negotiation, separate from recorded facts: help me handle a brand asking for a perpetual worldwide ad license. Summarize the missing terms and a negotiation approach.\nBrief item 1: Version 1 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 2: Version 2 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 3: Version 3 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-01",
+    "turn": 1
+  },
+  {
+    "id": "followup-002",
+    "category": "negotiation",
+    "query": "Give me three options with tradeoffs; use placeholders for unknown prices.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-01",
+    "turn": 2
+  },
+  {
+    "id": "followup-003",
+    "category": "negotiation",
+    "query": "The client now asks for two extra versions and an earlier deadline. Explain what changes without inventing agreement.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-01",
+    "turn": 3
+  },
+  {
+    "id": "followup-004",
+    "category": "negotiation",
+    "query": "Draft a natural reply under 220 words using our discussion; label assumptions and request confirmation.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-01",
+    "turn": 4
+  },
+  {
+    "id": "followup-005",
+    "category": "negotiation",
+    "query": "Review that draft for unsupported promises, summarize the next three actions, and do not send anything.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-01",
+    "turn": 5
+  },
+  {
+    "id": "followup-006",
+    "category": "long_context",
+    "query": "Hypothetical negotiation, separate from recorded facts: help me handle a film delivery with several revisions. Summarize the missing terms and a negotiation approach.\nBrief item 1: Version 1 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 2: Version 2 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 3: Version 3 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 4: Version 4 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 5: Version 5 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 6: Version 6 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 7: Version 7 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 8: Version 8 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 9: Version 9 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 10: Version 10 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 11: Version 11 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 12: Version 12 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 13: Version 13 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 14: Version 14 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 15: Version 15 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 16: Version 16 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 17: Version 17 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 18: Version 18 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 19: Version 19 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 20: Version 20 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 21: Version 21 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 22: Version 22 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 23: Version 23 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 24: Version 24 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 25: Version 25 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 26: Version 26 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 27: Version 27 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 28: Version 28 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.",
+    "projectId": "film",
+    "locale": "en",
+    "conversationId": "session-02",
+    "turn": 1
+  },
+  {
+    "id": "followup-007",
+    "category": "long_context",
+    "query": "Give me three options with tradeoffs; use placeholders for unknown prices.",
+    "projectId": "film",
+    "locale": "en",
+    "conversationId": "session-02",
+    "turn": 2
+  },
+  {
+    "id": "followup-008",
+    "category": "long_context",
+    "query": "The client now asks for two extra versions and an earlier deadline. Explain what changes without inventing agreement.",
+    "projectId": "film",
+    "locale": "en",
+    "conversationId": "session-02",
+    "turn": 3
+  },
+  {
+    "id": "followup-009",
+    "category": "long_context",
+    "query": "Draft a natural reply under 220 words using our discussion; label assumptions and request confirmation.",
+    "projectId": "film",
+    "locale": "en",
+    "conversationId": "session-02",
+    "turn": 4
+  },
+  {
+    "id": "followup-010",
+    "category": "long_context",
+    "query": "Review that draft for unsupported promises, summarize the next three actions, and do not send anything.",
+    "projectId": "film",
+    "locale": "en",
+    "conversationId": "session-02",
+    "turn": 5
+  },
+  {
+    "id": "followup-011",
+    "category": "payment",
+    "query": "Hypothetical negotiation, separate from recorded facts: help me handle an overdue product video invoice. Summarize the missing terms and a negotiation approach.\nBrief item 1: Version 1 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 2: Version 2 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 3: Version 3 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.",
+    "projectId": "audio",
+    "locale": "en",
+    "conversationId": "session-03",
+    "turn": 1
+  },
+  {
+    "id": "followup-012",
+    "category": "payment",
+    "query": "Give me three options with tradeoffs; use placeholders for unknown prices.",
+    "projectId": "audio",
+    "locale": "en",
+    "conversationId": "session-03",
+    "turn": 2
+  },
+  {
+    "id": "followup-013",
+    "category": "payment",
+    "query": "The client now asks for two extra versions and an earlier deadline. Explain what changes without inventing agreement.",
+    "projectId": "audio",
+    "locale": "en",
+    "conversationId": "session-03",
+    "turn": 3
+  },
+  {
+    "id": "followup-014",
+    "category": "payment",
+    "query": "Draft a natural reply under 220 words using our discussion; label assumptions and request confirmation.",
+    "projectId": "audio",
+    "locale": "en",
+    "conversationId": "session-03",
+    "turn": 4
+  },
+  {
+    "id": "followup-015",
+    "category": "payment",
+    "query": "Review that draft for unsupported promises, summarize the next three actions, and do not send anything.",
+    "projectId": "audio",
+    "locale": "en",
+    "conversationId": "session-03",
+    "turn": 5
+  },
+  {
+    "id": "followup-016",
+    "category": "planning",
+    "query": "Hypothetical negotiation, separate from recorded facts: help me handle a live event with travel and rehearsal. Summarize the missing terms and a negotiation approach.\nBrief item 1: Version 1 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 2: Version 2 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 3: Version 3 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.",
+    "projectId": "show",
+    "locale": "en",
+    "conversationId": "session-04",
+    "turn": 1
+  },
+  {
+    "id": "followup-017",
+    "category": "planning",
+    "query": "Give me three options with tradeoffs; use placeholders for unknown prices.",
+    "projectId": "show",
+    "locale": "en",
+    "conversationId": "session-04",
+    "turn": 2
+  },
+  {
+    "id": "followup-018",
+    "category": "planning",
+    "query": "The client now asks for two extra versions and an earlier deadline. Explain what changes without inventing agreement.",
+    "projectId": "show",
+    "locale": "en",
+    "conversationId": "session-04",
+    "turn": 3
+  },
+  {
+    "id": "followup-019",
+    "category": "planning",
+    "query": "Draft a natural reply under 220 words using our discussion; label assumptions and request confirmation.",
+    "projectId": "show",
+    "locale": "en",
+    "conversationId": "session-04",
+    "turn": 4
+  },
+  {
+    "id": "followup-020",
+    "category": "planning",
+    "query": "Review that draft for unsupported promises, summarize the next three actions, and do not send anything.",
+    "projectId": "show",
+    "locale": "en",
+    "conversationId": "session-04",
+    "turn": 5
+  },
+  {
+    "id": "followup-021",
+    "category": "contracts",
+    "query": "Hypothetical negotiation, separate from recorded facts: help me handle a music usage renewal. Summarize the missing terms and a negotiation approach.\nBrief item 1: Version 1 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 2: Version 2 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 3: Version 3 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.",
+    "projectId": "license",
+    "locale": "en",
+    "conversationId": "session-05",
+    "turn": 1
+  },
+  {
+    "id": "followup-022",
+    "category": "contracts",
+    "query": "Give me three options with tradeoffs; use placeholders for unknown prices.",
+    "projectId": "license",
+    "locale": "en",
+    "conversationId": "session-05",
+    "turn": 2
+  },
+  {
+    "id": "followup-023",
+    "category": "contracts",
+    "query": "The client now asks for two extra versions and an earlier deadline. Explain what changes without inventing agreement.",
+    "projectId": "license",
+    "locale": "en",
+    "conversationId": "session-05",
+    "turn": 3
+  },
+  {
+    "id": "followup-024",
+    "category": "contracts",
+    "query": "Draft a natural reply under 220 words using our discussion; label assumptions and request confirmation.",
+    "projectId": "license",
+    "locale": "en",
+    "conversationId": "session-05",
+    "turn": 4
+  },
+  {
+    "id": "followup-025",
+    "category": "contracts",
+    "query": "Review that draft for unsupported promises, summarize the next three actions, and do not send anything.",
+    "projectId": "license",
+    "locale": "en",
+    "conversationId": "session-05",
+    "turn": 5
+  },
+  {
+    "id": "followup-026",
+    "category": "drafting",
+    "query": "Hypothetical negotiation, separate from recorded facts: help me handle UGC files for organic and paid media. Summarize the missing terms and a negotiation approach.\nBrief item 1: Version 1 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 2: Version 2 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 3: Version 3 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-06",
+    "turn": 1
+  },
+  {
+    "id": "followup-027",
+    "category": "drafting",
+    "query": "Give me three options with tradeoffs; use placeholders for unknown prices.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-06",
+    "turn": 2
+  },
+  {
+    "id": "followup-028",
+    "category": "drafting",
+    "query": "The client now asks for two extra versions and an earlier deadline. Explain what changes without inventing agreement.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-06",
+    "turn": 3
+  },
+  {
+    "id": "followup-029",
+    "category": "drafting",
+    "query": "Draft a natural reply under 220 words using our discussion; label assumptions and request confirmation.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-06",
+    "turn": 4
+  },
+  {
+    "id": "followup-030",
+    "category": "drafting",
+    "query": "Review that draft for unsupported promises, summarize the next three actions, and do not send anything.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-06",
+    "turn": 5
+  },
+  {
+    "id": "followup-031",
+    "category": "contracts",
+    "query": "Hypothetical negotiation, separate from recorded facts: help me handle raw footage and project file delivery. Summarize the missing terms and a negotiation approach.\nBrief item 1: Version 1 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 2: Version 2 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 3: Version 3 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.",
+    "projectId": "film",
+    "locale": "en",
+    "conversationId": "session-07",
+    "turn": 1
+  },
+  {
+    "id": "followup-032",
+    "category": "contracts",
+    "query": "Give me three options with tradeoffs; use placeholders for unknown prices.",
+    "projectId": "film",
+    "locale": "en",
+    "conversationId": "session-07",
+    "turn": 2
+  },
+  {
+    "id": "followup-033",
+    "category": "contracts",
+    "query": "The client now asks for two extra versions and an earlier deadline. Explain what changes without inventing agreement.",
+    "projectId": "film",
+    "locale": "en",
+    "conversationId": "session-07",
+    "turn": 3
+  },
+  {
+    "id": "followup-034",
+    "category": "contracts",
+    "query": "Draft a natural reply under 220 words using our discussion; label assumptions and request confirmation.",
+    "projectId": "film",
+    "locale": "en",
+    "conversationId": "session-07",
+    "turn": 4
+  },
+  {
+    "id": "followup-035",
+    "category": "contracts",
+    "query": "Review that draft for unsupported promises, summarize the next three actions, and do not send anything.",
+    "projectId": "film",
+    "locale": "en",
+    "conversationId": "session-07",
+    "turn": 5
+  },
+  {
+    "id": "followup-036",
+    "category": "negotiation",
+    "query": "Hypothetical negotiation, separate from recorded facts: help me handle an affiliate livestream with refund deductions. Summarize the missing terms and a negotiation approach.\nBrief item 1: Version 1 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 2: Version 2 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 3: Version 3 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.",
+    "projectId": "audio",
+    "locale": "en",
+    "conversationId": "session-08",
+    "turn": 1
+  },
+  {
+    "id": "followup-037",
+    "category": "negotiation",
+    "query": "Give me three options with tradeoffs; use placeholders for unknown prices.",
+    "projectId": "audio",
+    "locale": "en",
+    "conversationId": "session-08",
+    "turn": 2
+  },
+  {
+    "id": "followup-038",
+    "category": "negotiation",
+    "query": "The client now asks for two extra versions and an earlier deadline. Explain what changes without inventing agreement.",
+    "projectId": "audio",
+    "locale": "en",
+    "conversationId": "session-08",
+    "turn": 3
+  },
+  {
+    "id": "followup-039",
+    "category": "negotiation",
+    "query": "Draft a natural reply under 220 words using our discussion; label assumptions and request confirmation.",
+    "projectId": "audio",
+    "locale": "en",
+    "conversationId": "session-08",
+    "turn": 4
+  },
+  {
+    "id": "followup-040",
+    "category": "negotiation",
+    "query": "Review that draft for unsupported promises, summarize the next three actions, and do not send anything.",
+    "projectId": "audio",
+    "locale": "en",
+    "conversationId": "session-08",
+    "turn": 5
+  },
+  {
+    "id": "followup-041",
+    "category": "planning",
+    "query": "Hypothetical negotiation, separate from recorded facts: help me handle a last-minute weather postponement. Summarize the missing terms and a negotiation approach.\nBrief item 1: Version 1 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 2: Version 2 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 3: Version 3 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.",
+    "projectId": "show",
+    "locale": "en",
+    "conversationId": "session-09",
+    "turn": 1
+  },
+  {
+    "id": "followup-042",
+    "category": "planning",
+    "query": "Give me three options with tradeoffs; use placeholders for unknown prices.",
+    "projectId": "show",
+    "locale": "en",
+    "conversationId": "session-09",
+    "turn": 2
+  },
+  {
+    "id": "followup-043",
+    "category": "planning",
+    "query": "The client now asks for two extra versions and an earlier deadline. Explain what changes without inventing agreement.",
+    "projectId": "show",
+    "locale": "en",
+    "conversationId": "session-09",
+    "turn": 3
+  },
+  {
+    "id": "followup-044",
+    "category": "planning",
+    "query": "Draft a natural reply under 220 words using our discussion; label assumptions and request confirmation.",
+    "projectId": "show",
+    "locale": "en",
+    "conversationId": "session-09",
+    "turn": 4
+  },
+  {
+    "id": "followup-045",
+    "category": "planning",
+    "query": "Review that draft for unsupported promises, summarize the next three actions, and do not send anything.",
+    "projectId": "show",
+    "locale": "en",
+    "conversationId": "session-09",
+    "turn": 5
+  },
+  {
+    "id": "followup-046",
+    "category": "contracts",
+    "query": "Hypothetical negotiation, separate from recorded facts: help me handle a narrow competitor exclusivity request. Summarize the missing terms and a negotiation approach.\nBrief item 1: Version 1 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 2: Version 2 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.\nBrief item 3: Version 3 needs a separate aspect ratio and approval contact. Scope, use duration, price and final date remain unconfirmed; ask before assuming them.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-10",
+    "turn": 1
+  },
+  {
+    "id": "followup-047",
+    "category": "contracts",
+    "query": "Give me three options with tradeoffs; use placeholders for unknown prices.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-10",
+    "turn": 2
+  },
+  {
+    "id": "followup-048",
+    "category": "contracts",
+    "query": "The client now asks for two extra versions and an earlier deadline. Explain what changes without inventing agreement.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-10",
+    "turn": 3
+  },
+  {
+    "id": "followup-049",
+    "category": "contracts",
+    "query": "Draft a natural reply under 220 words using our discussion; label assumptions and request confirmation.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-10",
+    "turn": 4
+  },
+  {
+    "id": "followup-050",
+    "category": "contracts",
+    "query": "Review that draft for unsupported promises, summarize the next three actions, and do not send anything.",
+    "projectId": "brand",
+    "locale": "en",
+    "conversationId": "session-10",
+    "turn": 5
+  },
+  {
+    "id": "followup-051",
+    "category": "negotiation",
+    "query": "以下是假設協商，不要當成已簽條款：品牌要求永久全球廣告授權。請整理缺少的資訊及協商方向。\n需求第1項：版本1需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第2項：版本2需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第3項：版本3需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-11",
+    "turn": 1
+  },
+  {
+    "id": "followup-052",
+    "category": "negotiation",
+    "query": "給我三個方案與取捨，不確定的價格請留空。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-11",
+    "turn": 2
+  },
+  {
+    "id": "followup-053",
+    "category": "negotiation",
+    "query": "對方現在又要多兩個版本並提前交付，請說明哪些要重談，不要當成已同意。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-11",
+    "turn": 3
+  },
+  {
+    "id": "followup-054",
+    "category": "negotiation",
+    "query": "依剛才的討論，寫一封自然回覆草稿，標示假設與待確認事項，盡量精簡。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-11",
+    "turn": 4
+  },
+  {
+    "id": "followup-055",
+    "category": "negotiation",
+    "query": "檢查這份草稿有沒有不實承諾，整理接下來三件事，不要寄出。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-11",
+    "turn": 5
+  },
+  {
+    "id": "followup-056",
+    "category": "long_context",
+    "query": "以下是假設協商，不要當成已簽條款：影片交付與多輪修改。請整理缺少的資訊及協商方向。\n需求第1項：版本1需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第2項：版本2需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第3項：版本3需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第4項：版本4需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第5項：版本5需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第6項：版本6需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第7項：版本7需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第8項：版本8需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第9項：版本9需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第10項：版本10需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第11項：版本11需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第12項：版本12需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第13項：版本13需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第14項：版本14需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第15項：版本15需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第16項：版本16需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第17項：版本17需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第18項：版本18需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第19項：版本19需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第20項：版本20需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第21項：版本21需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第22項：版本22需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第23項：版本23需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第24項：版本24需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第25項：版本25需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第26項：版本26需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第27項：版本27需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第28項：版本28需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。",
+    "projectId": "film",
+    "locale": "zh-TW",
+    "conversationId": "session-12",
+    "turn": 1
+  },
+  {
+    "id": "followup-057",
+    "category": "long_context",
+    "query": "給我三個方案與取捨，不確定的價格請留空。",
+    "projectId": "film",
+    "locale": "zh-TW",
+    "conversationId": "session-12",
+    "turn": 2
+  },
+  {
+    "id": "followup-058",
+    "category": "long_context",
+    "query": "對方現在又要多兩個版本並提前交付，請說明哪些要重談，不要當成已同意。",
+    "projectId": "film",
+    "locale": "zh-TW",
+    "conversationId": "session-12",
+    "turn": 3
+  },
+  {
+    "id": "followup-059",
+    "category": "long_context",
+    "query": "依剛才的討論，寫一封自然回覆草稿，標示假設與待確認事項，盡量精簡。",
+    "projectId": "film",
+    "locale": "zh-TW",
+    "conversationId": "session-12",
+    "turn": 4
+  },
+  {
+    "id": "followup-060",
+    "category": "long_context",
+    "query": "檢查這份草稿有沒有不實承諾，整理接下來三件事，不要寄出。",
+    "projectId": "film",
+    "locale": "zh-TW",
+    "conversationId": "session-12",
+    "turn": 5
+  },
+  {
+    "id": "followup-061",
+    "category": "payment",
+    "query": "以下是假設協商，不要當成已簽條款：產品影片款項逾期。請整理缺少的資訊及協商方向。\n需求第1項：版本1需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第2項：版本2需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第3項：版本3需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。",
+    "projectId": "audio",
+    "locale": "zh-TW",
+    "conversationId": "session-13",
+    "turn": 1
+  },
+  {
+    "id": "followup-062",
+    "category": "payment",
+    "query": "給我三個方案與取捨，不確定的價格請留空。",
+    "projectId": "audio",
+    "locale": "zh-TW",
+    "conversationId": "session-13",
+    "turn": 2
+  },
+  {
+    "id": "followup-063",
+    "category": "payment",
+    "query": "對方現在又要多兩個版本並提前交付，請說明哪些要重談，不要當成已同意。",
+    "projectId": "audio",
+    "locale": "zh-TW",
+    "conversationId": "session-13",
+    "turn": 3
+  },
+  {
+    "id": "followup-064",
+    "category": "payment",
+    "query": "依剛才的討論，寫一封自然回覆草稿，標示假設與待確認事項，盡量精簡。",
+    "projectId": "audio",
+    "locale": "zh-TW",
+    "conversationId": "session-13",
+    "turn": 4
+  },
+  {
+    "id": "followup-065",
+    "category": "payment",
+    "query": "檢查這份草稿有沒有不實承諾，整理接下來三件事，不要寄出。",
+    "projectId": "audio",
+    "locale": "zh-TW",
+    "conversationId": "session-13",
+    "turn": 5
+  },
+  {
+    "id": "followup-066",
+    "category": "planning",
+    "query": "以下是假設協商，不要當成已簽條款：含交通彩排的現場演出。請整理缺少的資訊及協商方向。\n需求第1項：版本1需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第2項：版本2需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第3項：版本3需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。",
+    "projectId": "show",
+    "locale": "zh-TW",
+    "conversationId": "session-14",
+    "turn": 1
+  },
+  {
+    "id": "followup-067",
+    "category": "planning",
+    "query": "給我三個方案與取捨，不確定的價格請留空。",
+    "projectId": "show",
+    "locale": "zh-TW",
+    "conversationId": "session-14",
+    "turn": 2
+  },
+  {
+    "id": "followup-068",
+    "category": "planning",
+    "query": "對方現在又要多兩個版本並提前交付，請說明哪些要重談，不要當成已同意。",
+    "projectId": "show",
+    "locale": "zh-TW",
+    "conversationId": "session-14",
+    "turn": 3
+  },
+  {
+    "id": "followup-069",
+    "category": "planning",
+    "query": "依剛才的討論，寫一封自然回覆草稿，標示假設與待確認事項，盡量精簡。",
+    "projectId": "show",
+    "locale": "zh-TW",
+    "conversationId": "session-14",
+    "turn": 4
+  },
+  {
+    "id": "followup-070",
+    "category": "planning",
+    "query": "檢查這份草稿有沒有不實承諾，整理接下來三件事，不要寄出。",
+    "projectId": "show",
+    "locale": "zh-TW",
+    "conversationId": "session-14",
+    "turn": 5
+  },
+  {
+    "id": "followup-071",
+    "category": "contracts",
+    "query": "以下是假設協商，不要當成已簽條款：音樂使用續約。請整理缺少的資訊及協商方向。\n需求第1項：版本1需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第2項：版本2需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第3項：版本3需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。",
+    "projectId": "license",
+    "locale": "zh-TW",
+    "conversationId": "session-15",
+    "turn": 1
+  },
+  {
+    "id": "followup-072",
+    "category": "contracts",
+    "query": "給我三個方案與取捨，不確定的價格請留空。",
+    "projectId": "license",
+    "locale": "zh-TW",
+    "conversationId": "session-15",
+    "turn": 2
+  },
+  {
+    "id": "followup-073",
+    "category": "contracts",
+    "query": "對方現在又要多兩個版本並提前交付，請說明哪些要重談，不要當成已同意。",
+    "projectId": "license",
+    "locale": "zh-TW",
+    "conversationId": "session-15",
+    "turn": 3
+  },
+  {
+    "id": "followup-074",
+    "category": "contracts",
+    "query": "依剛才的討論，寫一封自然回覆草稿，標示假設與待確認事項，盡量精簡。",
+    "projectId": "license",
+    "locale": "zh-TW",
+    "conversationId": "session-15",
+    "turn": 4
+  },
+  {
+    "id": "followup-075",
+    "category": "contracts",
+    "query": "檢查這份草稿有沒有不實承諾，整理接下來三件事，不要寄出。",
+    "projectId": "license",
+    "locale": "zh-TW",
+    "conversationId": "session-15",
+    "turn": 5
+  },
+  {
+    "id": "followup-076",
+    "category": "drafting",
+    "query": "以下是假設協商，不要當成已簽條款：品牌自然貼文及付費投放 UGC。請整理缺少的資訊及協商方向。\n需求第1項：版本1需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第2項：版本2需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第3項：版本3需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-16",
+    "turn": 1
+  },
+  {
+    "id": "followup-077",
+    "category": "drafting",
+    "query": "給我三個方案與取捨，不確定的價格請留空。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-16",
+    "turn": 2
+  },
+  {
+    "id": "followup-078",
+    "category": "drafting",
+    "query": "對方現在又要多兩個版本並提前交付，請說明哪些要重談，不要當成已同意。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-16",
+    "turn": 3
+  },
+  {
+    "id": "followup-079",
+    "category": "drafting",
+    "query": "依剛才的討論，寫一封自然回覆草稿，標示假設與待確認事項，盡量精簡。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-16",
+    "turn": 4
+  },
+  {
+    "id": "followup-080",
+    "category": "drafting",
+    "query": "檢查這份草稿有沒有不實承諾，整理接下來三件事，不要寄出。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-16",
+    "turn": 5
+  },
+  {
+    "id": "followup-081",
+    "category": "contracts",
+    "query": "以下是假設協商，不要當成已簽條款：原始素材與工程檔交付。請整理缺少的資訊及協商方向。\n需求第1項：版本1需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第2項：版本2需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第3項：版本3需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。",
+    "projectId": "film",
+    "locale": "zh-TW",
+    "conversationId": "session-17",
+    "turn": 1
+  },
+  {
+    "id": "followup-082",
+    "category": "contracts",
+    "query": "給我三個方案與取捨，不確定的價格請留空。",
+    "projectId": "film",
+    "locale": "zh-TW",
+    "conversationId": "session-17",
+    "turn": 2
+  },
+  {
+    "id": "followup-083",
+    "category": "contracts",
+    "query": "對方現在又要多兩個版本並提前交付，請說明哪些要重談，不要當成已同意。",
+    "projectId": "film",
+    "locale": "zh-TW",
+    "conversationId": "session-17",
+    "turn": 3
+  },
+  {
+    "id": "followup-084",
+    "category": "contracts",
+    "query": "依剛才的討論，寫一封自然回覆草稿，標示假設與待確認事項，盡量精簡。",
+    "projectId": "film",
+    "locale": "zh-TW",
+    "conversationId": "session-17",
+    "turn": 4
+  },
+  {
+    "id": "followup-085",
+    "category": "contracts",
+    "query": "檢查這份草稿有沒有不實承諾，整理接下來三件事，不要寄出。",
+    "projectId": "film",
+    "locale": "zh-TW",
+    "conversationId": "session-17",
+    "turn": 5
+  },
+  {
+    "id": "followup-086",
+    "category": "negotiation",
+    "query": "以下是假設協商，不要當成已簽條款：有退款扣除的直播分潤。請整理缺少的資訊及協商方向。\n需求第1項：版本1需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第2項：版本2需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第3項：版本3需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。",
+    "projectId": "audio",
+    "locale": "zh-TW",
+    "conversationId": "session-18",
+    "turn": 1
+  },
+  {
+    "id": "followup-087",
+    "category": "negotiation",
+    "query": "給我三個方案與取捨，不確定的價格請留空。",
+    "projectId": "audio",
+    "locale": "zh-TW",
+    "conversationId": "session-18",
+    "turn": 2
+  },
+  {
+    "id": "followup-088",
+    "category": "negotiation",
+    "query": "對方現在又要多兩個版本並提前交付，請說明哪些要重談，不要當成已同意。",
+    "projectId": "audio",
+    "locale": "zh-TW",
+    "conversationId": "session-18",
+    "turn": 3
+  },
+  {
+    "id": "followup-089",
+    "category": "negotiation",
+    "query": "依剛才的討論，寫一封自然回覆草稿，標示假設與待確認事項，盡量精簡。",
+    "projectId": "audio",
+    "locale": "zh-TW",
+    "conversationId": "session-18",
+    "turn": 4
+  },
+  {
+    "id": "followup-090",
+    "category": "negotiation",
+    "query": "檢查這份草稿有沒有不實承諾，整理接下來三件事，不要寄出。",
+    "projectId": "audio",
+    "locale": "zh-TW",
+    "conversationId": "session-18",
+    "turn": 5
+  },
+  {
+    "id": "followup-091",
+    "category": "planning",
+    "query": "以下是假設協商，不要當成已簽條款：天候造成活動臨時延期。請整理缺少的資訊及協商方向。\n需求第1項：版本1需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第2項：版本2需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第3項：版本3需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。",
+    "projectId": "show",
+    "locale": "zh-TW",
+    "conversationId": "session-19",
+    "turn": 1
+  },
+  {
+    "id": "followup-092",
+    "category": "planning",
+    "query": "給我三個方案與取捨，不確定的價格請留空。",
+    "projectId": "show",
+    "locale": "zh-TW",
+    "conversationId": "session-19",
+    "turn": 2
+  },
+  {
+    "id": "followup-093",
+    "category": "planning",
+    "query": "對方現在又要多兩個版本並提前交付，請說明哪些要重談，不要當成已同意。",
+    "projectId": "show",
+    "locale": "zh-TW",
+    "conversationId": "session-19",
+    "turn": 3
+  },
+  {
+    "id": "followup-094",
+    "category": "planning",
+    "query": "依剛才的討論，寫一封自然回覆草稿，標示假設與待確認事項，盡量精簡。",
+    "projectId": "show",
+    "locale": "zh-TW",
+    "conversationId": "session-19",
+    "turn": 4
+  },
+  {
+    "id": "followup-095",
+    "category": "planning",
+    "query": "檢查這份草稿有沒有不實承諾，整理接下來三件事，不要寄出。",
+    "projectId": "show",
+    "locale": "zh-TW",
+    "conversationId": "session-19",
+    "turn": 5
+  },
+  {
+    "id": "followup-096",
+    "category": "contracts",
+    "query": "以下是假設協商，不要當成已簽條款：限定競業排他要求。請整理缺少的資訊及協商方向。\n需求第1項：版本1需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第2項：版本2需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。\n需求第3項：版本3需要另外確認畫面比例與審稿窗口，範圍、使用期間、價格及定稿日尚未確認，請不要推測為已簽條款。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-20",
+    "turn": 1
+  },
+  {
+    "id": "followup-097",
+    "category": "contracts",
+    "query": "給我三個方案與取捨，不確定的價格請留空。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-20",
+    "turn": 2
+  },
+  {
+    "id": "followup-098",
+    "category": "contracts",
+    "query": "對方現在又要多兩個版本並提前交付，請說明哪些要重談，不要當成已同意。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-20",
+    "turn": 3
+  },
+  {
+    "id": "followup-099",
+    "category": "contracts",
+    "query": "依剛才的討論，寫一封自然回覆草稿，標示假設與待確認事項，盡量精簡。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-20",
+    "turn": 4
+  },
+  {
+    "id": "followup-100",
+    "category": "contracts",
+    "query": "檢查這份草稿有沒有不實承諾，整理接下來三件事，不要寄出。",
+    "projectId": "brand",
+    "locale": "zh-TW",
+    "conversationId": "session-20",
+    "turn": 5
+  }
+]

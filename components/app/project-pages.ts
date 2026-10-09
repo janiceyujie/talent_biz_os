@@ -1,5 +1,7 @@
 "use client";
 
+import { useAppData } from "./app-data";
+import { previewProjectPage } from "@/lib/domain/preview-projects";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PAGE_MAX, PAGE_SIZE, type ListSort, type ListView, type ProjectPage as Page } from "@/lib/domain/project-list";
 
@@ -19,6 +21,8 @@ const url = (p: ListParams, cursor: string, limit: number) =>
  * on arrival, when coming back to a list that had scrolled further.
  */
 export function useProjectPages(params: ListParams, revision: unknown, restore = 0) {
+  const data = useAppData();
+  const preview = !!data.preview;
   const [state, setState] = useState<{ page: Page | null; loading: boolean; failed: boolean }>({ page: null, loading: true, failed: false });
   const shown = useRef(0);
   const request = useRef<AbortController | null>(null);
@@ -30,6 +34,7 @@ export function useProjectPages(params: ListParams, revision: unknown, restore =
   const load = useCallback(
     (cursor: string, limit: number, append: boolean) => {
       request.current?.abort();
+      if (preview) return;
       const abort = (request.current = new AbortController());
       setState((s) => ({ ...s, loading: true, failed: false }));
       fetch(url(params, cursor, limit), { signal: abort.signal })
@@ -43,7 +48,7 @@ export function useProjectPages(params: ListParams, revision: unknown, restore =
         )
         .catch(() => !abort.signal.aborted && setState((s) => ({ ...s, loading: false, failed: true })));
     },
-    [params.view, params.type, params.contact, params.q, params.sort], // eslint-disable-line react-hooks/exhaustive-deps -- the five values are the request
+    [preview, params.view, params.type, params.contact, params.q, params.sort], // eslint-disable-line react-hooks/exhaustive-deps -- the five values are the request
   );
 
   // A new view, filter, or order: the first page (after a pause while typing). On arrival, as many rows as before.
@@ -85,6 +90,10 @@ export function useProjectPages(params: ListParams, revision: unknown, restore =
     if (page?.nextCursor && !loading) load(page.nextCursor, PAGE_SIZE, true);
   }, [page, loading, load]);
 
+  if (preview) {
+    const sample = previewProjectPage(data, params);
+    return { ...sample, hasMore: false, loading: false, failed: false, loadMore: () => {}, retry: () => {} };
+  }
   return {
     items: page?.items ?? [],
     total: page?.total ?? null,

@@ -31,7 +31,7 @@ export function Modal({ title, children, onClose }: { title: string; children: R
     >
       <header>
         <h2 id={titleId}>{title}</h2>
-        <button className="icon-button" aria-label={t("close")} onClick={onClose}>
+        <button type="button" data-preview-safe="true" className="icon-button" aria-label={t("close")} onClick={onClose}>
           ×
         </button>
       </header>

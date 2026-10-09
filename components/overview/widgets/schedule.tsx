@@ -57,7 +57,7 @@ function ScheduleRow({ item: i, items }: { item: PlanItem; items: PlanItem[] }) 
   const open = () =>
     i.ref.source === "google" ? void (i.ref.link && window.open(i.ref.link, "_blank", "noopener")) : router.push(`/calendar?date=${i.date}`);
   return (
-    <button className="today-event" onClick={open}>
+    <button data-preview-safe="true" className="today-event" onClick={open}>
       <span className="today-event-time">
         {i.start || t("allDay")}
         {i.end && <small>{i.endDate && i.endDate !== i.date ? `→${i.end}` : i.end}</small>}

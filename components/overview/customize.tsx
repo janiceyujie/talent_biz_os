@@ -1,10 +1,12 @@
 "use client";
 
+import { usePreviewAction } from "@/components/app/preview-action";
+
 import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/app/modal";
-import { resetPreference, savePreference } from "@/lib/actions/preferences";
+import { resetPreference as resetPreferenceRemote, savePreference as savePreferenceRemote } from "@/lib/actions/preferences";
 import { columnOf, editableLayout, moveWidget, toSavedLayout, type EditableLayout, type SavedLayout } from "@/lib/overview/layout";
 import type { Role } from "@/lib/roles";
 import { widgetTitleKey } from "./registry";
@@ -27,6 +29,8 @@ export function CustomizeOverview({
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
+  const resetPreference = usePreviewAction(resetPreferenceRemote);
+  const savePreference = usePreviewAction(savePreferenceRemote);
   const t = useTranslations("today");
   const tCommon = useTranslations("common");
   const [layout, setLayout] = useState<EditableLayout>(() => editableLayout(role, saved));

@@ -1,11 +1,13 @@
 "use client";
 
+import { usePreviewAction } from "@/components/app/preview-action";
+
 import { Check, ChevronRight, Circle, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { calendarRecord, projectRecord, toRecord, type Editor } from "@/components/app/record-editor";
-import { setTodoDone } from "@/lib/actions/calendar";
+import { setTodoDone as setTodoDoneRemote } from "@/lib/actions/calendar";
 import { calendarPoints } from "@/lib/calendar/points";
 import { dateInZone } from "@/lib/domain/dates";
 import { isSigned } from "@/lib/domain/phases";
@@ -42,6 +44,7 @@ export function ProjectActions({
   folded: boolean;
   onFold: (folded: boolean) => void;
 }) {
+  const setTodoDone = usePreviewAction(setTodoDoneRemote);
   const data = useAppData();
   const t = useTranslations("projects.actions");
   const tProjects = useTranslations("projects");

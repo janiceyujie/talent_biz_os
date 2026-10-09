@@ -35,7 +35,8 @@ function useNow() {
 /** This person's notifications, most urgent first, snoozed ones last. */
 export function useNotifications() {
   const data = useAppData();
-  const now = useNow();
+  const currentTime = useNow();
+  const now = data.previewDate ? new Date(`${data.previewDate}T04:00:00Z`) : currentTime;
   const list = withState(notifications(data, now), data.notificationState, now);
   return { list, unread: list.filter(isUnread) };
 }
@@ -62,7 +63,7 @@ export function ReminderControls({ n }: { n: StatefulNotification }) {
       <button
         type="button"
         className="secondary"
-        disabled={pending}
+        disabled={pending || data.preview}
         onClick={() => startTransition(async () => void (await snoozeNotification(n.id, !n.snoozedUntil)))}
       >
         {n.snoozedUntil ? t("unsnooze") : t("snooze")}
@@ -73,6 +74,7 @@ export function ReminderControls({ n }: { n: StatefulNotification }) {
 
 /** The notification panel's rows. Opening one marks it read. */
 export function NotificationList({ open }: { open: (href: string) => void }) {
+  const data = useAppData();
   const { list, unread } = useNotifications();
   const t = useTranslations("shell");
   const text = useNotificationText();
@@ -82,7 +84,7 @@ export function NotificationList({ open }: { open: (href: string) => void }) {
       {unread.length > 0 && (
         <button
           className="text-button"
-          disabled={pending}
+          disabled={pending || data.preview}
           onClick={() => startTransition(async () => void (await markNotificationsRead(unread.map((n) => n.id))))}
         >
           {t("markAllRead")}
@@ -95,7 +97,7 @@ export function NotificationList({ open }: { open: (href: string) => void }) {
             <button
               className="text-button left"
               onClick={() => {
-                if (!n.read) void markNotificationsRead([n.id]);
+                if (!data.preview && !n.read) void markNotificationsRead([n.id]);
                 open(n.href);
               }}
             >
@@ -136,7 +138,7 @@ export function ReminderToast({ onOpen, suppress }: { onOpen: () => void; suppre
     return () => clearTimeout(timer);
   }, []);
   const n = unread[0];
-  if (!visible || !n || suppress) return null;
+  if (!visible || !n || suppress || data.preview) return null;
   const close = () => {
     setVisible(false);
     try {

@@ -1,5 +1,7 @@
 "use client";
 
+import { usePreviewAction } from "@/components/app/preview-action";
+
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
@@ -7,7 +9,7 @@ import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
 import { DealCard } from "./deal-card";
 import { toRecord, type Editor } from "@/components/app/record-editor";
-import { createPaymentPlan } from "@/lib/actions/payments";
+import { createPaymentPlan as createPaymentPlanRemote } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
 import { splitPayments } from "@/lib/domain/money";
 import { useMoney } from "@/lib/i18n/format";
@@ -78,6 +80,7 @@ export function useClosingChecks(project: Project | null): ClosingCheck[] {
 
 /** A project's money: settlement totals, its payments, the deposit/balance split, and the closing check. */
 export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit: (e: Editor) => void }) {
+  const createPaymentPlan = usePreviewAction(createPaymentPlanRemote);
   const data = useAppData();
   const t = useTranslations("workflow");
   const tProjects = useTranslations("projects");

@@ -1,5 +1,7 @@
 "use client";
 
+import { InfoHint } from "@/components/app/info-hint";
+
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -66,19 +68,19 @@ export function InboxView() {
         <div className="section-header">
           <div>
             <span>{tEyebrow("intake")}</span>
-            <h2>{t("title")}</h2>
+            <h2>{t("title")} <InfoHint label={t("title")} notes={[t("intro")]} /></h2>
           </div>
           <span className="mock-chip">{t("gmailSoon")}</span>
         </div>
-        <p className="muted">{t("intro")}</p>
+
         <p className={data.aiUsage.remaining === 0 ? "notice error" : "muted ai-usage"}>
           {data.aiUsage.remaining === 0 ? t("usageExhausted", { limit: data.aiUsage.limit }) : t("usageRemaining", data.aiUsage)}
         </p>
         <div className="row-actions">
-          <button className="primary" onClick={() => setPasting(true)}>
+          <button className="primary" disabled={data.preview} onClick={() => setPasting(true)}>
             {t("paste")}
           </button>
-          <button className="secondary" onClick={() => setUploading(true)}>
+          <button className="secondary" disabled={data.preview} onClick={() => setUploading(true)}>
             {t("upload")}
           </button>
         </div>
@@ -97,7 +99,7 @@ export function InboxView() {
             <span role="status">{t("listCount", { count: visible.length })}</span>
           </div>
           <label className="check-line">
-            <input type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} />
+            <input data-preview-safe="true" type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} />
             {t("showDismissed")}
           </label>
           {!visible.length && (
@@ -109,6 +111,7 @@ export function InboxView() {
           {visible.map((m) => (
             <div className={`mail-item single ${message?.id === m.id ? "is-active" : ""}`} key={m.id}>
               <button
+                data-preview-safe="true"
                 className={`mail-summary ${message?.id === m.id ? "active" : ""}`}
                 aria-pressed={message?.id === m.id}
                 onClick={(e) => {
@@ -140,6 +143,7 @@ export function InboxView() {
           {message ? (
             <>
               <button
+                data-preview-safe="true"
                 className="secondary inbox-back"
                 onClick={() => {
                   const target = lastMessageButton.current?.isConnected ? lastMessageButton.current : listHeading.current;
@@ -156,7 +160,7 @@ export function InboxView() {
           )}
         </section>
       </div>
-      {pasting && (
+      {pasting && !data.preview && (
         <PasteDialog
           onClose={() => setPasting(false)}
           onSubmitted={(id, duplicate) => {
@@ -167,7 +171,7 @@ export function InboxView() {
           }}
         />
       )}
-      {uploading && (
+      {uploading && !data.preview && (
         <UploadDialog
           onClose={() => setUploading(false)}
           onSubmitted={(id, duplicate) => {
@@ -206,6 +210,7 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
   const [error, setError] = useState<string | null>(null);
   const run = (action: () => Promise<string | null>) => startTransition(async () => setError(await action()));
   const a = message.analysis;
+  const preview = useTranslations("preview");
   const analyzed = !!a && message.status !== "pending";
   const data = useAppData();
   const filedOn = message.projectId ? data.projects.find((p) => p.id === message.projectId) : undefined;
@@ -278,7 +283,8 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
         </div>
       )}
 
-      {message.status === "analyzed" && a && <MessageReview key={a.promptVersion + a.modelVersion} message={message} />}
+      {data.preview&&<p className="notice">{preview("readOnly")}</p>}
+      {!data.preview && message.status === "analyzed" && a && <MessageReview key={a.promptVersion + a.modelVersion} message={message} />}
       {message.status === "confirmed" && message.projectId && (
         <div className="row-actions section-gap">
           <Link className="primary" href={`/projects?id=${message.projectId}`}>
@@ -290,7 +296,7 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
       <div className="message-more">
         {analyzed && (
           <details className="original-message">
-            <summary>{a.assumptions.length ? t("factsWithAssumptions", { count: a.assumptions.length }) : t("facts")}</summary>
+            <summary>{data.preview ? preview("analysis") : a.assumptions.length ? t("factsWithAssumptions", { count: a.assumptions.length }) : t("facts")}</summary>
             <AnalysisView analysis={a} />
           </details>
         )}
@@ -316,17 +322,17 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
       )}
       <div className="row-actions section-gap">
         {(message.status === "analyzed" || message.status === "error") && (
-          <button className="secondary" disabled={pending} onClick={() => run(() => reanalyzeMessage(message.id))}>
+          <button className="secondary" disabled={pending || data.preview} onClick={() => run(() => reanalyzeMessage(message.id))}>
             {t("reanalyze")}
           </button>
         )}
         {(message.status === "analyzed" || message.status === "error") && (
-          <button className="text-button" disabled={pending} onClick={() => run(() => dismissMessage(message.id, true))}>
+          <button className="text-button" disabled={pending || data.preview} onClick={() => run(() => dismissMessage(message.id, true))}>
             {t("dismiss")}
           </button>
         )}
         {message.status === "dismissed" && (
-          <button className="secondary" disabled={pending} onClick={() => run(() => dismissMessage(message.id, false))}>
+          <button className="secondary" disabled={pending || data.preview} onClick={() => run(() => dismissMessage(message.id, false))}>
             {t("restore")}
           </button>
         )}

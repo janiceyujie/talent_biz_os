@@ -1,5 +1,9 @@
 "use client";
 
+import { InfoHint } from "@/components/app/info-hint";
+
+import { usePreviewAction } from "@/components/app/preview-action";
+
 import { useLocale, useTranslations } from "next-intl";
 import { useOptimistic, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
@@ -7,7 +11,7 @@ import { calendarRecord, RecordEditor, type Editor } from "@/components/app/reco
 import { TravelSummary } from "@/components/app/travel-summary";
 import { YourTime } from "@/components/app/your-time";
 import { calendarPoints, externalPoints, pointKind, type CalendarPoint, type ExternalPoint } from "@/lib/calendar/points";
-import { archiveCalendarItem, setTodoDone } from "@/lib/actions/calendar";
+import { archiveCalendarItem as archiveCalendarItemRemote, setTodoDone as setTodoDoneRemote } from "@/lib/actions/calendar";
 import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
 
@@ -20,12 +24,14 @@ const weekdays = (locale: string) =>
 // Calendar events and to-dos in one month view. Each item shows in its own
 // local date and time zone; cross-zone items aren't converted to one timeline.
 export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?: string; hideAdd?: boolean }) {
+  const archiveCalendarItem = usePreviewAction(archiveCalendarItemRemote);
+  const setTodoDone = usePreviewAction(setTodoDoneRemote);
   const data = useAppData();
   const t = useTranslations("calendar");
   const tp = useTranslations("planner");
   const labels = useLabels();
   const locale = useLocale();
-  const today = dateInZone(data.talent.timeZone);
+  const today = data.previewDate ?? dateInZone(data.talent.timeZone);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [month, setMonth] = useState((initialDay || today).slice(0, 7));
   const [day, setDay] = useState(initialDay);
@@ -93,7 +99,7 @@ export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?
           {t("archivedOnly")}
         </label>
       </div>
-      <p className="muted">{t("note")}</p>
+      <div className="compact-help"><InfoHint label={t("wholeMonth")} notes={[t("note")]} /></div>
       {error && (
         <p className="notice error" role="alert">
           {error}

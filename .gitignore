@@ -47,3 +47,6 @@ next-env.d.ts
 
 # recorded model answers (AI_REPLAY)
 /.ai-recordings/
+
+# Local paid AI experiment budget ledger (no prompts or secrets)
+/.ai-local/

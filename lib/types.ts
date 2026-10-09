@@ -270,6 +270,9 @@ export type ExternalEvent = {
 };
 
 export type AppData = {
+  preview?: boolean;
+  previewDate?: string;
+  previewProjectDetails?: Record<string, ProjectDetail>;
   talent: { id: string; name: string; timeZone: string };
   person: { displayName: string; email: string; role: Role; appearance: Appearance; replyWithinDays: number; workspaceOwner: boolean };
   calendarFeed: boolean; // a subscription link exists (the URL itself is only shown once)

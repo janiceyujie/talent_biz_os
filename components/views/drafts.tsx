@@ -1,9 +1,12 @@
 "use client";
 
+import { InfoHint } from "@/components/app/info-hint";
+
+
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useAppData } from "@/components/app/app-data";
+import { useAppData, usePreviewTemplates } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
@@ -21,6 +24,7 @@ const gmailComposeUrl = (to: string, subject: string, body: string) =>
 /** `initialAsks`: questions to start the reply with, sent from a project's Questions for them. */
 export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initialProjectId?: string; initialAsks?: string[] }) {
   const data = useAppData();
+  const localTemplates = usePreviewTemplates();
   const t = useTranslations("drafts");
   const tEyebrow = useTranslations("eyebrow");
   const tTone = useTranslations("tone");
@@ -174,7 +178,7 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
             <div className="section-header">
               <div>
                 <span>{tEyebrow("replyLibrary")}</span>
-                <h2>{t("libraryTitle")}</h2>
+                <h2>{t("libraryTitle")} <InfoHint label={t("libraryTitle")} notes={[t("libraryHelp")]} /></h2>
               </div>
               <button onClick={() => setEditor({ kind: "template", item: { projectType: type } })}>{t("add")}</button>
             </div>
@@ -188,7 +192,7 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
                 ))}
               </select>
             </label>
-            <p className="muted">{t("libraryHelp")}</p>
+
             <button className="secondary" onClick={() => setEditor({ kind: "template", item: starterTemplate(type) })}>
               {t("useStarter", { type: labels.projectType(type) })}
             </button>
@@ -242,7 +246,8 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
                       onClick={() =>
                         startTransition(async () => {
                           if (templateId === tpl.id) setTemplateId("");
-                          setNotice((await archiveTemplate(tpl.id, !tpl.archived)) ?? "");
+                          if (data.preview) localTemplates.archive(tpl.id, !tpl.archived);
+                          else setNotice((await archiveTemplate(tpl.id, !tpl.archived)) ?? "");
                         })
                       }
                     >
@@ -379,9 +384,8 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
                   className="secondary"
                   disabled={!body.trim()}
                   onClick={async () => {
-                    await navigator.clipboard.writeText(body);
-                    setNotice("");
-                    setMode(t("copied"));
+                    try { await navigator.clipboard.writeText(body); setNotice(""); setMode(t("copied")); }
+                    catch { setNotice(t("copyFailed")); }
                   }}
                 >
                   {t("copy")}
@@ -399,17 +403,13 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
               >
                 {t("openGmail")}
               </a>
-              <p className="muted">{t("openGmailHelp")}</p>
+              <p className="muted">{t("saveSoon")}</p>
+              <p className="muted compact-help">{t("reviewBeforeSend")} <InfoHint label={t("openGmail")} notes={[t("openGmailHelp")]} /></p>
             </section>
           </section>
         </div>
-        <section className="surface padded section-gap saved-drafts">
-          <div className="section-header">
-            <div>
-              <span>{tEyebrow("savedDrafts")}</span>
-              <h2>{t("savedTitle")}</h2>
-            </div>
-          </div>
+        <details className="surface padded section-gap saved-drafts compact-disclosure">
+          <summary>{t("savedTitle")} <span className="muted">({data.drafts.filter(d => !d.archived).length})</span></summary>
           {data.drafts
             .filter((d) => !d.archived)
             .map((d) => (
@@ -420,7 +420,7 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
               </div>
             ))}
           {!data.drafts.filter((d) => !d.archived).length && <p className="empty">{t("savedEmpty")}</p>}
-        </section>
+        </details>
       </fieldset>
       {pendingChange && (
         <Modal title={t("confirmTitle")} onClose={() => setPendingChange(null)}>

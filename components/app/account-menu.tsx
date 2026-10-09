@@ -58,7 +58,7 @@ export function AccountMenu() {
   };
 
   return (
-    <div className="account-menu" ref={root} onKeyDown={open ? onKey : undefined}>
+    <div data-preview-safe="true" className="account-menu" ref={root} onKeyDown={open ? onKey : undefined}>
       <button
         ref={button}
         className="account-avatar"

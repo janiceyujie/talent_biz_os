@@ -10,7 +10,7 @@ import { useLabels } from "@/lib/i18n/labels";
 import { AccountMenu } from "./account-menu";
 import { Companion } from "./companion";
 import { NotificationList, ReminderToast, useNotifications } from "./notifications";
-import { useAppData } from "./app-data";
+import { PreviewBanner, useAppData } from "./app-data";
 import { Modal } from "./modal";
 import { isActive, nav } from "./nav";
 
@@ -167,7 +167,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <strong>{PRODUCT_NAME}</strong>
             <small>{PRODUCT_TAGLINE}</small>
           </div>
-          <button className="close-nav" aria-label={tNav("closeMenu")} onClick={() => setMobile(false)}>
+          <button data-preview-safe="true" className="close-nav" aria-label={tNav("closeMenu")} onClick={() => setMobile(false)}>
             <X size={20} />
           </button>
         </div>
@@ -208,7 +208,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
       {mobile && (
-        <button
+        <button data-preview-safe="true"
           className="nav-backdrop"
           tabIndex={-1}
           aria-hidden="true"
@@ -218,7 +218,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
       <main className="app-main" inert={narrow && mobile}>
         <header className="topbar">
-          <button
+          <button data-preview-safe="true"
             className="menu-button"
             aria-label={tNav("openMenu")}
             aria-expanded={mobile}
@@ -229,7 +229,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
           <div className="topbar-start">
             {/* Wide screens: collapse the sidebar to its icons for more room (calendar, dashboard). Phones use the menu button above. */}
-            <button
+            <button data-preview-safe="true"
               className="collapse-nav"
               aria-label={tNav(collapsed ? "expandMenu" : "collapseMenu")}
               title={`${tNav(collapsed ? "expandMenu" : "collapseMenu")} (${COLLAPSE_SHORTCUT})`}
@@ -239,7 +239,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               {collapsed ? <PanelLeftOpen size={19} aria-hidden="true" /> : <PanelLeftClose size={19} aria-hidden="true" />}
             </button>
-            <button className="global-search" onClick={() => setShowSearch(true)}>
+            <button data-preview-safe="true" className="global-search" onClick={() => setShowSearch(true)}>
               <Search size={17} />
               <span>{t("searchPlaceholder")}</span>
               <kbd>{SEARCH_SHORTCUT}</kbd>
@@ -252,7 +252,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             blocked={mobile || showNotifications || showSearch}
           />
           <div className="top-actions">
-            <button
+            <button data-preview-safe="true"
               aria-label={t("notifications", { count: unread.length })}
               onClick={() => setShowNotifications(true)}
             >
@@ -262,7 +262,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <AccountMenu />
           </div>
         </header>
-        <div className="page-content">{children}</div>
+        <PreviewBanner />
+        <div className="page-content" key={data.preview?"preview":"workspace"}>{children}</div>
       </main>
       {showNotifications && (
         <Modal title={t("notifications", { count: unread.length })} onClose={() => setShowNotifications(false)}>
@@ -281,7 +282,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
           <div className="search-results">
             {results.map((r) => (
-              <button key={r.id} onClick={() => open(r.href)}>
+              <button data-preview-safe="true" key={r.id} onClick={() => open(r.href)}>
                 <strong>{r.label}</strong>
                 <small>{r.detail}</small>
               </button>

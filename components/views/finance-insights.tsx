@@ -11,9 +11,10 @@ export function FinanceInsights() {
   const t = useTranslations("finance.insights");
   const money = useMoney();
   const locale = useLocale();
-  const report = financeInsights(data);
+  const now = data.previewDate ? new Date(`${data.previewDate}T04:00:00Z`) : new Date();
+  const report = financeInsights(data, now);
   const max = Math.max(1, ...report.monthly.flatMap((m) => [m.received, m.paid]));
-  const asOf = new Intl.DateTimeFormat(locale, { timeZone: data.talent.timeZone, month: "numeric", day: "numeric" }).format(new Date());
+  const asOf = new Intl.DateTimeFormat(locale, { timeZone: data.talent.timeZone, month: "numeric", day: "numeric" }).format(now);
   return (
     <>
       <div className="finance-insights-grid">

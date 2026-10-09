@@ -1,5 +1,7 @@
 "use client";
 
+import { usePreviewAction } from "@/components/app/preview-action";
+
 // Day and week calendar over the talent's real events, to-dos, and payment
 // dates (lib/calendar/planner.ts), with the month view as the third tab.
 // Dragging a timed item moves it in 15-minute steps and saves through the same
@@ -14,7 +16,7 @@ import { Modal } from "@/components/app/modal";
 import { PageHeader } from "@/components/app/page-header";
 import { Toast } from "@/components/app/toast";
 import { calendarRecord, RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
-import { deleteCalendarItem, saveCalendarItem } from "@/lib/actions/calendar";
+import { deleteCalendarItem as deleteCalendarItemRemote, saveCalendarItem as saveCalendarItemRemote } from "@/lib/actions/calendar";
 import { refreshGoogleCalendars } from "@/lib/actions/google-calendar";
 import { at, clock, conflicts, layoutDay, minutes, moveItem, planItems, plusDays, segment, validItem, weekStart, type PlanItem } from "@/lib/calendar/planner";
 import { dateInZone } from "@/lib/domain/dates";
@@ -29,10 +31,12 @@ const onDay = (item: PlanItem, day: string) => item.date === day || (!!item.star
 
 /** `initialDay` opens the month filtered to that day (reminder links); `initialDate` opens that day's schedule. */
 export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?: string; initialDate?: string }) {
+  const deleteCalendarItem = usePreviewAction(deleteCalendarItemRemote);
+  const saveCalendarItem = usePreviewAction(saveCalendarItemRemote);
   const data = useAppData();
   const t = useTranslations("planner");
   const format = useFormatter();
-  const today = dateInZone(data.talent.timeZone);
+  const today = data.previewDate || dateInZone(data.talent.timeZone);
   const [view, setView] = useState<View>(initialDay ? "month" : initialDate ? "day" : "week");
   const [date, setDate] = useState(initialDay || initialDate || today);
   // The item being edited; `dropped` when it came from a drag, so the dialog only asks to confirm.
@@ -77,7 +81,7 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
     });
   // The person's own Google calendars (decision 0009, phase 2): read again on opening and every few
   // minutes while the calendar is open (the server skips it if read in the last two minutes).
-  const importing = data.googleCalendar.importing.length > 0;
+  const importing = !data.preview && data.googleCalendar.importing.length > 0;
   useEffect(() => {
     if (!importing) return;
     void refreshGoogleCalendars();

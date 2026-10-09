@@ -1,5 +1,7 @@
 "use client";
 
+import { usePreviewAction } from "@/components/app/preview-action";
+
 import { Archive, FolderOpen, Funnel, Mail, Phone, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -8,7 +10,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { PageHeader } from "@/components/app/page-header";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
-import { archiveContact } from "@/lib/actions/contacts";
+import { archiveContact as archiveContactRemote } from "@/lib/actions/contacts";
 import { orderContactProjects } from "@/lib/domain/contact-projects";
 import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
@@ -58,6 +60,7 @@ const SHOWN_PROJECTS = 3; // on a contact's card before "N more"
 const EXPAND_UP_TO = 10; // past this, "See all" opens Projects filtered to them rather than a long list on the card
 
 function PeopleView({ adding, doneAdding }: { adding: boolean; doneAdding: () => void }) {
+  const archiveContact = usePreviewAction(archiveContactRemote);
   const data = useAppData();
   const t = useTranslations("contacts");
   const labels = useLabels();

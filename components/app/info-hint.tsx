@@ -4,62 +4,70 @@ import { Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
-const SCREEN_MARGIN = 16; // px kept clear of the window's right edge
+const SCREEN_MARGIN = 16;
 
-/**
- * An ⓘ beside a title, with that section's explanation behind it: shown on
- * hover and keyboard focus, and toggled by a tap (phones have no hover).
- * Notes are plain text, one per line, so it can sit inside a heading.
- * `above` opens it upward, where below would cover what it explains.
- */
-export function InfoHint({ notes, above = false }: { notes: string[]; above?: boolean }) {
+/** Secondary, plain-text help available by pointer, keyboard, or touch. */
+export function InfoHint({ notes, label, above = false }: { notes: string[]; label?: string; above?: boolean }) {
   const t = useTranslations("common");
-  const [open, setOpen] = useState(false); // tapped open; stays until a tap elsewhere
-  const [peek, setPeek] = useState(false); // hovered or focused
+  const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const id = useId();
   const ref = useRef<HTMLSpanElement>(null);
   const body = useRef<HTMLSpanElement>(null);
-  const shown = open || peek;
-  const hide = () => {
-    setOpen(false);
-    setPeek(false);
-  };
-  // Keep it on screen: shift left when it would run past the right edge (a title near the right, or a phone).
+  const shown = !dismissed && (open || hovered || focused);
+
   useLayoutEffect(() => {
-    const el = body.current;
-    if (!shown || !el) return;
-    el.style.removeProperty("--shift");
-    const over = el.getBoundingClientRect().right - (window.innerWidth - SCREEN_MARGIN);
-    if (over > 0) el.style.setProperty("--shift", `${-over}px`);
+    if (!shown) return;
+    const position = () => {
+      const el = body.current;
+      if (!el) return;
+      el.style.removeProperty("--shift");
+      el.removeAttribute("data-above");
+      const bounds = el.getBoundingClientRect();
+      const shift = Math.min(0, window.innerWidth - SCREEN_MARGIN - bounds.right);
+      el.style.setProperty("--shift", `${Math.max(shift, SCREEN_MARGIN - bounds.left)}px`);
+      if (bounds.bottom > window.innerHeight - SCREEN_MARGIN && (ref.current?.getBoundingClientRect().top ?? 0) > bounds.height + SCREEN_MARGIN) {
+        el.setAttribute("data-above", "true");
+      }
+    };
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+    };
   }, [shown]);
+
   useEffect(() => {
-    if (!open) return;
-    const outside = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
-    const escape = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    if (!shown) return;
+    const hide = () => { setOpen(false); setDismissed(true); };
+    const outside = (event: PointerEvent) => { if (!ref.current?.contains(event.target as Node)) hide(); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") hide(); };
     document.addEventListener("pointerdown", outside);
     document.addEventListener("keydown", escape);
     return () => {
       document.removeEventListener("pointerdown", outside);
       document.removeEventListener("keydown", escape);
     };
-  }, [open]);
+  }, [shown]);
+
   return (
-    <span
-      ref={ref}
-      className={`info-hint ${above ? "above" : ""} ${shown ? "is-open" : ""}`}
-      onMouseEnter={() => setPeek(true)}
-      onMouseLeave={() => setPeek(false)}
-      onFocus={() => setPeek(true)}
-      onBlur={() => setPeek(false)}
-      onKeyDown={(e) => e.key === "Escape" && hide()}
-    >
-      <button type="button" className="info-hint-button" aria-label={t("about")} aria-expanded={shown} aria-describedby={id} onClick={() => (open ? hide() : setOpen(true))}>
+    <span ref={ref} className={`info-hint ${above ? "above" : ""} ${shown ? "is-open" : ""}`}
+      onMouseEnter={() => { setHovered(true); setDismissed(false); }}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => { setFocused(true); setDismissed(false); }}
+      onBlur={() => { setFocused(false); setOpen(false); }}>
+      <button type="button" className="info-hint-button"
+        aria-label={label ? `${label}: ${t("about")}` : t("about")}
+        aria-expanded={shown} aria-describedby={shown ? id : undefined}
+        onClick={() => { setOpen(!open); setDismissed(open); }}>
         <Info size={16} aria-hidden="true" />
       </button>
       <span ref={body} role="tooltip" id={id} className="info-hint-body">
-        {notes.map((note) => (
-          <span key={note}>{note}</span>
-        ))}
+        {notes.map(note => <span key={note}>{note}</span>)}
       </span>
     </span>
   );

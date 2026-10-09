@@ -1,5 +1,6 @@
 "use client";
 
+import { useAppData } from "./app-data";
 import { useEffect, useState } from "react";
 import type { Project, ProjectDetail, ProjectSummary } from "@/lib/types";
 
@@ -33,18 +34,24 @@ export const loadProject = async (project: ProjectSummary) => withDetail(project
 
 /** A project's details, notes, offer text, and timeline (app/api/projects/[id]), fetched when it's opened. */
 export function useProjectDetail(project: Pick<Project, "id" | "updatedAt"> | undefined) {
+  const data = useAppData();
+  const preview = !!data.preview;
   const key = project ? keyOf(project) : "";
   const [state, setState] = useState<{ key: string; detail: ProjectDetail | null; failed: boolean }>({ key: "", detail: null, failed: false });
 
   useEffect(() => {
-    if (!project || recent.has(key)) return;
+    if (preview || !project || recent.has(key)) return;
     const abort = new AbortController();
     fetchDetail(project, abort.signal)
       .then((detail) => setState({ key, detail, failed: false }))
       .catch(() => !abort.signal.aborted && setState({ key, detail: null, failed: true }));
     return () => abort.abort();
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps -- `key` covers the project
+  }, [key, preview]); // eslint-disable-line react-hooks/exhaustive-deps -- `key` covers the project
 
+  if (preview) {
+    const detail = project ? data.previewProjectDetails?.[project.id] ?? null : null;
+    return { detail, loading: false, failed: !!project && !detail };
+  }
   const cached = recent.get(key);
   if (cached) return { detail: cached, loading: false, failed: false };
   const current = state.key === key;

@@ -1,5 +1,7 @@
 "use client";
 
+import { usePreviewAction } from "@/components/app/preview-action";
+
 import { Building2, ChevronRight, Mail, Phone, Plus, UserRound } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition, type ChangeEvent, type ReactNode } from "react";
@@ -9,16 +11,16 @@ import { ContactPicker, type ContactValue } from "@/components/app/contact-picke
 import { Modal } from "@/components/app/modal";
 import { OrganizationPicker, type OrganizationValue } from "@/components/app/organization-picker";
 import { toRecord } from "@/components/app/record-editor";
-import { saveContact } from "@/lib/actions/contacts";
+import { saveContact as saveContactRemote } from "@/lib/actions/contacts";
 import {
-  addProjectOrganization,
-  addProjectPerson,
-  removeProjectOrganization,
-  removeProjectPerson,
-  setClientOrganization,
-  setMainContact,
-  setProjectOrganizationRole,
-  setProjectPersonLabel,
+  addProjectOrganization as addProjectOrganizationRemote,
+  addProjectPerson as addProjectPersonRemote,
+  removeProjectOrganization as removeProjectOrganizationRemote,
+  removeProjectPerson as removeProjectPersonRemote,
+  setClientOrganization as setClientOrganizationRemote,
+  setMainContact as setMainContactRemote,
+  setProjectOrganizationRole as setProjectOrganizationRoleRemote,
+  setProjectPersonLabel as setProjectPersonLabelRemote,
 } from "@/lib/actions/project-people";
 import type { Contact, Project, ProjectDetail } from "@/lib/types";
 import { DealCard } from "./deal-card";
@@ -48,6 +50,11 @@ export function ProjectPeople({
   people: ProjectDetail["people"];
   organizations: ProjectDetail["organizations"];
 }) {
+  const removeProjectOrganization = usePreviewAction(removeProjectOrganizationRemote);
+  const removeProjectPerson = usePreviewAction(removeProjectPersonRemote);
+  const setClientOrganization = usePreviewAction(setClientOrganizationRemote);
+  const setMainContact = usePreviewAction(setMainContactRemote);
+  const setProjectOrganizationRole = usePreviewAction(setProjectOrganizationRoleRemote);
   const data = useAppData();
   const t = useTranslations("projects.people");
   const [adding, setAdding] = useState<{ kind: "person"; organizationId: string } | { kind: "organization" } | null>(null);
@@ -309,6 +316,8 @@ export function ProjectPeople({
 
 /** Edit someone on the project: their contact details (name, email, phone: the same contact everywhere) and their role here. */
 function EditPerson({ project, person, onDone }: { project: Project; person: Person; onDone: () => void }) {
+  const saveContact = usePreviewAction(saveContactRemote);
+  const setProjectPersonLabel = usePreviewAction(setProjectPersonLabelRemote);
   const t = useTranslations("projects.people");
   const [values, setValues] = useState({ name: person.contact.name, email: person.contact.email, phone: person.contact.phone, label: person.label });
   const [pending, startTransition] = useTransition();
@@ -370,6 +379,7 @@ function EditPerson({ project, person, onDone }: { project: Project; person: Per
 
 /** Add someone: pick a contact or type a new name (added to contacts too), and their role here. From an organisation's group, they work there. */
 function AddPerson({ project, organizationId, taken, onDone }: { project: Project; organizationId: string; taken: string[]; onDone: () => void }) {
+  const addProjectPerson = usePreviewAction(addProjectPersonRemote);
   const data = useAppData();
   const t = useTranslations("projects.people");
   const [value, setValue] = useState<ContactValue>({ name: "", contactId: "", newContact: null });
@@ -430,6 +440,7 @@ function AddPerson({ project, organizationId, taken, onDone }: { project: Projec
 
 /** Add an organisation: search existing ones or type a new name, and its role here. The first becomes the client. */
 function AddOrganization({ project, taken, onDone }: { project: Project; taken: string[]; onDone: () => void }) {
+  const addProjectOrganization = usePreviewAction(addProjectOrganizationRemote);
   const t = useTranslations("projects.people");
   const [value, setValue] = useState<OrganizationValue>({ name: "", organizationId: "" });
   const [role, setRole] = useState("");

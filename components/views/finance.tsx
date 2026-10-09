@@ -1,11 +1,15 @@
 "use client";
 
+import { InfoHint } from "@/components/app/info-hint";
+
+import { usePreviewAction } from "@/components/app/preview-action";
+
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { FinanceInsights } from "./finance-insights";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
-import { voidPayment } from "@/lib/actions/payments";
+import { voidPayment as voidPaymentRemote } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
 import { quote, supportedCurrencies } from "@/lib/domain/money";
 import { useMoney } from "@/lib/i18n/format";
@@ -91,6 +95,7 @@ function csvCell(v: unknown) {
 }
 
 export function FinanceView() {
+  const voidPayment = usePreviewAction(voidPaymentRemote);
   const data = useAppData();
   const t = useTranslations("finance");
   const tEyebrow = useTranslations("eyebrow");
@@ -105,7 +110,7 @@ export function FinanceView() {
   const [showVoided, setShowVoided] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const today = dateInZone(data.talent.timeZone);
+  const today = data.previewDate ?? dateInZone(data.talent.timeZone);
   const s = summarize(data, from, to || "9999-12-31");
   const q = quote(Math.max(0, base || 0), Math.max(0, Math.min(100, rate || 0)), included);
   const rows = showVoided
@@ -141,7 +146,7 @@ export function FinanceView() {
 
   return (
     <div className="finance-workspace">
-      <div className="toolbar wrap">
+      <div className="toolbar wrap finance-toolbar">
         <label>
           {t("currency")}
           <select value="TWD" disabled>
@@ -171,6 +176,8 @@ export function FinanceView() {
         <Metric label={t("metricPayable")} value={money(s.payable)} note={t("metricPayableNote")} />
       </section>
       <FinanceInsights />
+      <details className="surface padded compact-disclosure finance-tools">
+        <summary>{t("toolsTitle")}</summary>
       <div className="finance-grid">
         <Revenue data={data} from={from} to={to || "9999-12-31"} />
         <section className="surface tax-card">
@@ -218,11 +225,12 @@ export function FinanceView() {
           </button>
         </section>
       </div>
+      </details>
       <section className="surface ledger-card">
         <div className="section-header">
           <div>
             <span>{tEyebrow("ledger")}</span>
-            <h2>{t("ledgerTitle")}</h2>
+            <h2>{t("ledgerTitle")} <InfoHint label={t("showVoided")} notes={[t("voidHelp")]} /></h2>
           </div>
           <button className="primary" onClick={() => setEditor({ kind: "payment" })}>{t("newEntry")}</button>
         </div>
@@ -230,7 +238,7 @@ export function FinanceView() {
           <input type="checkbox" checked={showVoided} onChange={(e) => setShowVoided(e.target.checked)} />
           {t("showVoided")}
         </label>
-        <p className="muted">{t("voidHelp")}</p>
+
         {error && (
           <p className="notice error" role="alert">
             {error}

@@ -14,7 +14,7 @@ import { dateInZone } from "@/lib/domain/dates";
 export function TodayDate() {
   const data = useAppData();
   const format = useFormatter();
-  const today = dateInZone(data.talent.timeZone);
+  const today = data.previewDate ?? dateInZone(data.talent.timeZone);
   return (
     <span className="page-subtitle">
       {format.dateTime(new Date(`${today}T12:00:00Z`), { month: "long", day: "numeric", weekday: "short", timeZone: "UTC" })}

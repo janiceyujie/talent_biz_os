@@ -1,5 +1,7 @@
 "use client";
 
+import { usePreviewAction } from "@/components/app/preview-action";
+
 import { ChevronRight, Mail, Phone, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -8,7 +10,7 @@ import { useAppData } from "@/components/app/app-data";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { ContactPicker, type ContactValue } from "@/components/app/contact-picker";
 import { Modal } from "@/components/app/modal";
-import { addOrganizationPerson, archiveOrganization, removeOrganizationPerson, saveOrganization } from "@/lib/actions/organizations";
+import { addOrganizationPerson as addOrganizationPersonRemote, archiveOrganization as archiveOrganizationRemote, removeOrganizationPerson as removeOrganizationPersonRemote, saveOrganization } from "@/lib/actions/organizations";
 import type { OrganizationProject } from "@/lib/data/organizations";
 import { paymentCash, paymentTotal } from "@/lib/domain/workflow";
 import { useMoney } from "@/lib/i18n/format";
@@ -22,6 +24,8 @@ import { MoreMenu } from "./more-menu";
  * role there, and the money on the projects it's the client of.
  */
 export function OrganizationView({ id, projects }: { id: string; projects: OrganizationProject[] }) {
+  const archiveOrganization = usePreviewAction(archiveOrganizationRemote);
+  const removeOrganizationPerson = usePreviewAction(removeOrganizationPersonRemote);
   const data = useAppData();
   const t = useTranslations("organizations");
   const tNav = useTranslations("nav");
@@ -213,6 +217,8 @@ export function EditOrganization({
   onSaved?: (id: string) => void;
 }) {
   const t = useTranslations("organizations");
+  const { preview } = useAppData();
+  const tPreview = useTranslations("preview");
   const [values, setValues] = useState({ name, notes });
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -223,6 +229,7 @@ export function EditOrganization({
         onSubmit={(e) => {
           e.preventDefault();
           startTransition(async () => {
+            if (preview) return setError(tPreview("readOnly"));
             const result = await saveOrganization({ id, ...values });
             if ("error" in result) return setError(result.error);
             onSaved?.(result.id);
@@ -259,6 +266,7 @@ export function EditOrganization({
 
 /** Someone works here: pick a contact (they move here) or add a new one. */
 function AddPerson({ organizationId, taken, onDone }: { organizationId: string; taken: string[]; onDone: () => void }) {
+  const addOrganizationPerson = usePreviewAction(addOrganizationPersonRemote);
   const data = useAppData();
   const t = useTranslations("organizations");
   const [value, setValue] = useState<ContactValue>({ name: "", contactId: "", newContact: null });

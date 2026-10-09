@@ -22,9 +22,8 @@ import { OrganizationDuplicates } from "./organization-duplicates";
 /** People and organisations (decision 0012), one at a time: `?view=organizations` shows organisations. */
 export function ContactsView() {
   const address = useSearchParams();
-  const [view, setView] = useState<"people" | "organizations">(address.get("view") === "organizations" ? "organizations" : "people");
+  const view = address.get("view") === "organizations" ? "organizations" : "people";
   const show = (next: "people" | "organizations") => {
-    setView(next);
     window.history.replaceState(null, "", next === "organizations" ? "?view=organizations" : window.location.pathname);
   };
   const t = useTranslations("contacts");
@@ -65,7 +64,13 @@ function PeopleView({ adding, doneAdding }: { adding: boolean; doneAdding: () =>
   const t = useTranslations("contacts");
   const labels = useLabels();
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [q, setQ] = useState("");
+  const address = useSearchParams();
+  const q = address.get("q") ?? "";
+  const setQ = (value: string) => {
+    const next = new URLSearchParams(address.toString());
+    if (value) next.set("q", value); else next.delete("q");
+    window.history.replaceState(null, "", `${window.location.pathname}${next.size ? `?${next}` : ""}`);
+  };
   const [role, setRole] = useState("all");
   const [archived, setArchived] = useState(false);
   const [pending, startTransition] = useTransition();

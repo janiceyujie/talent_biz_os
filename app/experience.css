@@ -51,7 +51,7 @@ button:disabled {
   color: var(--ink);
   border-right: 1px solid var(--line);
 }
-.brand > span {
+.brand-home > span {
   background: var(--accent);
   color: #fff;
 }
@@ -5146,7 +5146,7 @@ a.deal-record:hover {
 }
 
 /* Keep secondary guidance compact without hiding actions or warnings. */
-.info-hint .info-hint-button { min-width: 28px; min-height: 28px; padding: 6px; }
+.info-hint .info-hint-button { min-width: 28px; min-height: 28px; padding: 6px; align-items: center; justify-content: center; flex-shrink: 0; }
 .info-hint-button:focus-visible, .compact-disclosure > summary:focus-visible,
 .document-card summary:focus-visible, .document-card .prewrap:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 3px;
@@ -5202,3 +5202,183 @@ a.deal-record:hover {
 .cost-table .prewrap { white-space: pre-wrap; overflow-wrap: anywhere; }
 .cost-analysis summary { cursor: pointer; padding: 8px 0; }
 @media (max-width: 600px) { .cost-metrics { grid-template-columns: 1fr; gap: 16px; } .cost-analysis .page-title { flex-wrap: wrap; } }
+
+/* Navigation stays available throughout an optional role change. */
+.role-change-header { display: flex; gap: 12px; }
+.role-close { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; color: var(--ink); background: var(--surface); }
+.role-brand-home { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 44px; color: inherit; text-decoration: none; border-radius: 10px; }
+.role-change-header .language-switch { margin-left: auto; }
+.role-close:hover, .brand-home:hover { background: var(--paper); color: var(--ink); }
+.role-close[aria-disabled="true"], .role-brand-home[aria-disabled="true"] { opacity: .5; cursor: wait; }
+.role-close:focus-visible, .role-brand-home:focus-visible, .brand-home:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.role-heading { display: flex; align-items: center; gap: 8px; margin: 18px 0 12px; }
+.onboarding .role-heading h1 { min-width: 0; margin: 0; }
+.role-heading h1:focus { outline: none; }
+.preview-banner-copy { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+.preview-banner-status { font-size: var(--text-meta); color: var(--muted); }
+.assistant-sample-control { display: flex; align-items: center; gap: 4px; }
+@media (pointer: coarse) {
+  .info-hint .info-hint-button { min-width: 44px; min-height: 44px; }
+}
+@media (max-width: 600px) {
+  .role-change-header { display: flex; flex-wrap: wrap; gap: 10px; }
+  .role-change-header .role-brand-home { flex: 1; font-size: 12px; }
+  .role-change-header .role-brand-home .monogram { width: 36px; height: 36px; }
+  .role-change-header .language-switch { margin-left: auto; }
+  .preview-banner { gap: 8px; padding: 12px 16px; }
+}
+
+@media (max-width: 400px) {
+  .role-change-header .role-brand-home > span:not(.monogram) { display: none; }
+}
+
+/* Inline workspace autocomplete: a real input with a dropdown anchored beneath it. */
+.topbar-start { display: grid; grid-template-columns: 36px minmax(0, 1fr); flex: 1 1 auto; width: 100%; max-width: 764px; }
+.workspace-search { position: relative; min-width: 0; width: 100%; }
+.topbar .workspace-search-field { width: 100%; max-width: none; height: 44px; }
+.workspace-search-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--line); }
+.workspace-search-field > svg { flex-shrink: 0; }
+.topbar .workspace-search-field input { flex: 1; min-width: 0; min-height: 0; height: 100%; width: 100%; border: 0; border-radius: 0; background: transparent; box-shadow: none; outline: none; padding: 0; font: inherit; color: var(--ink); }
+.topbar .workspace-search-field input::placeholder { color: var(--muted); }
+.workspace-search-clear { display: grid; place-items: center; flex: none; width: 32px; height: 32px; padding: 0; background: transparent; border: 0; color: var(--muted); border-radius: 6px; }
+.workspace-search-clear:hover { background: var(--surface); }
+.workspace-search-dropdown { position: absolute; z-index: 2; top: calc(100% + 8px); left: 0; right: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: 0 12px 32px #203f3520; overflow: hidden; }
+.workspace-search-caption { padding: 12px 16px 8px; color: var(--muted); font-size: var(--text-meta); }
+.workspace-search-list { max-height: min(420px, calc(100dvh - 200px)); overflow-y: auto; overscroll-behavior: contain; padding: 4px; }
+.workspace-search-option { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); text-align: left; }
+.workspace-search-option > svg { flex: none; color: var(--muted); }
+.workspace-search-option > span { display: block; min-width: 0; flex: 1; }
+.workspace-search-option strong, .workspace-search-option small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.workspace-search-option strong { font-size: var(--text-body); font-weight: 600; }
+.workspace-search-option small { color: var(--muted); font-size: var(--text-meta); margin-top: 3px; }
+.workspace-search-option:hover, .workspace-search-option[aria-selected="true"] { background: var(--accent-soft); }
+.workspace-search-empty { padding: 12px 16px 16px; margin: 0; color: var(--muted); font-size: var(--text-meta); }
+@media (max-width: 600px) {
+  :root { --topbar: 173px; }
+  .topbar-start { order: 3; flex-basis: 100%; max-width: none; }
+  .topbar .top-actions { margin-left: auto; }
+  .topbar .workspace-search-field input { font-size: 16px; }
+  .workspace-search-clear { width: 40px; height: 40px; }
+  .workspace-search-list { max-height: min(360px, calc(100dvh - 180px)); }
+}
+
+@media (max-width: 800px) {
+  .topbar-start { grid-template-columns: minmax(0, 1fr); width: auto; }
+}
+
+/* A small, shared conversation surface; the workspace remains usable beside it. */
+.assistant-dock { position: fixed; right: 24px; bottom: max(20px, env(safe-area-inset-bottom)); z-index: 32; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+.assistant-launcher { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 12px 16px; border: 1px solid var(--accent); border-radius: 999px; color: var(--surface); background: var(--accent); box-shadow: 0 4px 16px #203f3520; font: inherit; cursor: pointer; }
+.assistant-launcher-pending { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.assistant-dock-panel { width: min(440px, calc(100vw - 32px)); max-height: min(720px, calc(100dvh - 112px)); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 12px 40px #203f3526; overflow: hidden; }
+.assistant-dock-heading { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.assistant-dock-heading h2 { margin: 0; font-size: var(--text-body); }
+.assistant-dock-heading > div { display: flex; gap: 4px; }
+.assistant-dock-action { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: 8px; color: var(--ink); background: transparent; cursor: pointer; }
+.assistant-dock-action:hover { background: var(--bg); }
+.assistant-dock-panel .assistant-panel { display: flex; flex-direction: column; min-height: 0; width: 100%; padding: 16px; border: 0; border-radius: 0; overflow-y: auto; box-shadow: none; }
+.assistant-dock-panel .message-list { flex: 1 1 auto; min-height: 100px; max-height: 320px; overflow-y: auto; overscroll-behavior: contain; margin: 12px 0; }
+.assistant-dock-panel .message { max-width: 100%; padding: 12px; }
+.assistant-dock-panel .assistant-totals { margin: 8px 0 0; padding: 8px; font-size: 12px; }
+.assistant-dock-panel .quick-prompts { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.assistant-dock-panel .quick-prompts button { font-size: 13px; min-height: 36px; }
+.assistant-dock-panel .assistant-input { flex-shrink: 0; margin: 0; }
+.assistant-dock-panel .assistant-input textarea { font-size: 16px; max-height: 100px; }
+.assistant-options-disclosure > summary { cursor: pointer; color: var(--muted); font-size: var(--text-meta); }
+.assistant-compact-note { display: flex; justify-content: flex-end; margin-top: 4px; }
+html:has(dialog[open]) .assistant-dock { visibility: hidden; }
+.app-main .page-content { padding-bottom: 96px; }
+
+.cash-scenario > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.cash-scenario > summary::before { content: "+"; font-weight: 400; }
+.cash-scenario[open] > summary::before { content: "−"; }
+.cash-scenario > summary .muted { font-size: var(--text-meta); font-weight: 400; }
+.cash-scenario-body { padding-top: 20px; }
+.cash-scenario-inputs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.cash-scenario-inputs label { display: grid; gap: 8px; font-size: var(--text-meta); }
+.cash-scenario-inputs input, .cash-scenario-inputs select { width: 100%; min-width: 0; }
+.cash-scenario-legend { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 24px; font-size: var(--text-meta); }
+.cash-scenario-legend span { display: flex; gap: 8px; align-items: center; }
+.cash-scenario-legend i { width: 24px; border-top: 2px dashed var(--muted); }
+.cash-scenario-legend span + span i { border-top: 3px solid var(--accent); }
+.cash-scenario-chart { display: block; width: 100%; max-height: 200px; overflow: visible; margin: 12px 0 20px; }
+.cash-scenario-chart polyline { fill: none; stroke-width: 2; }
+.cash-baseline { stroke: var(--muted); stroke-dasharray: 5 4; }
+.cash-adjusted { stroke: var(--accent); }
+.cash-zero { stroke: var(--line); }
+.cash-scenario-chart circle { fill: var(--accent); }
+.cash-scenario-chart text { fill: var(--muted); font-size: 12px; }
+.cash-scenario-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.cash-scenario-results article { border-top: 1px solid var(--line); padding-top: 12px; }
+.cash-scenario-results h3 { margin: 0 0 12px; font-size: var(--text-body); }
+.cash-scenario-results dl { margin: 0; font-variant-numeric: tabular-nums; }
+.cash-scenario-results dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 8px 0; }
+.cash-scenario-results dt { color: var(--muted); font-size: var(--text-meta); }
+.cash-scenario-results dd { margin: 0; overflow-wrap: anywhere; }
+.cash-result dd { font-weight: 700; color: var(--accent); }
+.cash-negative { color: #a12f35; }
+.cash-negative dd { font-weight: 700; }
+.cash-scenario-scope { font-size: var(--text-meta); margin-top: 20px; }
+@media (max-width: 800px) {
+  .cash-scenario-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .assistant-dock { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); gap: 8px; }
+  .assistant-dock-panel { width: calc(100vw - 24px); max-height: calc(100dvh - 92px); }
+  .assistant-dock-panel .assistant-panel { padding: 12px; }
+  .assistant-launcher { min-height: 44px; padding: 10px 12px; }
+  .cash-scenario-inputs, .cash-scenario-results { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* The composer owns the focus ring; avoid a second ring around its textarea. */
+.assistant-panel .assistant-input textarea:focus { outline: none; box-shadow: none; }
+
+/* Keep template guidance beside, rather than inside, the disclosure button. */
+ .document-library-heading-row { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; padding: 1rem 1.5rem; }
+.document-library-heading-row .document-library-heading { min-width: 0; font-size: 1rem; }
+.document-library-heading-row .document-library-toggle { width: auto; min-height: 44px; margin-inline-start: auto; padding: .5rem .75rem; }
+@media (max-width: 600px) { .document-library-heading-row { padding: .75rem 1rem; } }
+
+/* Guide the cash estimate from two inputs to a single, explained balance. */
+.cash-scenario-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cash-scenario-body .section-header p { margin: 0; }
+.cash-advanced, .cash-comparison { margin-top: 1.25rem; }
+.cash-advanced .cash-scenario-inputs { margin: 1rem 0; }
+.cash-summary { margin-top: 1.5rem; padding: 1.25rem; border: 1px solid var(--line); border-radius: 12px; }
+.cash-summary > label { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; font-size: var(--text-meta); }
+.cash-summary-label { margin: 1.25rem 0 .25rem; }
+.cash-summary-amount { margin: 0; font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cash-breakdown { margin: 1rem 0; padding-top: .75rem; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.cash-breakdown > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1rem; margin: .5rem 0; }
+.cash-breakdown dt { color: var(--muted); }
+.cash-breakdown dd { margin: 0; overflow-wrap: anywhere; }
+.cash-table-scroll { overflow-x: auto; margin-top: .75rem; }
+@media (max-width: 600px) { .cash-scenario-inputs { grid-template-columns: minmax(0, 1fr); } }
+
+.cash-example-actions { margin: 1rem 0; }
+.cash-example-notice { margin-bottom: 1rem; }
+.cash-example-notice p { margin: .5rem 0 0; }
+.finance-tools-body > .finance-grid { margin-top: 1rem; }
+.finance-cash-spotlight {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 0 24px;
+  padding: 20px 24px;
+  border: 1px solid var(--line);
+  border-inline-start: 4px solid var(--accent);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+.finance-cash-spotlight-copy { min-width: 0; }
+.finance-cash-spotlight h2 { margin: 0 0 2px; font-size: 20px; line-height: 1.4; }
+.finance-cash-spotlight p { margin: 0; color: var(--muted); }
+.cash-scenario-launch { min-height: 44px; flex: none; display: inline-flex; align-items: center; gap: 10px; }
+.cash-scenario-launch svg { width: 20px; height: 20px; }
+.cash-scenario-launch > span { font-size: 1.15em; line-height: 1; }
+.cash-scenario-purpose { display: flex; align-items: center; gap: .25rem; color: var(--muted); }
+@media (max-width: 600px) {
+  .finance-cash-spotlight { align-items: stretch; flex-direction: column; gap: 16px; padding: 18px; }
+  .finance-cash-spotlight .cash-scenario-launch { justify-content: center; width: 100%; }
+}

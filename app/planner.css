@@ -453,16 +453,3 @@
   min-height: 44px;
   cursor: pointer;
 }
-@media (min-width: 801px) and (max-width: 1100px) {
-  .app-main .global-search {
-    flex: 0 0 44px;
-    width: 44px;
-    min-width: 44px;
-    justify-content: center;
-    padding: 0;
-  }
-  .app-main .global-search span,
-  .app-main .global-search kbd {
-    display: none;
-  }
-}

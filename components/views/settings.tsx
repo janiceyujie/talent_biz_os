@@ -50,12 +50,12 @@ export function SettingsView() {
       </SettingsGroup>
 
       <SettingsGroup title={t("groupPreferences")}>
-        <SettingsRow label={tLocale("heading")} description={tLocale("help")}>
+        <SettingsRow label={tLocale("heading")} hint={[tLocale("help")]}>
           <LocaleSwitch bare className="settings-select" />
         </SettingsRow>
         <SettingsRow label={tRoles("settingsTitle")} hint={[tRoles("settingsBody")]}>
           <span>{tRoles(`${data.person.role}.label`)}</span>
-          <Link className="secondary" href="/role">
+          <Link className="secondary" href="/role?returnTo=%2Fsettings">
             {tRoles("change")}
           </Link>
         </SettingsRow>

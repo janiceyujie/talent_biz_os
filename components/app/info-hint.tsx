@@ -26,7 +26,7 @@ export function InfoHint({ notes, label, above = false }: { notes: string[]; lab
       el.style.removeProperty("--shift");
       el.removeAttribute("data-above");
       const bounds = el.getBoundingClientRect();
-      const shift = Math.min(0, window.innerWidth - SCREEN_MARGIN - bounds.right);
+      const shift = Math.min(0, document.documentElement.clientWidth - SCREEN_MARGIN - bounds.right);
       el.style.setProperty("--shift", `${Math.max(shift, SCREEN_MARGIN - bounds.left)}px`);
       if (bounds.bottom > window.innerHeight - SCREEN_MARGIN && (ref.current?.getBoundingClientRect().top ?? 0) > bounds.height + SCREEN_MARGIN) {
         el.setAttribute("data-above", "true");

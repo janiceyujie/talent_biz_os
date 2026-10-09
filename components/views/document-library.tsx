@@ -1,10 +1,12 @@
 "use client";
 
+import { InfoHint } from "@/components/app/info-hint";
 import { useEffect, useId, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toLocale, type Locale } from "@/lib/i18n/config";
-import { documentScenarios, type DocumentKind } from "@/lib/templates/documents";
+import { type DocumentKind } from "@/lib/templates/documents";
 
+import { useAppData } from "@/components/app/app-data";
 import type { CatalogDocument } from "@/lib/templates/catalog";
 
 export function DocumentLibrary() {
@@ -17,7 +19,10 @@ export function DocumentLibrary() {
     toggleRef.current?.focus({ preventScroll: true });
     toggleRef.current?.scrollIntoView({ block: "nearest" });
   };
-  const [role, setRole] = useState("all");
+  const currentRole = useAppData().person.role;
+  const [roleChoice, setRoleChoice] = useState<{ ownerRole: string; value: string } | null>(null);
+  const role = roleChoice?.ownerRole === currentRole ? roleChoice.value : currentRole;
+  const setRole = (value: string) => setRoleChoice({ ownerRole: currentRole, value });
   const [language, setLanguage] = useState<Locale>(toLocale(useLocale()));
   const [kind, setKind] = useState<DocumentKind>("contract");
   const [status,setStatus] = useState("");
@@ -27,6 +32,7 @@ export function DocumentLibrary() {
   const loading = expanded && result.key !== requestKey;
   const documents = result.key === requestKey ? result.documents : [];
   const failed = result.key === requestKey && result.failed;
+  const visibleDocuments = documents.filter(doc => role === "all" || (role === "general" ? doc.scenario === "general" : doc.role === role || doc.scenario === "general"));
   useEffect(() => {
     if (!expanded) return;
     const controller = new AbortController();
@@ -37,17 +43,18 @@ export function DocumentLibrary() {
     return () => controller.abort();
   }, [expanded, language, kind, requestKey]);
   return <section className="surface document-library" aria-label={t("title")}>
-    <h2 className="document-library-heading">
+    <div className="document-library-heading-row">
+      <h2 className="document-library-heading">{t("title")}</h2>
+      <InfoHint label={t("title")} notes={[t("intro"), t("notice")]} />
       <button ref={toggleRef} type="button" className="document-library-toggle" aria-expanded={expanded} aria-controls={panelId} onClick={() => setExpanded(value => !value)}>
-        <span className="document-library-label"><span>{t("title")}</span><span className="document-library-summary">{t("summary", { scenarios: documentScenarios.length, documents: documentScenarios.length * 4 })}</span></span>
         <span className="document-library-toggle-label">{t(expanded ? "collapse" : "expand")}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d={expanded ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"} /></svg></span>
       </button>
-    </h2>
+    </div>
     <div id={panelId} hidden={!expanded} className="document-library-body">
-    <p>{t("intro")}</p><p className="muted">{t("notice")}</p>
     <div className="toolbar wrap document-toolbar">
       <label>{t("role")}<select value={role} onChange={e=>setRole(e.target.value)}>
         <option value="all">{t("all")}</option>
+        <option value="general">{t("general")}</option>
         {(["musician","manager","model","influencer","video","other"] as const).map(r=><option key={r} value={r}>{t(`roles.${r}`)}</option>)}
       </select></label>
       <label>{t("language")}<select value={language} onChange={e=>setLanguage(e.target.value as Locale)}><option value="zh-TW">{t("zh")}</option><option value="en">{t("en")}</option></select></label>
@@ -57,7 +64,8 @@ export function DocumentLibrary() {
     {loading && <p role="status">{t("loading")}</p>}
     {failed && <p role="alert">{t("loadFailed")} <button type="button" className="text-button" onClick={() => setRetry(value => value + 1)}>{t("retry")}</button></p>}
     {!loading && !failed && documents.length === 0 && <p>{t("empty")}</p>}
-    <div className="document-grid" aria-busy={loading}>{documents.filter(doc=>role==="all"||doc.role===role).map(doc=>{
+    {!loading && !failed && documents.length > 0 && visibleDocuments.length === 0 && <p role="status">{t("noMatch")} <button type="button" className="text-button" onClick={() => setRole("all")}>{t("all")}</button></p>}
+    <div className="document-grid" aria-busy={loading}>{visibleDocuments.map(doc=>{
       return <article key={doc.id} className="document-card"><h3>{doc.title}</h3>
         <details name={panelId + "-preview"}><summary>{t("preview")}</summary><div className="prewrap" role="region" aria-label={doc.title} tabIndex={0}>{doc.text}</div></details>
         <div className="row-actions"><a className="secondary" href={`/api/document-templates/${doc.id}/download`} download>{t("download")}</a>

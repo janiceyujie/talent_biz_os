@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { InfoHint } from "./info-hint";
 import type { AppData, ReplyTemplate } from "@/lib/types";
 import { workspaceSamples } from "@/lib/ai/workspace-samples";
 
@@ -28,7 +29,7 @@ export function AppDataProvider({ data, children, previewAvailable = false }: { 
   const save = (template: ReplyTemplate) => setTemplates(current => [...current.filter(x => x.id !== template.id), template]);
   const archive = (id: string, archived: boolean) => setTemplates(current => current.map(x => x.id === id ? {...x, archived} : x));
   const banner = previewAvailable&&<aside data-preview-safe="true" className="preview-banner" role="region" aria-label={t("label")}>
-      <div><strong>{active?t("active"):t("inactive")}</strong><p>{active?t("description"):t("realDescription")}</p></div>
+      <div className="preview-banner-copy"><strong>{active?t("active"):t("inactive")}</strong><span className="preview-banner-status">{active?t("notSaved"):t("savedData")}</span><InfoHint label={t("label")} notes={[active?t("description"):t("realDescription")]} /></div>
       <button type="button" className="secondary" onClick={toggle}>{enabled?t("exit"):t("enter")}</button>
     </aside>;
   return <PreviewBannerContext.Provider value={banner}><AppDataContext.Provider value={active?{...workspaceSamples(data),templates}:data}>

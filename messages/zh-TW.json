@@ -28,7 +28,8 @@
     "closeBackdrop": "關閉背景選單",
     "partners": "合作紀錄",
     "collapseMenu": "收合側欄",
-    "expandMenu": "展開側欄"
+    "expandMenu": "展開側欄",
+    "home": "回到首頁"
   },
   "shell": {
     "searchPlaceholder": "搜尋案件、合作方、行程、範本…",
@@ -63,7 +64,12 @@
     "settings": "設定",
     "roleAndAssistant": "角色與助理",
     "importSent": "已送出分析，完成後會出現在「需要你處理」。",
-    "importDuplicate": "這段內容先前已匯入過，可在「進件分類」查看。"
+    "importDuplicate": "這段內容先前已匯入過，可在「進件分類」查看。",
+    "clearSearch": "清除搜尋",
+    "searchSuggestions": "最近開啟與工作區建議",
+    "searchMatches": "{count} 筆結果",
+    "searchRefine": "目前顯示前 {count} 筆，繼續輸入可縮小範圍。",
+    "resultOrganization": "公司"
   },
   "locale": {
     "label": "語言",
@@ -303,11 +309,12 @@
     "moneyNone": "沒有待收或待付的款項。"
   },
   "finance": {
-    "revenueTitle": "已收營收分布 · TWD",
+    "revenueTitle": "已收營收分布",
     "revenueAria": "已收營收 {amount}",
     "revenueCaption": "含稅現金收入",
     "revenueEmpty": "還沒有已收款紀錄，新增內帳後圖表會自動更新。",
     "currency": "幣別",
+    "currencyNames": { "TWD": "新台幣", "HKD": "港幣", "USD": "美元", "JPY": "日圓", "EUR": "歐元", "GBP": "英鎊" },
     "from": "起日",
     "to": "迄日",
     "exportCsv": "匯出 CSV",
@@ -319,7 +326,7 @@
     "metricPaidNote": "依實際付款日期篩選",
     "metricNet": "現金淨額",
     "metricNetNote": "已收減已付，不等於會計淨利",
-    "calculatorTitle": "含稅／未稅報價 · TWD",
+    "calculatorTitle": "含稅／未稅報價",
     "quoteAmount": "報價金額",
     "taxRate": "稅率 %",
     "enterExclusive": "輸入未稅價",
@@ -343,7 +350,7 @@
     "settledGap": "實{direction, select, in {收} other {付}} {cash} · 差額 {gap}",
     "markSettled": "記為{direction, select, in {已收} other {已付}}",
     "empty": "沒有符合條件的內帳紀錄。",
-    "footnote": "已收／已付按實際收付日期，待收／待付按登錄日期篩選。稅率由你依交易設定；未包含扣繳、匯差與正式稅務申報調整。目前僅支援 TWD。",
+    "footnote": "已收／已付按實際收付日期，待收／待付按登錄日期篩選。稅率由你依交易設定；未包含扣繳、匯差與正式稅務申報調整。請選擇幣別查看對應帳目；各幣別分開計算，不會自動換匯。",
     "csv": {
       "recorded": "登錄日期",
       "settled": "實際收付日期",
@@ -358,7 +365,7 @@
       "status": "狀態",
       "due": "付款期限",
       "invoice": "發票",
-      "filename": "內帳-TWD.csv"
+      "filename": "內帳-{currency}.csv"
     },
     "edit": "編輯",
     "restore": "還原",
@@ -391,7 +398,59 @@
       "agingNote": "依全部未作廢待收款的期限計算；未填期限單獨列出。"
     },
     "summaryLabel": "收支摘要",
-    "toolsTitle": "收入分類與報價試算"
+    "toolsTitle": "財務工具",
+    "scenario": {
+      "title": "現金流規劃",
+      "subtitle": "30／60／90 天",
+      "assumptions": "調整試算條件",
+      "opening": "目前可用現金（{currency}）",
+      "openingPlaceholder": "輸入你目前可動用的金額",
+      "delay": "收款延遲",
+      "collection": "預計收到的款項比例（%）",
+      "extra": "每 30 天額外支出（{currency}）",
+      "days": "{days} 天",
+      "start": "先填上方的可用現金，就會顯示試算結果。",
+      "base": "按期收付",
+      "adjusted": "調整後",
+      "chartLabel": "第 0、30、60、90 天的現金比較，詳細金額列在下方。連線只連接各檢查點，不代表每日餘額。",
+      "point": "第 {days} 天：{amount}",
+      "horizon": "{days} 天後",
+      "shortfall": "資金缺口：{amount}",
+      "scope": "以 {date} 為起點，使用所有已填到期日的待收付款，不受上方帳目日期篩選影響。各檢查點之間仍可能有短期資金缺口。",
+      "help": "可用現金由你輸入，沒有連接銀行。「按期收付」假設待收款全額準時收到、待付款準時付出。「調整後」套用收款延遲與收款比例，付款日不變，並於每 30 天檢查點扣除額外支出。金額包含已登錄稅額。試算只在瀏覽器計算，不會更動帳目。",
+      "excluded": "有 {count} 筆逾期或未填到期日的款項未納入：待收 {incoming}、待付 {outgoing}。確認日期後再納入試算。",
+      "excludedCurrency": "有 {count} 筆待收付款使用 {currencies}，未納入這次試算。",
+      "empty": "目前沒有已填日期的未來待收付款，仍可先試算額外支出的影響。",
+      "purpose": "看看未來收款、付款後，手上預計還剩多少錢。",
+      "openingStep": "1. 現在可用的現金（{currency}）",
+      "delayStep": "2. 客戶什麼時候付款？",
+      "openingHelp": "由你自行填寫，沒有連接銀行。填 0 可只看收支變化。",
+      "delayHelp": "套用到所有納入試算的收款；你要付出的款項仍按原日期扣除。",
+      "onTime": "按照帳目上的到期日收款",
+      "late": "所有收款都晚 {days} 天收到",
+      "advanced": "其他試算條件",
+      "customActive": "已套用自訂條件",
+      "collectionHelp": "100 表示全額收到；80 表示每筆款項只收到 80%。這是試算假設，不是收款成功機率。",
+      "extraHelp": "帳目中尚未列入的額外支出，每滿 30 天扣除一次。已列入待付款的金額不要重複填。",
+      "reset": "恢復準時、全額收款",
+      "invalid": "請確認金額，收款比例需介於 0 到 100。",
+      "viewHorizon": "想看多久以後？",
+      "remaining": "{days} 天後預計剩餘現金",
+      "comparison": "若全部準時收付，預計剩下：{amount}",
+      "cashNow": "目前可用現金",
+      "incoming": "這段期間預計收到",
+      "outgoing": "這段期間到期應付",
+      "additionalCosts": "額外支出",
+      "checkpointNotice": "只試算這一天的餘額，不代表期間內每天都不會缺錢。",
+      "compareAll": "比較 30／60／90 天",
+      "period": "時間",
+      "tryExample": "用範例試算",
+      "exitExample": "回到我的帳目",
+      "exampleTitle": "範例資料・不會存進帳目",
+      "exampleSummary": "14 筆範例：90 天內 6 筆待收、6 筆待付，另有 1 筆逾期及 1 筆未填日期，會顯示為未納入。",
+      "openPanel": "試算未來現金",
+      "closePanel": "關閉現金流試算"
+    }
   },
   "projects": {
     "search": "搜尋合作案",
@@ -894,6 +953,8 @@
     "uploadSoon": "一般素材上傳尚未開放。邀約可從進件分類匯入，合約與報價單可在上方下載。"
   },
   "assistant": {
+    "loadingOlder": "正在載入較早的訊息…",
+    "loadOlder": "載入較早的訊息",
     "status": "Luna · 本機測試",
     "intro": "可以問已登錄的款項、選擇案件請我擬稿，或切換範例資料試用。我可以解釋與擬稿，不會修改資料或寄出訊息。",
     "prompt": {
@@ -935,7 +996,7 @@
     "archiveTotals": "{count} 次回覆 · 輸入 {input} · 輸出 {output} · 總計 {total} tokens · US${cost}",
     "savedConversations": "對話紀錄（{count}）",
     "storageNotice": "紀錄保存在這台電腦，依登入帳號與工作區隔離。開始新對話會保留先前紀錄；過去未儲存的頁面對話無法復原。",
-    "truncatedHistory": "顯示最近 500 次回覆；更早的紀錄仍保留在本機檔案。",
+    "truncatedHistory": "目前只載入部分歷史。若要還原完整對話，請先載入較早的訊息。",
     "emptyHistory": "目前沒有已儲存的對話；下一次成功回覆會自動儲存。",
     "workspaceData": "工作區資料",
     "evaluationHistory": "批次測試紀錄（{count}）",
@@ -965,7 +1026,13 @@
       "omitted": "另有 {count} 項未列出。"
     },
     "privacyTitle": "助理資料使用說明",
-    "costAnalysis": "用量與定價分析"
+    "costAnalysis": "用量與定價分析",
+    "options": "對話設定",
+    "workspace": "我的工作區",
+    "dockTitle": "個人助理",
+    "expand": "展開完整對話",
+    "minimize": "收起對話",
+    "openChat": "與個人助理對話"
   },
   "calendar": {
     "prevMonth": "上個月",
@@ -1183,6 +1250,7 @@
     "replyInvalid": "請輸入 0 到 {max} 之間的整數"
   },
   "editor": {
+    "projectCurrencyLocked": "這個合作案已有內帳紀錄，因此不能更改幣別。",
     "titleNew": "新增{kind, select, project {合作案} contact {藝人與合作方} calendar {行程／待辦} payment {內帳紀錄} template {回覆範本} other {回覆草稿}}",
     "titleEdit": "編輯{kind, select, project {合作案} contact {藝人與合作方} calendar {行程／待辦} payment {內帳紀錄} template {回覆範本} other {回覆草稿}}",
     "field": {
@@ -1419,6 +1487,8 @@
     "or": "或"
   },
   "errors": {
+    "paymentCurrencyMismatch": "請使用此合作案設定的幣別，或移除合作案連結。",
+    "projectCurrencyLocked": "這個合作案已有內帳紀錄，不能更改幣別。",
     "invalid": "資料格式不正確。",
     "onlyOwner": "只有負責人可以修改工作區設定。",
     "nameRequired": "請輸入名稱。",
@@ -1562,7 +1632,9 @@
     "avatarHint": "點一下，打個招呼",
     "change": "變更角色",
     "settingsTitle": "角色與助理",
-    "settingsBody": "角色只影響介面用語與建議，不會限制任何功能或權限。可隨時變更角色或助理造型。"
+    "settingsBody": "角色只影響介面用語與建議，不會限制任何功能或權限。可隨時變更角色或助理造型。",
+    "cancelChange": "取消變更角色",
+    "saveNotice": "按下儲存後才會變更角色。"
   },
   "itinerary": {
     "title": "交通住宿與演出",
@@ -1762,9 +1834,12 @@
     "exit": "切回我的工作區",
     "enter": "顯示範例資料",
     "analysis": "範例解讀（預先編寫，未呼叫 AI）",
-    "localTemplates": "範例模式的回覆範本只保留在本次瀏覽期間，重新整理後清除。"
+    "localTemplates": "範例模式的回覆範本只保留在本次瀏覽期間，重新整理後清除。",
+    "notSaved": "業務資料不會儲存",
+    "savedData": "已儲存的工作區資料"
   },
   "documentLibrary": {
+    "general": "通用",
     "title": "合約與報價單範本",
     "intro": "選擇情境後，可預覽、複製全文，或下載可編輯的 Word 檔。",
     "notice": "此為待填寫的起始範本，尚未經律師審核。簽署前請依案件與適用地區確認條款。",
@@ -2109,7 +2184,9 @@
     "freelancersUnion": "Freelancers Union 合約基本事項",
     "loading": "正在載入範本…",
     "loadFailed": "目前無法載入範本。",
-    "retry": "重試"
+    "retry": "重試",
+    "noticeShort": "範本僅供起草，簽署前請確認條款。",
+    "noMatch": "目前沒有這個角色的範本。"
   },
   "assistantCosts": {
     "title": "AI 用量與定價分析",

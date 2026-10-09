@@ -28,7 +28,8 @@
     "closeBackdrop": "Close menu backdrop",
     "partners": "Partner history",
     "collapseMenu": "Collapse sidebar",
-    "expandMenu": "Expand sidebar"
+    "expandMenu": "Expand sidebar",
+    "home": "Back to home"
   },
   "shell": {
     "searchPlaceholder": "Search projects, partners, calendar, templates…",
@@ -63,7 +64,12 @@
     "settings": "Settings",
     "roleAndAssistant": "Role and assistant",
     "importSent": "Sent for analysis; it will appear under “Needs you” when it’s done.",
-    "importDuplicate": "This was imported before; see it in Intake."
+    "importDuplicate": "This was imported before; see it in Intake.",
+    "clearSearch": "Clear search",
+    "searchSuggestions": "Recent picks & workspace suggestions",
+    "searchMatches": "{count, plural, one {# result} other {# results}}",
+    "searchRefine": "Showing the first {count}. Keep typing to narrow your search.",
+    "resultOrganization": "Company"
   },
   "locale": {
     "label": "Language",
@@ -303,11 +309,12 @@
     "moneyNone": "Nothing to receive or pay."
   },
   "finance": {
-    "revenueTitle": "Revenue received · TWD",
+    "revenueTitle": "Revenue received",
     "revenueAria": "Revenue received {amount}",
     "revenueCaption": "Cash received, incl. tax",
     "revenueEmpty": "No payments received yet. The chart updates as you record them.",
     "currency": "Currency",
+    "currencyNames": { "TWD": "New Taiwan dollar", "HKD": "Hong Kong dollar", "USD": "US dollar", "JPY": "Japanese yen", "EUR": "Euro", "GBP": "British pound" },
     "from": "From",
     "to": "To",
     "exportCsv": "Export CSV",
@@ -319,7 +326,7 @@
     "metricPaidNote": "By date paid",
     "metricNet": "Net cash",
     "metricNetNote": "Received minus paid — not accounting profit",
-    "calculatorTitle": "Quote with / without tax · TWD",
+    "calculatorTitle": "Quote with / without tax",
     "quoteAmount": "Quote amount",
     "taxRate": "Tax rate %",
     "enterExclusive": "Enter pre-tax",
@@ -343,7 +350,7 @@
     "settledGap": "{direction, select, in {Received} other {Paid}} {cash} · gap {gap}",
     "markSettled": "{direction, select, in {Mark received} other {Mark paid}}",
     "empty": "No ledger entries match.",
-    "footnote": "Received and paid filter by settled date; outstanding and to-pay by recorded date. You set the tax rate per entry; withholding, exchange differences, and tax-filing adjustments aren't included. TWD only for now.",
+    "footnote": "Received and paid filter by settled date; outstanding and to-pay by recorded date. You set the tax rate per entry; withholding, exchange differences, and tax-filing adjustments aren't included. Choose a currency to see matching entries; currencies are kept separate and are not converted.",
     "csv": {
       "recorded": "Recorded",
       "settled": "Settled",
@@ -358,7 +365,7 @@
       "status": "Status",
       "due": "Due",
       "invoice": "Invoice",
-      "filename": "talent-ledger-TWD.csv"
+      "filename": "talent-ledger-{currency}.csv"
     },
     "edit": "Edit",
     "restore": "Restore",
@@ -391,7 +398,59 @@
       "agingNote": "From the due dates of all outstanding, non-voided income; entries without a due date are listed on their own."
     },
     "summaryLabel": "Cash summary",
-    "toolsTitle": "Revenue breakdown and quote calculator"
+    "toolsTitle": "Finance tools",
+    "scenario": {
+      "title": "Cash flow planning",
+      "subtitle": "30 / 60 / 90 days",
+      "assumptions": "Adjust the assumptions",
+      "opening": "Starting cash ({currency})",
+      "openingPlaceholder": "Enter your available cash",
+      "delay": "Collection delay",
+      "collection": "Receivables collected (%)",
+      "extra": "Extra costs per 30 days ({currency})",
+      "days": "{days} days",
+      "start": "Fill in available cash above to see the result.",
+      "base": "On schedule",
+      "adjusted": "Your scenario",
+      "chartLabel": "Cash at 0, 30, 60 and 90 days; exact amounts follow below. Lines connect checkpoints, not daily balances.",
+      "point": "Day {days}: {amount}",
+      "horizon": "In {days} days",
+      "shortfall": "Cash gap: {amount}",
+      "scope": "From {date}; uses all dated pending payments, independently of the ledger date filter. Checkpoint balances may miss gaps between dates.",
+      "help": "Starting cash is entered by you, not read from a bank. On schedule assumes all dated receivables arrive in full and all payables are paid on time. Your scenario delays and scales receivables, keeps payables on time, and adds extra costs at each 30-day checkpoint. Amounts include recorded tax. This calculation stays in your browser and does not change the ledger.",
+      "excluded": "{count} overdue or undated items are excluded: {incoming} incoming and {outgoing} outgoing. Confirm their dates before including them.",
+      "excludedCurrency": "{count} expected payments in {currencies} are excluded because this estimate uses another currency.",
+      "empty": "No dated upcoming payments yet. The scenario can still show the effect of your extra costs.",
+      "purpose": "See how much cash may remain after upcoming receipts and payments.",
+      "openingStep": "1. Cash available now ({currency})",
+      "delayStep": "2. When will clients pay?",
+      "openingHelp": "Enter it yourself; no bank connection. Enter 0 to see only the cash movement.",
+      "delayHelp": "Applies to all included receipts. Payments you owe keep their recorded dates.",
+      "onTime": "On the recorded due dates",
+      "late": "All receipts arrive {days} days late",
+      "advanced": "More assumptions",
+      "customActive": "Custom assumptions active",
+      "collectionHelp": "100 means full payment; 80 means only 80% of each receipt is collected. This is an assumption, not a likelihood estimate.",
+      "extraHelp": "Extra spending beyond recorded payables. Deducted once per 30-day checkpoint; do not include it twice.",
+      "reset": "Restore on-time, full-payment assumptions",
+      "invalid": "Check the amounts and enter a collection percentage between 0 and 100.",
+      "viewHorizon": "Look ahead",
+      "remaining": "Estimated cash remaining in {days} days",
+      "comparison": "If everything is paid on time: {amount}",
+      "cashNow": "Starting cash",
+      "incoming": "Receipts within this period",
+      "outgoing": "Payments due within this period",
+      "additionalCosts": "Additional spending",
+      "checkpointNotice": "Estimate at this date only; it does not guarantee enough cash on every day.",
+      "compareAll": "Compare 30, 60 and 90 days",
+      "period": "Period",
+      "tryExample": "Try with example data",
+      "exitExample": "Return to my ledger",
+      "exampleTitle": "Example only · not saved to your ledger",
+      "exampleSummary": "14 sample entries: 6 incoming and 6 outgoing over 90 days, plus one overdue and one undated item shown as excluded.",
+      "openPanel": "Forecast future cash",
+      "closePanel": "Close cash-flow estimate"
+    }
   },
   "projects": {
     "search": "Search projects",
@@ -894,6 +953,8 @@
     "uploadSoon": "General file uploads are not connected yet. Use Inbox to import offers or download a template above."
   },
   "assistant": {
+    "loadingOlder": "Loading earlier messages…",
+    "loadOlder": "Load earlier messages",
     "status": "Luna · Local testing",
     "intro": "Ask about recorded payments, select a project for a reply draft, or turn on sample data to explore. I can explain and draft; I cannot change records or send messages.",
     "prompt": {
@@ -935,7 +996,7 @@
     "archiveTotals": "{count} replies · input {input} · output {output} · total {total} tokens · US${cost}",
     "savedConversations": "Saved conversations ({count})",
     "storageNotice": "Stored on this computer for your signed-in account and workspace. Starting a new conversation preserves earlier conversations. Older unsaved page sessions cannot be recovered.",
-    "truncatedHistory": "Showing the latest 500 replies. Earlier records remain on disk.",
+    "truncatedHistory": "Only part of your history is loaded. Load earlier messages before restoring a conversation if you need its full history.",
     "emptyHistory": "No saved conversations yet. Your next successful reply will be saved.",
     "workspaceData": "Workspace data",
     "evaluationHistory": "Batch test records ({count})",
@@ -965,7 +1026,13 @@
       "omitted": "{count} additional items are not shown."
     },
     "privacyTitle": "Assistant data use",
-    "costAnalysis": "Usage and pricing analysis"
+    "costAnalysis": "Usage and pricing analysis",
+    "options": "Conversation settings",
+    "workspace": "My workspace",
+    "dockTitle": "Assistant",
+    "expand": "Open full conversation",
+    "minimize": "Minimize conversation",
+    "openChat": "Chat with your assistant"
   },
   "calendar": {
     "prevMonth": "Previous month",
@@ -1183,6 +1250,7 @@
     "replyInvalid": "Enter a whole number from 0 to {max}"
   },
   "editor": {
+    "projectCurrencyLocked": "This project already has ledger entries, so its currency can't be changed.",
     "titleNew": "New {kind, select, project {project} contact {artist / partner} calendar {event / to-do} payment {ledger entry} template {reply template} other {reply draft}}",
     "titleEdit": "Edit {kind, select, project {project} contact {artist / partner} calendar {event / to-do} payment {ledger entry} template {reply template} other {reply draft}}",
     "field": {
@@ -1419,6 +1487,8 @@
     "or": "or"
   },
   "errors": {
+    "paymentCurrencyMismatch": "Use the currency set on the linked project, or remove the project link.",
+    "projectCurrencyLocked": "This project already has ledger entries. Its currency can't be changed.",
     "invalid": "That data isn't in a valid format.",
     "onlyOwner": "Only the owner can change workspace settings.",
     "nameRequired": "Enter a name.",
@@ -1562,7 +1632,9 @@
     "avatarHint": "Click to say hi",
     "change": "Change role",
     "settingsTitle": "Role and assistant",
-    "settingsBody": "Your role shapes wording and suggestions, never what you can access. Change it, or the assistant's look, any time."
+    "settingsBody": "Your role shapes wording and suggestions, never what you can access. Change it, or the assistant's look, any time.",
+    "cancelChange": "Cancel role change",
+    "saveNotice": "Changes apply only after you save."
   },
   "itinerary": {
     "title": "Travel, stays & performances",
@@ -1762,9 +1834,12 @@
     "exit": "Use my workspace",
     "enter": "Show sample data",
     "analysis": "Sample analysis (prewritten, no AI call)",
-    "localTemplates": "Preview templates stay in this browser session and are cleared on reload."
+    "localTemplates": "Preview templates stay in this browser session and are cleared on reload.",
+    "notSaved": "Business changes are not saved",
+    "savedData": "Saved workspace data"
   },
   "documentLibrary": {
+    "general": "General-purpose",
     "title": "Contracts and quotations",
     "intro": "Choose a scenario to preview, copy, or download an editable Word document.",
     "notice": "These are editable starting templates, not lawyer-reviewed agreements. Review the terms for your project and jurisdiction before signing.",
@@ -2109,7 +2184,9 @@
     "freelancersUnion": "Freelancers Union contract essentials",
     "loading": "Loading templates…",
     "loadFailed": "Templates could not be loaded.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "noticeShort": "Starting templates — review the terms before signing.",
+    "noMatch": "No templates for this role yet."
   },
   "assistantCosts": {
     "title": "Assistant usage and pricing",

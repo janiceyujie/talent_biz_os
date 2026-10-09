@@ -12,7 +12,7 @@ export function SettingsGroup({ title, hint, children }: { title: string; hint?:
     <section className="settings-group">
       <h2>
         {title}
-        {hint && <InfoHint notes={hint} />}
+        {hint && <InfoHint label={title} notes={hint} />}
       </h2>
       <div className="surface settings-list">{children}</div>
     </section>
@@ -46,7 +46,7 @@ export function SettingsRow({
       <div className="settings-row-label">
         <span className="settings-row-title">
           {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : label}
-          {hint && <InfoHint notes={hint} />}
+          {hint && <InfoHint label={label} notes={hint} />}
         </span>
         {description && <small>{description}</small>}
         {error && (

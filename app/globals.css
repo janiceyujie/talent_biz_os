@@ -69,12 +69,23 @@ select:focus-visible {
 }
 .brand {
   display: grid;
-  grid-template-columns: 40px 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 11px;
   padding: 0 5px 22px;
 }
-.brand > span {
+.brand-home {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  min-height: 44px;
+  color: inherit;
+  border-radius: 11px;
+  text-decoration: none;
+}
+.brand-home > span {
+  flex-shrink: 0;
   width: 40px;
   height: 40px;
   display: grid;
@@ -3933,7 +3944,7 @@ button.primary.danger {
     justify-items: center;
     padding: 0 0 12px;
   }
-  .sidebar-collapsed .brand > div,
+  .sidebar-collapsed .brand-home > div,
   .sidebar-collapsed .sidebar nav > small,
   .sidebar-collapsed .sidebar nav .nav-group-label {
     display: none;
@@ -4356,4 +4367,37 @@ button.primary.danger {
 }
 .customize-move .icon-button:disabled {
   opacity: 0.3;
+}
+
+.cash-scenario-panel {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(520px, 100vw);
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 1.25rem;
+  border: 0;
+  border-inline-start: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--ink);
+  overflow-y: auto;
+  box-shadow: -12px 0 40px #0002;
+}
+.cash-scenario-panel::backdrop { background: #1118; backdrop-filter: blur(2px); }
+.cash-scenario-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
+.cash-scenario-panel-header h2 { margin: 0; font-size: 1.25rem; }
+.cash-scenario-purpose { margin: .75rem 0 1rem; color: var(--muted); }
+.cash-scenario-inputs { grid-template-columns: minmax(0, 1fr); gap: .875rem; }
+.cash-scenario-inputs label > span { display: inline-flex; align-items: center; gap: .25rem; }
+.cash-advanced { margin-top: 1rem; }
+.cash-advanced .cash-scenario-inputs { margin-block: .875rem; }
+.cash-example-actions { margin-block: .75rem; }
+.cash-example-notice p { margin-block: .5rem 0; }
+.cash-summary { margin-top: 1rem; padding: 1rem; }
+.cash-breakdown { margin-bottom: .75rem; }
+.cash-scenario-panel :focus-visible { outline-color: var(--focus-ring); }
+@media (max-width: 600px) {
+  .cash-scenario-panel { inset: auto 0 0; width: 100vw; height: min(88dvh, 760px); max-height: 88dvh; padding: 1rem; border: 1px solid var(--line); border-bottom: 0; border-radius: 16px 16px 0 0; }
 }

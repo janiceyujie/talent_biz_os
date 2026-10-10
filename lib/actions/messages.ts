@@ -3,14 +3,14 @@
 import { createHash } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { refresh } from "next/cache";
-import { after } from "next/server";
 import { z } from "zod";
-import { analyzeMessage } from "@/lib/ai/analyze-message";
 import { canAnalyze } from "@/lib/ai/usage";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { message, messageAnalysis } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
+import { queue } from "@/lib/queue";
+import { analyzeJobKey } from "@/lib/queue/jobs";
 import { errorText, firstIssue } from "./validation";
 
 const MAX_LENGTH = 50_000;
@@ -32,18 +32,24 @@ export async function submitPastedMessage(
   if (!parsed.success) return { error: fail(firstIssue(parsed.error), { max: MAX_LENGTH }) };
 
   const key = dedupKey(parsed.data);
-  const [created] = await db
-    .insert(message)
-    .values({
-      talentId: talent.id,
-      submittedBy: person.personId,
-      channel: "paste",
-      receivedAt: new Date(),
-      bodyText: parsed.data,
-      dedupKey: key,
-    })
-    .onConflictDoNothing({ target: [message.talentId, message.dedupKey] })
-    .returning({ id: message.id });
+  const locale = toLocale(person.locale);
+  // The message and its analysis job are saved together, or neither is.
+  const created = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(message)
+      .values({
+        talentId: talent.id,
+        submittedBy: person.personId,
+        channel: "paste",
+        receivedAt: new Date(),
+        bodyText: parsed.data,
+        dedupKey: key,
+      })
+      .onConflictDoNothing({ target: [message.talentId, message.dedupKey] })
+      .returning({ id: message.id });
+    if (row) await queue.enqueue("message.analyze", { messageId: row.id, locale }, { tx, jobKey: analyzeJobKey(row.id) });
+    return row;
+  });
   if (!created) {
     const [existing] = await db
       .select({ id: message.id })
@@ -51,8 +57,6 @@ export async function submitPastedMessage(
       .where(and(eq(message.talentId, talent.id), eq(message.dedupKey, key)));
     return { id: existing.id, duplicate: true };
   }
-  const locale = toLocale(person.locale);
-  after(() => analyzeMessage(created.id, locale));
   refresh();
   return { id: created.id, duplicate: false };
 }
@@ -64,14 +68,17 @@ export async function reanalyzeMessage(id: string): Promise<string | null> {
   if (!z.uuid().safeParse(id).success) return fail("invalid");
   const allowed = await canAnalyze(talent.id, id);
   if (!allowed.ok) return fail(allowed.reason === "daily" ? "aiDailyLimit" : "aiMessageLimit");
-  const rows = await db
-    .update(message)
-    .set({ status: "pending", failure: null })
-    .where(and(eq(message.id, id), eq(message.talentId, talent.id), inArray(message.status, ["analyzed", "error"])))
-    .returning({ id: message.id });
-  if (!rows.length) return fail("messageNotFound");
   const locale = toLocale(person.locale);
-  after(() => analyzeMessage(id, locale));
+  const found = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(message)
+      .set({ status: "pending", failure: null })
+      .where(and(eq(message.id, id), eq(message.talentId, talent.id), inArray(message.status, ["analyzed", "error"])))
+      .returning({ id: message.id });
+    if (rows.length) await queue.enqueue("message.analyze", { messageId: id, locale }, { tx, jobKey: analyzeJobKey(id) });
+    return rows.length > 0;
+  });
+  if (!found) return fail("messageNotFound");
   refresh();
   return null;
 }

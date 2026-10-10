@@ -212,7 +212,7 @@ Analysis turns a message into facts. Matching decides which project those facts 
 - **Every model call is logged** in `ai_call` (task, provider and model, prompt version, tokens, latency, status or failure code, and the talent, person, and message it ran for). It feeds usage limits, cost tracking, and debugging — [decision 0008](decisions/0008-ai-operations.md).
 - **Usage limits** count real calls in `ai_call` over the last 24 hours: analyses per account per day (`AI_DAILY_ANALYSES`) and per message (`AI_MAX_ANALYSES_PER_MESSAGE`). Over a limit, a message is saved but not sent to the model (failure `usage_limit`); the inbox shows what's left today.
 - **Recorded responses** for tests: `AI_REPLAY=record` saves each model answer under a key of the prompt version, the input, the schema, and the files; `AI_REPLAY=only` answers from recordings and fails (`replay_missing`) rather than calling a live model. Recordings live in `AI_RECORDINGS_DIR` (not committed), are marked `replayed` in `ai_call`, and don't count toward limits. Off in production.
-- **Pasted offers (built).** 匯入邀約 stores the text as a `message` (channel `paste`, duplicate pastes return the existing message), analyzes it in the background (`after()`, status `pending` → `analyzed` or `error` with a retry), and shows the proposal in the inbox beside the original text. Filing it either creates a project — the form prefilled from the analysis, stage 待確認 — or adds it to an existing project; either way the reply-by date is shown for the person to confirm before it becomes a `reply` to-do linked to the message (`todo.message_id`). The project's Offer section shows the earliest message filed under it.
+- **Pasted offers (built).** 匯入邀約 stores the text as a `message` (channel `paste`, duplicate pastes return the existing message), analyzes it in the background (a `message.analyze` job in the worker, queued in the same transaction as the message; status `pending` → `analyzed` or `error` with a retry), and shows the proposal in the inbox beside the original text. Filing it either creates a project — the form prefilled from the analysis, stage 待確認 — or adds it to an existing project; either way the reply-by date is shown for the person to confirm before it becomes a `reply` to-do linked to the message (`todo.message_id`). The project's Offer section shows the earliest message filed under it.
 
 ### Matching a message to a project
 
@@ -241,33 +241,11 @@ Drafts are written in the language of the message they answer, not the UI langua
 
 ## Pipeline
 
-Every arrow below is a data contract, not just a connection.
+Every channel ends in the same job: paste and upload save the message and queue `message.analyze` in one transaction; the connected mailbox gets there through `mail.sync` (changes and metadata), `mail.relevance` (rules, thread, small model), and `mail.fetch` (body and attachments, relevant mail only). The worker runs the analysis and saves it; the Intake page suggests a project and proposes changes from it; a person confirms, and the changes are saved together and logged. Jobs carry ids, never content.
 
-```mermaid
-flowchart TD
-    CM["Connected Gmail mailbox<br/>(Pub/Sub pull, metadata first)"] -->|relevant only: fetch| GW[Ingestion gateway]
-    WU["Web / email upload<br/>(screenshots, photos, PDFs)"] -->|upload + POST| GW
-    GA["Later: Gmail add-on<br/>(one message, user-initiated)"] -.->|card click -> API call| GW
-    FWD["Later: email forwarding<br/>(dedicated inbound address)"] -.->|webhook| GW
+The whole path, by system (browser, web service, database, worker, Google, model providers), with each step numbered and marked built or planned: [Message Pipeline Map](https://claude.ai/artifact/Av5sq9yns69tX39BFfdiQg) (private; open it from the owner's account or share it from its page). The Gmail job chain is in [docs/design/gmail-ingestion.md](design/gmail-ingestion.md#pipeline); the token flow in [Gmail Token Flow](https://claude.ai/artifact/2Moj4sPrnpJxh1Uc2r4kVg).
 
-    GW -->|raw file| BLOB[(Blob storage)]
-    GW -->|enqueue, dedup_key| Q[(Message queue)]
-
-    Q -->|worker pulls| CL[Classifier]
-    CL -->|type| EX[Extractor]
-    EX -->|MessageAnalysis: type, facts, confidence| DM[Project matcher]
-    DM <-.->|similarity search| OP[("Open projects<br/>(pgvector)")]
-
-    DM -->|proposed link: existing or new project| OR[Action orchestrator]
-    OR -->|write records| PG[(Postgres)]
-    OR -->|draft calendar file| CAL[Calendar file generator]
-    OR -->|review alert / to-do| NOT[Notifications]
-
-    PG <-->|reads pending / writes confirm, edit, link| WEB[Web app]
-    WEB -->|on confirm only: generate file| CAL
-```
-
-The mailbox owner, or the person sending a message in, is always known; an email's sender is a claim, checked as decision 0007 describes. The connected mailbox decides relevance from metadata before anything else is read ([docs/design/gmail-ingestion.md](design/gmail-ingestion.md) has its own pipeline). The project matcher runs before anything is written, so a proposed project link is confirmed by the person alongside the extracted facts, not merged silently.
+The mailbox owner, or the person sending a message in, is always known; an email's sender is a claim, checked as decision 0007 describes. The connected mailbox decides relevance from metadata before anything else is read. The project matcher runs before anything is written, so a proposed project link is confirmed by the person alongside the extracted facts, not merged silently.
 
 ### Calendar event lifecycle
 
@@ -816,7 +794,7 @@ Shaped by the situation: a part-time build, a handful of solo artists at first, 
 | LLM | OpenAI and Anthropic in production, one primary and one backup set in configuration; Gemini's free tier for testing until launch | Decided | Structured JSON extraction, vision input for screenshots and PDF pages, drafting; a provider outage delays mail instead of stopping it. See [decision 0015](decisions/0015-production-model-providers.md) |
 | Embeddings | Voyage AI or similar | Open — M4 | Claude has no embeddings API; needed only once project matching is built |
 | Transactional email | Plain SMTP (nodemailer); Mailpit locally, provider TBD at deploy (e.g. Resend) | Decided — provider open until M2 | Password reset and verification. Every provider speaks SMTP, so switching is a `SMTP_URL` change |
-| Job queue | Graphile Worker in our Postgres, behind a `Queue` interface; `after()` until it lands | Decided | Enqueue inside our own transactions with plain SQL, one-at-a-time queues per mailbox, retries and cron built in, no new vendor. See [decision 0014](decisions/0014-hosting-and-job-queue.md) |
+| Job queue | Graphile Worker in our Postgres, behind a `Queue` interface (`lib/queue`), run by `npm run worker` | Decided | Enqueue inside our own transactions with plain SQL, one-at-a-time queues per mailbox, retries and cron built in, no new vendor. See [decision 0014](decisions/0014-hosting-and-job-queue.md) |
 | Hosting | Render in Singapore: a web service and a background worker from one Docker image (`render.yaml`) | Decided | The worker runs the queue, Gmail sync, and Calendar retries; fixed per-instance pricing. See [decision 0014](decisions/0014-hosting-and-job-queue.md) |
 | Gmail ingestion | Connected mailbox: Gmail API (`gmail.readonly`) + Pub/Sub pull; the Workspace Add-on after it | Decided | Mail arrives without a per-message action; relevance decided from metadata before anything is read. See [decision 0013](decisions/0013-connected-gmail-mailbox.md) |
 | Key management | Google Cloud KMS (Singapore), envelope encryption | Decided | Mailbox refresh tokens: web encrypts only, worker decrypts only, every use logged. See [decision 0016](decisions/0016-mailbox-tokens-and-key-management.md) |

@@ -64,3 +64,11 @@ The database, files, web service, and worker all run in Singapore. Latency from 
 - A `Dockerfile`, `render.yaml`, and `npm run worker`; development runs `npm run worker` beside `npm run dev`.
 - Paid hosting: Supabase Pro and two small Render instances, before the first external user.
 - If throughput ever outgrows Postgres (sustained hundreds of jobs a second), the `Queue` interface, idempotent handlers, and id-only jobs make a move to another queue a change of plumbing.
+
+## Implementation notes (2026-10-10)
+
+- `lib/queue/jobs.ts` lists every job and its payload schema (strict, ids only); `lib/queue/index.ts` is the `Queue` interface and its Graphile Worker implementation, which calls `graphile_worker.add_job` through Drizzle so a `tx` option joins the caller's transaction.
+- `worker/index.ts` (`npm run worker`) loads the `.env` files, then runs the handlers in `worker/tasks.ts`. `npm run db:migrate` installs the queue's own schema after the app's migrations (`scripts/queue-migrate.mts`), so the app can queue jobs before the worker first starts.
+- Paste, upload, and Retry queue `message.analyze` in the same transaction as their write, keyed per message so a second request replaces a waiting job. `analyzeMessage` skips a message that is no longer pending, so a job that runs twice analyzes once.
+- Each job sets its own attempt limit in `jobAttempts` (`lib/queue/jobs.ts`) instead of Graphile's default of 25, which keeps retrying for about 3 days. `message.analyze` gets 5 (about 1.5 minutes): model errors don't throw, they mark the message error for the person to Retry, so only failures such as the database being down are retried. If the last attempt still throws, the handler marks the message error (`unexpected`) so it shows Retry instead of staying pending.
+- Google Calendar sync still runs in `after()` until its module drops its `next/*` imports.

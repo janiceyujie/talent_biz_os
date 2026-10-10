@@ -7,7 +7,8 @@ What has to happen before the first production deploy and before real users. Eac
 - [x] Hosting and job queue, together: Render in Singapore and Graphile Worker ([decision 0014](../decisions/0014-hosting-and-job-queue.md)).
 - [ ] Supabase on the Pro plan (backups, no idle pausing) before the first person besides the builder connects Gmail.
 - [ ] `Dockerfile` and `render.yaml`; the worker on the session-mode pooler.
-- [ ] Move background work off `after()` to the queue: message analysis (decision 0008), Google Calendar sync (decision 0009).
+- [x] Move message analysis off `after()` to the queue (decision 0008).
+- [ ] Move Google Calendar sync off `after()` to the queue (decision 0009); `lib/calendar/google/sync.ts` first needs its `next/*` imports moved out (decision 0014).
 - [ ] Retry failed Google Calendar pushes from the queue, waiting longer after each failure (e.g. 1 min, 5 min, 30 min, 2 h, then every 6 h). Retry network errors, Google being down, and Google's "slow down"; not lost access (the person reconnects) or a request Google rejects (it would fail the same way). Until then a failed push stays pending and goes on the next change or 立即同步.
 
 ## 2. Squash the database migrations into one baseline

@@ -10,9 +10,10 @@ const SCREEN_MARGIN = 16; // px kept clear of the window's right edge
  * An ⓘ beside a title, with that section's explanation behind it: shown on
  * hover and keyboard focus, and toggled by a tap (phones have no hover).
  * Notes are plain text, one per line, so it can sit inside a heading.
- * `above` opens it upward, where below would cover what it explains.
+ * `above` opens it upward, where below would cover what it explains;
+ * `bulleted` marks each note as a list item, for several separate points.
  */
-export function InfoHint({ notes, above = false }: { notes: string[]; above?: boolean }) {
+export function InfoHint({ notes, above = false, bulleted = false }: { notes: string[]; above?: boolean; bulleted?: boolean }) {
   const t = useTranslations("common");
   const [open, setOpen] = useState(false); // tapped open; stays until a tap elsewhere
   const [peek, setPeek] = useState(false); // hovered or focused
@@ -56,7 +57,7 @@ export function InfoHint({ notes, above = false }: { notes: string[]; above?: bo
       <button type="button" className="info-hint-button" aria-label={t("about")} aria-expanded={shown} aria-describedby={id} onClick={() => (open ? hide() : setOpen(true))}>
         <Info size={16} aria-hidden="true" />
       </button>
-      <span ref={body} role="tooltip" id={id} className="info-hint-body">
+      <span ref={body} role="tooltip" id={id} className={`info-hint-body ${bulleted ? "bulleted" : ""}`}>
         {notes.map((note) => (
           <span key={note}>{note}</span>
         ))}

@@ -58,7 +58,7 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 | `data_key_wrapped`, `key_id` | The data key wrapped by the KMS master key, and which key and version |
 | `history_id`, `watch_expires_at` | Sync cursor and watch renewal |
 | `history_mode`, `history_done_at` | `30_days` or `new_only`; when the history read finished |
-| `status`, `failure`, `last_synced_at` | `connected`, `reconnect_needed`, `error` |
+| `status`, `failure`, `last_synced_at` | `connected`, `reconnect_needed`, `error`, `disconnecting` (until the worker has revoked the token and deleted the row) |
 
 **`mail_decision`**: one row per message the relevance check saw, ids only (decision 0013).
 
@@ -103,7 +103,7 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 
 - **Connect Gmail**: any Google account; says what's read, what's kept, that members (including a manager) see work email brought in, and, when `AI_FREE_TIER_OK=1`, that Google's free tier analyzes it. History choice: last 30 days (default) or only new mail.
 - **Connected**: account, status, last sync, Sync now, sender rules.
-- **Disconnect**: remove everything brought in from Gmail, or keep what's filed under projects and remove the rest.
+- **Disconnect**: remove everything brought in from Gmail, or keep what's filed under projects and remove the rest. The worker revokes the token and deletes the connection; the choice arrives with `gmail-ingest`, once there is mail to remove.
 
 ## Configuration
 

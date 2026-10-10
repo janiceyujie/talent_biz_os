@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
-export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+/** `narrow` for a short, focused step (a choice and a button), rather than a form. */
+export function Modal({ title, children, onClose, narrow = false }: { title: string; children: ReactNode; onClose: () => void; narrow?: boolean }) {
   const t = useTranslations("common");
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -21,7 +22,7 @@ export function Modal({ title, children, onClose }: { title: string; children: R
   return (
     <dialog
       ref={ref}
-      className="modal"
+      className={narrow ? "modal modal-narrow" : "modal"}
       aria-labelledby={titleId}
       // Escape asks the owner to close rather than closing natively, so a form can hold it open.
       onCancel={(e) => {

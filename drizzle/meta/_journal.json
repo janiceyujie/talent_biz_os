@@ -176,6 +176,13 @@
       "when": 1791433715282,
       "tag": "0024_organization_distinct",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791648058165,
+      "tag": "0025_mail_connection",
+      "breakpoints": true
     }
   ]
 }

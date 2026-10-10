@@ -12,6 +12,11 @@ describe("job payloads", () => {
     assert.equal(jobs["message.analyze"].safeParse({ messageId: id, locale: "fr" }).success, false);
   });
 
+  test("a disconnect job carries only the connection id", () => {
+    assert.equal(jobs["mail.disconnect"].safeParse({ connectionId: id }).success, true);
+    assert.equal(jobs["mail.disconnect"].safeParse({ connectionId: id, token: "1//x" }).success, false);
+  });
+
   test("nothing else rides along: payloads hold ids, never message content", () => {
     assert.equal(jobs["message.analyze"].safeParse({ messageId: id, locale: "en", body: "Fee NT$12,000" }).success, false);
   });

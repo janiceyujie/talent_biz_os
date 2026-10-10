@@ -9,8 +9,9 @@ import { db } from "@/lib/db";
 import { readPreferences } from "@/lib/preferences";
 import { pairKey } from "@/lib/domain/organizations";
 import { summaryOf } from "./projects";
-import { authAccount, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { authAccount, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
+import { mailConfigured } from "@/lib/mail/connect";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
 import { calendarKinds, type AppData, type CalendarItem, type CalendarKind, type TravelDetails } from "@/lib/types";
@@ -88,6 +89,19 @@ export const getAppData = cache(async (): Promise<AppData> => {
     .select()
     .from(calendarConnection)
     .where(and(eq(calendarConnection.personId, person.personId), eq(calendarConnection.talentId, current.id)));
+  // The talent's connected mailbox (decision 0013): every member sees the same one. Never the token columns.
+  const [mailbox] = await db
+    .select({
+      accountEmail: mailConnection.accountEmail,
+      status: mailConnection.status,
+      failure: mailConnection.failure,
+      historyMode: mailConnection.historyMode,
+      lastSyncedAt: mailConnection.lastSyncedAt,
+      createdAt: mailConnection.createdAt,
+      updatedAt: mailConnection.updatedAt,
+    })
+    .from(mailConnection)
+    .where(eq(mailConnection.talentId, current.id));
   // This person's own Google calendars shown here (decision 0009, phase 2): only they see them.
   const importSources = connection
     ? await db.select().from(calendarImportSource).where(eq(calendarImportSource.connectionId, connection.id))
@@ -219,6 +233,20 @@ export const getAppData = cache(async (): Promise<AppData> => {
             status: connection.status,
             lastError: connection.lastError,
             lastSyncedAt: connection.lastSyncedAt?.toISOString() ?? null,
+          }
+        : null,
+    },
+    gmail: {
+      available: mailConfigured(),
+      connection: mailbox
+        ? {
+            accountEmail: mailbox.accountEmail,
+            status: mailbox.status,
+            failure: mailbox.failure,
+            historyMode: mailbox.historyMode,
+            lastSyncedAt: mailbox.lastSyncedAt?.toISOString() ?? null,
+            connectedAt: mailbox.createdAt.toISOString(),
+            updatedAt: mailbox.updatedAt.toISOString(), // when the status last changed
           }
         : null,
     },

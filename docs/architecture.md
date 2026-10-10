@@ -333,7 +333,7 @@ erDiagram
 | `calendar_import_source` | A Google calendar the person chose to show here | Phase 2 |
 | `external_event` | An event read from a chosen Google calendar: read-only, visible only to that person | Phase 2 |
 | `contract` | One version of a contract document, with status and diff | M2 (v1 only); versions and diff in M4 |
-| `mail_connection` | One connected mailbox for a talent: the Google account, the encrypted refresh token and wrapped data key, sync cursor, status ([decision 0016](decisions/0016-mailbox-tokens-and-key-management.md)) | Building |
+| `mail_connection` | One connected mailbox for a talent: the Google account, the encrypted refresh token and wrapped data key, sync cursor, status ([decision 0016](decisions/0016-mailbox-tokens-and-key-management.md)) | Built (connect and disconnect) |
 | `mail_decision` | The relevance decision for each email the check saw, ids only ([decision 0013](decisions/0013-connected-gmail-mailbox.md)) | Building |
 | `mail_sender_rule` | An artist's "always" or "never" for a sender or domain | Building |
 | `inbound_grant` | Authorization from the Gmail add-on | After the connected mailbox |

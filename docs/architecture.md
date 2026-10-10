@@ -33,12 +33,12 @@ Tagged by when it's built: **MVP** ships first. **Phase 2** follows once the cor
 
 ### Ingestion
 
-- Gmail add-on: open an email in Gmail, click one button to send just that message in — **MVP**.
+- Connect a Gmail mailbox: the system reads new mail on its own, decides from metadata what's work, and brings in only that — **MVP, built first**. See [Connected Gmail mailbox](#connected-gmail-mailbox) and [decision 0013](decisions/0013-connected-gmail-mailbox.md).
+- Gmail add-on: open an email in Gmail, click one button to send just that message in — **MVP, after the connected mailbox**. For people who won't grant mailbox access, and for tagging a message with its project on the way in.
 - Upload a screenshot, photo, or PDF from a browser, including several images from one scrolling conversation — **MVP**.
 - Paste an offer's text directly (匯入邀約) — **MVP**. It becomes a message and goes through the same analysis.
 - Email a screenshot to a personal upload address as a phone-friendly alternative to the web upload page — **MVP**.
 - Forward an email to a dedicated inbound address — **MVP alternative path**. Needs no Google authorization or review at all, and works with any email provider, not just Gmail. Weaker on two fronts: forwarding changes the message headers, so recovering the original sender and timestamp for deal-matching is less reliable than reading via API, and there's no natural UI slot for project tagging the way the add-on's dropdown provides.
-- Connect a Gmail account directly so the system reads new mail on its own, no per-message action needed — **Later**. Real access to the whole mailbox, designed for now, built when the per-message flow proves too much friction.
 - Other email providers via forwarding — **Later**.
 
 ### Reading and understanding
@@ -151,7 +151,18 @@ Every extraction schema starts from the same core: who the counterparty is, what
 
 ## Ingestion
 
-The first version never scans a mailbox in the background. Every message arrives because a person acted: they clicked a button on an email they had open, forwarded a message, or uploaded a file. That has a real engineering upside — there's no unknown-sender case to guard against, because the source of every message is always the authenticated person themselves, not a claim in an email header.
+A connected Gmail mailbox comes first: the worker reads new mail on its own and brings in only what's work. Paste and upload stay, and the add-on and forwarding follow, each a person's action on one message. Whatever the channel, the mailbox owner or the person sending in is known; the sender of an email is a claim in a header (decision 0007).
+
+### Connected Gmail mailbox
+
+Decided in [0013](decisions/0013-connected-gmail-mailbox.md) (what's read and kept), [0014](decisions/0014-hosting-and-job-queue.md) (worker and queue), [0015](decisions/0015-production-model-providers.md) (models), and [0016](decisions/0016-mailbox-tokens-and-key-management.md) (tokens); design and build order in [docs/design/gmail-ingestion.md](design/gmail-ingestion.md).
+
+- **One mailbox per artist account (talent),** from any Google account the person picks; every member, managers included, sees what's brought in. A manager's own mailbox, which mixes artists, is later.
+- **`gmail.readonly` only,** through its own OAuth flow (`state` + PKCE), separate from sign-in. The refresh token is stored encrypted under a Cloud KMS key; access tokens live only in the worker's memory.
+- **Gmail push through Pub/Sub, pulled by the worker,** plus a daily watch renewal, a 15-minute reconciliation poll, and Sync now. On connect, the last 30 days (default) or only new mail.
+- **Metadata first.** Rules, then thread memory, then a small model score sender, subject, and snippet. Above the threshold or unsure, the body and attachments are fetched and analyzed; below it, only an ids-only decision is kept. Bank and payment notices take a restricted path: snippet first, redacted body, fields only.
+- **Brought-in mail becomes a `message`** (channel `gmail`) and goes through the same analysis and review as paste and upload. If it isn't work, its body and files are deleted at once.
+- **Threads** are tracked by Gmail's thread id and the reply headers; sent mail joins only in threads already relevant.
 
 ### Gmail add-on
 
@@ -178,12 +189,10 @@ The first version never scans a mailbox in the background. Every message arrives
 - Relative dates in a screenshot ("Friday," "tomorrow") resolve against a timestamp visible in the image where there is one, falling back to upload time. The review screen always shows the resolved date, not the original phrase.
 - **Built:** 上傳截圖／PDF in the inbox takes up to 10 files, 10 MB each and 12 MB in total (they go to the model inline, base64-encoded, within a 20 MB request) — PNG, JPEG, WebP, HEIC, PDF — in an order the person can change. The browser `PUT`s each file to storage through a signed URL (`lib/storage`, ten minutes, bound to the declared type and size) under a key scoped to the talent (`files/{talent_id}/{file_id}`); `registerUpload` then checks each file arrived with that size, type, and matching file signature (a renamed text file isn't a PNG), fingerprints the bytes in order (`dedup_key`, so the same screenshots twice open the existing message), and records the message (channel `upload`) and its `file` rows. The analysis reads the files inline with the prompt and also returns a transcript of what it read, shown as "AI 讀到的內容" beside the thumbnails. Files are served only through `/api/files/[id]`, which checks the signed-in talent and sends the stored type with `nosniff`. Not yet: the email-in address; cleanup of files uploaded but never registered (an abandoned dialog); HEIC thumbnails (the file opens, the inbox shows a tile).
 
-### Designed for later: a connected mailbox
+### Designed for later: other mailboxes
 
-- Gmail API and Microsoft Graph over OAuth 2.0, one refresh token per mailbox. Poll on an interval to start; push (a Gmail `watch` on Pub/Sub, or a Graph subscription) once latency matters.
-- This is a materially bigger authorization to ask for — the full mailbox, not one message — and past a small number of users it needs Google's app verification and a security assessment, which can take weeks.
-- It also reopens a problem the per-message design avoids: a connected mailbox can receive mail addressed to more than one project or, for a manager, more than one talent, so it needs a routing step the add-on flow doesn't.
-- Continuous mailbox monitoring (polling or a maintained push subscription) is a standing background cost that runs even when nothing's happening, scaling with total user count — a real, durable difference from the add-on's zero-idle-cost model.
+- Microsoft Graph behind the same `MailProvider` interface as Gmail, once someone asks for Outlook.
+- A manager's own mailbox: each email also needs a "which talent is this for" step before the relevance check.
 
 > **Message content is untrusted input regardless of channel.** The extractor returns schema-validated data and has no tools of its own, so nothing inside a message can trigger an action by itself. Invisible characters are stripped before analysis; the model and deterministic checks flag injected instructions, payment-detail requests, hidden text, and inconsistencies, shown as a warning in the inbox. Every write — a confirmed event, a saved contract — happens only after a person confirms it in the review queue. The layers, and the rules future features must keep (never act on model output without a person; drafts never carry payment details from the incoming message), are in [decision 0007](decisions/0007-untrusted-message-content.md).
 
@@ -210,7 +219,7 @@ Analysis turns a message into facts. Matching decides which project those facts 
 A deal is rarely one message. A venue's first offer, the signed contract, and a follow-up about the deposit date are the same deal told three times. The system needs to recognize that without ever silently merging two unrelated deals with the same counterparty.
 
 - **Explicit tagging first.** If the message arrived through a channel that lets the person specify the project directly (e.g. the Gmail add-on's dropdown), use that — no inference needed.
-- **Email threading next.** When a message is a reply within an existing email thread, the link is free and certain.
+- **Email threading next.** When a message is a reply within an existing email thread (Gmail's thread id, then `In-Reply-To` / `References`), the project its thread is filed under is the strongest suggestion.
 - **Known facts next.** Built: the same contact (email, then company or name), a date the project already has, the same venue or event, and for a payment notice an expected payment of that amount; a similar title only adds weight. Each suggestion shows its reasons (`lib/domain/intake.ts`, `suggestTargets`).
 - **Similarity as a fallback** (later). For anything the facts don't settle, compare the extracted summary against the open projects for that talent using embedding similarity, and propose the closest match above a threshold.
 - **Always proposed, never automatic** for anything inferred. A proposed match is presented as "this looks like the same deal as [project] — is it?" alongside the extraction review, and a person confirms, rejects, or starts a new project instead.
@@ -236,10 +245,10 @@ Every arrow below is a data contract, not just a connection.
 
 ```mermaid
 flowchart TD
-    GA["Gmail add-on<br/>(one message, user-initiated)"] -->|card click -> API call| GW[Ingestion gateway]
+    CM["Connected Gmail mailbox<br/>(Pub/Sub pull, metadata first)"] -->|relevant only: fetch| GW[Ingestion gateway]
     WU["Web / email upload<br/>(screenshots, photos, PDFs)"] -->|upload + POST| GW
-    FWD["Email forwarding<br/>(dedicated inbound address)"] -->|webhook| GW
-    CM["Later: connected mailbox<br/>(Gmail / Graph OAuth)"] -.->|poll / push| GW
+    GA["Later: Gmail add-on<br/>(one message, user-initiated)"] -.->|card click -> API call| GW
+    FWD["Later: email forwarding<br/>(dedicated inbound address)"] -.->|webhook| GW
 
     GW -->|raw file| BLOB[(Blob storage)]
     GW -->|enqueue, dedup_key| Q[(Message queue)]
@@ -258,7 +267,7 @@ flowchart TD
     WEB -->|on confirm only: generate file| CAL
 ```
 
-Ingestion only happens when a person acts, so every message has a known, authenticated source — there's no sender-identity check to perform. The project matcher runs before anything is written, so a proposed project link is confirmed by the person alongside the extracted facts, not merged silently.
+The mailbox owner, or the person sending a message in, is always known; an email's sender is a claim, checked as decision 0007 describes. The connected mailbox decides relevance from metadata before anything else is read ([docs/design/gmail-ingestion.md](design/gmail-ingestion.md) has its own pipeline). The project matcher runs before anything is written, so a proposed project link is confirmed by the person alongside the extracted facts, not merged silently.
 
 ### Calendar event lifecycle
 
@@ -346,7 +355,10 @@ erDiagram
 | `calendar_import_source` | A Google calendar the person chose to show here | Phase 2 |
 | `external_event` | An event read from a chosen Google calendar: read-only, visible only to that person | Phase 2 |
 | `contract` | One version of a contract document, with status and diff | M2 (v1 only); versions and diff in M4 |
-| `inbound_grant` | Authorization from the Gmail add-on | M3 |
+| `mail_connection` | One connected mailbox for a talent: the Google account, the encrypted refresh token and wrapped data key, sync cursor, status ([decision 0016](decisions/0016-mailbox-tokens-and-key-management.md)) | Building |
+| `mail_decision` | The relevance decision for each email the check saw, ids only ([decision 0013](decisions/0013-connected-gmail-mailbox.md)) | Building |
+| `mail_sender_rule` | An artist's "always" or "never" for a sender or domain | Building |
+| `inbound_grant` | Authorization from the Gmail add-on | After the connected mailbox |
 
 **M1–M5** are the MVP build milestones (the 階段 in the internal timeline). **Phase 2** and **Later** remain the post-MVP scope tags used under [Functionality](#functionality).
 
@@ -796,17 +808,18 @@ Shaped by the situation: a part-time build, a handful of solo artists at first, 
 |---|---|---|---|
 | App shape | Next.js monolith (React, TS) — route handlers + server actions | Decided | One deployable and shared types; the Gmail add-on webhook is just another route handler. Split only for a concrete reason (see below) |
 | Data loading | The layout carries what every page needs; a page fetches what it shows, lists in pages of 50 with keyset cursors, an item's detail when it's opened | Decided — moving screen by screen | The cost of a page stays proportional to the screen, not the account. Projects are done (`/api/projects`, `/api/projects/[id]`); the layout still carries a summary of each project and every payment, to-do, and event until the other screens move. See [decision 0011](decisions/0011-pages-fetch-what-they-show.md) |
-| Primary DB | Postgres, hosted on Supabase | Decided | Relational integrity for money, contracts, and versions. Supabase gives free local dev (`supabase start`) and Asia regions; to us it is plain Postgres |
+| Primary DB | Postgres, hosted on Supabase in Singapore | Decided | Relational integrity for money, contracts, and versions. Supabase gives free local dev (`supabase start`) and Asia regions; to us it is plain Postgres. Region: [decision 0014](decisions/0014-hosting-and-job-queue.md) |
 | Vector search | pgvector | Decided | Project matching without a second datastore; supported by every major Postgres host |
 | DB access + migrations | Drizzle (`drizzle-kit`) | Decided | SQL-shaped, typed queries and typed `jsonb`; schema lives in TS; works on any Postgres |
 | App auth (login) | Better Auth — email/password + Google sign-in | Decided | Users and sessions live in our own Postgres tables, so changing host never touches identity. Google sign-in from day one eases linking the Gmail add-on later. Login only — separate from any mailbox authorization |
 | Blob storage | Supabase Storage, through its S3-compatible API | Decided | Raw emails, screenshots, PDFs; presigned uploads straight from the browser. The S3 API means moving to S3, R2, or GCS is an endpoint change |
-| LLM | Claude API | Decided | Structured JSON extraction, vision input for screenshots and PDF pages, drafting |
+| LLM | OpenAI and Anthropic in production, one primary and one backup set in configuration; Gemini's free tier for testing until launch | Decided | Structured JSON extraction, vision input for screenshots and PDF pages, drafting; a provider outage delays mail instead of stopping it. See [decision 0015](decisions/0015-production-model-providers.md) |
 | Embeddings | Voyage AI or similar | Open — M4 | Claude has no embeddings API; needed only once project matching is built |
 | Transactional email | Plain SMTP (nodemailer); Mailpit locally, provider TBD at deploy (e.g. Resend) | Decided — provider open until M2 | Password reset and verification. Every provider speaks SMTP, so switching is a `SMTP_URL` change |
-| Job queue | Start with Next.js `after()` + `message.status`; pg-boss / Inngest when needed | Open — M2 | Low volume doesn't need a queue yet; the choice depends on hosting |
-| Hosting | Vercel / Fly.io / Render | Open — M2 | Serverless (Vercel) can't run a long-lived worker; decide together with the queue |
-| Gmail ingestion | Google Workspace Add-on | M3 | Per-message, user-initiated, narrower authorization than full mailbox access |
+| Job queue | Graphile Worker in our Postgres, behind a `Queue` interface; `after()` until it lands | Decided | Enqueue inside our own transactions with plain SQL, one-at-a-time queues per mailbox, retries and cron built in, no new vendor. See [decision 0014](decisions/0014-hosting-and-job-queue.md) |
+| Hosting | Render in Singapore: a web service and a background worker from one Docker image (`render.yaml`) | Decided | The worker runs the queue, Gmail sync, and Calendar retries; fixed per-instance pricing. See [decision 0014](decisions/0014-hosting-and-job-queue.md) |
+| Gmail ingestion | Connected mailbox: Gmail API (`gmail.readonly`) + Pub/Sub pull; the Workspace Add-on after it | Decided | Mail arrives without a per-message action; relevance decided from metadata before anything is read. See [decision 0013](decisions/0013-connected-gmail-mailbox.md) |
+| Key management | Google Cloud KMS (Singapore), envelope encryption | Decided | Mailbox refresh tokens: web encrypts only, worker decrypts only, every use logged. See [decision 0016](decisions/0016-mailbox-tokens-and-key-management.md) |
 | Calendar output | Generated `.ics` file + private subscription feed | Decided | No calendar account connection, no stored tokens |
 | Internationalization | `next-intl`, no locale in URLs | Decided | Works in server components, client components, server actions, and route handlers; ICU messages; locale-aware formatting; typed keys. See [Internationalization](#internationalization) |
 
@@ -822,7 +835,7 @@ These keep a future move off Supabase (to any vendor) a matter of days, not week
 
 ### Designed for, not built yet
 
-- **Full mailbox connection** — Gmail API and Microsoft Graph over OAuth, poll then push. Built if the per-message add-on flow proves too much friction.
+- **Other mailboxes** — Microsoft Graph behind the same `MailProvider` interface as Gmail.
 - **Direct calendar connection** — Google Calendar API / Microsoft Graph Calendar, once a person wants events to appear without a download step.
 - **Other email providers** — inbound email parsing (Postmark / SendGrid Inbound Parse) for forwarding on non-Gmail accounts.
 

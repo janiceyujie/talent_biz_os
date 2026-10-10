@@ -2,9 +2,11 @@
 
 What has to happen before the first production deploy and before real users. Each item links where it was decided; this file only collects them. Tick items off in the pull request that does them.
 
-## 1. Decide hosting and the job queue
+## 1. Hosting and the job queue
 
-- [ ] Hosting and job queue, together (architecture doc, "Stack": open since M2). Serverless hosting can't run a long-lived worker, so the queue choice depends on it.
+- [x] Hosting and job queue, together: Render in Singapore and Graphile Worker ([decision 0014](../decisions/0014-hosting-and-job-queue.md)).
+- [ ] Supabase on the Pro plan (backups, no idle pausing) before the first person besides the builder connects Gmail.
+- [ ] `Dockerfile` and `render.yaml`; the worker on the session-mode pooler.
 - [ ] Move background work off `after()` to the queue: message analysis (decision 0008), Google Calendar sync (decision 0009).
 - [ ] Retry failed Google Calendar pushes from the queue, waiting longer after each failure (e.g. 1 min, 5 min, 30 min, 2 h, then every 6 h). Retry network errors, Google being down, and Google's "slow down"; not lost access (the person reconnects) or a request Google rejects (it would fail the same way). Until then a failed push stays pending and goes on the next change or 立即同步.
 
@@ -28,7 +30,8 @@ Do this **once**, as late as possible (right before creating the production data
 
 - [ ] A strong `BETTER_AUTH_SECRET` per environment, never reused from development. It encrypts stored Google tokens (decision 0009); changing it later forces everyone to reconnect Google.
 - [ ] `BETTER_AUTH_URL` set to the production address.
-- [ ] No test settings in production: `GOOGLE_TEST_STUB`, `AI_REPLAY`, `GOOGLE_CALENDAR_API_URL`, `GOOGLE_OAUTH_REVOKE_URL`, `NEXT_DIST_DIR` unset.
+- [ ] No test settings in production: `GOOGLE_TEST_STUB`, `AI_REPLAY`, `GOOGLE_CALENDAR_API_URL`, `GOOGLE_OAUTH_REVOKE_URL`, `NEXT_DIST_DIR`, `GMAIL_API_URL`, `GOOGLE_OAUTH_TOKEN_URL`, `AI_FREE_TIER_OK`, `MAIL_KEY_DEV` unset; `APP_ENV=production`.
+- [ ] Cloud KMS key in Singapore; an encrypt-only credential on the web service and a decrypt-only one on the worker ([decision 0016](../decisions/0016-mailbox-tokens-and-key-management.md)).
 - [ ] Email: a real SMTP provider (architecture doc, "Transactional email").
 - [ ] Storage: a production bucket and keys (`STORAGE_*`).
 
@@ -39,13 +42,16 @@ Do this **once**, as late as possible (right before creating the production data
 - [ ] Publish sign-in (basic scopes, no review).
 - [ ] Google verification for the calendar scopes, with a demo video ([google-calendar.md](google-calendar.md), "Before real users"). Add them to the production consent screen once it passes, so sign-in isn't held up.
 - [ ] Calendar change notifications and sync tokens replacing polling (decision 0009, phase 2).
+- [ ] The consent screen moved from Testing to In production before anyone besides the builder connects Gmail (Testing expires refresh tokens after 7 days).
+- [ ] Google verification for `gmail.readonly`, then the CASA security assessment ([decision 0013](../decisions/0013-connected-gmail-mailbox.md)); until both pass, at most 100 users.
+- [ ] Pub/Sub topic with publish rights for Gmail, and the worker's pull subscription.
 
 ## 5. AI
 
 From [decision 0008](../decisions/0008-ai-operations.md):
 
-- [ ] The paid model behind the provider seam, with its own key and a spending cap.
-- [ ] `AI_PROVIDER_KEEPS_DATA` off; a permanent line that content is analyzed by AI; the privacy policy says so.
+- [ ] OpenAI and Anthropic behind the provider seam, each with its own key and a spending cap; `AI_PRIMARY` and `AI_BACKUP` set ([decision 0015](../decisions/0015-production-model-providers.md)).
+- [ ] The Gemini adapter, `AI_PROVIDER_KEEPS_DATA`, and `AI_FREE_TIER_OK` removed; a permanent line that content is analyzed by AI; the privacy policy names both providers.
 - [ ] A cap on PDF pages and on the model's output length.
 - [ ] Per-month and short-burst limits.
 - [ ] Rate limits on server actions and the upload and file routes.

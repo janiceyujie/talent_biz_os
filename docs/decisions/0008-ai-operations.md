@@ -1,6 +1,6 @@
 # 0008 — Running the AI features: testing, prompts, paid models, and usage limits
 
-**Status:** Accepted (2026-10-04)
+**Status:** Accepted (2026-10-04). The paid providers and per-task models are now [decision 0015](0015-production-model-providers.md); the job queue is [decision 0014](0014-hosting-and-job-queue.md).
 
 ## Context
 

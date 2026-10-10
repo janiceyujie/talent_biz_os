@@ -88,8 +88,7 @@ Decided 2026-10-02. MVP: `zh-TW` and `en`; built so more languages are a file, n
 
 ## Deferred decisions
 
-- **Job queue (M2).** Start with Next.js `after()` to run extraction after an upload is accepted, using `message.status` as the state machine. Move to pg-boss (needs a long-lived worker) or Inngest / Trigger.dev (serverless-friendly) when that stops being enough.
-- **Hosting (M2).** Vercel is the smoothest for Next.js but can't run a long-lived worker; Fly.io or Render can. Decide with the queue.
+- **Job queue and hosting (decided 2026-10-10).** Graphile Worker in our Postgres, and Render in Singapore for the web service and the worker; the options weighed are in [decision 0014](decisions/0014-hosting-and-job-queue.md).
 - **Embeddings (M4).** Claude has no embeddings API; Anthropic points to Voyage AI. Any provider works since vectors are stored in pgvector.
 
 ## Leaving Supabase later

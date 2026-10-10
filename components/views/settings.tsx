@@ -13,6 +13,7 @@ import { RolePortrait } from "@/components/role/role-portrait";
 import { SignOutButton } from "@/components/sign-out-button";
 import { setReplyWithinDays } from "@/lib/actions/intake";
 import { CalendarFeedSettings } from "./calendar-feed-settings";
+import { GmailSettings } from "./gmail-settings";
 import { GoogleCalendarSettings } from "./google-calendar-settings";
 import { SettingsGroup, SettingsRow } from "./settings-row";
 import { SignInMethods } from "./sign-in-methods";
@@ -69,6 +70,7 @@ export function SettingsView() {
       <SettingsGroup title={t("groupServices")}>
         <GoogleCalendarSettings onNotice={setToast} />
         <CalendarFeedSettings />
+        <GmailSettings onNotice={setToast} />
         <SettingsRow icon={<Mail size={20} />} label={t("gmailTitle")} hint={[t("gmailBody")]}>
           <span className="mock-chip">{t("comingSoon")}</span>
         </SettingsRow>

@@ -300,6 +300,19 @@ export type AppData = {
     granted: boolean;
     connection: { status: "connected" | "needs_reconnect" | "error"; lastError: string | null; lastSyncedAt: string | null } | null;
   };
+  // The talent's connected Gmail mailbox (decision 0013); `available` = an OAuth client and a master key are set up here.
+  gmail: {
+    available: boolean;
+    connection: {
+      accountEmail: string;
+      status: "connected" | "reconnect_needed" | "error" | "disconnecting";
+      failure: string | null;
+      historyMode: "30_days" | "new_only";
+      lastSyncedAt: string | null;
+      connectedAt: string;
+      updatedAt: string;
+    } | null;
+  };
   // This person's sign-in methods; googleAccountId is our auth_account row id (what unlinking takes).
   signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };
   // The AI service's name when it may keep what's sent (e.g. a free tier) — shown as a notice; null otherwise.

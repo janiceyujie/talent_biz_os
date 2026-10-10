@@ -23,6 +23,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
+import { historyModes } from "../mail/history";
 import { contactRoles, stages as projectStages, transportModes, type ContractTerms, type ProjectDetails, type TermChange } from "../types"; // relative: drizzle-kit loads this file too
 
 const id = () => uuid().primaryKey().defaultRandom();
@@ -801,4 +802,46 @@ export const externalEvent = pgTable(
     htmlLink: text(), // opens the event in Google Calendar
   },
   (t) => [unique("external_event_source_event").on(t.sourceId, t.externalEventId), index("external_event_source_start_idx").on(t.sourceId, t.startDate)],
+).enableRLS();
+
+// A connected mailbox (decision 0013): one per talent for now, any Google
+// account the person picks. Only the refresh token is stored, encrypted with
+// its own data key, which the master key wraps (decision 0016). The mailbox's
+// account never becomes a way to sign in. `disconnecting` waits for the worker
+// to revoke the token at Google and delete the row.
+export const mailConnectionStatuses = ["connected", "reconnect_needed", "error", "disconnecting"] as const;
+
+export const mailConnection = pgTable(
+  "mail_connection",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    connectedBy: uuid().references(() => person.id, { onDelete: "set null" }),
+    provider: text().notNull().default("gmail"),
+    accountEmail: text().notNull(),
+    accountSubject: text().notNull(), // the Google account's stable id
+    scopes: text().notNull(), // as granted, space-separated
+    refreshTokenCiphertext: text().notNull(), // AES-256-GCM, base64; bound to talent and account
+    refreshTokenNonce: text().notNull(),
+    refreshTokenTag: text().notNull(),
+    dataKeyWrapped: text().notNull(), // the data key, wrapped by the master key
+    keyId: text().notNull(), // which master key and version
+    historyId: text(), // sync cursor; set by the first sync
+    watchExpiresAt: timestamp({ withTimezone: true }),
+    historyMode: text({ enum: historyModes }).notNull(),
+    historyDoneAt: timestamp({ withTimezone: true }),
+    status: text({ enum: mailConnectionStatuses }).notNull().default("connected"),
+    failure: text(), // a failure code, for the settings row
+    lastSyncedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique("mail_connection_talent_account").on(t.talentId, t.provider, t.accountSubject),
+    index("mail_connection_talent_idx").on(t.talentId),
+    check("mail_connection_status_check", oneOf(t.status, mailConnectionStatuses)),
+    check("mail_connection_history_mode_check", oneOf(t.historyMode, historyModes)),
+  ],
 ).enableRLS();

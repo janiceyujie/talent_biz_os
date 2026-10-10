@@ -24,6 +24,7 @@ export function SettingsRow({
   htmlFor,
   description,
   hint,
+  hintBulleted = false,
   icon,
   error,
   children,
@@ -32,6 +33,7 @@ export function SettingsRow({
   htmlFor?: string; // the control's id, when it's a single field
   description?: ReactNode;
   hint?: string[];
+  hintBulleted?: boolean; // the hint is several separate points
   icon?: ReactNode;
   error?: string | null;
   children?: ReactNode;
@@ -46,7 +48,7 @@ export function SettingsRow({
       <div className="settings-row-label">
         <span className="settings-row-title">
           {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : label}
-          {hint && <InfoHint notes={hint} />}
+          {hint && <InfoHint notes={hint} bulleted={hintBulleted} />}
         </span>
         {description && <small>{description}</small>}
         {error && (

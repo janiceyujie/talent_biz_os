@@ -56,9 +56,9 @@ Every redirect URI must be listed exactly, so per-branch preview URLs (e.g. `my-
 
 Calendar sync uses this same project and client, adding the Calendar API and one permission: [google-calendar.md](google-calendar.md).
 
-## Later: reading Gmail
+## Next: Gmail
 
-When the connected mailbox (architecture doc, "Designed for later: a connected mailbox") is built, it asks for Gmail scopes Google classes as **restricted**. That means app verification and an annual third-party security assessment (CASA) before more than test users can use it, and it should be its own consent, separate from sign-in. Plan weeks for it; it doesn't affect sign-in.
+Reading a connected mailbox uses this same project and client too, with its own consent and callback, and a restricted scope that needs its own review: [gmail.md](gmail.md).
 
 ## Troubleshooting
 

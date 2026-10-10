@@ -1,5 +1,6 @@
 import type { Task } from "graphile-worker";
 import { analyzeMessage, markAnalysisFailed } from "@/lib/ai/analyze-message";
+import { disconnectMailbox } from "@/lib/mail/jobs/disconnect";
 import { jobs, type JobName } from "@/lib/queue/jobs";
 
 // One handler per job in lib/queue/jobs.ts. Each must be safe to run twice:
@@ -17,5 +18,9 @@ export const taskList: Record<JobName, Task> = {
       }
       throw e;
     }
+  },
+  "mail.disconnect": async (payload, { job }) => {
+    const { connectionId } = jobs["mail.disconnect"].parse(payload);
+    await disconnectMailbox(connectionId, { lastAttempt: job.attempts >= job.max_attempts });
   },
 };

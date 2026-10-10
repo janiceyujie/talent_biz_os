@@ -27,10 +27,14 @@ When a choice is easy to get wrong later, was argued over, or trades something a
 | [0003](0003-scheduled-times-as-local-time-plus-zone.md) | Scheduled times are stored as local time plus zone, not UTC | Accepted |
 | [0004](0004-execution-work-needs-a-signed-project.md) | Execution work attaches only to signed projects | Accepted |
 | [0005](0005-language-neutral-template-placeholders.md) | Reply-template placeholders are stored language-neutral | Accepted |
-| [0006](0006-model-provider.md) | Model calls go through one provider seam; a free model during development | Accepted |
+| [0006](0006-model-provider.md) | Model calls go through one provider seam; a free model during development | Accepted; production providers in 0015 |
 | [0007](0007-untrusted-message-content.md) | Message content is untrusted: layered protection against prompt injection and fraud | Accepted |
 | [0008](0008-ai-operations.md) | Running the AI features: testing, prompts, paid models, and usage limits | Accepted |
 | [0009](0009-google-calendar-sync.md) | Syncing with Google Calendar: phases, permission, ownership, storage | Accepted |
 | [0010](0010-per-person-preferences.md) | Per-person settings in a key–value table | Accepted |
 | [0011](0011-pages-fetch-what-they-show.md) | Pages fetch what they show; the layout carries only what every page needs | Accepted |
 | [0012](0012-companies-and-their-roles-on-projects.md) | Companies, their people, and their roles on projects | Accepted |
+| [0013](0013-connected-gmail-mailbox.md) | Reading the connected Gmail mailbox, metadata first | Accepted |
+| [0014](0014-hosting-and-job-queue.md) | Singapore on Supabase and Render, with Graphile Worker as the job queue | Accepted |
+| [0015](0015-production-model-providers.md) | OpenAI and Anthropic in production, one primary and one backup | Accepted |
+| [0016](0016-mailbox-tokens-and-key-management.md) | Mailbox tokens: envelope encryption with Cloud KMS | Accepted |

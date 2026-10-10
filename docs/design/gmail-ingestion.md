@@ -1,6 +1,6 @@
 # Design: ingesting the connected Gmail mailbox
 
-**Status:** Agreed direction (2026-10-10). The decisions behind it: [0013](../decisions/0013-connected-gmail-mailbox.md) (what is read and kept), [0014](../decisions/0014-hosting-and-job-queue.md) (hosting and the queue), [0015](../decisions/0015-production-model-providers.md) (models), [0016](../decisions/0016-mailbox-tokens-and-key-management.md) (tokens). Diagram of the token flow: [Gmail Token Flow](https://claude.ai/artifact/2Moj4sPrnpJxh1Uc2r4kVg) (private; open it from the owner's account or share it from its page).
+**Status:** Agreed direction (2026-10-10). The decisions behind it: [0013](../decisions/0013-connected-gmail-mailbox.md) (what is read and kept), [0014](../decisions/0014-hosting-and-job-queue.md) (hosting and the queue), [0015](../decisions/0015-production-model-providers.md) (models), [0016](../decisions/0016-mailbox-tokens-and-key-management.md) (tokens). Diagrams (private; open them from the owner's account or share them from their pages): [Message Pipeline Map](https://claude.ai/artifact/Av5sq9yns69tX39BFfdiQg), the whole path from paste, upload, and Gmail to a confirmed change, by system; [Gmail Token Flow](https://claude.ai/artifact/2Moj4sPrnpJxh1Uc2r4kVg), how the token is issued, used, and refreshed.
 
 ## The point
 

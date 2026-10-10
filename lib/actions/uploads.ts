@@ -3,13 +3,13 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { refresh } from "next/cache";
-import { after } from "next/server";
 import { z } from "zod";
-import { analyzeMessage } from "@/lib/ai/analyze-message";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { file, message } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
+import { queue } from "@/lib/queue";
+import { analyzeJobKey } from "@/lib/queue/jobs";
 import { readBytes, stat, uploadUrl } from "@/lib/storage";
 import { UPLOAD_LIMITS } from "@/lib/uploads";
 import { errorText } from "./validation";
@@ -81,7 +81,9 @@ export async function registerUpload(
     digest.update(createHash("sha256").update(bytes).digest());
   }
   const dedupKey = `upload:${digest.digest("hex")}`;
+  const locale = toLocale(person.locale);
 
+  // The message, its files, and its analysis job are saved together, or none are.
   const created = await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(message)
@@ -102,6 +104,7 @@ export async function registerUpload(
         sizeBytes: f.size,
       })),
     );
+    await queue.enqueue("message.analyze", { messageId: row.id, locale }, { tx, jobKey: analyzeJobKey(row.id) });
     return row;
   });
   if (!created) {
@@ -111,8 +114,6 @@ export async function registerUpload(
       .where(and(eq(message.talentId, talent.id), eq(message.dedupKey, dedupKey)));
     return { id: existing.id, duplicate: true };
   }
-  const locale = toLocale(person.locale);
-  after(() => analyzeMessage(created.id, locale));
   refresh();
   return { id: created.id, duplicate: false };
 }

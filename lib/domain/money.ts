@@ -12,7 +12,8 @@ export const money = (n: number, locale: string, currency = "TWD") =>
     maximumFractionDigits: currency === "JPY" ? 0 : 2,
   }).format(n);
 
-const scaleOf = (currency: string) => (currency === "JPY" ? 1 : 100);
+export const minorUnitFactor = (currency: string) => (currency === "JPY" ? 1 : 100);
+const scaleOf = minorUnitFactor;
 
 export function minorUnits(amount: number, currency: string) {
   return Number(amount.toFixed(currency === "JPY" ? 0 : 2).replace(".", ""));

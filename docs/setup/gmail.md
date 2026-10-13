@@ -16,10 +16,15 @@ In the project you made for sign-in:
    ```
    APP_ENV=development
    MAIL_KEY_DEV=…            # openssl rand -base64 32
+   WORKER_SECRET=…           # openssl rand -base64 32, a different value
    ```
-   `openssl rand -base64 32` prints 32 random bytes (a 256-bit key) as text that fits in `.env.local`; run it once and paste the output. `MAIL_KEY_DEV` is the local master key that wraps each mailbox's data key. Keep it out of Git: with it and a copy of the database, the stored tokens can be decrypted. Changing it makes stored tokens unreadable, so connected mailboxes need reconnecting. The app refuses to use it unless `APP_ENV=development`; other environments use Cloud KMS (deploy-render).
+   `openssl rand -base64 32` prints 32 random bytes (a 256-bit key) as text that fits in `.env.local`; run it once for each and paste the output. `MAIL_KEY_DEV` is the local master key that wraps each mailbox's data key. Keep it out of Git: with it and a copy of the database, the stored tokens can be decrypted. Changing it makes stored tokens unreadable, so connected mailboxes need reconnecting. The app refuses to use it unless `APP_ENV=development`; other environments use Cloud KMS (deploy-render).
 
 Restart `npm run dev` and `npm run worker`. Then Settings → Connected services → Gmail → Connect: pick the history choice, then the Google account. Google shows the "Google hasn't verified this app" screen while testing; **Advanced → Go to … (unsafe)** is expected for test users. Make sure the box for reading your email is ticked.
+
+`WORKER_SECRET` lets the web service ask the worker for sender and subject: Intake's Waiting and Filtered out read them live from Gmail, and only the worker can decrypt the token. The worker listens on `127.0.0.1:3001` (`WORKER_HTTP_PORT` to change it, and `WORKER_URL` to match).
+
+**Sync now** (Intake, top right) is also done by the worker: the first one reads the last 30 days, if that was the choice when connecting, or starts from now; later ones read what arrived since. Only headers and labels are read, never the body.
 
 Disconnect is finished by the worker (it alone can decrypt the token to revoke it at Google), so the row says "Disconnecting…" until `npm run worker` picks the job up.
 
@@ -39,7 +44,7 @@ While the app stays in Testing, test users can keep connecting, with the 7-day e
 
 ## Production
 
-A production OAuth client (ideally its own project) with `https://app.example.com/api/mail/callback`, the Gmail API enabled there, and on the host: `APP_ENV=production`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `BETTER_AUTH_SECRET` (it also seals the short-lived connect cookie), `BETTER_AUTH_URL`, and the Cloud KMS settings from deploy-render. No `MAIL_KEY_DEV`.
+A production OAuth client (ideally its own project) with `https://app.example.com/api/mail/callback`, the Gmail API enabled there, and on the host: `APP_ENV=production`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `BETTER_AUTH_SECRET` (it also seals the short-lived connect cookie), `BETTER_AUTH_URL`, and the Cloud KMS settings from deploy-render. No `MAIL_KEY_DEV`. The same `WORKER_SECRET` on the web service and the worker; the worker runs as a private service (not reachable from the internet) with `WORKER_HTTP_HOST=0.0.0.0`, and the web service's `WORKER_URL` is its private address.
 
 ## Troubleshooting
 
@@ -49,5 +54,6 @@ A production OAuth client (ideally its own project) with `https://app.example.co
 | "You can't sign in because this app sent an invalid request" (or `redirect_uri_mismatch`) on Google's page | Step 4: the callback isn't listed exactly as `BETTER_AUTH_URL` + `/api/mail/callback` on the same client as `GOOGLE_CLIENT_ID`. Google may take a few minutes to apply a new URI. To see Google's real reason, decode the `authError` value in the error page's address: it's base64 |
 | "Google didn't grant access to read Gmail" | The scope isn't added under Data access, or the box was unticked on Google's screen |
 | `access_denied` for a teammate | Their Google account isn't under Test users |
-| "Gmail API has not been used in project …" (from the worker, later branches) | Step 1: enable the API in this project |
-| Stuck on "Disconnecting…" | `npm run worker` isn't running |
+| Stuck on "Disconnecting…" or "Syncing…" | `npm run worker` isn't running |
+| "Senders and subjects can't be read from Gmail right now" in Waiting or Filtered out | The worker isn't running, `WORKER_SECRET` differs between `.env.local` and the worker (or is missing), or `WORKER_URL` doesn't point at its port. The worker's log says "listening on" when its endpoint is up |
+| "Last sync failed" | The worker's log has `mail.sync failed` with Gmail's status and reason. A 403 `accessNotConfigured` is step 1 |

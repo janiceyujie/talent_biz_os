@@ -3,6 +3,9 @@
 //
 //   npm run worker                  # beside npm run dev
 //
+// It also answers the web service's live questions about a mailbox on a
+// private port (worker/http.ts), since only the worker can decrypt its token.
+//
 // It runs the app's own modules under the react-server condition, so their
 // "server-only" imports resolve, and reads the same .env files as the app.
 // Stop it with Ctrl-C (or SIGTERM on deploy): running jobs finish first.
@@ -13,13 +16,16 @@ async function main() {
   // Imported after the environment is loaded: lib/db reads DATABASE_URL when it loads.
   const { run } = await import("graphile-worker");
   const { taskList } = await import("./tasks");
+  const { startHttp } = await import("./http");
   const runner = await run({
     connectionString: process.env.DATABASE_URL,
     concurrency: Number(process.env.WORKER_CONCURRENCY || 4),
     taskList,
     parsedCronItems: [], // no scheduled jobs yet
   });
+  const http = startHttp();
   await runner.promise;
+  http?.close();
   process.exit(0);
 }
 

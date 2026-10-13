@@ -24,6 +24,7 @@ import {
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
 import { historyModes } from "../mail/history";
+import { ruleIds } from "../mail/relevance/rules";
 import { contactRoles, stages as projectStages, transportModes, type ContractTerms, type ProjectDetails, type TermChange } from "../types"; // relative: drizzle-kit loads this file too
 
 const id = () => uuid().primaryKey().defaultRandom();
@@ -834,6 +835,7 @@ export const mailConnection = pgTable(
     historyDoneAt: timestamp({ withTimezone: true }),
     status: text({ enum: mailConnectionStatuses }).notNull().default("connected"),
     failure: text(), // a failure code, for the settings row
+    syncRequestedAt: timestamp({ withTimezone: true }), // Sync now pressed; syncing until last_synced_at passes it
     lastSyncedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -843,5 +845,67 @@ export const mailConnection = pgTable(
     index("mail_connection_talent_idx").on(t.talentId),
     check("mail_connection_status_check", oneOf(t.status, mailConnectionStatuses)),
     check("mail_connection_history_mode_check", oneOf(t.historyMode, historyModes)),
+  ],
+).enableRLS();
+
+// What the relevance check decided about one email of a connected mailbox
+// (decision 0013): ids only, never a sender or subject. Filtered out and
+// Waiting in Intake read those live from Gmail, through the worker. Removed
+// with the connection. `pending` waits for the model step.
+export const mailDecisionOutcomes = ["work", "skipped", "pending"] as const;
+// Who decided: a rule (lib/mail/relevance/rules.ts) or the person, with a sender rule.
+export const mailDecisionDeciders = [...ruleIds, "person"] as const;
+
+export const mailDecision = pgTable(
+  "mail_decision",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    connectionId: uuid()
+      .notNull()
+      .references(() => mailConnection.id, { onDelete: "cascade" }),
+    providerMessageId: text().notNull(),
+    providerThreadId: text().notNull(),
+    receivedAt: timestamp({ withTimezone: true }).notNull(),
+    outcome: text({ enum: mailDecisionOutcomes }).notNull(),
+    decidedBy: text({ enum: mailDecisionDeciders }), // null while pending
+    classifierVersion: text().notNull(), // the rules version that decided
+    messageId: uuid().references(() => message.id, { onDelete: "set null" }), // the message it became, once brought in
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique("mail_decision_connection_message").on(t.connectionId, t.providerMessageId), // never decided twice
+    index("mail_decision_connection_outcome_idx").on(t.connectionId, t.outcome, t.receivedAt),
+    index("mail_decision_connection_thread_idx").on(t.connectionId, t.providerThreadId),
+    check("mail_decision_outcome_check", oneOf(t.outcome, mailDecisionOutcomes)),
+    check("mail_decision_decided_by_check", oneOf(t.decidedBy, mailDecisionDeciders)),
+  ],
+).enableRLS();
+
+// An artist's "always bring in" or "never" for one sender or a whole domain,
+// made only by their own click. Belongs to the talent, so it outlives a reconnect.
+export const mailSenderRuleKinds = ["address", "domain"] as const;
+export const mailSenderVerdicts = ["always", "never"] as const;
+
+export const mailSenderRule = pgTable(
+  "mail_sender_rule",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    kind: text({ enum: mailSenderRuleKinds }).notNull(),
+    value: text().notNull(), // an address or a domain, lowercased
+    verdict: text({ enum: mailSenderVerdicts }).notNull(),
+    createdBy: uuid().references(() => person.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("mail_sender_rule_talent_value").on(t.talentId, t.kind, t.value),
+    check("mail_sender_rule_kind_check", oneOf(t.kind, mailSenderRuleKinds)),
+    check("mail_sender_rule_verdict_check", oneOf(t.verdict, mailSenderVerdicts)),
   ],
 ).enableRLS();

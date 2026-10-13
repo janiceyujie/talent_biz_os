@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { cache } from "react";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { dailyUsage } from "@/lib/ai/usage";
@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 import { readPreferences } from "@/lib/preferences";
 import { pairKey } from "@/lib/domain/organizations";
 import { summaryOf } from "./projects";
-import { authAccount, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { authAccount, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { mailConfigured } from "@/lib/mail/connect";
 import { isProjectType } from "@/lib/project-types";
@@ -92,16 +92,33 @@ export const getAppData = cache(async (): Promise<AppData> => {
   // The talent's connected mailbox (decision 0013): every member sees the same one. Never the token columns.
   const [mailbox] = await db
     .select({
+      id: mailConnection.id,
       accountEmail: mailConnection.accountEmail,
       status: mailConnection.status,
       failure: mailConnection.failure,
       historyMode: mailConnection.historyMode,
       lastSyncedAt: mailConnection.lastSyncedAt,
+      syncRequestedAt: mailConnection.syncRequestedAt,
       createdAt: mailConnection.createdAt,
       updatedAt: mailConnection.updatedAt,
     })
     .from(mailConnection)
     .where(eq(mailConnection.talentId, current.id));
+  const [mailCounts, senderRules] = await Promise.all([
+    mailbox
+      ? db
+          .select({ outcome: mailDecision.outcome, n: count() })
+          .from(mailDecision)
+          .where(eq(mailDecision.connectionId, mailbox.id))
+          .groupBy(mailDecision.outcome)
+      : [],
+    db
+      .select({ id: mailSenderRule.id, kind: mailSenderRule.kind, value: mailSenderRule.value, verdict: mailSenderRule.verdict })
+      .from(mailSenderRule)
+      .where(eq(mailSenderRule.talentId, current.id))
+      .orderBy(mailSenderRule.value),
+  ]);
+  const mailCount = (o: string) => mailCounts.find((r) => r.outcome === o)?.n ?? 0;
   // This person's own Google calendars shown here (decision 0009, phase 2): only they see them.
   const importSources = connection
     ? await db.select().from(calendarImportSource).where(eq(calendarImportSource.connectionId, connection.id))
@@ -245,10 +262,14 @@ export const getAppData = cache(async (): Promise<AppData> => {
             failure: mailbox.failure,
             historyMode: mailbox.historyMode,
             lastSyncedAt: mailbox.lastSyncedAt?.toISOString() ?? null,
+            syncing:
+              mailbox.status === "connected" && !!mailbox.syncRequestedAt && (!mailbox.lastSyncedAt || mailbox.syncRequestedAt > mailbox.lastSyncedAt),
             connectedAt: mailbox.createdAt.toISOString(),
             updatedAt: mailbox.updatedAt.toISOString(), // when the status last changed
+            counts: { waiting: mailCount("work") + mailCount("pending"), skipped: mailCount("skipped") },
           }
         : null,
+      senderRules,
     },
     signIn: {
       password: accountRows.some((a) => a.providerId === "credential"),

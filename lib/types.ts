@@ -309,9 +309,12 @@ export type AppData = {
       failure: string | null;
       historyMode: "30_days" | "new_only";
       lastSyncedAt: string | null;
+      syncing: boolean; // Sync now pressed and not finished
       connectedAt: string;
       updatedAt: string;
+      counts: { waiting: number; skipped: number }; // Intake's Waiting and Filtered out
     } | null;
+    senderRules: GmailSenderRule[]; // the artist's own "always" and "never"
   };
   // This person's sign-in methods; googleAccountId is our auth_account row id (what unlinking takes).
   signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };
@@ -319,6 +322,22 @@ export type AppData = {
   aiDataNotice: string | null;
   aiUsage: { used: number; limit: number; remaining: number }; // AI analyses in the last 24 hours (docs/decisions/0008)
 };
+
+export type GmailSenderRule = { id: string; kind: "address" | "domain"; value: string; verdict: "always" | "never" };
+
+// Intake's Waiting (work, or not decided yet) and Filtered out (skipped).
+export type GmailMailView = "waiting" | "skipped";
+export type GmailMailItem = {
+  id: string; // our decision's id
+  gmailId: string;
+  receivedAt: string;
+  outcome: "work" | "skipped" | "pending";
+  decidedBy: string | null; // a rule id (lib/mail/relevance/rules.ts) or "person"; null while pending
+  from: { address: string; name: string } | null; // read live from Gmail; null when it couldn't be
+  subject: string | null;
+};
+// `error`: the mailbox is gone, needs reconnecting, or Gmail or the worker couldn't be reached.
+export type GmailMailPage = { items: GmailMailItem[]; more: boolean; error: "gone" | "reconnect" | "gmail" | "unavailable" | null };
 
 /** Read and snooze marks by notification id (ISO timestamps). */
 export type NotificationState = Record<string, { readAt: string | null; snoozedUntil: string | null }>;

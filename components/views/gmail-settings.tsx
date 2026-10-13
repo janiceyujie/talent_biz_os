@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { InfoHint } from "@/components/app/info-hint";
 import { Modal } from "@/components/app/modal";
-import { disconnectGmail } from "@/lib/actions/mail";
+import { disconnectGmail, removeSenderRule } from "@/lib/actions/mail";
 import type { HistoryMode } from "@/lib/mail/history";
 import { SettingsRow } from "./settings-row";
 
@@ -105,7 +105,10 @@ export function GmailSettings({ onNotice }: { onNotice: (text: string) => void }
             <dd>{format.dateTime(new Date(connection.connectedAt), { dateStyle: "medium" })}</dd>
             <dt>{t("historyLabel")}</dt>
             <dd>{connection.historyMode === "new_only" ? t("historyNew") : t("history30")}</dd>
+            <dt>{t("lastSynced")}</dt>
+            <dd>{connection.lastSyncedAt ? format.dateTime(new Date(connection.lastSyncedAt), { dateStyle: "medium", timeStyle: "short" }) : t("never")}</dd>
           </dl>
+          <SenderRules onNotice={onNotice} />
           <p className={connection.status === "error" ? "notice error" : "muted"} role="status">
             {connection.status === "error" ? t("errorLong") : t("notReadingYet")}
           </p>
@@ -145,6 +148,44 @@ export function GmailSettings({ onNotice }: { onNotice: (text: string) => void }
         </Modal>
       )}
     </>
+  );
+}
+
+/** The artist's own "always" and "never", each removable. They're made from Waiting and Filtered out in Intake. */
+function SenderRules({ onNotice }: { onNotice: (text: string) => void }) {
+  const { gmail } = useAppData();
+  const t = useTranslations("gmail");
+  const [pending, startTransition] = useTransition();
+  return (
+    <section className="gmail-rules" aria-labelledby="gmail-rules-title">
+      <h3 id="gmail-rules-title">{t("senderRules")}</h3>
+      {gmail.senderRules.length ? (
+        <ul>
+          {gmail.senderRules.map((r) => (
+            <li key={r.id}>
+              <span>{r.kind === "domain" ? t("scopeDomain", { domain: r.value }) : r.value}</span>
+              <em className={r.verdict === "always" ? "message-status status-confirmed" : "message-status"}>
+                {r.verdict === "always" ? t("ruleAlways") : t("ruleNever")}
+              </em>
+              <button
+                className="text-button"
+                disabled={pending}
+                onClick={() =>
+                  startTransition(async () => {
+                    const failure = await removeSenderRule(r.id);
+                    if (failure) onNotice(failure);
+                  })
+                }
+              >
+                {t("removeRule")}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">{t("noRules")}</p>
+      )}
+    </section>
   );
 }
 

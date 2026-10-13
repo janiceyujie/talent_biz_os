@@ -12,6 +12,11 @@ describe("job payloads", () => {
     assert.equal(jobs["message.analyze"].safeParse({ messageId: id, locale: "fr" }).success, false);
   });
 
+  test("a sync job carries only the connection id", () => {
+    assert.equal(jobs["mail.sync"].safeParse({ connectionId: id }).success, true);
+    assert.equal(jobs["mail.sync"].safeParse({ connectionId: id, subject: "Offer" }).success, false);
+  });
+
   test("a disconnect job carries only the connection id", () => {
     assert.equal(jobs["mail.disconnect"].safeParse({ connectionId: id }).success, true);
     assert.equal(jobs["mail.disconnect"].safeParse({ connectionId: id, token: "1//x" }).success, false);

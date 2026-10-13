@@ -299,6 +299,7 @@ A queue is a row in Postgres, not memory in the worker: the number of mailboxes 
 | A sync, steady state | One "what changed" call, plus one header read per new email | New mail for 4 mailboxes at once at 20 emails a second each: far above the expected 100 emails a day per artist (about 0.1 a second for 100 artists) |
 | The first sync, 30 days | One list call per 500 emails, then one header read each | About 25 seconds for 500 emails (measured: the builder's month); about 2.5 minutes for 3,000 |
 | Waiting or Filtered out opening | One header read per row, 30 rows a page | About 1.5 seconds a page. HTTP lookups don't use job slots: they're limited by the mailbox's pace, not the worker |
+| `mail.relevance` | One header read and one small-model call per email the rules leave pending (about 4% of mail) | One at a time per mailbox (its own queue): about 1.5 seconds each on a local qwen3:8b (measured: 37 emails in 78 seconds), well under a second on a paid small model. To score several at once, drop the per-mailbox queue; a local Ollama also needs `OLLAMA_NUM_PARALLEL` |
 | `message.analyze` | One model call, about 5 to 30 seconds | Roughly 10 to 50 analyses a minute, bounded by model latency and the daily limit |
 
 The first limit to reach is job slots when many large jobs arrive together: for example, 20 new mailboxes each starting a 30-day sync, or a burst of analyses waiting on a slow model. Jobs then wait in the queue rather than fail; the wait grows, not the error rate.

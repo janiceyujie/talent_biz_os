@@ -1,10 +1,12 @@
 import "server-only";
-import { and, count, eq, gt } from "drizzle-orm";
+import { and, count, eq, gt, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { aiCall } from "@/lib/db/schema";
 
 // Usage limits on AI calls (docs/decisions/0008), counted from ai_call. Only
-// real model calls count — replayed recordings cost nothing. Limits come from
+// real model calls count — replayed recordings cost nothing — and the
+// relevance check on a connected mailbox doesn't (short, cheap, and not the
+// person's action). Limits come from
 // the environment until plans and billing exist.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -16,7 +18,9 @@ export async function dailyUsage(talentId: string) {
   const [row] = await db
     .select({ used: count() })
     .from(aiCall)
-    .where(and(eq(aiCall.talentId, talentId), eq(aiCall.replayed, false), gt(aiCall.createdAt, new Date(Date.now() - DAY_MS))));
+    .where(
+      and(eq(aiCall.talentId, talentId), eq(aiCall.replayed, false), ne(aiCall.task, "relevance"), gt(aiCall.createdAt, new Date(Date.now() - DAY_MS))),
+    );
   const limit = dailyLimit();
   return { used: row.used, limit, remaining: Math.max(0, limit - row.used) };
 }

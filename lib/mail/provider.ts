@@ -11,6 +11,6 @@ export interface MailProvider {
   listChanges(cursor: string): Promise<{ mail: MailRef[]; cursor: string } | null>;
   /** Emails received after `after`, oldest first (spam and trash left out), at most `limit`. */
   listSince(after: Date, limit: number): Promise<MailRef[]>;
-  /** One email's headers and labels; null when it's gone (deleted since). */
-  getMetadata(id: string): Promise<MailMetadata | null>;
+  /** One email's headers and labels, and its short preview when `snippet`; null when it's gone (deleted since). */
+  getMetadata(id: string, options?: { snippet?: boolean }): Promise<MailMetadata | null>;
 }

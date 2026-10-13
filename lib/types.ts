@@ -303,13 +303,14 @@ export type AppData = {
   // The talent's connected Gmail mailbox (decision 0013); `available` = an OAuth client and a master key are set up here.
   gmail: {
     available: boolean;
+    freeTier: boolean; // Gmail content may go to a free tier that keeps what it's sent (AI_FREE_TIER_OK, decision 0015)
     connection: {
       accountEmail: string;
       status: "connected" | "reconnect_needed" | "error" | "disconnecting";
       failure: string | null;
       historyMode: "30_days" | "new_only";
       lastSyncedAt: string | null;
-      syncing: boolean; // Sync now pressed and not finished
+      syncing: boolean; // Sync now pressed and not finished, or emails still being scored
       connectedAt: string;
       updatedAt: string;
       counts: { waiting: number; skipped: number }; // Intake's Waiting and Filtered out
@@ -325,14 +326,16 @@ export type AppData = {
 
 export type GmailSenderRule = { id: string; kind: "address" | "domain"; value: string; verdict: "always" | "never" };
 
-// Intake's Waiting (work, or not decided yet) and Filtered out (skipped).
+// Intake's Waiting (work, not sure, or not decided yet) and Filtered out (skipped).
 export type GmailMailView = "waiting" | "skipped";
 export type GmailMailItem = {
   id: string; // our decision's id
   gmailId: string;
   receivedAt: string;
-  outcome: "work" | "skipped" | "pending";
-  decidedBy: string | null; // a rule id (lib/mail/relevance/rules.ts) or "person"; null while pending
+  outcome: "work" | "skipped" | "pending" | "unsure";
+  decidedBy: string | null; // a rule id (lib/mail/relevance/rules.ts), "model", "person", or "gone"; null while pending
+  score: number | null; // the model's, 0 to 1
+  kind: string | null; // what the model says it looks like (lib/mail/relevance/prompt.ts)
   from: { address: string; name: string } | null; // read live from Gmail; null when it couldn't be
   subject: string | null;
 };

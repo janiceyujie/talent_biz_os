@@ -28,6 +28,7 @@ function mail(
     from: parseAddress(o.from ?? "Someone <someone@example.com>"),
     subject: o.subject ?? "Hello",
     receivedAt: new Date(o.at ?? 0),
+    snippet: "",
     headers: {
       From: "",
       Subject: "",

@@ -70,6 +70,7 @@ export type GmailMetadata = {
   threadId: string;
   labelIds?: string[];
   internalDate?: string; // ms since the epoch, as a string
+  snippet?: string;
   payload?: { headers?: GmailHeader[] };
 };
 
@@ -91,11 +92,11 @@ export function gmailApi(token: string) {
         messages?: { id: string; threadId: string }[];
         nextPageToken?: string;
       }>(token, `/messages?${new URLSearchParams({ q, maxResults: "500", ...(pageToken ? { pageToken } : {}) })}`),
-    /** Headers and labels only: Gmail never sends the body in this format. */
-    metadata: (id: string) => {
+    /** Headers and labels only (and Gmail's short preview, when asked): Gmail never sends the body in this format. */
+    metadata: (id: string, { snippet = false } = {}) => {
       const q = new URLSearchParams({ format: "metadata" });
       for (const h of metadataHeaders) q.append("metadataHeaders", h);
-      q.append("fields", "id,threadId,labelIds,internalDate,payload/headers");
+      q.append("fields", `id,threadId,labelIds,internalDate,payload/headers${snippet ? ",snippet" : ""}`);
       return call<GmailMetadata>(token, `/messages/${encodeURIComponent(id)}?${q}`);
     },
   };

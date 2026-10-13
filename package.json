@@ -15,6 +15,7 @@
     "db:studio": "drizzle-kit studio",
     "i18n:check": "node scripts/i18n-check.mjs && tsx scripts/registry-labels-check.mts",
     "eval:extraction": "tsx --conditions=react-server scripts/eval-extraction.mts",
+    "eval:relevance": "tsx --conditions=react-server scripts/eval-relevance.mts",
     "test": "tsx --test 'lib/**/*.test.ts'"
   },
   "dependencies": {

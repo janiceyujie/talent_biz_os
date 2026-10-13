@@ -51,3 +51,10 @@ The router that picks the role is plain code (task, intent, attachments, thread 
 - Prompts and schemas stay provider-neutral (`lib/ai/prompts.ts`, `lib/ai/analysis.ts`); each provider's structured-output mode is handled inside its adapter.
 - The privacy policy names both providers as processors, and their no-training and retention terms are checked before launch.
 - Paste and upload use the same roles and router, so the free-tier rule for them stays as decision 0006 describes until launch.
+
+## Implementation notes (2026-10-13)
+
+- Calls name a role (`analysis`, `relevance`; `lib/ai/model.ts`). Until the paid adapters arrive (ai-providers), relevance can run on its own provider and model in development, `AI_RELEVANCE_PROVIDER` and `AI_RELEVANCE_MODEL`.
+- The free-tier rule is enforced in `generateObject`: a request marked as mailbox content goes to a provider marked `AI_PROVIDER_KEEPS_DATA` only with `AI_FREE_TIER_OK=1`, which throws with `APP_ENV=production` (the worker checks it at start). With the flag on, the Gmail connect dialog says so.
+- Relevance calls are logged in `ai_call` (task `relevance`) and don't count toward the daily analysis limit.
+- Recorded answers (`AI_REPLAY`) are keyed by provider and model too, so an eval on one model never replays another's.

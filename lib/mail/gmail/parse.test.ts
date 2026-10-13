@@ -24,4 +24,10 @@ test("only the headers asked for, matched whatever their case", () => {
   assert.equal(m.headers.Precedence, "");
   assert.equal("Received" in m.headers, false);
   assert.equal(m.receivedAt.getTime(), 1760000000000);
+  assert.equal(m.snippet, ""); // not asked for
+});
+
+test("the snippet, unescaped", () => {
+  const m = toMetadata({ id: "a", threadId: "t", snippet: "Rock &amp; roll &#39;26 &lt;tour&gt; &#x4e2d;&#25991; &bogus;" });
+  assert.equal(m.snippet, "Rock & roll '26 <tour> 中文 &bogus;");
 });

@@ -9,10 +9,12 @@ import type { MailProvider } from "../provider";
 import { readMetadata } from "../read";
 import { ruleContext } from "../relevance/context";
 import { decideAll, RULES_VERSION } from "../relevance/rules";
+import { queueScoring } from "./relevance";
 
 // mail.sync (docs/design/gmail-ingestion.md, Jobs): find the mailbox's new
 // email, read each one's metadata, run the rules, and record what they
-// decided. Runs on the mailbox's own queue, so two syncs never move the same
+// decided; what they leave pending is queued for the model step
+// (./relevance.ts). Runs on the mailbox's own queue, so two syncs never move the same
 // cursor. Safe to run twice: an email already decided is never read again,
 // except one still pending when the rules have changed since.
 
@@ -84,6 +86,8 @@ async function sync(c: Connection) {
       failure: null,
     })
     .where(and(eq(mailConnection.id, c.id), inArray(mailConnection.status, ["connected", "error"])));
+  // Also anything still pending from before: a model that was down, or the rules-only version.
+  await queueScoring(c.id);
 }
 
 /**

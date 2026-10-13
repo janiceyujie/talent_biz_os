@@ -24,6 +24,7 @@ import {
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
 import { historyModes } from "../mail/history";
+import { mailKinds } from "../mail/relevance/prompt";
 import { ruleIds } from "../mail/relevance/rules";
 import { contactRoles, stages as projectStages, transportModes, type ContractTerms, type ProjectDetails, type TermChange } from "../types"; // relative: drizzle-kit loads this file too
 
@@ -851,10 +852,12 @@ export const mailConnection = pgTable(
 // What the relevance check decided about one email of a connected mailbox
 // (decision 0013): ids only, never a sender or subject. Filtered out and
 // Waiting in Intake read those live from Gmail, through the worker. Removed
-// with the connection. `pending` waits for the model step.
-export const mailDecisionOutcomes = ["work", "skipped", "pending"] as const;
-// Who decided: a rule (lib/mail/relevance/rules.ts) or the person, with a sender rule.
-export const mailDecisionDeciders = [...ruleIds, "person"] as const;
+// with the connection. `pending` waits for the model step; `unsure` is between
+// its two thresholds ("Not sure this is work").
+export const mailDecisionOutcomes = ["work", "skipped", "pending", "unsure"] as const;
+// Who decided: a rule (lib/mail/relevance/rules.ts), the model, the person with
+// a sender rule, or `gone` when the email was deleted in Gmail before the model saw it.
+export const mailDecisionDeciders = [...ruleIds, "model", "person", "gone"] as const;
 
 export const mailDecision = pgTable(
   "mail_decision",
@@ -871,7 +874,9 @@ export const mailDecision = pgTable(
     receivedAt: timestamp({ withTimezone: true }).notNull(),
     outcome: text({ enum: mailDecisionOutcomes }).notNull(),
     decidedBy: text({ enum: mailDecisionDeciders }), // null while pending
-    classifierVersion: text().notNull(), // the rules version that decided
+    score: numeric({ precision: 4, scale: 3, mode: "number" }), // the model's, 0 to 1
+    kind: text({ enum: mailKinds }), // what the model says it looks like: our label, nothing from the email
+    classifierVersion: text().notNull(), // the rules version, and the model step's prompt and model when it decided
     messageId: uuid().references(() => message.id, { onDelete: "set null" }), // the message it became, once brought in
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -882,6 +887,8 @@ export const mailDecision = pgTable(
     index("mail_decision_connection_thread_idx").on(t.connectionId, t.providerThreadId),
     check("mail_decision_outcome_check", oneOf(t.outcome, mailDecisionOutcomes)),
     check("mail_decision_decided_by_check", oneOf(t.decidedBy, mailDecisionDeciders)),
+    check("mail_decision_kind_check", oneOf(t.kind, mailKinds)),
+    check("mail_decision_score_check", sql`${t.score} between 0 and 1`),
   ],
 ).enableRLS();
 

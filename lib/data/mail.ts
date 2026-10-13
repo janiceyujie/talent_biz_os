@@ -7,7 +7,7 @@ import type { GmailMailPage, GmailMailView } from "@/lib/types";
 
 const PAGE_SIZE = 30;
 const outcomes = {
-  waiting: ["work", "pending"],
+  waiting: ["work", "unsure", "pending"],
   skipped: ["skipped"],
 } as const;
 
@@ -29,6 +29,8 @@ export async function listMailDecisions(talentId: string, view: GmailMailView, o
       receivedAt: mailDecision.receivedAt,
       outcome: mailDecision.outcome,
       decidedBy: mailDecision.decidedBy,
+      score: mailDecision.score,
+      kind: mailDecision.kind,
     })
     .from(mailDecision)
     .where(and(eq(mailDecision.connectionId, c.id), inArray(mailDecision.outcome, outcomes[view])))
@@ -50,6 +52,8 @@ export async function listMailDecisions(talentId: string, view: GmailMailView, o
       receivedAt: r.receivedAt.toISOString(),
       outcome: r.outcome,
       decidedBy: r.decidedBy,
+      score: r.score,
+      kind: r.kind,
       from: found.get(r.gmailId)?.from ?? null, // null: deleted in Gmail since, or not readable right now
       subject: found.get(r.gmailId)?.subject ?? null,
     })),

@@ -51,9 +51,9 @@ export function gmailProvider(accessToken: string): MailProvider {
       return mail.slice(0, limit).reverse(); // Gmail lists newest first
     },
 
-    async getMetadata(id) {
+    async getMetadata(id, options) {
       try {
-        return toMetadata(await api.metadata(id));
+        return toMetadata(await api.metadata(id, options));
       } catch (e) {
         if (e instanceof GmailError && e.status === 404) return null;
         throw e;

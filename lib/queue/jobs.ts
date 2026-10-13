@@ -11,6 +11,8 @@ export const jobs = {
   "message.analyze": z.strictObject({ messageId: z.uuid(), locale: z.enum(locales) }),
   /** Find a mailbox's new email, run the rules, record the decisions (lib/mail/jobs/sync.ts). */
   "mail.sync": z.strictObject({ connectionId: z.uuid() }),
+  /** The model step for one email the rules left pending (lib/mail/jobs/relevance.ts). */
+  "mail.relevance": z.strictObject({ decisionId: z.uuid() }),
   /** Revoke a mailbox's token at Google and delete the connection (lib/mail/jobs/disconnect.ts). */
   "mail.disconnect": z.strictObject({ connectionId: z.uuid() }),
 };
@@ -30,6 +32,8 @@ export const jobAttempts: Record<JobName, number> = {
   "message.analyze": 5,
   // Gmail unreachable or rate-limited: a few tries, then the connection shows an error until the next Sync now.
   "mail.sync": 5,
+  // The model busy or unreachable: a few tries, then the email stays "Not decided yet" until the next Sync now.
+  "mail.relevance": 5,
   // Google unreachable: a few more tries, then the row is deleted anyway.
   "mail.disconnect": 5,
 };
@@ -39,6 +43,16 @@ export const analyzeJobKey = (messageId: string) => `message.analyze:${messageId
 
 /** The key that makes a second Sync now replace a waiting sync instead of queueing twice. */
 export const syncJobKey = (connectionId: string) => `mail.sync:${connectionId}`;
+
+/** The key that keeps one email from being scored twice at once. */
+export const relevanceJobKey = (decisionId: string) => `mail.relevance:${decisionId}`;
+
+/**
+ * Scoring has its own queue per mailbox, apart from the sync's, so scoring a
+ * month of mail never holds up the next sync; one email at a time, as a local
+ * model handles best.
+ */
+export const relevanceQueue = (connectionId: string) => `mail-relevance:${connectionId}`;
 
 /** One queue per mailbox: its jobs run one at a time, in order (docs/design/gmail-ingestion.md, Jobs). */
 export const mailQueue = (connectionId: string) => `mail:${connectionId}`;

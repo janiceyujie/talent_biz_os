@@ -17,6 +17,8 @@ async function main() {
   const { run } = await import("graphile-worker");
   const { taskList } = await import("./tasks");
   const { startHttp } = await import("./http");
+  const { freeTierOk } = await import("@/lib/ai/model");
+  freeTierOk(); // throws when AI_FREE_TIER_OK=1 in production: refuse to start
   const runner = await run({
     connectionString: process.env.DATABASE_URL,
     concurrency: Number(process.env.WORKER_CONCURRENCY || 4),

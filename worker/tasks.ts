@@ -1,6 +1,7 @@
 import type { Task } from "graphile-worker";
 import { analyzeMessage, markAnalysisFailed } from "@/lib/ai/analyze-message";
 import { disconnectMailbox } from "@/lib/mail/jobs/disconnect";
+import { scoreDecision } from "@/lib/mail/jobs/relevance";
 import { syncMailbox } from "@/lib/mail/jobs/sync";
 import { jobs, type JobName } from "@/lib/queue/jobs";
 
@@ -23,6 +24,10 @@ export const taskList: Record<JobName, Task> = {
   "mail.sync": async (payload, { job }) => {
     const { connectionId } = jobs["mail.sync"].parse(payload);
     await syncMailbox(connectionId, { lastAttempt: job.attempts >= job.max_attempts });
+  },
+  "mail.relevance": async (payload) => {
+    const { decisionId } = jobs["mail.relevance"].parse(payload);
+    await scoreDecision(decisionId);
   },
   "mail.disconnect": async (payload, { job }) => {
     const { connectionId } = jobs["mail.disconnect"].parse(payload);

@@ -24,6 +24,7 @@ export function stripInvisible(text: string) {
 // Conservative on purpose: a false alarm costs a glance, a miss costs trust.
 const instructionPatterns = [
   /ignore\s+(all\s+|any\s+)?(the\s+)?(previous|prior|above|earlier|preceding)\s+(instructions?|rules?|prompts?|directions?)/i,
+  /ignore\s+(all\s+)?(your|its)\s+(instructions?|rules?|prompts?)/i,
   /disregard\s+(all\s+|any\s+)?(the\s+)?(previous|prior|above|earlier)?\s*(instructions?|rules?|prompts?)/i,
   /\b(system|developer)\s+(prompt|instructions?)\b/i,
   /\bdeveloper\s+message\b/i,

@@ -1,5 +1,7 @@
 import "server-only";
-import { and, asc, count, desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import { freeTierOk, keepsData, modelFor } from "@/lib/ai/model";
+import { relevanceQueue } from "@/lib/queue/jobs";
 import { cache } from "react";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { dailyUsage } from "@/lib/ai/usage";
@@ -104,7 +106,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     })
     .from(mailConnection)
     .where(eq(mailConnection.talentId, current.id));
-  const [mailCounts, senderRules] = await Promise.all([
+  const [mailCounts, senderRules, scoring] = await Promise.all([
     mailbox
       ? db
           .select({ outcome: mailDecision.outcome, n: count() })
@@ -117,6 +119,14 @@ export const getAppData = cache(async (): Promise<AppData> => {
       .from(mailSenderRule)
       .where(eq(mailSenderRule.talentId, current.id))
       .orderBy(mailSenderRule.value),
+    // Emails still waiting for the model step: jobs not yet run or still retrying.
+    mailbox
+      ? db
+          .execute<{ scoring: boolean }>(
+            sql`select exists (select 1 from graphile_worker.jobs where queue_name = ${relevanceQueue(mailbox.id)} and attempts < max_attempts) as scoring`,
+          )
+          .then((r) => !!r[0]?.scoring)
+      : false,
   ]);
   const mailCount = (o: string) => mailCounts.find((r) => r.outcome === o)?.n ?? 0;
   // This person's own Google calendars shown here (decision 0009, phase 2): only they see them.
@@ -255,6 +265,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     },
     gmail: {
       available: mailConfigured(),
+      freeTier: keepsData(modelFor("relevance").provider) && freeTierOk(),
       connection: mailbox
         ? {
             accountEmail: mailbox.accountEmail,
@@ -263,10 +274,11 @@ export const getAppData = cache(async (): Promise<AppData> => {
             historyMode: mailbox.historyMode,
             lastSyncedAt: mailbox.lastSyncedAt?.toISOString() ?? null,
             syncing:
-              mailbox.status === "connected" && !!mailbox.syncRequestedAt && (!mailbox.lastSyncedAt || mailbox.syncRequestedAt > mailbox.lastSyncedAt),
+              mailbox.status === "connected" &&
+              (scoring || (!!mailbox.syncRequestedAt && (!mailbox.lastSyncedAt || mailbox.syncRequestedAt > mailbox.lastSyncedAt))),
             connectedAt: mailbox.createdAt.toISOString(),
             updatedAt: mailbox.updatedAt.toISOString(), // when the status last changed
-            counts: { waiting: mailCount("work") + mailCount("pending"), skipped: mailCount("skipped") },
+            counts: { waiting: mailCount("work") + mailCount("unsure") + mailCount("pending"), skipped: mailCount("skipped") },
           }
         : null,
       senderRules,

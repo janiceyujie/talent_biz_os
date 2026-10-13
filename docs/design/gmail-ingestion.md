@@ -81,7 +81,7 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 | Job | Triggered by | Queue | Does |
 |---|---|---|---|
 | `mail.sync` | Pub/Sub notice, poll, Sync now | `mail:<connection>` | `history.list` from the cursor (the first time, the last 30 days by search when chosen); `messages.get(format=metadata)`; the rules and thread memory, inline, writing `mail_decision` (`work`, `skipped`, or `pending`); advance the cursor. Built in `gmail-sync-rules` |
-| `mail.relevance` | `mail.sync` | `mail:<connection>` | The small model on `pending` decisions (the rules already ran in `mail.sync`, which had the metadata in hand); update `mail_decision`; enqueue `mail.fetch` or the payment path |
+| `mail.relevance` | `mail.sync`, one per pending email | `mail-relevance:<connection>` | The small model on one `pending` decision: sender, subject, tab, and Gmail's preview, never the body; score and kind into `mail_decision`, `work`, `unsure`, or `skipped` by the thresholds; the rest of a work thread becomes work. Its own queue, so scoring never holds up the next sync; Sync now shows Syncing… until it's done. Built in `relevance-model`; enqueueing `mail.fetch` or the payment path comes with `gmail-ingest` and `payment-notices` |
 | `mail.fetch` | `mail.relevance` | `mail:<connection>` | Body and attachments into `message` and `file`; enqueue `message.analyze` |
 | `message.analyze` | `mail.fetch`, paste, upload | per talent | The existing analysis, model picked by the router; not-work cleanup |
 | `mail.history` | Connect | `mail-history` (low priority) | Starts the first `mail.sync` on connect, so the 30-day read no longer waits for Sync now |
@@ -114,7 +114,8 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | Provider keys |
 | `AI_MODEL_<PROVIDER>_<ROLE>` | e.g. `AI_MODEL_ANTHROPIC_RELEVANCE`; roles `RELEVANCE`, `ANALYSIS`, `ANALYSIS_COMPLEX` |
 | `AI_FREE_TIER_OK` | Allows Gmail content to reach a provider marked `AI_PROVIDER_KEEPS_DATA` (never with `APP_ENV=production`) |
-| `MAIL_RELEVANCE_HIGH`, `MAIL_RELEVANCE_LOW` | The two thresholds |
+| `AI_RELEVANCE_PROVIDER`, `AI_RELEVANCE_MODEL` | Development: relevance on its own provider and model; replaced by the role models with `ai-providers` |
+| `MAIL_RELEVANCE_HIGH`, `MAIL_RELEVANCE_LOW` | The two thresholds: 0.6 and 0.4, from the first relevance eval |
 | `MAIL_KEY_DEV` | The local data-key master key (development only) |
 | `GCP_PROJECT`, `KMS_KEY_NAME`, `GCP_KMS_CREDENTIALS` | Cloud KMS (encrypt-only credential on web, decrypt-only on the worker) |
 | `PUBSUB_TOPIC`, `PUBSUB_SUBSCRIPTION`, `GCP_PUBSUB_CREDENTIALS` | Gmail notices (worker only) |
@@ -137,7 +138,7 @@ One theme per branch, each mergeable on its own and testable on the builder's ow
 | 1 | `job-queue-worker` | Graphile Worker behind `Queue`; `npm run worker`; analysis off `after()` | Pastes and uploads analyzed by the worker |
 | 2 | `gmail-connect` | `mail_connection`, the OAuth flow, `KeyProvider` (`.env`), `APP_ENV`; connect and disconnect in Settings | Connect and disconnect your own Gmail |
 | 3 | `gmail-sync-rules` | `MailProvider`, Sync now (metadata only) including the 30-day history read, `mail_decision`, rules, thread memory, sender rules, Waiting and Filtered out through the worker's private endpoint | See what the rules decide on a real month of mail, no body read |
-| 4 | `relevance-model` | Router and roles in configuration, the free-tier guard, the model step, thresholds, relevance eval | Every email scored; tune the thresholds |
+| 4 | `relevance-model` | Roles in configuration (`AI_RELEVANCE_PROVIDER`, `AI_RELEVANCE_MODEL` until `ai-providers`), the free-tier guard, the model step with score and kind, thresholds, relevance eval | Every email scored; thresholds set from the eval |
 | 5 | `gmail-ingest` | Fetch into `message` and `file`, thread headers, analysis via the queue, Not work and cleanup | Real work email in Intake, analyzed |
 | 6 | `payment-notices` | The restricted path, the unmatched payment card, expiry | Bank notices matched to payments |
 | 7 | `gmail-threads` | Thread as the top suggestion, sent mail in relevant threads, contact proposals, reply to-do completion | A negotiation tracked as one project |
@@ -149,7 +150,7 @@ One theme per branch, each mergeable on its own and testable on the builder's ow
 
 ## Open questions
 
-1. **Threshold starting values.** Set from the first relevance eval run, not guessed.
+1. **Threshold starting values.** Set from the first relevance eval run: 0.6 and 0.4 (decision 0013, implementation notes). Revisit with the Not work rate once mail is brought in.
 2. **Rules data.** Settled for now: e-sign services only, no booking platforms (each artist's differ; sender rules cover them), and work words in both languages (`lib/mail/relevance/keywords.ts`). Revisit with what Filtered out shows.
 3. **"Never from this sender" for a contact.** Does a "never" rule override the contact rule?
 4. **The add-on after this.** It reuses the same fetch and analysis; its project dropdown becomes the strongest target signal.

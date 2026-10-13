@@ -33,3 +33,20 @@ Cases can attach screenshots, photos, or PDFs (`files: [...]`, read from `extrac
 ### Adversarial cases and flags
 
 Some cases attack the pipeline: instructions aimed at the model (plain, disguised as a footer, trying to reclassify), a payment-redirect scam, instructions hidden in invisible characters, a weekday that doesn't match its date. They pass only if the facts stay right *and* the expected flag is raised (`flags: [...]`). Every other case must raise no flags at all (`noFalseFlags`), so a protection that cries wolf shows up as a failure too. When a new trick appears, add a case for it first. Background: [decision 0007](../docs/decisions/0007-untrusted-message-content.md).
+
+## Relevance (`npm run eval:relevance`)
+
+`relevance/cases.ts` holds made-up emails of the kind the mailbox rules leave pending — offers in Promotions, bank notices, replies with no work words, sales that say "collab", friends, attempts to steer the check — each marked work or not, with its expected kind when clear-cut. At least half are Traditional Chinese. `scripts/eval-relevance.mts` scores them through `lib/mail/relevance/score.ts`, the function the worker uses, and reports, against the thresholds:
+
+- **work kept**: work not filtered out. Recall comes first: it must stay at 100%.
+- work marked sure, not work filtered out, not work marked work, and kinds as expected;
+- the lowest-scoring work case, and what a few low thresholds would keep and filter.
+
+```
+npm run eval:relevance                                   # AI_RELEVANCE_PROVIDER / AI_RELEVANCE_MODEL from .env.local
+npm run eval:relevance -- --provider gemini
+npm run eval:relevance -- --provider ollama --model qwen3:8b
+MAIL_RELEVANCE_LOW=0.3 npm run eval:relevance            # try other thresholds
+```
+
+Run it on every model named in configuration before relying on it, and whenever the prompt changes. A case the check gets wrong becomes a better prompt in general terms, or a narrower expectation, as for extraction.

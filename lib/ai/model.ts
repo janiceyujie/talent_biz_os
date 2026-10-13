@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { appEnv } from "@/lib/app-env";
 import { aiCall } from "@/lib/db/schema";
 import type { ModelErrorCode } from "./errors";
 
@@ -17,6 +18,12 @@ import type { ModelErrorCode } from "./errors";
 //                          AI_MODEL (default qwen3:8b), OLLAMA_URL (default http://127.0.0.1:11434)
 //   AI_PROVIDER=anthropic  Claude — not wired yet; added when we test with it
 //
+// Each call names its role. `relevance` (is this email work?) can run on
+// another provider in development, AI_RELEVANCE_PROVIDER and
+// AI_RELEVANCE_MODEL, e.g. a local model while analysis uses Gemini. Content from a connected mailbox never goes to a provider that
+// may keep it (AI_PROVIDER_KEEPS_DATA) unless AI_FREE_TIER_OK=1, which is
+// refused in production (docs/decisions/0015).
+//
 // Every call is logged in ai_call, and can be served from a recording
 // (AI_REPLAY) so tests don't spend quota. See docs/decisions/0006 and 0008.
 
@@ -25,14 +32,18 @@ export type Attachment = { mimeType: string; data: Uint8Array };
 
 /** What a call is for and whom, for the ai_call log and usage limits. */
 export type CallTrace = {
-  task: "extract" | "eval";
+  task: "extract" | "relevance" | "eval";
   promptVersion: string;
   talentId?: string | null;
   personId?: string | null;
   messageId?: string | null;
 };
 
+export type ModelRole = "analysis" | "relevance";
+
 export type StructuredRequest<T> = {
+  role?: ModelRole; // default analysis
+  fromMailbox?: boolean; // content read from a connected mailbox: the free-tier rule applies
   system: string;
   prompt: string;
   schema: z.ZodType<T>;
@@ -53,8 +64,32 @@ export class ModelError extends Error {
   }
 }
 
+const defaultModels: Record<string, string> = { gemini: "gemini-3.5-flash-lite,gemini-3.1-flash-lite", ollama: "qwen3:8b" };
+
+/** Which provider and models answer a role: one model, or a list tried in order when one is busy. */
+export function modelFor(role: ModelRole = "analysis") {
+  const own = role === "relevance" ? process.env.AI_RELEVANCE_PROVIDER : undefined;
+  const provider = own || process.env.AI_PROVIDER || "ollama";
+  const configured = role === "relevance" ? process.env.AI_RELEVANCE_MODEL || (own ? undefined : process.env.AI_MODEL) : process.env.AI_MODEL;
+  const models = (configured || defaultModels[provider] || "")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  return { provider, models };
+}
+
+/** A provider that may keep and use what it's sent: Gemini's free tier, when AI_PROVIDER_KEEPS_DATA=1. */
+export const keepsData = (provider: string) => provider === "gemini" && process.env.AI_PROVIDER_KEEPS_DATA === "1";
+
+/** Everyone whose mail this deployment reads has accepted a free tier's terms. Never in production. */
+export function freeTierOk() {
+  if (process.env.AI_FREE_TIER_OK !== "1") return false;
+  if (appEnv(process.env) === "production") throw new Error("AI_FREE_TIER_OK=1 isn't allowed with APP_ENV=production");
+  return true;
+}
+
 export async function generateObject<T>(request: StructuredRequest<T>): Promise<StructuredResult<T>> {
-  const provider = process.env.AI_PROVIDER || "ollama";
+  const { provider, models } = modelFor(request.role);
   const started = Date.now();
   const log = (entry: { model: string; status: "ok" | "error"; failureCode?: string; replayed?: boolean } & Partial<Usage>) =>
     db
@@ -71,8 +106,13 @@ export async function generateObject<T>(request: StructuredRequest<T>): Promise<
       })
       .catch((e) => console.error("ai_call log", e)); // logging never breaks an analysis
 
+  if (request.fromMailbox && keepsData(provider) && !freeTierOk()) {
+    await log({ model: models.join(","), status: "error", failureCode: "not_configured" });
+    throw new ModelError("not_configured", `Mailbox content isn't sent to ${provider}, which may keep it, unless AI_FREE_TIER_OK=1`);
+  }
+
   const replay = replayMode();
-  const key = replay !== "off" ? recordingKey(request) : "";
+  const key = replay !== "off" ? recordingKey(request, provider, models) : "";
   if (replay !== "off") {
     const recorded = await readRecording<T>(key, request.schema);
     if (recorded) {
@@ -87,9 +127,9 @@ export async function generateObject<T>(request: StructuredRequest<T>): Promise<
   try {
     const result =
       provider === "gemini"
-        ? await gemini(request)
+        ? await gemini(request, models)
         : provider === "ollama"
-          ? await ollama(request)
+          ? await ollama(request, models[0] ?? "qwen3:8b")
           : (() => {
               throw new ModelError("not_configured", `AI_PROVIDER "${provider}" isn't wired up yet`);
             })();
@@ -97,7 +137,7 @@ export async function generateObject<T>(request: StructuredRequest<T>): Promise<
     if (replay === "record") await writeRecording(key, result);
     return { object: result.object, modelVersion: result.modelVersion };
   } catch (e) {
-    await log({ model: process.env.AI_MODEL ?? provider, status: "error", failureCode: e instanceof ModelError ? e.code : "unexpected" });
+    await log({ model: models.join(",") || provider, status: "error", failureCode: e instanceof ModelError ? e.code : "unexpected" });
     throw e;
   }
 }
@@ -111,10 +151,12 @@ function replayMode(): "off" | "record" | "only" {
   return mode === "record" || mode === "only" ? mode : "off";
 }
 
-// The same prompt version, message, files, and schema give the same key. The
-// system prompt is left out because it carries today's date.
-function recordingKey(request: StructuredRequest<unknown>) {
+// The same provider and model, prompt version, message, files, and schema give
+// the same key, so an eval run on another model never replays this one's
+// answers. The system prompt is left out because it carries today's date.
+function recordingKey(request: StructuredRequest<unknown>, provider: string, models: string[]) {
   const hash = createHash("sha256");
+  hash.update(`${provider}:${models.join(",")}\n`);
   hash.update(request.trace.promptVersion);
   hash.update(request.prompt);
   hash.update(JSON.stringify(z.toJSONSchema(request.schema)));
@@ -142,8 +184,7 @@ async function writeRecording(key: string, result: StructuredResult<unknown>) {
   );
 }
 
-async function ollama<T>({ system, prompt, schema, attachments = [] }: StructuredRequest<T>): Promise<ProviderResult<T>> {
-  const model = process.env.AI_MODEL || "qwen3:8b";
+async function ollama<T>({ system, prompt, schema, attachments = [] }: StructuredRequest<T>, model: string): Promise<ProviderResult<T>> {
   // Ollama takes images (for vision models) but not PDFs.
   if (attachments.some((a) => !a.mimeType.startsWith("image/")))
     throw new ModelError("unsupported_file", "The local model can't read PDFs — switch AI_PROVIDER to gemini for documents");
@@ -180,11 +221,10 @@ async function ollama<T>({ system, prompt, schema, attachments = [] }: Structure
   };
 }
 
-async function gemini<T>(request: StructuredRequest<T>): Promise<ProviderResult<T>> {
+async function gemini<T>(request: StructuredRequest<T>, models: string[]): Promise<ProviderResult<T>> {
   const { schema } = request;
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new ModelError("not_configured", "GEMINI_API_KEY isn't set");
-  const models = (process.env.AI_MODEL || "gemini-3.5-flash-lite,gemini-3.1-flash-lite").split(",").map((m) => m.trim()).filter(Boolean);
   const busy = (r: Response) => r.status === 503 || r.status === 429;
   // Busy (503) and rate-limited (429) answers are usually brief: retry once after a pause, then try the next model.
   let model = models[0];

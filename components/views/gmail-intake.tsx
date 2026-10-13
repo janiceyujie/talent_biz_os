@@ -14,6 +14,7 @@ import { isPersonalDomain } from "@/lib/mail/relevance/rules";
 import type { GmailMailItem, GmailMailPage, GmailMailView } from "@/lib/types";
 
 const POLL_MS = 3000; // while a sync runs, look again this often
+const outcomeChip: Record<GmailMailItem["outcome"], string> = { work: "status-confirmed", unsure: "status-analyzed", pending: "", skipped: "" };
 
 /** The header's Sync now, with when the last sync finished. */
 export function GmailSync({ onNotice }: { onNotice: (text: string | null) => void }) {
@@ -101,7 +102,8 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
   const [loading, setLoading] = useState(false);
   const c = gmail.connection;
   // A finished sync or a moved email changes the counts: read the list again.
-  const version = `${c?.lastSyncedAt}:${c?.counts.waiting}:${c?.counts.skipped}`;
+  const version = `${c?.lastSyncedAt}:${c?.syncing}:${c?.counts.waiting}:${c?.counts.skipped}`;
+  const sorting = !!c?.syncing; // the lists show only what's sorted: wait for the last score
 
   const load = useCallback(
     async (offset: number) => {
@@ -120,11 +122,21 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
   );
 
   useEffect(() => {
+    if (sorting) return;
     queueMicrotask(() => load(0));
-  }, [load, version]);
+  }, [load, version, sorting]);
 
   const picked = items?.find((i) => i.id === active) ?? items?.[0];
   const peekError = error === "reconnect" ? t("peekError.reconnect") : error === "gmail" || error === "unavailable" ? t("peekError.unavailable") : null;
+
+  if (sorting)
+    return (
+      <div className="surface padded section-gap" id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${view}`}>
+        <p className="notice analyzing" role="status">
+          {t("sorting")}
+        </p>
+      </div>
+    );
 
   return (
     <div className="inbox-layout section-gap" id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${view}`}>
@@ -146,7 +158,7 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
             <button className={`mail-summary ${picked?.id === m.id ? "active" : ""}`} aria-pressed={picked?.id === m.id} onClick={() => setActive(m.id)}>
               <small>
                 {view === "waiting" && (
-                  <em className={m.outcome === "work" ? "message-status status-confirmed" : "message-status"}>{t(`outcome.${m.outcome}`)}</em>
+                  <em className={`message-status ${outcomeChip[m.outcome]}`}>{t(`outcome.${m.outcome}`)}</em>
                 )}{" "}
                 {m.from ? m.from.name || m.from.address : ""}
               </small>
@@ -200,7 +212,14 @@ function GmailMailDetail({
   const domain = domainOf(address);
   const [kind, setKind] = useState<"address" | "domain">("address");
   const verdict = view === "waiting" ? "never" : "always";
-  const reason = item.decidedBy ?? (item.outcome === "pending" ? "pending" : null);
+  const reason =
+    item.decidedBy === "model" && item.kind
+      ? t("byModel", { kind: t(`kind.${item.kind as "other"}`), score: format.number(item.score ?? 0, { maximumFractionDigits: 2 }) })
+      : item.decidedBy
+        ? t(`rule.${item.decidedBy as "pending"}`)
+        : item.outcome === "pending"
+          ? t("rule.pending")
+          : null;
   const gmailUrl = `https://mail.google.com/mail/?${new URLSearchParams({ authuser: accountEmail })}#all/${item.gmailId}`;
 
   return (
@@ -226,7 +245,7 @@ function GmailMailDetail({
         {reason && (
           <div>
             <dt>{t("why")}</dt>
-            <dd>{t(`rule.${reason as "pending"}`)}</dd>
+            <dd>{reason}</dd>
           </div>
         )}
       </dl>

@@ -11,6 +11,7 @@ export type MailMetadata = MailRef & {
   subject: string;
   receivedAt: Date;
   headers: Record<MetadataHeader, string>; // "" when the email has none
+  snippet: string; // Gmail's short preview; read only for the model step, "" otherwise
 };
 
 export type Address = { address: string; name: string }; // address lowercased; both "" when missing

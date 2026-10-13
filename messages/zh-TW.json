@@ -1156,7 +1156,8 @@
     "outcome": {
       "work": "工作信",
       "pending": "尚未判斷",
-      "skipped": "已過濾"
+      "skipped": "已過濾",
+      "unsure": "不確定"
     },
     "rule": {
       "sender_always": "你的規則：一律收進",
@@ -1171,7 +1172,9 @@
       "bulk": "電子報或系統自動寄出，且沒有工作相關字詞",
       "tab": "在「促銷內容」或「最新快訊」分頁，且沒有工作相關字詞",
       "person": "由你移動",
-      "pending": "沒有符合的規則，之後會再判斷。"
+      "pending": "沒有符合的規則，之後會再判斷。",
+      "model": "模型",
+      "gone": "檢查前已在 Gmail 刪除"
     },
     "peekError": {
       "reconnect": "請到「設定」重新連結 Gmail，才能看到寄件者與主旨。",
@@ -1189,7 +1192,24 @@
     "ruleNever": "不收",
     "removeRule": "移除",
     "noRules": "還沒有寄件者規則。可在「進件分類」的「等待中」或「已過濾」新增。",
-    "notLoaded": "無法載入寄件者與主旨"
+    "notLoaded": "無法載入寄件者與主旨",
+    "sorting": "正在整理你的信…",
+    "byModel": "模型判斷：{kind}（{score}）",
+    "freeTierNotice": "工作信會交給 Google Gemini 免費方案判讀，Google 可能保留並使用收到的內容。",
+    "kind": {
+      "offer": "邀約或詢問",
+      "negotiation": "條件洽談",
+      "contract": "合約",
+      "logistics": "行程安排",
+      "payment": "款項通知",
+      "press": "媒體邀訪",
+      "newsletter": "電子報",
+      "marketing": "促銷廣告",
+      "receipt": "購物收據",
+      "personal": "私人信件",
+      "notification": "系統通知",
+      "other": "其他"
+    }
   },
   "settings": {
     "name": "藝名或品牌名稱",

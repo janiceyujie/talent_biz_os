@@ -9,6 +9,8 @@ import { locales } from "@/lib/i18n/config";
 export const jobs = {
   /** Analyze one message and store a new analysis version (lib/ai/analyze-message.ts). */
   "message.analyze": z.strictObject({ messageId: z.uuid(), locale: z.enum(locales) }),
+  /** Find a mailbox's new email, run the rules, record the decisions (lib/mail/jobs/sync.ts). */
+  "mail.sync": z.strictObject({ connectionId: z.uuid() }),
   /** Revoke a mailbox's token at Google and delete the connection (lib/mail/jobs/disconnect.ts). */
   "mail.disconnect": z.strictObject({ connectionId: z.uuid() }),
 };
@@ -26,12 +28,17 @@ export const jobAttempts: Record<JobName, number> = {
   // Model errors don't throw: the message is marked error and the person can Retry.
   // Only a failure outside that, such as the database being down, retries here.
   "message.analyze": 5,
+  // Gmail unreachable or rate-limited: a few tries, then the connection shows an error until the next Sync now.
+  "mail.sync": 5,
   // Google unreachable: a few more tries, then the row is deleted anyway.
   "mail.disconnect": 5,
 };
 
 /** The key that makes a second "analyze this message" replace a waiting one instead of queueing twice. */
 export const analyzeJobKey = (messageId: string) => `message.analyze:${messageId}`;
+
+/** The key that makes a second Sync now replace a waiting sync instead of queueing twice. */
+export const syncJobKey = (connectionId: string) => `mail.sync:${connectionId}`;
 
 /** One queue per mailbox: its jobs run one at a time, in order (docs/design/gmail-ingestion.md, Jobs). */
 export const mailQueue = (connectionId: string) => `mail:${connectionId}`;

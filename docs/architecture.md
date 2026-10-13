@@ -13,6 +13,7 @@ Scope here is grounded in interviews with two real prospective users — a talen
 - [Ingestion](#ingestion)
 - [Understanding and project matching](#understanding-and-project-matching)
 - [Pipeline](#pipeline)
+- [Capacity and scaling](#capacity-and-scaling)
 - [Entity model](#entity-model)
 - [Schema](#schema)
 - [Stack](#stack)
@@ -275,6 +276,59 @@ A rejected proposal never generates a file. A cancelled confirmed event only sto
 - **Deleting**: right-clicking an event or to-do (or 刪除 in its date-and-time editor, for touch) deletes it after a confirmation, for good, as decision 0002 defines delete; the confirmation points to archiving as the way to keep it. Each deletion is written to `audit_log` (`calendar.deleted`, with the title, date, and project). Payment dates are voided in the ledger, not deleted from the calendar.
 - **Never invented**: an item without an end time keeps none when moved and isn't checked for clashes. Ordinary events can end later the same day or on a later day (`end_date`, `end_time`, in the start's zone); travel and stays keep their own arrival and check-out and are edited in the full form, as are items in another zone.
 
+## Capacity and scaling
+
+Where the background work runs, what it can handle today, and what to change, in order, as volume grows. The numbers are estimates from the settings and Google's published quotas unless marked measured; replace them with measurements as real traffic arrives.
+
+### What runs today
+
+| Piece | Today | Setting |
+|---|---|---|
+| Worker processes | **1** (`npm run worker`; deployed: one Render private service, [decision 0014](decisions/0014-hosting-and-job-queue.md)) | Render instance count |
+| Jobs at once, per worker | **4** | `WORKER_CONCURRENCY` |
+| Queues | One per mailbox (`mail:<connection id>`, one job at a time, in order); paste and upload jobs share the default queue | `lib/queue/jobs.ts` |
+| Gmail pace, per mailbox | **20 calls a second**, shared by the sync and Intake's live lookups; "slow down" answers wait and retry | `lib/mail/gmail/api.ts` |
+| Model analyses, per account | 50 per 24 hours | `AI_DAILY_ANALYSES` |
+
+A queue is a row in Postgres, not memory in the worker: the number of mailboxes doesn't change the worker's footprint. Its memory follows the jobs running at once, and a sync holds ids and headers only (a few MB at most).
+
+### What one worker handles
+
+| Work | Cost | One worker (4 at once) |
+|---|---|---|
+| A sync, steady state | One "what changed" call, plus one header read per new email | New mail for 4 mailboxes at once at 20 emails a second each: far above the expected 100 emails a day per artist (about 0.1 a second for 100 artists) |
+| The first sync, 30 days | One list call per 500 emails, then one header read each | About 25 seconds for 500 emails (measured: the builder's month); about 2.5 minutes for 3,000 |
+| Waiting or Filtered out opening | One header read per row, 30 rows a page | About 1.5 seconds a page. HTTP lookups don't use job slots: they're limited by the mailbox's pace, not the worker |
+| `message.analyze` | One model call, about 5 to 30 seconds | Roughly 10 to 50 analyses a minute, bounded by model latency and the daily limit |
+
+The first limit to reach is job slots when many large jobs arrive together: for example, 20 new mailboxes each starting a 30-day sync, or a burst of analyses waiting on a slow model. Jobs then wait in the queue rather than fail; the wait grows, not the error rate.
+
+### Limits outside our code
+
+| Limit | Size | Note |
+|---|---|---|
+| Gmail, per mailbox | 250 quota units a second (a header read costs 5) | Each mailbox has its own; we use 40% |
+| Gmail, per Google Cloud project | 1,200,000 quota units a minute: about 4,000 header reads a second across all mailboxes | Raised on request in the Cloud console |
+| Google verification | 100 test users until `gmail.readonly` is verified and CASA passes ([decision 0013](decisions/0013-connected-gmail-mailbox.md)) | The real cap for now |
+| Postgres connections | The worker holds a few, whatever the number of queues; the web service uses the pooler | Supabase plan limits |
+| Model provider | Requests and tokens a minute, per key | Per provider ([decision 0015](decisions/0015-production-model-providers.md)) |
+
+### Scaling, in order
+
+1. **Raise `WORKER_CONCURRENCY`** (10 to 20). Jobs mostly wait on the network, so one Node process runs many. No code change.
+2. **Add worker instances.** Every worker takes jobs from the same Postgres table; Graphile gives each job to one worker, and the one-at-a-time rule per mailbox holds across workers. No code change.
+3. **Keep big jobs from crowding small ones.** Run the 30-day history read on its own low-priority queue (`mail.history`, gmail-push-backfill), so a new mailbox's first sync never delays everyone's new mail or analyses.
+4. **Separate the lookup endpoint** from the job worker: the same image as its own service, if Intake's live lookups and background jobs need to scale apart.
+5. **Ask Google for more project quota** before thousands of first syncs run at once.
+6. **Move the queue off Postgres** only if jobs reach sustained hundreds a second. The `Queue` interface, id-only payloads, and handlers safe to run twice make that a change of plumbing ([decision 0014](decisions/0014-hosting-and-job-queue.md), Consequences).
+
+### What to watch
+
+- **Queue wait**: how long jobs sit before they start (`graphile_worker.jobs`: `run_at` against when they ran). Growing waits mean step 1 or 2.
+- **Failed jobs**: jobs left with `last_error` after their last attempt, by task.
+- **Gmail "slow down" answers**: frequent retries mean the pace or the project quota needs a look.
+- **Model cost and latency**: `ai_call`, per role and provider.
+
 ## Entity model
 
 Two ideas carry the model. **A login is not a business:** `person` is someone who signs in, `talent` is the artist or creator whose business is tracked, and `membership` links them with a role — so manager accounts (one person, many talents) and bands (many people, one talent) are a permissions change, not a schema change. **The project is the unit a person manages:** messages, contract versions, calendar events, money, files, drafts, and to-dos all hang off it.
@@ -333,9 +387,9 @@ erDiagram
 | `calendar_import_source` | A Google calendar the person chose to show here | Phase 2 |
 | `external_event` | An event read from a chosen Google calendar: read-only, visible only to that person | Phase 2 |
 | `contract` | One version of a contract document, with status and diff | M2 (v1 only); versions and diff in M4 |
-| `mail_connection` | One connected mailbox for a talent: the Google account, the encrypted refresh token and wrapped data key, sync cursor, status ([decision 0016](decisions/0016-mailbox-tokens-and-key-management.md)) | Built (connect and disconnect) |
-| `mail_decision` | The relevance decision for each email the check saw, ids only ([decision 0013](decisions/0013-connected-gmail-mailbox.md)) | Building |
-| `mail_sender_rule` | An artist's "always" or "never" for a sender or domain | Building |
+| `mail_connection` | One connected mailbox for a talent: the Google account, the encrypted refresh token and wrapped data key, sync cursor, status ([decision 0016](decisions/0016-mailbox-tokens-and-key-management.md)) | Built (connect, Sync now, disconnect) |
+| `mail_decision` | The relevance decision for each email the check saw, ids only ([decision 0013](decisions/0013-connected-gmail-mailbox.md)) | Built (rules and thread memory; the model step to come) |
+| `mail_sender_rule` | An artist's "always" or "never" for a sender or domain | Built |
 | `inbound_grant` | Authorization from the Gmail add-on | After the connected mailbox |
 
 **M1–M5** are the MVP build milestones (the 階段 in the internal timeline). **Phase 2** and **Later** remain the post-MVP scope tags used under [Functionality](#functionality).

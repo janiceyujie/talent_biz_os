@@ -183,6 +183,20 @@
       "when": 1791648058165,
       "tag": "0025_mail_connection",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791858538744,
+      "tag": "0026_mail_decisions",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791860019824,
+      "tag": "0027_mail_decision_tab_rule",
+      "breakpoints": true
     }
   ]
 }

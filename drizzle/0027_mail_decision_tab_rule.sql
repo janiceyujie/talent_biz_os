@@ -1,0 +1,2 @@
+ALTER TABLE "mail_decision" DROP CONSTRAINT "mail_decision_decided_by_check";--> statement-breakpoint
+ALTER TABLE "mail_decision" ADD CONSTRAINT "mail_decision_decided_by_check" CHECK ("mail_decision"."decided_by" in ('sender_always', 'sender_never', 'contact', 'thread', 'esign', 'spam', 'trash', 'draft', 'sent', 'bulk', 'tab', 'person'));

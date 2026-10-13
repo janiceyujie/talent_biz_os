@@ -3678,6 +3678,75 @@ button.primary.danger {
   line-height: 1.5;
 }
 
+/* Gmail in Intake: Sync now, the Messages · Waiting · Filtered out tabs, sender rules */
+.gmail-sync {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.gmail-sync .gmail-sync-failed {
+  color: var(--red);
+}
+.gmail-sync button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.gmail-sync .spinning {
+  animation: spin 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gmail-sync .spinning {
+    animation: none;
+  }
+}
+.inbox-workspace .intake-tabs {
+  position: static;
+  margin: 16px 0 0;
+  border-radius: 0;
+  background: transparent;
+}
+.inbox-messages p.gmail-about {
+  margin: 4px 16px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.gmail-rule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+.gmail-rule label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.gmail-rules h3 {
+  margin: 20px 0 8px;
+  font-size: 15px;
+}
+.gmail-rules ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gmail-rules li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.gmail-rules li span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 /* ⓘ beside a title: the section's explanation, on hover, focus, or tap */
 .info-hint {
   position: relative;

@@ -14,6 +14,7 @@ import { detailFieldKeys, type AssumptionTopic } from "@/lib/ai/analysis";
 import { isFailureCode } from "@/lib/ai/errors";
 import { weekdayMismatchOf } from "@/lib/ai/safety";
 import type { InboxMessage } from "@/lib/types";
+import { GmailMail, GmailSync, IntakeTabs, type IntakeTab } from "./gmail-intake";
 import { MessageReview } from "./message-review";
 import { UploadDialog } from "./upload-dialog";
 
@@ -35,6 +36,7 @@ export function InboxView() {
   const [active, setActive] = useState(params.get("message") ?? ""); // ?message= from a project timeline
   const [showDismissed, setShowDismissed] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [tab, setTab] = useState<IntakeTab>("messages");
   const visible = data.inbox.filter((m) => showDismissed || m.status !== "dismissed");
   const message = data.inbox.find((m) => m.id === active) ?? visible[0];
   const analyzing = data.inbox.some((m) => m.status === "pending");
@@ -68,7 +70,7 @@ export function InboxView() {
             <span>{tEyebrow("intake")}</span>
             <h2>{t("title")}</h2>
           </div>
-          <span className="mock-chip">{t("gmailSoon")}</span>
+          {data.gmail.connection ? <GmailSync onNotice={setNotice} /> : <span className="mock-chip">{t("gmailSoon")}</span>}
         </div>
         <p className="muted">{t("intro")}</p>
         <p className={data.aiUsage.remaining === 0 ? "notice error" : "muted ai-usage"}>
@@ -88,74 +90,79 @@ export function InboxView() {
           </p>
         )}
       </section>
-      <div className="inbox-layout section-gap">
-        <section className="surface padded inbox-messages" aria-label={t("listLabel")}>
-          <div className="inbox-list-heading">
-            <h2 ref={listHeading} tabIndex={-1}>
-              {t("listHeading")}
-            </h2>
-            <span role="status">{t("listCount", { count: visible.length })}</span>
-          </div>
-          <label className="check-line">
-            <input type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} />
-            {t("showDismissed")}
-          </label>
-          {!visible.length && (
-            <div className="empty">
-              <h3>{t("emptyTitle")}</h3>
-              <p>{t("emptyBody")}</p>
+      <IntakeTabs tab={data.gmail.connection ? tab : "messages"} onTab={setTab} />
+      {data.gmail.connection && tab !== "messages" ? (
+        <GmailMail view={tab} onNotice={setNotice} />
+      ) : (
+        <div className="inbox-layout section-gap">
+          <section className="surface padded inbox-messages" aria-label={t("listLabel")}>
+            <div className="inbox-list-heading">
+              <h2 ref={listHeading} tabIndex={-1}>
+                {t("listHeading")}
+              </h2>
+              <span role="status">{t("listCount", { count: visible.length })}</span>
             </div>
-          )}
-          {visible.map((m) => (
-            <div className={`mail-item single ${message?.id === m.id ? "is-active" : ""}`} key={m.id}>
-              <button
-                className={`mail-summary ${message?.id === m.id ? "active" : ""}`}
-                aria-pressed={message?.id === m.id}
-                onClick={(e) => {
-                  lastMessageButton.current = e.currentTarget;
-                  setActive(m.id);
-                  // On narrow screens the message is below the list: take the reader there.
-                  if (window.matchMedia("(max-width: 900px)").matches)
-                    requestAnimationFrame(() => {
-                      readerHeading.current?.focus({ preventScroll: true });
-                      readerHeading.current?.scrollIntoView({ block: "start" });
-                    });
-                }}
-              >
-                <small>
-                  <StatusChip status={m.status} />
-                  {!!m.analysis?.flags.length && <em className="message-status status-flagged">{t("flagChip")}</em>} {t(`channel.${m.channel}`)}
-                </small>
-                <strong>{m.analysis?.title || fallbackTitle(m, t)}</strong>
-                <span className="mail-snippet">{(m.analysis?.summary || m.body || m.files.map((f) => f.filename).join(", ")).slice(0, 110)}</span>
-                <span className="mail-summary-meta">
-                  <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
-                  {m.status === "confirmed" && m.projectId && <span>{t("filedChip")}</span>}
-                </span>
-              </button>
-            </div>
-          ))}
-        </section>
-        <section className="surface padded inbox-reader" aria-label={t("readerLabel")}>
-          {message ? (
-            <>
-              <button
-                className="secondary inbox-back"
-                onClick={() => {
-                  const target = lastMessageButton.current?.isConnected ? lastMessageButton.current : listHeading.current;
-                  target?.focus({ preventScroll: true });
-                  target?.scrollIntoView({ block: "center" });
-                }}
-              >
-                {t("backToList")}
-              </button>
-              <MessageDetail key={message.id} message={message} headingRef={readerHeading} />
-            </>
-          ) : (
-            <p className="empty">{t("pick")}</p>
-          )}
-        </section>
-      </div>
+            <label className="check-line">
+              <input type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} />
+              {t("showDismissed")}
+            </label>
+            {!visible.length && (
+              <div className="empty">
+                <h3>{t("emptyTitle")}</h3>
+                <p>{t("emptyBody")}</p>
+              </div>
+            )}
+            {visible.map((m) => (
+              <div className={`mail-item single ${message?.id === m.id ? "is-active" : ""}`} key={m.id}>
+                <button
+                  className={`mail-summary ${message?.id === m.id ? "active" : ""}`}
+                  aria-pressed={message?.id === m.id}
+                  onClick={(e) => {
+                    lastMessageButton.current = e.currentTarget;
+                    setActive(m.id);
+                    // On narrow screens the message is below the list: take the reader there.
+                    if (window.matchMedia("(max-width: 900px)").matches)
+                      requestAnimationFrame(() => {
+                        readerHeading.current?.focus({ preventScroll: true });
+                        readerHeading.current?.scrollIntoView({ block: "start" });
+                      });
+                  }}
+                >
+                  <small>
+                    <StatusChip status={m.status} />
+                    {!!m.analysis?.flags.length && <em className="message-status status-flagged">{t("flagChip")}</em>} {t(`channel.${m.channel}`)}
+                  </small>
+                  <strong>{m.analysis?.title || fallbackTitle(m, t)}</strong>
+                  <span className="mail-snippet">{(m.analysis?.summary || m.body || m.files.map((f) => f.filename).join(", ")).slice(0, 110)}</span>
+                  <span className="mail-summary-meta">
+                    <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
+                    {m.status === "confirmed" && m.projectId && <span>{t("filedChip")}</span>}
+                  </span>
+                </button>
+              </div>
+            ))}
+          </section>
+          <section className="surface padded inbox-reader" aria-label={t("readerLabel")}>
+            {message ? (
+              <>
+                <button
+                  className="secondary inbox-back"
+                  onClick={() => {
+                    const target = lastMessageButton.current?.isConnected ? lastMessageButton.current : listHeading.current;
+                    target?.focus({ preventScroll: true });
+                    target?.scrollIntoView({ block: "center" });
+                  }}
+                >
+                  {t("backToList")}
+                </button>
+                <MessageDetail key={message.id} message={message} headingRef={readerHeading} />
+              </>
+            ) : (
+              <p className="empty">{t("pick")}</p>
+            )}
+          </section>
+        </div>
+      )}
       {pasting && (
         <PasteDialog
           onClose={() => setPasting(false)}

@@ -58,19 +58,19 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 | `data_key_wrapped`, `key_id` | The data key wrapped by the KMS master key, and which key and version |
 | `history_id`, `watch_expires_at` | Sync cursor and watch renewal |
 | `history_mode`, `history_done_at` | `30_days` or `new_only`; when the history read finished |
-| `status`, `failure`, `last_synced_at` | `connected`, `reconnect_needed`, `error`, `disconnecting` (until the worker has revoked the token and deleted the row) |
+| `status`, `failure`, `sync_requested_at`, `last_synced_at` | `connected`, `reconnect_needed`, `error`, `disconnecting` (until the worker has revoked the token and deleted the row) |
 
 **`mail_decision`**: one row per message the relevance check saw, ids only (decision 0013).
 
 | Column | Notes |
 |---|---|
 | `connection_id`, `provider_message_id`, `provider_thread_id` | Unique on (connection, message): never evaluated twice per classifier version |
-| `received_at`, `score`, `decided_by` | `rule:<id>`, `thread`, `model`, `person` |
-| `outcome` | `skipped`, `brought_in`, `unsure`, `payment`, `not_work` |
+| `talent_id`, `received_at`, `score`, `decided_by` | A rule id (`contact`, `thread`, `bulk`, …), later `model`, or `person`; `score` arrives with the model step |
+| `outcome` | Built: `work`, `skipped`, `pending` (waiting for the model step). Later: `brought_in`, `unsure`, `payment`, `not_work` |
 | `classifier_version` | Rules version + prompt fingerprint + model |
 | `message_id` | The `message` it became, if any |
 
-**`mail_sender_rule`**: an artist's "always" or "never" for a sender or domain, created only by their action.
+**`mail_sender_rule`**: an artist's "always" or "never" for a sender or domain (not a free mailbox provider's), created only by their action. Per talent, so it outlives a reconnect.
 
 **`message`, new columns**: channel `gmail` added; `connection_id`; `provider_thread_id`; `header_message_id`, `in_reply_to`, `references` (for threading); `direction` (`received` or `sent`); `relevance` (`sure` or `unsure`). `external_ref` keeps the Gmail message id; `dedup_key` for Gmail is `gmail:<connection>:<message id>`.
 
@@ -80,11 +80,11 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 
 | Job | Triggered by | Queue | Does |
 |---|---|---|---|
-| `mail.sync` | Pub/Sub notice, poll, Sync now | `mail:<connection>` | `history.list` from the cursor; `messages.get(format=metadata)`; enqueue `mail.relevance` per new message; advance the cursor in the same transaction |
-| `mail.relevance` | `mail.sync`, `mail.history` | `mail:<connection>` | Rules → thread memory → small model; write `mail_decision`; enqueue `mail.fetch` or the payment path |
+| `mail.sync` | Pub/Sub notice, poll, Sync now | `mail:<connection>` | `history.list` from the cursor (the first time, the last 30 days by search when chosen); `messages.get(format=metadata)`; the rules and thread memory, inline, writing `mail_decision` (`work`, `skipped`, or `pending`); advance the cursor. Built in `gmail-sync-rules` |
+| `mail.relevance` | `mail.sync` | `mail:<connection>` | The small model on `pending` decisions (the rules already ran in `mail.sync`, which had the metadata in hand); update `mail_decision`; enqueue `mail.fetch` or the payment path |
 | `mail.fetch` | `mail.relevance` | `mail:<connection>` | Body and attachments into `message` and `file`; enqueue `message.analyze` |
 | `message.analyze` | `mail.fetch`, paste, upload | per talent | The existing analysis, model picked by the router; not-work cleanup |
-| `mail.history` | Connect | `mail-history` (low priority) | The last 30 days, through the same relevance path |
+| `mail.history` | Connect | `mail-history` (low priority) | Starts the first `mail.sync` on connect, so the 30-day read no longer waits for Sync now |
 | `mail.watch-renew` | Daily cron | — | Renew each connection's Gmail watch |
 | `mail.reconcile` | Every 15 minutes | — | Enqueue `mail.sync` for each connection |
 | `mail.expire` | Daily cron | — | Delete unmatched payment fields past `expires_at` |
@@ -96,13 +96,13 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 - **Gmail messages** look like any other message, with the sender, subject, and a link to open the email in Gmail.
 - **Flags**: "Not sure this is work" (unsure band), "Payment not matched to any project" (unmatched payment), each with its one-click answer.
 - **From your history**: threads from the history read whose last message is more than 14 days old, grouped and collapsed.
-- **Filtered out**: a filter listing skipped emails, fetched live from Gmail (metadata only); **This was work** brings one in.
+- **Messages · Waiting · Filtered out** tabs, once a mailbox is connected, and **Sync now** in the header. Waiting lists work and not-yet-decided email; Filtered out, skipped email. Both read sender and subject live from Gmail through the worker's private endpoint (decision 0013, implementation notes); **Always bring in** and **Never** make a sender rule, for the address or its domain; **This was work** brings one in (with `gmail-ingest`).
 - **Not work** on any Gmail message: deletes its body and files, keeps the decision, offers "never from this sender".
 
 ## Settings
 
 - **Connect Gmail**: any Google account; says what's read, what's kept, that members (including a manager) see work email brought in, and, when `AI_FREE_TIER_OK=1`, that Google's free tier analyzes it. History choice: last 30 days (default) or only new mail.
-- **Connected**: account, status, last sync, Sync now, sender rules.
+- **Connected**: account, status, last sync, sender rules (each removable).
 - **Disconnect**: remove everything brought in from Gmail, or keep what's filed under projects and remove the rest. The worker revokes the token and deletes the connection; the choice arrives with `gmail-ingest`, once there is mail to remove.
 
 ## Configuration
@@ -136,12 +136,12 @@ One theme per branch, each mergeable on its own and testable on the builder's ow
 | 0 | `gmail-ingestion-design` | These decisions and this design | Review |
 | 1 | `job-queue-worker` | Graphile Worker behind `Queue`; `npm run worker`; analysis off `after()` | Pastes and uploads analyzed by the worker |
 | 2 | `gmail-connect` | `mail_connection`, the OAuth flow, `KeyProvider` (`.env`), `APP_ENV`; connect and disconnect in Settings | Connect and disconnect your own Gmail |
-| 3 | `gmail-sync-rules` | `MailProvider`, Sync now (metadata only), `mail_decision`, rules, thread memory, Filtered out | See what the rules decide, no body read |
+| 3 | `gmail-sync-rules` | `MailProvider`, Sync now (metadata only) including the 30-day history read, `mail_decision`, rules, thread memory, sender rules, Waiting and Filtered out through the worker's private endpoint | See what the rules decide on a real month of mail, no body read |
 | 4 | `relevance-model` | Router and roles in configuration, the free-tier guard, the model step, thresholds, relevance eval | Every email scored; tune the thresholds |
 | 5 | `gmail-ingest` | Fetch into `message` and `file`, thread headers, analysis via the queue, Not work and cleanup | Real work email in Intake, analyzed |
 | 6 | `payment-notices` | The restricted path, the unmatched payment card, expiry | Bank notices matched to payments |
 | 7 | `gmail-threads` | Thread as the top suggestion, sent mail in relevant threads, contact proposals, reply to-do completion | A negotiation tracked as one project |
-| 8 | `gmail-push-backfill` | Watch + Pub/Sub pull, renewal, reconciliation, history on connect | Mail arrives without Sync now |
+| 8 | `gmail-push-backfill` | Watch + Pub/Sub pull, renewal, reconciliation, the history read started on connect, deleting skipped decisions after 90 days, a daily queue cleanup (jobs that gave up more than 14 days ago, unused queue rows; Graphile keeps failed jobs until deleted) | Mail arrives without Sync now |
 | 9 | `ai-providers` | OpenAI and Anthropic adapters; evals on both | Paid models; required before anyone else's mail (can move up to right after 4) |
 | 10 | `deploy-render` | `Dockerfile`, `render.yaml`, Cloud KMS provider, Supabase project, Google Cloud setup | The first person besides the builder connects |
 
@@ -150,6 +150,6 @@ One theme per branch, each mergeable on its own and testable on the builder's ow
 ## Open questions
 
 1. **Threshold starting values.** Set from the first relevance eval run, not guessed.
-2. **Rules data.** The first list of e-sign and booking-platform senders, and work keywords in both languages.
+2. **Rules data.** Settled for now: e-sign services only, no booking platforms (each artist's differ; sender rules cover them), and work words in both languages (`lib/mail/relevance/keywords.ts`). Revisit with what Filtered out shows.
 3. **"Never from this sender" for a contact.** Does a "never" rule override the contact rule?
 4. **The add-on after this.** It reuses the same fetch and analysis; its project dropdown becomes the strongest target signal.

@@ -214,7 +214,7 @@ export type StoredFile = {
 /** A message the person sent in, with the latest analysis of it (the model's proposal). */
 export type InboxMessage = {
   id: string;
-  channel: "paste" | "upload" | "gmail_addon" | "forwarded_email";
+  channel: "paste" | "upload" | "gmail" | "gmail_addon" | "forwarded_email";
   body: string;
   receivedAt: string; // ISO instant
   status: "pending" | "analyzed" | "confirmed" | "dismissed" | "error";
@@ -222,6 +222,14 @@ export type InboxMessage = {
   projectId: string | null;
   analysis: (MessageAnalysis & { modelVersion: string; promptVersion: string }) | null;
   files: { id: string; contentType: string; filename: string; sizeBytes: number }[]; // screenshots, photos, PDFs, in order
+  // An email brought in from the connected mailbox (decision 0013); null otherwise.
+  gmail: {
+    gmailId: string;
+    sender: string; // "Name <address>": the email's claim (decision 0007)
+    subject: string;
+    unsure: boolean; // "Not sure this is work"
+    skippedAttachments: { filename: string; mimeType: string; sizeBytes: number }[]; // listed, not fetched
+  } | null;
 };
 
 /** What only a project's own screen shows, loaded when it's opened (lib/data/project-detail.ts). */
@@ -326,13 +334,13 @@ export type AppData = {
 
 export type GmailSenderRule = { id: string; kind: "address" | "domain"; value: string; verdict: "always" | "never" };
 
-// Intake's Waiting (work, not sure, or not decided yet) and Filtered out (skipped).
+// Intake's Waiting (work, not sure, or not decided yet, and not brought in yet) and Filtered out (skipped, or not work).
 export type GmailMailView = "waiting" | "skipped";
 export type GmailMailItem = {
   id: string; // our decision's id
   gmailId: string;
   receivedAt: string;
-  outcome: "work" | "skipped" | "pending" | "unsure";
+  outcome: "work" | "skipped" | "pending" | "unsure" | "not_work";
   decidedBy: string | null; // a rule id (lib/mail/relevance/rules.ts), "model", "person", or "gone"; null while pending
   score: number | null; // the model's, 0 to 1
   kind: string | null; // what the model says it looks like (lib/mail/relevance/prompt.ts)

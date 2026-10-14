@@ -6,15 +6,15 @@
 import { RefreshCw } from "lucide-react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
-import { addSenderRule, syncGmail } from "@/lib/actions/mail";
+import { addSenderRule, markWasWork, syncGmail } from "@/lib/actions/mail";
 import { domainOf } from "@/lib/mail/metadata";
 import { isPersonalDomain } from "@/lib/mail/relevance/rules";
 import type { GmailMailItem, GmailMailPage, GmailMailView } from "@/lib/types";
 
 const POLL_MS = 3000; // while a sync runs, look again this often
-const outcomeChip: Record<GmailMailItem["outcome"], string> = { work: "status-confirmed", unsure: "status-analyzed", pending: "", skipped: "" };
+const outcomeChip: Record<GmailMailItem["outcome"], string> = { work: "status-confirmed", unsure: "status-analyzed", pending: "", skipped: "", not_work: "" };
 
 /** The header's Sync now, with when the last sync finished. */
 export function GmailSync({ onNotice }: { onNotice: (text: string | null) => void }) {
@@ -105,17 +105,21 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
   const version = `${c?.lastSyncedAt}:${c?.syncing}:${c?.counts.waiting}:${c?.counts.skipped}`;
   const sorting = !!c?.syncing; // the lists show only what's sorted: wait for the last score
 
+  // Only the latest request may fill the list: an older, slower one (a refresh racing it) is ignored.
+  const latest = useRef(0);
   const load = useCallback(
     async (offset: number) => {
+      const request = ++latest.current;
       setLoading(true);
       try {
         const res = await fetch(`/api/mail/decisions?${new URLSearchParams({ view, offset: String(offset) })}`, { cache: "no-store" });
         const page = res.ok ? ((await res.json()) as GmailMailPage) : { items: [], more: false, error: "unavailable" as const };
+        if (request !== latest.current) return;
         setItems((prev) => (offset ? [...(prev ?? []), ...page.items] : page.items));
         setMore(page.more);
         setError(page.error);
       } finally {
-        setLoading(false);
+        if (request === latest.current) setLoading(false);
       }
     },
     [view],
@@ -250,6 +254,19 @@ function GmailMailDetail({
         )}
       </dl>
       <div className="row-actions section-gap">
+        {view === "skipped" && (
+          <button
+            className="primary"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                onNotice((await markWasWork(item.id)) ?? t("bringingIn"));
+              })
+            }
+          >
+            {t("wasWork")}
+          </button>
+        )}
         <a className="secondary" href={gmailUrl} target="_blank" rel="noopener noreferrer">
           {t("openInGmail")}
         </a>
@@ -266,7 +283,7 @@ function GmailMailDetail({
             </label>
           )}
           <button
-            className={verdict === "always" ? "primary" : "secondary"}
+            className="secondary"
             disabled={pending}
             onClick={() =>
               startTransition(async () => {

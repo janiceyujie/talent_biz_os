@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 import { file, message } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { queue } from "@/lib/queue";
-import { analyzeJobKey } from "@/lib/queue/jobs";
+import { analysisQueue, analyzeJobKey } from "@/lib/queue/jobs";
 import { readBytes, stat, uploadUrl } from "@/lib/storage";
 import { UPLOAD_LIMITS } from "@/lib/uploads";
 import { errorText } from "./validation";
@@ -104,7 +104,7 @@ export async function registerUpload(
         sizeBytes: f.size,
       })),
     );
-    await queue.enqueue("message.analyze", { messageId: row.id, locale }, { tx, jobKey: analyzeJobKey(row.id) });
+    await queue.enqueue("message.analyze", { messageId: row.id, locale }, { tx, jobKey: analyzeJobKey(row.id), queueName: analysisQueue(talent.id) });
     return row;
   });
   if (!created) {

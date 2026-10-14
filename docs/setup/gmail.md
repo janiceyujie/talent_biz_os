@@ -26,7 +26,7 @@ Restart `npm run dev` and `npm run worker`. Then Settings → Connected services
 
 **Sync now** (Intake, top right) is also done by the worker: the first one reads the last 30 days, if that was the choice when connecting, or starts from now; later ones read what arrived since. Only headers and labels are read, never the body.
 
-What the rules can't decide, a model scores from sender, subject, tab, and Gmail's short preview; "Syncing…" lasts until it's done. It uses `AI_RELEVANCE_PROVIDER` and `AI_RELEVANCE_MODEL`, or `AI_PROVIDER` when they're unset. For a local model: install [Ollama](https://ollama.com), `ollama pull qwen3:8b`, keep `ollama serve` running, and set `AI_RELEVANCE_PROVIDER=ollama` and `AI_RELEVANCE_MODEL=qwen3:8b`. A provider marked `AI_PROVIDER_KEEPS_DATA` is refused mailbox content unless `AI_FREE_TIER_OK=1`; those emails stay "Not decided yet".
+What the rules can't decide, a model scores from sender, subject, tab, and Gmail's short preview; "Syncing…" lasts until it's done. It uses `AI_MAILBOX_PROVIDER` and `AI_MAILBOX_MODEL`, or `AI_PROVIDER` when they're unset. For a local model: install [Ollama](https://ollama.com), `ollama pull qwen3:8b`, keep `ollama serve` running, and set `AI_MAILBOX_PROVIDER=ollama` and `AI_MAILBOX_MODEL=qwen3:8b`. A provider marked `AI_PROVIDER_KEEPS_DATA` is refused mailbox content unless `AI_FREE_TIER_OK=1`; those emails stay "Not decided yet".
 
 Disconnect is finished by the worker (it alone can decrypt the token to revoke it at Google), so the row says "Disconnecting…" until `npm run worker` picks the job up.
 
@@ -58,5 +58,6 @@ A production OAuth client (ideally its own project) with `https://app.example.co
 | `access_denied` for a teammate | Their Google account isn't under Test users |
 | Stuck on "Disconnecting…" or "Syncing…" | `npm run worker` isn't running |
 | "Senders and subjects can't be read from Gmail right now" in Waiting or Filtered out | The worker isn't running, `WORKER_SECRET` differs between `.env.local` and the worker (or is missing), or `WORKER_URL` doesn't point at its port. The worker's log says "listening on" when its endpoint is up |
+| A Gmail message shows "this model can't read this file" | A PDF attachment on a local model, which reads text and images only; it's analyzed once a provider that reads PDFs is set for mailbox content |
 | Emails stay "Not decided yet" | The relevance model isn't reachable (`ollama serve` not running, or the model not pulled), or it's a free tier without `AI_FREE_TIER_OK=1`. The worker's log has `mail.relevance failed` with the code. Sync now tries them again |
 | "Last sync failed" | The worker's log has `mail.sync failed` with Gmail's status and reason. A 403 `accessNotConfigured` is step 1 |

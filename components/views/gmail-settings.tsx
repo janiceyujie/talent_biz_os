@@ -32,6 +32,7 @@ export function GmailSettings({ onNotice }: { onNotice: (text: string) => void }
     returned && returned !== "connected" && results.includes(returned as Result) ? t(`result.${returned as Exclude<Result, "connected">}`) : null,
   );
   const [dialog, setDialog] = useState<"connect" | "manage" | "disconnect" | null>(null);
+  const [keep, setKeep] = useState<"filed" | "none">("filed"); // the gentler choice by default
   const connection = gmail.connection;
 
   // Back from Google: confirm success, once, and tidy the address.
@@ -125,8 +126,18 @@ export function GmailSettings({ onNotice }: { onNotice: (text: string) => void }
       )}
 
       {dialog === "disconnect" && (
-        <Modal title={t("disconnectTitle")} onClose={() => setDialog(null)}>
+        <Modal narrow title={t("disconnectTitle")} onClose={() => setDialog(null)}>
           <p>{t("disconnectBody")}</p>
+          <fieldset className="gmail-history">
+            <legend>{t("keepTitle")}</legend>
+            {(["filed", "none"] as const).map((k) => (
+              <label key={k} className="gmail-option">
+                <input type="radio" name="gmail-keep" value={k} checked={keep === k} onChange={() => setKeep(k)} />
+                <strong>{k === "filed" ? t("keepFiled") : t("keepNone")}</strong>
+                <small>{k === "filed" ? t("keepFiledHint") : t("keepNoneHint")}</small>
+              </label>
+            ))}
+          </fieldset>
           <footer className="modal-actions">
             <button className="secondary" onClick={() => setDialog(null)}>
               {t("cancel")}
@@ -136,7 +147,7 @@ export function GmailSettings({ onNotice }: { onNotice: (text: string) => void }
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  const failure = await disconnectGmail();
+                  const failure = await disconnectGmail(keep);
                   setFailed(failure);
                   setDialog(null);
                 })

@@ -18,6 +18,8 @@ export async function extractMessage({
   timeZone,
   outputLocale,
   trace,
+  fromMailbox = false,
+  textIfFilesUnreadable = false,
 }: {
   body: string;
   files?: { name: string; mimeType: string; data: Uint8Array }[]; // screenshots, photos, PDFs, in order
@@ -25,16 +27,20 @@ export async function extractMessage({
   timeZone: string;
   outputLocale: Locale;
   trace: Omit<CallTrace, "promptVersion">; // what the call is for and whom (ai_call log)
+  fromMailbox?: boolean; // read from a connected mailbox: the mailbox model and the free-tier rule apply
+  textIfFilesUnreadable?: boolean; // an email's files are extras: if the model can't read them, analyze its text alone
 }) {
   // Invisible characters can hide instructions a person can't see: remove them
   // before the model reads the text, and say so.
   const visible = stripInvisible(body);
   const request = {
+    fromMailbox,
     system: systemPrompt({ today, timeZone, outputLocale }),
     prompt: messagePrompt(visible.text, outputLocale, files),
     trace: { ...trace, promptVersion: PROMPT_VERSION },
   };
   let transcriptWithheld = false;
+  let filesNotRead = false;
   let result;
   if (!files.length) result = await generateObject({ ...request, schema: modelOutput });
   else {
@@ -44,9 +50,15 @@ export async function extractMessage({
       // A provider may refuse to write out text it recognizes as published
       // (lyrics, articles). Retrying the same request gets the same refusal;
       // asking without the transcript usually works.
-      if (!(e instanceof ModelError && e.code === "recitation")) throw e;
-      result = await generateObject({ ...request, schema: modelOutput, attachments: files });
-      transcriptWithheld = true;
+      if (e instanceof ModelError && e.code === "unsupported_file" && textIfFilesUnreadable && visible.text.trim()) {
+        // This model can't read these files (a local text-only model): the text alone, and say so.
+        result = await generateObject({ ...request, prompt: messagePrompt(visible.text, outputLocale, []), schema: modelOutput });
+        filesNotRead = true;
+      } else {
+        if (!(e instanceof ModelError && e.code === "recitation")) throw e;
+        result = await generateObject({ ...request, schema: modelOutput, attachments: files });
+        transcriptWithheld = true;
+      }
     }
   }
   const { object, modelVersion } = result;
@@ -57,6 +69,7 @@ export async function extractMessage({
     dates: normalized.dates.map((d) => ({ ...d, date: rollForwardYearless(d.date, d.asStated, today) })),
     replyBy: rollForwardYearless(normalized.replyBy, normalized.replyByStated, today),
     transcriptWithheld,
+    filesNotRead,
   };
   return { analysis: { ...analysis, flags: withChecks(analysis, visible) }, modelVersion, promptVersion: PROMPT_VERSION };
 }

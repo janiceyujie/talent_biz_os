@@ -654,7 +654,8 @@
       "paste": "Pasted",
       "upload": "Upload",
       "gmail_addon": "Gmail",
-      "forwarded_email": "Forwarded email"
+      "forwarded_email": "Forwarded email",
+      "gmail": "Gmail"
     },
     "pendingBody": "The AI is reading this message; the result appears here on its own. The local model takes about half a minute.",
     "failed": "The analysis didn't finish: {reason}",
@@ -734,7 +735,8 @@
     "backToList": "Back to messages",
     "source": "Source",
     "receivedAt": "Received",
-    "filedOn": "Project"
+    "filedOn": "Project",
+    "filesNotRead": "This model couldn't read the attachments, so only the email's text was analyzed."
   },
   "intake": {
     "targetHeading": "Which project is this message about?",
@@ -1141,9 +1143,9 @@
     "tabMessages": "Messages",
     "tabWaiting": "Waiting",
     "tabSkipped": "Filtered out",
-    "aboutWaiting": "Email that looks like work, or that the rules couldn't decide from sender and subject.",
+    "aboutWaiting": "Email still being decided or brought in. Once it's in, it moves to Messages.",
     "aboutSkipped": "Not work, judged from sender and subject alone. Nothing from these emails is kept.",
-    "emptyWaiting": "Nothing waiting.",
+    "emptyWaiting": "Nothing waiting. Work email is brought into Messages.",
     "emptySkipped": "Nothing filtered out.",
     "notSyncedYet": "Press Sync now to sort your email.",
     "from": "From",
@@ -1157,7 +1159,8 @@
       "work": "Work",
       "pending": "Not decided yet",
       "skipped": "Filtered out",
-      "unsure": "Not sure"
+      "unsure": "Not sure",
+      "not_work": "Not work"
     },
     "rule": {
       "sender_always": "Your rule: always bring in",
@@ -1174,7 +1177,8 @@
       "person": "Moved by you",
       "pending": "No rule matched. A later check will decide.",
       "model": "The model",
-      "gone": "Deleted in Gmail before it was checked"
+      "gone": "Deleted in Gmail before it was checked",
+      "analysis": "The analysis found it isn't work"
     },
     "peekError": {
       "reconnect": "Reconnect Gmail in Settings to see senders and subjects.",
@@ -1209,7 +1213,19 @@
       "personal": "personal",
       "notification": "notification",
       "other": "something else"
-    }
+    },
+    "unsureNotice": "Not sure this is work. It was brought in to be safe.",
+    "itsWork": "It's work",
+    "notWork": "Not work",
+    "notWorkNever": "Not work, and never from this sender",
+    "skippedAttachments": "Not brought in (open it in Gmail): {names}",
+    "wasWork": "This was work",
+    "bringingIn": "Bringing it in. It will appear in Messages.",
+    "keepTitle": "What was brought in from Gmail",
+    "keepFiled": "Keep what's filed under projects",
+    "keepFiledHint": "Remove the rest",
+    "keepNone": "Remove everything",
+    "keepNoneHint": "Including email filed under projects"
   },
   "settings": {
     "name": "Artist or brand name",

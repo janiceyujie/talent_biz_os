@@ -18,9 +18,10 @@ import type { ModelErrorCode } from "./errors";
 //                          AI_MODEL (default qwen3:8b), OLLAMA_URL (default http://127.0.0.1:11434)
 //   AI_PROVIDER=anthropic  Claude — not wired yet; added when we test with it
 //
-// Each call names its role. `relevance` (is this email work?) can run on
-// another provider in development, AI_RELEVANCE_PROVIDER and
-// AI_RELEVANCE_MODEL, e.g. a local model while analysis uses Gemini. Content from a connected mailbox never goes to a provider that
+// Each call names its role. Content from a connected mailbox (its relevance
+// check, and the analysis of what's brought in) can run on another provider in
+// development, AI_MAILBOX_PROVIDER and AI_MAILBOX_MODEL, e.g. a local model
+// while paste and upload use Gemini. Content from a connected mailbox never goes to a provider that
 // may keep it (AI_PROVIDER_KEEPS_DATA) unless AI_FREE_TIER_OK=1, which is
 // refused in production (docs/decisions/0015).
 //
@@ -66,11 +67,14 @@ export class ModelError extends Error {
 
 const defaultModels: Record<string, string> = { gemini: "gemini-3.5-flash-lite,gemini-3.1-flash-lite", ollama: "qwen3:8b" };
 
-/** Which provider and models answer a role: one model, or a list tried in order when one is busy. */
-export function modelFor(role: ModelRole = "analysis") {
-  const own = role === "relevance" ? process.env.AI_RELEVANCE_PROVIDER : undefined;
+/**
+ * Which provider and models answer a call: one model, or a list tried in
+ * order when one is busy. The relevance check only ever reads mailbox content.
+ */
+export function modelFor(role: ModelRole = "analysis", fromMailbox = role === "relevance") {
+  const own = fromMailbox || role === "relevance" ? process.env.AI_MAILBOX_PROVIDER : undefined;
   const provider = own || process.env.AI_PROVIDER || "ollama";
-  const configured = role === "relevance" ? process.env.AI_RELEVANCE_MODEL || (own ? undefined : process.env.AI_MODEL) : process.env.AI_MODEL;
+  const configured = own ? process.env.AI_MAILBOX_MODEL : process.env.AI_MODEL;
   const models = (configured || defaultModels[provider] || "")
     .split(",")
     .map((m) => m.trim())
@@ -89,7 +93,7 @@ export function freeTierOk() {
 }
 
 export async function generateObject<T>(request: StructuredRequest<T>): Promise<StructuredResult<T>> {
-  const { provider, models } = modelFor(request.role);
+  const { provider, models } = modelFor(request.role, request.fromMailbox);
   const started = Date.now();
   const log = (entry: { model: string; status: "ok" | "error"; failureCode?: string; replayed?: boolean } & Partial<Usage>) =>
     db
@@ -184,10 +188,30 @@ async function writeRecording(key: string, result: StructuredResult<unknown>) {
   );
 }
 
+const capabilities = new Map<string, Promise<string[]>>();
+/** What a local model can do (Ollama's /api/show), asked once per model. */
+function ollamaCapabilities(model: string) {
+  const url = (process.env.OLLAMA_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
+  if (!capabilities.has(model))
+    capabilities.set(
+      model,
+      fetch(`${url}/api/show`, { method: "POST", body: JSON.stringify({ model }), signal: AbortSignal.timeout(10_000) })
+        .then((r) => (r.ok ? r.json() : {}))
+        .then((b: { capabilities?: string[] }) => b.capabilities ?? [])
+        .catch(() => {
+          capabilities.delete(model); // try again next time
+          return [];
+        }),
+    );
+  return capabilities.get(model)!;
+}
+
 async function ollama<T>({ system, prompt, schema, attachments = [] }: StructuredRequest<T>, model: string): Promise<ProviderResult<T>> {
-  // Ollama takes images (for vision models) but not PDFs.
-  if (attachments.some((a) => !a.mimeType.startsWith("image/")))
-    throw new ModelError("unsupported_file", "The local model can't read PDFs — switch AI_PROVIDER to gemini for documents");
+  // Ollama takes images, for vision models only, and never PDFs. A model without vision
+  // ignores images without saying so: refuse instead, so nobody trusts an analysis that never saw them.
+  if (attachments.some((a) => !a.mimeType.startsWith("image/"))) throw new ModelError("unsupported_file", "The local model can't read PDFs");
+  if (attachments.length && !(await ollamaCapabilities(model)).includes("vision"))
+    throw new ModelError("unsupported_file", `The local model ${model} can't read images`);
   const images = attachments.map((a) => Buffer.from(a.data).toString("base64"));
   const url = (process.env.OLLAMA_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
   let response: Response;

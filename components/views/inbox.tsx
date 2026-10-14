@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, useTransition, type RefObject } from "reac
 import { useAppData } from "@/components/app/app-data";
 import { ANALYSIS_POLL_MS, PasteDialog } from "@/components/app/paste-dialog";
 import { FileText } from "lucide-react";
+import { markNotWork, markSureWork } from "@/lib/actions/mail";
 import { dismissMessage, reanalyzeMessage } from "@/lib/actions/messages";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
@@ -92,7 +93,7 @@ export function InboxView() {
       </section>
       <IntakeTabs tab={data.gmail.connection ? tab : "messages"} onTab={setTab} />
       {data.gmail.connection && tab !== "messages" ? (
-        <GmailMail view={tab} onNotice={setNotice} />
+        <GmailMail key={tab} view={tab} onNotice={setNotice} />
       ) : (
         <div className="inbox-layout section-gap">
           <section className="surface padded inbox-messages" aria-label={t("listLabel")}>
@@ -196,7 +197,7 @@ function failureText(failure: string | null, t: ReturnType<typeof useTranslation
 
 /** A message's title before or without an analysis: its first line, or how many files it has. */
 function fallbackTitle(m: InboxMessage, t: ReturnType<typeof useTranslations<"inbox">>) {
-  return firstLine(m.body) || (m.files.length ? t("filesCount", { count: m.files.length }) : t("untitled"));
+  return m.gmail?.subject || firstLine(m.body) || (m.files.length ? t("filesCount", { count: m.files.length }) : t("untitled"));
 }
 
 function StatusChip({ status }: { status: InboxMessage["status"] }) {
@@ -208,6 +209,7 @@ function StatusChip({ status }: { status: InboxMessage["status"] }) {
 function MessageDetail({ message, headingRef }: { message: InboxMessage; headingRef: RefObject<HTMLHeadingElement | null> }) {
   const t = useTranslations("inbox");
   const labels = useLabels();
+  const tGmail = useTranslations("gmail");
   const format = useFormatter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -234,6 +236,18 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
           <dt>{t("source")}</dt>
           <dd>{t(`channel.${message.channel}`)}</dd>
         </div>
+        {message.gmail && (
+          <>
+            <div>
+              <dt>{tGmail("from")}</dt>
+              <dd>{message.gmail.sender || "—"}</dd>
+            </div>
+            <div>
+              <dt>{tGmail("subject")}</dt>
+              <dd>{message.gmail.subject || tGmail("noSubject")}</dd>
+            </div>
+          </>
+        )}
         <div>
           <dt>{t("receivedAt")}</dt>
           <dd>
@@ -253,6 +267,19 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
         )}
       </dl>
 
+      {message.gmail?.unsure && (
+        <div className="notice gmail-unsure" role="note">
+          <p>{tGmail("unsureNotice")}</p>
+          <div className="row-actions">
+            <button className="secondary" disabled={pending} onClick={() => run(() => markSureWork(message.id))}>
+              {tGmail("itsWork")}
+            </button>
+            <button className="text-button" disabled={pending} onClick={() => run(() => markNotWork(message.id))}>
+              {tGmail("notWork")}
+            </button>
+          </div>
+        </div>
+      )}
       {message.status === "pending" && <p className="notice analyzing">{t("pendingBody")}</p>}
       {message.status === "error" && (
         <p className="notice error" role="alert">
@@ -284,6 +311,11 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
           ))}
         </div>
       )}
+      {!!message.gmail?.skippedAttachments.length && (
+        <p className="muted gmail-skipped">
+          {tGmail("skippedAttachments", { names: message.gmail.skippedAttachments.map((f) => f.filename).join(", ") })}
+        </p>
+      )}
 
       {message.status === "analyzed" && a && <MessageReview key={a.promptVersion + a.modelVersion} message={message} />}
       {message.status === "confirmed" && message.projectId && (
@@ -302,6 +334,7 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
           </details>
         )}
         {a?.transcriptWithheld && <p className="muted">{t("transcriptWithheld")}</p>}
+        {a?.filesNotRead && <p className="muted">{t("filesNotRead")}</p>}
         {a?.transcript && (
           <details className="original-message">
             <summary>{t("transcript")}</summary>
@@ -336,6 +369,26 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
           <button className="secondary" disabled={pending} onClick={() => run(() => dismissMessage(message.id, false))}>
             {t("restore")}
           </button>
+        )}
+        {message.gmail && data.gmail.connection && (
+          <a
+            className="secondary"
+            href={`https://mail.google.com/mail/?${new URLSearchParams({ authuser: data.gmail.connection.accountEmail })}#all/${message.gmail.gmailId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {tGmail("openInGmail")}
+          </a>
+        )}
+        {message.gmail && message.status !== "confirmed" && (
+          <>
+            <button className="text-button" disabled={pending} onClick={() => run(() => markNotWork(message.id))}>
+              {tGmail("notWork")}
+            </button>
+            <button className="text-button" disabled={pending} onClick={() => run(() => markNotWork(message.id, true))}>
+              {tGmail("notWorkNever")}
+            </button>
+          </>
         )}
       </div>
     </>

@@ -3724,6 +3724,20 @@ button.primary.danger {
   color: var(--muted);
   font-size: 13px;
 }
+.notice.gmail-unsure p {
+  margin: 0 0 8px;
+}
+.notice.gmail-unsure .row-actions {
+  margin: 0;
+}
+p.gmail-skipped {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.notice.gmail-free-tier {
+  margin: 0;
+  font-size: 13px;
+}
 .gmail-rules h3 {
   margin: 20px 0 8px;
   font-size: 15px;

@@ -1,3 +1,4 @@
+import { decodeEntities } from "../clean";
 import { metadataHeaders, parseAddress, type MailMetadata } from "../metadata";
 import type { GmailMetadata } from "./api";
 
@@ -13,15 +14,7 @@ export function toMetadata(raw: GmailMetadata): MailMetadata {
     subject: headers.Subject,
     receivedAt: new Date(Number(raw.internalDate ?? 0)),
     headers,
-    snippet: decodeEntities(raw.snippet ?? ""),
+    snippet: decodeEntities(raw.snippet ?? ""), // Gmail sends it HTML-escaped
   };
 }
 
-// Gmail's snippet arrives HTML-escaped (&#39;, &amp;, …).
-const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
-const decodeEntities = (text: string) =>
-  text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, e: string) => {
-    if (e[0] !== "#") return named[e.toLowerCase()] ?? whole;
-    const code = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : Number(e.slice(1));
-    return Number.isFinite(code) && code > 0 && code < 0x110000 ? String.fromCodePoint(code) : whole;
-  });

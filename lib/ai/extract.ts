@@ -13,6 +13,7 @@ import { findInstructions, rollForwardYearless, stripInvisible, weekdayMismatche
  */
 export async function extractMessage({
   body,
+  fromMailbox = false,
   files = [],
   today,
   timeZone,
@@ -20,6 +21,7 @@ export async function extractMessage({
   trace,
 }: {
   body: string;
+  fromMailbox?: boolean;
   files?: { name: string; mimeType: string; data: Uint8Array }[]; // screenshots, photos, PDFs, in order
   today: string; // YYYY-MM-DD in timeZone — the day the message was received
   timeZone: string;
@@ -30,6 +32,7 @@ export async function extractMessage({
   // before the model reads the text, and say so.
   const visible = stripInvisible(body);
   const request = {
+    fromMailbox,
     system: systemPrompt({ today, timeZone, outputLocale }),
     prompt: messagePrompt(visible.text, outputLocale, files),
     trace: { ...trace, promptVersion: PROMPT_VERSION },

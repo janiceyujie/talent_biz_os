@@ -25,7 +25,7 @@ export function Overview() {
   const [customizing, setCustomizing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   // A message imported from the header is analyzed in the background: look again until it lands.
-  const analyzing = ctx.data.inbox.some((m) => m.status === "pending");
+  const analyzing = ctx.data.inboxOverview ? ctx.data.inboxOverview.counts.pending > 0 : ctx.data.inbox.some((m) => m.status === "pending");
   const router = useRouter();
   useEffect(() => {
     if (!analyzing) return;

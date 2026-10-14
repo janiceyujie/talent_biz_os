@@ -6,6 +6,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { appEnv } from "@/lib/app-env";
 import { aiCall } from "@/lib/db/schema";
+import { openAIResponse } from "./openai";
+import { LocalAIError } from "./local-budget";
 import type { ModelErrorCode } from "./errors";
 
 // The one place that talks to a language model. The pipeline asks for an
@@ -126,7 +128,9 @@ export async function generateObject<T>(request: StructuredRequest<T>): Promise<
   }
   try {
     const result =
-      provider === "gemini"
+      provider === "openai"
+        ? await openai(request, models[0])
+        : provider === "gemini"
         ? await gemini(request, models)
         : provider === "ollama"
           ? await ollama(request, models[0] ?? "qwen3:8b")
@@ -306,4 +310,13 @@ function parseAgainst<T>(schema: z.ZodType<T>, text: string): T {
   const parsed = schema.safeParse(raw);
   if (!parsed.success) throw new ModelError("invalid_output", `The model's answer didn't match the schema: ${parsed.error.issues[0]?.message}`);
   return parsed.data;
+}
+
+async function openai<T>({system,prompt,schema,attachments=[]}: StructuredRequest<T>, model?:string): Promise<ProviderResult<T>> {
+  // The paid local experiment covers text only. Do not silently omit files.
+  if(attachments.length) throw new ModelError("unsupported_file", "OpenAI local evaluation supports text only");
+  try {
+    const result=await openAIResponse({model,instructions:system,input:prompt,schema:z.toJSONSchema(schema),maxOutputTokens:4000});
+    return {object:parseAgainst(schema,result.text),modelVersion:`openai:${result.model}`,inputTokens:result.usage.inputTokens,outputTokens:result.usage.outputTokens};
+  } catch(e) { if(e instanceof LocalAIError) throw new ModelError(e.code,e.message); throw e; }
 }

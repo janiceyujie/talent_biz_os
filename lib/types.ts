@@ -7,6 +7,7 @@ import type { Appearance, Role } from "@/lib/roles";
 import type { MessageAnalysis } from "@/lib/ai/analysis";
 import type { ChangeRecord } from "@/lib/domain/intake";
 import type { ProjectType } from "@/lib/project-types";
+import type { Currency } from "@/lib/domain/money";
 
 export const stages = [
   "offer",
@@ -28,6 +29,7 @@ export type Stage = (typeof stages)[number];
 export type ProjectSummary = Omit<Project, "details" | "notes"> & { details: Pick<ProjectDetails, "fields" | "dates"> };
 
 export type Project = {
+  artistId?:string;
   id: string;
   title: string;
   counterparty: string;
@@ -37,7 +39,7 @@ export type Project = {
   type: ProjectType;
   stage: Stage;
   quotedAmount: number | null; // null = quote not set (not decided yet), not zero
-  currency: "TWD";
+  currency: Currency;
   taxRate: number;
   taxIncluded: boolean;
   details: ProjectDetails;
@@ -123,6 +125,9 @@ export const calendarKinds = [
 export type CalendarKind = (typeof calendarKinds)[number];
 
 export type CalendarItem = {
+  artistId?: string;
+  artistName?: string;
+  grantApplicationId?: string;
   id: string;
   source: "event" | "todo";
   kind: CalendarKind;
@@ -158,6 +163,8 @@ export type TravelDetails = {
 };
 
 export type Payment = {
+  artistId?: string;
+  artistName?: string;
   id: string;
   projectId: string | null;
   projectType: ProjectType; // the project's type, or "other" for a general expense
@@ -165,7 +172,7 @@ export type Payment = {
   installment: "regular" | "deposit" | "balance";
   label: string;
   amount: number;
-  currency: "TWD";
+  currency: Currency;
   taxRate: number;
   taxIncluded: boolean;
   recordedDate: string; // recorded on
@@ -212,9 +219,13 @@ export type StoredFile = {
 };
 
 /** A message the person sent in, with the latest analysis of it (the model's proposal). */
+export type InboxSummary = Pick<InboxMessage, "id" | "channel" | "status" | "projectId" | "receivedAt"> & {
+  title: string; snippet: string; flagged: boolean; fileCount: number;
+};
 export type InboxMessage = {
+  filed?: import("@/lib/domain/intake").FiledMessage[];
   id: string;
-  channel: "paste" | "upload" | "gmail_addon" | "forwarded_email";
+  channel: "paste" | "upload" | "gmail_addon" | "forwarded_email" | "gmail";
   body: string;
   receivedAt: string; // ISO instant
   status: "pending" | "analyzed" | "confirmed" | "dismissed" | "error";
@@ -233,6 +244,7 @@ export type ProjectDetail = {
   people: { contactId: string; label: string }[];
   /** The organisations on the project, the primary one (its client) first, each with its role there. */
   organizations: { organizationId: string; role: string; primary: boolean }[];
+  grantApplications?: { id: string; title: string }[];
   offerText: string; // the earliest message filed under it
   timeline: TimelineEntry[]; // newest first
 };
@@ -270,6 +282,14 @@ export type ExternalEvent = {
 };
 
 export type AppData = {
+  portfolio?: {artists: import("@/lib/manager/scope").ArtistAccess[]};
+  managerAvailable?:boolean;
+  managerToolsAvailable?:boolean;
+  grantsAvailable?: boolean;
+  grantNotice?: {count:number} | null;
+  preview?: boolean;
+  previewDate?: string;
+  previewProjectDetails?: Record<string, ProjectDetail>;
   talent: { id: string; name: string; timeZone: string };
   person: { displayName: string; email: string; role: Role; appearance: Appearance; replyWithinDays: number; workspaceOwner: boolean };
   calendarFeed: boolean; // a subscription link exists (the URL itself is only shown once)
@@ -285,7 +305,13 @@ export type AppData = {
   templates: ReplyTemplate[];
   drafts: ReplyDraft[];
   files: StoredFile[];
-  inbox: InboxMessage[];
+  inbox: InboxMessage[]; // In-memory preview only; live lists and details are loaded on demand.
+  inboxOverview?: {
+    counts: Record<InboxMessage["status"], number>;
+    review: InboxSummary[];
+    latestActivity: Record<string, string>;
+    revision: string;
+  };
   contracts: Contract[]; // newest version first
   notificationState: NotificationState; // this person's read and snooze marks
   preferences: Preferences; // this person's settings in this workspace (lib/preferences)
@@ -302,6 +328,7 @@ export type AppData = {
   };
   // The talent's connected Gmail mailbox (decision 0013); `available` = an OAuth client and a master key are set up here.
   gmail: {
+    reviewEnabled?: boolean;
     available: boolean;
     freeTier: boolean; // Gmail content may go to a free tier that keeps what it's sent (AI_FREE_TIER_OK, decision 0015)
     connection: {
@@ -329,6 +356,8 @@ export type GmailSenderRule = { id: string; kind: "address" | "domain"; value: s
 // Intake's Waiting (work, not sure, or not decided yet) and Filtered out (skipped).
 export type GmailMailView = "waiting" | "skipped";
 export type GmailMailItem = {
+  importStatus: "idle" | "queued" | "imported" | "error";
+  messageId: string | null;
   id: string; // our decision's id
   gmailId: string;
   receivedAt: string;

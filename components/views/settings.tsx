@@ -1,6 +1,5 @@
 "use client";
 
-import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
@@ -13,6 +12,7 @@ import { RolePortrait } from "@/components/role/role-portrait";
 import { SignOutButton } from "@/components/sign-out-button";
 import { setReplyWithinDays } from "@/lib/actions/intake";
 import { CalendarFeedSettings } from "./calendar-feed-settings";
+import { CreatorPlatformSettings } from "./creator-platform-settings";
 import { GmailSettings } from "./gmail-settings";
 import { GoogleCalendarSettings } from "./google-calendar-settings";
 import { SettingsGroup, SettingsRow } from "./settings-row";
@@ -51,12 +51,12 @@ export function SettingsView() {
       </SettingsGroup>
 
       <SettingsGroup title={t("groupPreferences")}>
-        <SettingsRow label={tLocale("heading")} description={tLocale("help")}>
+        <SettingsRow label={tLocale("heading")} hint={[tLocale("help")]}>
           <LocaleSwitch bare className="settings-select" />
         </SettingsRow>
         <SettingsRow label={tRoles("settingsTitle")} hint={[tRoles("settingsBody")]}>
           <span>{tRoles(`${data.person.role}.label`)}</span>
-          <Link className="secondary" href="/role">
+          <Link className="secondary" href="/role?returnTo=%2Fsettings">
             {tRoles("change")}
           </Link>
         </SettingsRow>
@@ -65,16 +65,16 @@ export function SettingsView() {
 
       <SettingsGroup title={t("groupWorkspace")}>
         <Workspace onSaved={saved} />
+        {data.managerToolsAvailable && data.person.workspaceOwner && <SettingsRow label={t("managerAccess")}><Link className="secondary" href="/manager/access">{t("manageAccess")}</Link></SettingsRow>}
       </SettingsGroup>
 
       <SettingsGroup title={t("groupServices")}>
         <GoogleCalendarSettings onNotice={setToast} />
         <CalendarFeedSettings />
         <GmailSettings onNotice={setToast} />
-        <SettingsRow icon={<Mail size={20} />} label={t("gmailTitle")} hint={[t("gmailBody")]}>
-          <span className="mock-chip">{t("comingSoon")}</span>
-        </SettingsRow>
       </SettingsGroup>
+
+      <CreatorPlatformSettings />
 
       <SettingsGroup title={t("aiTitle")} hint={[t("aiBody")]}>
         <p className="settings-note">{t("aiShort")}</p>

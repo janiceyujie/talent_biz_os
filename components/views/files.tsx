@@ -1,5 +1,11 @@
 "use client";
 
+import { PageLoader } from "@/components/app/cursor-pages";
+import { useFilePages } from "@/components/app/file-pages";
+import { InfoHint } from "@/components/app/info-hint";
+
+import { DocumentLibrary } from "./document-library";
+
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useAppData } from "@/components/app/app-data";
@@ -14,22 +20,20 @@ export function FilesView() {
   const [projectId, setProjectId] = useState("");
   const [q, setQ] = useState("");
   const [archived, setArchived] = useState(false);
-  const files = data.files.filter(
-    (f) =>
-      f.archived === archived &&
-      (!projectId || f.projectId === projectId) &&
-      f.filename.toLowerCase().includes(q.toLowerCase()),
-  );
+  const page = useFilePages(projectId, q, archived);
+  const files = page.items;
 
   return (
-    <section className="surface padded">
+    <>
+    <DocumentLibrary />
+    <section className="surface padded section-gap">
       <div className="section-header">
         <div>
           <span>{tEyebrow("files")}</span>
-          <h2>{t("title")}</h2>
+          <h2>{t("title")} <InfoHint label={t("title")} notes={[t("intro"), t("uploadSoon")]} /></h2>
         </div>
       </div>
-      <p className="muted">{t("intro")}</p>
+
       <div className="toolbar wrap">
         <input aria-label={t("search")} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchPlaceholder")} />
         <select aria-label={t("projectFilter")} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
@@ -42,7 +46,7 @@ export function FilesView() {
               </option>
             ))}
         </select>
-        <button className="primary" disabled>
+        <button className="primary" disabled title={t("uploadSoon")}>
           {t("upload")}
         </button>
         <label className="check-line">
@@ -63,7 +67,7 @@ export function FilesView() {
             {files.map((f) => (
               <tr key={f.id}>
                 <td>
-                  <strong>{f.filename}</strong>
+                  <strong><a href={`/api/files/${f.id}`} target="_blank" rel="noopener noreferrer" download={f.filename}>{f.filename}</a></strong>
                   <small>{format.dateTime(new Date(f.createdAt), { dateStyle: "medium" })}</small>
                 </td>
                 <td>{data.projects.find((p) => p.id === f.projectId)?.title || labels.unlinked()}</td>
@@ -73,7 +77,9 @@ export function FilesView() {
           </tbody>
         </table>
       </div>
-      {!files.length && <p className="empty">{t("empty")}</p>}
+      <PageLoader page={page} />
+      {!page.loading && !page.failed && !files.length && <p className="empty">{t("empty")}</p>}
     </section>
+    </>
   );
 }

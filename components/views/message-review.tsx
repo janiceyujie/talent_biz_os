@@ -53,10 +53,10 @@ export function MessageReview({ message }: { message: InboxMessage }) {
       calendar: data.calendar,
       receivedOn: dateInZone(data.talent.timeZone, 0, new Date(message.receivedAt)),
       replyWithinDays: data.person.replyWithinDays,
-      filed: filedMessages(data.inbox, message.id),
+      filed: message.filed ?? filedMessages(data.inbox, message.id),
       contracts: data.contracts,
     }),
-    [data, message.id, message.receivedAt],
+    [data, message],
   );
   const suggestions = useMemo(() => suggestTargets(a, ctx).slice(0, 3), [a, ctx]);
   const [target, setTarget] = useState<string>(suggestions[0]?.projectId ?? "new");

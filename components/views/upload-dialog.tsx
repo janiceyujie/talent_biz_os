@@ -3,6 +3,7 @@
 import { ArrowDown, ArrowUp, FileText, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
+import { useAppData } from "@/components/app/app-data";
 import { DataNotice } from "@/components/app/data-notice";
 import { Modal } from "@/components/app/modal";
 import { prepareUpload, registerUpload } from "@/lib/actions/uploads";
@@ -30,6 +31,8 @@ type Picked = { key: string; file: File; type: UploadType; preview: string | nul
  */
 export function UploadDialog({ onClose, onSubmitted }: { onClose: () => void; onSubmitted: (id: string, duplicate: boolean) => void }) {
   const t = useTranslations("inbox");
+  const {preview} = useAppData();
+  const tPreview = useTranslations("preview");
   const [picked, setPicked] = useState<Picked[]>([]);
   const [dragging, setDragging] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -58,6 +61,7 @@ export function UploadDialog({ onClose, onSubmitted }: { onClose: () => void; on
 
   const submit = () =>
     startTransition(async () => {
+      if (preview) { setError(tPreview("readOnly")); return; }
       setError(null);
       const meta = picked.map((p) => ({ name: p.file.name, type: p.type, size: p.file.size }));
       const prepared = await prepareUpload(meta);

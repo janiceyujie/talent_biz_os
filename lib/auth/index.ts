@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
@@ -30,13 +30,14 @@ export async function requirePerson() {
   return session;
 }
 
-/** The talent the signed-in person works on, or a redirect to onboarding. */
+/** Personal editing context is always owner-held; delegated artist access stays in read-only portfolio readers. */
 export const getCurrentTalent = cache(async (personId: string) => {
   const [row] = await db
     .select({ id: talent.id, name: talent.name, vertical: talent.vertical, role: membership.role })
     .from(membership)
     .innerJoin(talent, eq(talent.id, membership.talentId))
-    .where(and(eq(membership.personId, personId), eq(membership.status, "active")))
+    .where(and(eq(membership.personId, personId), eq(membership.status, "active"), eq(membership.role, "owner")))
+    .orderBy(asc(membership.createdAt),asc(membership.id))
     .limit(1);
   return row ?? null;
 });

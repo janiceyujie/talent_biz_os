@@ -17,6 +17,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
   const [row] = await db
     .select({
       talentId: message.talentId,
+      channel: message.channel,
       status: message.status,
       submittedBy: message.submittedBy,
       body: message.bodyText,
@@ -47,6 +48,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
     );
     const { analysis, modelVersion, promptVersion } = await extractMessage({
       body: row.body ?? "",
+      fromMailbox: row.channel === "gmail",
       files,
       today: dateInZone(row.timeZone, 0, row.receivedAt),
       timeZone: row.timeZone,

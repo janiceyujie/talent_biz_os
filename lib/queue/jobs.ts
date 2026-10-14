@@ -7,6 +7,8 @@ import { locales } from "@/lib/i18n/config";
 // (docs/decisions/0014-hosting-and-job-queue.md).
 
 export const jobs = {
+  "mail.review": z.strictObject({decisionId:z.uuid(),mode:z.enum(["preview","import"])}),
+  "grants.refresh": z.strictObject({}),
   /** Analyze one message and store a new analysis version (lib/ai/analyze-message.ts). */
   "message.analyze": z.strictObject({ messageId: z.uuid(), locale: z.enum(locales) }),
   /** Find a mailbox's new email, run the rules, record the decisions (lib/mail/jobs/sync.ts). */
@@ -27,11 +29,13 @@ export type JobPayload<N extends JobName> = z.infer<(typeof jobs)[N]>;
  * 25 would keep trying for about 3 days.
  */
 export const jobAttempts: Record<JobName, number> = {
+  "mail.review": 1,
+  "mail.sync": 5,
+  "grants.refresh": 3,
   // Model errors don't throw: the message is marked error and the person can Retry.
   // Only a failure outside that, such as the database being down, retries here.
   "message.analyze": 5,
   // Gmail unreachable or rate-limited: a few tries, then the connection shows an error until the next Sync now.
-  "mail.sync": 5,
   // The model busy or unreachable: a few tries, then the email stays "Not decided yet" until the next Sync now.
   "mail.relevance": 5,
   // Google unreachable: a few more tries, then the row is deleted anyway.

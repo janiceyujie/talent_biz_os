@@ -1,5 +1,8 @@
 "use client";
 
+import { appendPage } from "@/lib/domain/cursor-page";
+import { useAppData } from "./app-data";
+import { previewProjectPage } from "@/lib/domain/preview-projects";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PAGE_MAX, PAGE_SIZE, type ListSort, type ListView, type ProjectPage as Page } from "@/lib/domain/project-list";
 
@@ -19,7 +22,11 @@ const url = (p: ListParams, cursor: string, limit: number) =>
  * on arrival, when coming back to a list that had scrolled further.
  */
 export function useProjectPages(params: ListParams, revision: unknown, restore = 0) {
-  const [state, setState] = useState<{ page: Page | null; loading: boolean; failed: boolean }>({ page: null, loading: true, failed: false });
+  const data = useAppData();
+  const preview = !!data.preview;
+  const artistScope=data.portfolio?JSON.stringify(data.portfolio.artists.map(artist=>artist.id).sort()):"";
+  const scopeKey=`${data.person.email}:${data.talent.id}:${artistScope}:${JSON.stringify(params)}`;
+  const [state, setState] = useState<{scope:string;page: Page | null; loading: boolean; failed: boolean }>({scope:"",page: null, loading: true, failed: false });
   const shown = useRef(0);
   const request = useRef<AbortController | null>(null);
   const count = state.page?.items.length ?? 0;
@@ -30,20 +37,24 @@ export function useProjectPages(params: ListParams, revision: unknown, restore =
   const load = useCallback(
     (cursor: string, limit: number, append: boolean) => {
       request.current?.abort();
+      if (preview) return;
       const abort = (request.current = new AbortController());
       setState((s) => ({ ...s, loading: true, failed: false }));
-      fetch(url(params, cursor, limit), { signal: abort.signal })
+      const target=artistScope?new URL(url(params,cursor,limit),window.location.origin):null;
+      if(target){target.pathname="/api/manager/projects";const ids=JSON.parse(artistScope) as string[];if(!ids.length)target.searchParams.set("artist","none");else ids.forEach(id=>target.searchParams.append("artist",id));}
+      fetch(target?`${target.pathname}${target.search}`:url(params, cursor, limit), { signal: abort.signal,cache:"no-store" })
         .then((r) => (r.ok ? (r.json() as Promise<Page>) : Promise.reject(r.status)))
         .then((next) =>
-          setState((s) => ({
-            page: append && s.page ? { ...next, items: [...s.page.items, ...next.items] } : next,
+          !abort.signal.aborted&&setState((s) => ({
+            scope:scopeKey,
+            page: append && s.scope===scopeKey && s.page ? { ...next, items: appendPage(s.page.items, next.items) } : next,
             loading: false,
             failed: false,
           })),
         )
-        .catch(() => !abort.signal.aborted && setState((s) => ({ ...s, loading: false, failed: true })));
+        .catch(() => !abort.signal.aborted && setState((s) => ({ ...s,scope:scopeKey,page:artistScope||s.scope!==scopeKey?null:s.page, loading: false, failed: true })));
     },
-    [params.view, params.type, params.contact, params.q, params.sort], // eslint-disable-line react-hooks/exhaustive-deps -- the five values are the request
+    [preview, artistScope,scopeKey, params.view, params.type, params.contact, params.q, params.sort], // eslint-disable-line react-hooks/exhaustive-deps -- the five values are the request
   );
 
   // A new view, filter, or order: the first page (after a pause while typing). On arrival, as many rows as before.
@@ -56,17 +67,17 @@ export function useProjectPages(params: ListParams, revision: unknown, restore =
     const target = arrivedAt.current ? restore : 0;
     goal.current = target;
     const timer = setTimeout(() => load("", Math.min(Math.max(target, PAGE_SIZE), PAGE_MAX), false), params.q && !target ? SEARCH_PAUSE : 0);
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(timer); request.current?.abort(); };
   }, [load]); // eslint-disable-line react-hooks/exhaustive-deps -- `load` changes with the request
 
   // Coming back to more rows than one request returns: keep loading pages until they're all there.
   const { page: current, loading: busy } = state;
   useEffect(() => {
     const want = goal.current;
-    if (!want || !current || busy) return;
+    if (!want || !current || busy || state.failed || state.scope !== scopeKey) return;
     if (current.items.length >= want || !current.nextCursor) goal.current = 0;
     else load(current.nextCursor, Math.min(want - current.items.length, PAGE_MAX), true);
-  }, [current, busy, load]);
+  }, [current, busy, state.failed, state.scope, scopeKey, load]);
 
   // After a save: the same rows again, fresh.
   const first = useRef(true);
@@ -80,11 +91,16 @@ export function useProjectPages(params: ListParams, revision: unknown, restore =
 
   useEffect(() => () => request.current?.abort(), []);
 
-  const { page, loading, failed } = state;
+  const currentScope=state.scope===scopeKey;
+  const page=currentScope?state.page:null,loading=!currentScope||state.loading,failed=currentScope&&state.failed;
   const loadMore = useCallback(() => {
-    if (page?.nextCursor && !loading) load(page.nextCursor, PAGE_SIZE, true);
-  }, [page, loading, load]);
+    if (page?.nextCursor && !loading && !failed) load(page.nextCursor, PAGE_SIZE, true);
+  }, [page, loading, failed, load]);
 
+  if (preview) {
+    const sample = previewProjectPage(data, params);
+    return { ...sample, hasMore: false, loading: false, failed: false, loadMore: () => {}, retry: () => {} };
+  }
   return {
     items: page?.items ?? [],
     total: page?.total ?? null,

@@ -1,4 +1,7 @@
 "use client";
+import Link from "next/link";
+
+import { usePreviewAction } from "@/components/app/preview-action";
 
 // Day and week calendar over the talent's real events, to-dos, and payment
 // dates (lib/calendar/planner.ts), with the month view as the third tab.
@@ -14,12 +17,13 @@ import { Modal } from "@/components/app/modal";
 import { PageHeader } from "@/components/app/page-header";
 import { Toast } from "@/components/app/toast";
 import { calendarRecord, RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
-import { deleteCalendarItem, saveCalendarItem } from "@/lib/actions/calendar";
+import { deleteCalendarItem as deleteCalendarItemRemote, saveCalendarItem as saveCalendarItemRemote } from "@/lib/actions/calendar";
 import { refreshGoogleCalendars } from "@/lib/actions/google-calendar";
 import { at, clock, conflicts, layoutDay, minutes, moveItem, planItems, plusDays, segment, validItem, weekStart, type PlanItem } from "@/lib/calendar/planner";
 import { dateInZone } from "@/lib/domain/dates";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
+import { DateTimeInput } from "@/components/app/date-time-input";
 import { CalendarView } from "./calendar";
 
 type View = "day" | "week" | "month";
@@ -28,11 +32,15 @@ type Edge = "move" | "start" | "end";
 const onDay = (item: PlanItem, day: string) => item.date === day || (!!item.start && !!segment(item, day));
 
 /** `initialDay` opens the month filtered to that day (reminder links); `initialDate` opens that day's schedule. */
-export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?: string; initialDate?: string }) {
+export function PlannerView({ initialDay = "", initialDate = "", readOnly=false }: { initialDay?: string; initialDate?: string; readOnly?:boolean }) {
+  const deleteCalendarItem = usePreviewAction(deleteCalendarItemRemote);
+  const saveCalendarItem = usePreviewAction(saveCalendarItemRemote);
   const data = useAppData();
   const t = useTranslations("planner");
+  const tp=useTranslations("portfolio");
+  const [viewing,setViewing]=useState<PlanItem|null>(null);
   const format = useFormatter();
-  const today = dateInZone(data.talent.timeZone);
+  const today = data.previewDate || dateInZone(data.talent.timeZone);
   const [view, setView] = useState<View>(initialDay ? "month" : initialDate ? "day" : "week");
   const [date, setDate] = useState(initialDay || initialDate || today);
   // The item being edited; `dropped` when it came from a drag, so the dialog only asks to confirm.
@@ -40,7 +48,7 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
   const [editor, setEditor] = useState<Editor | null>(null);
   const [message, setMessage] = useState("");
   const [, startTransition] = useTransition();
-  const saved = useMemo(() => planItems(data), [data]);
+  const saved = useMemo(() => planItems(data).map(item=>readOnly?{...item,movable:false,title:`${data.calendar.find(row=>row.id===item.ref.id&&row.source===item.ref.source)?.artistName||data.payments.find(row=>row.id===item.ref.id)?.artistName||data.projects.find(row=>row.id===item.projectId)?.artist||""} · ${item.title}`}:item), [data,readOnly]);
   // A move shows at once; the server's answer replaces it.
   const [items, show] = useOptimistic(saved, (state, moved: PlanItem) => state.map((i) => (i.id === moved.id ? moved : i)));
 
@@ -64,7 +72,7 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
   const [menu, setMenu] = useState<{ item: PlanItem; x: number; y: number } | null>(null);
   const [deleting, setDeleting] = useState<PlanItem | null>(null);
   const onMenu = (item: PlanItem, e: ReactMouseEvent) => {
-    if (item.ref.source === "payment" || item.ref.source === "google") return; // not ours to delete here
+    if (readOnly || item.ref.source === "payment" || item.ref.source === "google") return; // not ours to delete here
     e.preventDefault();
     setMenu({ item, x: e.clientX, y: e.clientY });
   };
@@ -77,7 +85,7 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
     });
   // The person's own Google calendars (decision 0009, phase 2): read again on opening and every few
   // minutes while the calendar is open (the server skips it if read in the last two minutes).
-  const importing = data.googleCalendar.importing.length > 0;
+  const importing = !data.preview && data.googleCalendar.importing.length > 0;
   useEffect(() => {
     if (!importing) return;
     void refreshGoogleCalendars();
@@ -85,6 +93,7 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
     return () => clearInterval(timer);
   }, [importing]);
   const open = (item: PlanItem) => {
+    if(readOnly)return setViewing(item);
     // A Google event opens in Google Calendar: it's read-only here.
     if (item.ref.source === "google") return void (item.ref.link && window.open(item.ref.link, "_blank", "noopener"));
     if (item.movable) return setEditing(item);
@@ -102,7 +111,7 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
   const dayLabel = (d: string) => format.dateTime(new Date(`${d}T12:00:00Z`), { weekday: "short", timeZone: "UTC" });
 
   return (
-    <div className="planner">
+    <div className={`planner ${readOnly?"portfolio-read-only":""}`}>
       {/* The calendar is the page: every control shares the title's row; help sits behind ⓘ. */}
       <PageHeader titleKey="calendar">
         {view !== "month" && (
@@ -128,23 +137,16 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
         </select>
         {view !== "month" && (
           <>
-            <input
-              className="planner-go-to"
-              type="date"
-              aria-label={t("goTo")}
-              title={t("goTo")}
-              value={date}
-              onInput={(e) => e.currentTarget.value && setDate(e.currentTarget.value)}
-            />
+            <DateTimeInput className="planner-go-to" kind="date" hideLabel required label={t("goTo")} value={date} today={today} onChange={value=>value&&setDate(value)}/>
           </>
         )}
-        <button className="primary" title={t("add")} aria-label={t("add")} onClick={() => setEditor({ kind: "calendar", item: { date } })}>
+        {!readOnly&&<button className="primary" title={t("add")} aria-label={t("add")} onClick={() => setEditor({ kind: "calendar", item: { date } })}>
           <Plus size={16} aria-hidden="true" />
           {t("create")}
-        </button>
+        </button>}
       </PageHeader>
       {view === "month" ? (
-        <CalendarView initialDay={initialDay} hideAdd />
+        <CalendarView initialDay={initialDay||date} hideAdd readOnly={readOnly} />
       ) : (
         <>
           <TimeGrid
@@ -157,12 +159,15 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
             onOpen={open}
             onMenu={onMenu}
             onDrop={(next) => {
+              if(readOnly)return;
               if (!validItem(next)) return setMessage(t("invalidMove"));
               // Fixed commitments and clashes are confirmed in the editor; flexible work just moves.
               if (next.fixed || conflicts(next, items).length) setEditing({ ...next, dropped: true });
               else save(next);
             }}
+            readOnly={readOnly}
             onCreate={(day, time) => {
+              if(readOnly)return;
               // A new event at the clicked time, an hour long; the form sets the rest.
               const endAt = minutes(time) + NEW_LENGTH;
               setEditor({
@@ -186,7 +191,7 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
                   {day === today ? ` · ${t("today")}` : ""}
                 </h3>
                 {items.filter((e) => onDay(e, day)).map((item) => (
-                  <EventCard key={item.id} item={item} items={items} onOpen={open} onMenu={onMenu} />
+                  <EventCard key={item.id} item={item} items={items} onOpen={open} onMenu={onMenu} readOnly={readOnly} />
                 ))}
                 {!items.some((e) => onDay(e, day)) && <p className="muted">{t("nothing")}</p>}
               </section>
@@ -247,7 +252,8 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
           }}
         />
       )}
-      {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
+      {!readOnly&&editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
+      {viewing&&items.some(item=>item.id===viewing.id)&&<Modal title={tp("details")} onClose={()=>setViewing(null)}><div className="portfolio-detail"><h3>{viewing.title}</h3><dl><div><dt>{tp("when")}</dt><dd>{viewing.date} {viewing.start}{viewing.end?` – ${viewing.endDate} ${viewing.end}`:""}</dd></div><div><dt>{tp("zone")}</dt><dd>{data.talent.timeZone}</dd></div><div><dt>{tp("notes")}</dt><dd>{data.calendar.find(row=>row.id===viewing.ref.id&&row.source===viewing.ref.source)?.notes||""}</dd></div></dl></div></Modal>}
     </div>
   );
 }
@@ -284,7 +290,9 @@ function TimeGrid({
   onMenu,
   onDrop,
   onCreate,
+  readOnly=false,
 }: {
+  readOnly?:boolean;
   days: string[];
   timeZone: string;
   today: string;
@@ -298,15 +306,20 @@ function TimeGrid({
 }) {
   const t = useTranslations("planner");
   const locale = useLocale();
+  const tp=useTranslations("portfolio");
   const scroll = useRef<HTMLDivElement>(null);
   const pointer = useRef<{ item: PlanItem; edge: Edge; grab: number; x: number; y: number; active: boolean } | null>(null);
   const suppressClick = useRef(false);
   const [preview, setPreview] = useState<{ item: PlanItem; edge: Edge } | null>(null);
 
-  // Open on the working day, not midnight.
+  // A hidden portfolio panel has no dimensions until its records finish loading.
+  const openedView=useRef<View|null>(null);
   useEffect(() => {
-    if (scroll.current) scroll.current.scrollTop = OPEN_AT_HOUR * HOUR - 8;
-  }, [view]);
+    if(scroll.current?.clientHeight && openedView.current!==view){
+      scroll.current.scrollTop=OPEN_AT_HOUR * HOUR - 8;
+      openedView.current=view;
+    }
+  }, [view,items]);
 
   /** The day and minute under the pointer, as minutes since the epoch (see `at`). */
   const pointAt = (x: number, y: number) => {
@@ -357,6 +370,7 @@ function TimeGrid({
   };
   // Clicking empty time adds an event there, on the quarter hour.
   const create = (e: ReactMouseEvent<HTMLElement>, day: string) => {
+    if(readOnly)return;
     if (suppressClick.current || (e.target as HTMLElement).closest(".cal-block")) return;
     const minute = Math.floor((((e.clientY - e.currentTarget.getBoundingClientRect().top) / HOUR) * 60) / CLICK_STEP) * CLICK_STEP;
     onCreate(day, clock(Math.min(1440 - CLICK_STEP, Math.max(0, minute))));
@@ -429,7 +443,7 @@ function TimeGrid({
               {items
                 .filter((i) => i.date === day && !i.start)
                 .map((item) => (
-                  <EventCard key={item.id} item={item} items={items} onOpen={onOpen} onMenu={onMenu} compact />
+                  <EventCard key={item.id} item={item} items={items} onOpen={onOpen} onMenu={onMenu} compact readOnly={readOnly} />
                 ))}
             </div>
           ))}
@@ -443,7 +457,7 @@ function TimeGrid({
             ))}
           </div>
           {days.map((day) => (
-            <div key={day} className={`cal-col ${day === today ? "is-today" : ""}`} data-day={day} onClick={(e) => create(e, day)} title={t("clickToAdd")}>
+            <div key={day} className={`cal-col ${day === today ? "is-today" : ""}`} data-day={day} onClick={readOnly?undefined:(e) => create(e, day)} title={readOnly?undefined:t("clickToAdd")}>
               {blocks(day).map((b) => {
                 const item = b.item;
                 const height = b.open ? POINT_PX : Math.max(((b.to - b.from) / 60) * HOUR, MIN_BLOCK_PX);
@@ -462,7 +476,7 @@ function TimeGrid({
                     }}
                     onContextMenu={(e) => onMenu(item, e)}
                     title={
-                      item.external
+                      readOnly ? tp("viewItem",{title:item.title}) : item.external
                         ? t("hintGoogle", { calendar: item.external.calendar })
                         : item.movable
                         ? [item.fixed ? t("hintProject") : "", item.end ? t("hintMoveResize") : t("hintMove"), t("hintDelete")].filter(Boolean).join(" · ")
@@ -479,7 +493,7 @@ function TimeGrid({
                       onPointerUp={end}
                       onPointerCancel={cancel}
                       onClick={() => onOpen(item)}
-                      aria-label={t("edit", { title: item.title })}
+                      aria-label={readOnly?tp("viewItem",{title:item.title}):t("edit", { title: item.title })}
                     >
                       <strong>{item.title || t("untitled")}</strong>
                       <span>
@@ -506,16 +520,19 @@ export function EventCard({
   onOpen,
   onMenu,
   compact = false,
+  readOnly=false,
 }: {
   item: PlanItem;
   items: PlanItem[];
   onOpen: (item: PlanItem) => void;
   onMenu?: (item: PlanItem, e: ReactMouseEvent) => void;
   compact?: boolean;
+  readOnly?:boolean;
 }) {
   const t = useTranslations("planner");
   const labels = useLabels();
   const money = useMoney();
+  const tp=useTranslations("portfolio");
   const clash = conflicts(item, items).length > 0;
   return (
     <article
@@ -523,14 +540,14 @@ export function EventCard({
       data-event-id={item.id}
       onContextMenu={onMenu && ((e) => onMenu(item, e))}
     >
-      <button className="planner-event-main" onClick={() => onOpen(item)} aria-label={t("edit", { title: item.title })}>
+      <button className="planner-event-main" onClick={() => onOpen(item)} aria-label={readOnly?tp("viewItem",{title:item.title}):t("edit", { title: item.title })}>
         {!compact &&
           (item.external ? (
             <span className="planner-event-meta">{t("fromGoogle", { calendar: item.external.calendar })}</span>
           ) : (
             <span className="planner-event-meta">
-              {item.fixed ? <LockKeyhole size={14} aria-hidden="true" /> : <Move size={14} aria-hidden="true" />}
-              {t(item.fixed ? "fixed" : "flexible")} · {labels.calendarKind(item.kind)}
+              {!readOnly&&(item.fixed ? <LockKeyhole size={14} aria-hidden="true" /> : <Move size={14} aria-hidden="true" />)}
+              {readOnly?labels.calendarKind(item.kind):`${t(item.fixed ? "fixed" : "flexible")} · ${labels.calendarKind(item.kind)}`}
             </span>
           ))}
         <strong>{item.title || t("untitled")}</strong>
@@ -572,6 +589,9 @@ function TimeEditor({
   onFull: () => void;
 }) {
   const t = useTranslations("planner");
+  const data=useAppData();
+  const grantId=data.calendar.find(c=>c.id===item.ref.id)?.grantApplicationId;
+  const today=data.previewDate||dateInZone(data.talent.timeZone);
   const [draft, setDraft] = useState<PlanItem>(item);
   // The value is read before the update: React runs the update after the input event is gone.
   const set = (key: "date" | "start" | "endDate" | "end", value: string) => setDraft((d) => ({ ...d, [key]: value }));
@@ -586,8 +606,9 @@ function TimeEditor({
   };
   return (
     <Modal title={t(confirm ? "confirmTitle" : "editTitle")} onClose={onClose}>
-      <div className="planner-editor">
+      <form className="planner-editor" onSubmit={event=>{event.preventDefault();submit();}}>
         <h3>{item.title}</h3>
+        {grantId&&<Link className="text-button" href={`/grants?application=${grantId}`}>{t("grantSource")}</Link>}
         {item.project && (
           <p>
             {item.project}
@@ -604,22 +625,10 @@ function TimeEditor({
         ) : (
           // Start and end as pairs: day and time side by side.
           <div className="planner-time-fields">
-            <label>
-              {t("startDate")}
-              <input type="date" required value={draft.date} onInput={(e) => set("date", e.currentTarget.value)} />
-            </label>
-            <label>
-              {t("start")}
-              <input type="time" value={draft.start} onInput={(e) => set("start", e.currentTarget.value)} />
-            </label>
-            <label>
-              {t("endDate")}
-              <input type="date" value={draft.endDate} onInput={(e) => set("endDate", e.currentTarget.value)} />
-            </label>
-            <label>
-              {t("end")}
-              <input type="time" value={draft.end} onInput={(e) => set("end", e.currentTarget.value)} />
-            </label>
+            <DateTimeInput kind="date" label={t("startDate")} value={draft.date} required today={today} onChange={value=>set("date",value)}/>
+            <DateTimeInput kind="time" label={t("start")} value={draft.start} today={today} onChange={value=>set("start",value)}/>
+            <DateTimeInput kind="date" label={t("endDate")} value={draft.endDate} today={today} onChange={value=>set("endDate",value)}/>
+            <DateTimeInput kind="time" label={t("end")} value={draft.end} today={today} onChange={value=>set("end",value)}/>
           </div>
         )}
         {!!overlaps.length && (
@@ -636,25 +645,25 @@ function TimeEditor({
         <div className="planner-actions planner-editor-actions">
           {/* Deleting sits apart, on the left; the everyday actions on the right. */}
           {!confirm && (
-            <button className="secondary danger-outline" onClick={onDelete}>
+            <button type="button" className="secondary danger-outline" onClick={onDelete}>
               <Trash2 size={16} aria-hidden="true" />
               {t("delete")}
             </button>
           )}
           <span className="planner-actions-spacer" />
           {!confirm && (
-            <button className="secondary" onClick={onFull}>
+            <button type="button" className="secondary" onClick={onFull}>
               {t("fullEdit")}
             </button>
           )}
-          <button className="secondary" onClick={confirm ? () => setConfirm(false) : onClose}>
+          <button type="button" className="secondary" onClick={confirm ? () => setConfirm(false) : onClose}>
             {t(confirm ? "back" : "cancel")}
           </button>
-          <button className="primary" disabled={!changed} onClick={submit}>
+          <button type="submit" className="primary" disabled={!changed}>
             {t(confirm ? "confirm" : "save")}
           </button>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 }

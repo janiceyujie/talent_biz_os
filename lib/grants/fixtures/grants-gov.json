@@ -1,0 +1,316 @@
+{
+  "errorcode": 0,
+  "data": {
+    "hitCount": 22,
+    "oppHits": [
+      {
+        "id": "358676",
+        "number": "PDS-CAIRO-001-FY25",
+        "title": "U.S. Embassy Cairo Public Diplomacy Section  Annual Program Statement",
+        "agencyCode": "DOS-EGY",
+        "agency": "U.S. Mission to Egypt",
+        "openDate": "04/23/2025",
+        "closeDate": "",
+        "oppStatus": "forecasted",
+        "docType": "forecast",
+        "cfdaList": [
+          "19.040"
+        ]
+      },
+      {
+        "id": "345645",
+        "number": "693JJ92023",
+        "title": "State Electronic Crash Data Collection",
+        "agencyCode": "DOT-NHTSA",
+        "agency": "National Highway Traffic Safety Administration",
+        "openDate": "02/02/2023",
+        "closeDate": "",
+        "oppStatus": "forecasted",
+        "docType": "forecast",
+        "cfdaList": [
+          "20.614"
+        ]
+      },
+      {
+        "id": "322814",
+        "number": "AFCP20",
+        "title": "AFCP 2020 Small Grants Competition",
+        "agencyCode": "DOS-EGY",
+        "agency": "U.S. Mission to Egypt",
+        "openDate": "12/02/2019",
+        "closeDate": "",
+        "oppStatus": "forecasted",
+        "docType": "forecast",
+        "cfdaList": [
+          "19.025"
+        ]
+      },
+      {
+        "id": "322815",
+        "number": "AFCPLG20",
+        "title": "AFCP 2020 Small Grants Competition",
+        "agencyCode": "DOS-EGY",
+        "agency": "U.S. Mission to Egypt",
+        "openDate": "12/02/2019",
+        "closeDate": "",
+        "oppStatus": "forecasted",
+        "docType": "forecast",
+        "cfdaList": [
+          "19.025"
+        ]
+      },
+      {
+        "id": "361554",
+        "number": "DFOP0017204",
+        "title": "Annual Program Statement for U.S. Presentation at International Art Biennales",
+        "agencyCode": "DOS-ECA",
+        "agency": "Bureau Of Educational and Cultural Affairs",
+        "openDate": "03/19/2026",
+        "closeDate": "01/01/2099",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "19.415"
+        ]
+      },
+      {
+        "id": "363225",
+        "number": "DFOP0017180",
+        "title": "Annual Program Statement for U.S. Presentation at International Architecture Biennales",
+        "agencyCode": "DOS-ECA",
+        "agency": "Bureau Of Educational and Cultural Affairs",
+        "openDate": "07/17/2026",
+        "closeDate": "01/01/2099",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "19.415"
+        ]
+      },
+      {
+        "id": "362983",
+        "number": "2027FCAH02",
+        "title": "NEA Arts and Artifacts International Indemnity Program 2, FY2027 (3/27)",
+        "agencyCode": "NEA",
+        "agency": "National Endowment for the Arts",
+        "openDate": "06/26/2026",
+        "closeDate": "03/08/2027",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.201"
+        ]
+      },
+      {
+        "id": "362982",
+        "number": "2027FCAHDOM01",
+        "title": "NEA Arts and Artifacts Domestic Indemnity Program 1, FY2027 (12/26)",
+        "agencyCode": "NEA",
+        "agency": "National Endowment for the Arts",
+        "openDate": "06/26/2026",
+        "closeDate": "12/07/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.201"
+        ]
+      },
+      {
+        "id": "362984",
+        "number": "2027FCAHDOM02",
+        "title": "NEA Arts and Artifacts Domestic Indemnity Program 2, FY2027 (6/27)",
+        "agencyCode": "NEA",
+        "agency": "National Endowment for the Arts",
+        "openDate": "06/26/2026",
+        "closeDate": "06/07/2027",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.201"
+        ]
+      },
+      {
+        "id": "363770",
+        "number": "AAHC-FY27",
+        "title": "Museum Grants for African American History and Culture (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.309"
+        ]
+      },
+      {
+        "id": "363771",
+        "number": "IGSM-FY27",
+        "title": "Inspire Grants for Small Museums (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.301"
+        ]
+      },
+      {
+        "id": "363768",
+        "number": "MFA-FY27",
+        "title": "Museums for America (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.301"
+        ]
+      },
+      {
+        "id": "363769",
+        "number": "21MP-FY27",
+        "title": "21st Century Museum Professionals Program (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.032"
+        ]
+      },
+      {
+        "id": "363772",
+        "number": "ALHC-FY27",
+        "title": "Museum Grants for American Latino History and Culture (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.033"
+        ]
+      },
+      {
+        "id": "363776",
+        "number": "ME-FY27",
+        "title": "Museums Empowered (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.301"
+        ]
+      },
+      {
+        "id": "363775",
+        "number": "NANH-FY27",
+        "title": "Native American/Native Hawaiian Museum Services (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.308"
+        ]
+      },
+      {
+        "id": "363763",
+        "number": "NAG-HAWAIIAN-FY27",
+        "title": "Native Hawaiian Library Services Grants (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.311"
+        ]
+      },
+      {
+        "id": "363762",
+        "number": "NAG-ENHANCEMENT-FY27",
+        "title": "Native American Library Services Enhancement Grants (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.311"
+        ]
+      },
+      {
+        "id": "363767",
+        "number": "NAG-BASIC-FY27",
+        "title": "Native American Library Services Basic Grant (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.311"
+        ]
+      },
+      {
+        "id": "363773",
+        "number": "NLG-M-FY27",
+        "title": "National Leadership Grants for Museums (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.312"
+        ]
+      },
+      {
+        "id": "363766",
+        "number": "NLG-LIBRARIES-FY27",
+        "title": "National Leadership Grants for Libraries (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.312"
+        ]
+      },
+      {
+        "id": "363765",
+        "number": "LB21-FY27",
+        "title": "Laura Bush 21st Century Librarian Program (2027)",
+        "agencyCode": "IMLS",
+        "agency": "Institute of Museum and Library Services",
+        "openDate": "09/01/2026",
+        "closeDate": "11/13/2026",
+        "oppStatus": "posted",
+        "docType": "synopsis",
+        "cfdaList": [
+          "45.313"
+        ]
+      }
+    ]
+  }
+}

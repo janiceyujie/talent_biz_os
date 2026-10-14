@@ -1,9 +1,13 @@
 "use client";
 
+import { InfoHint } from "@/components/app/info-hint";
+
+import { DocumentLibrary } from "./document-library";
+
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { useAppData } from "@/components/app/app-data";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { useAppData, usePreviewTemplates } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
@@ -21,8 +25,8 @@ const gmailComposeUrl = (to: string, subject: string, body: string) =>
 /** `initialAsks`: questions to start the reply with, sent from a project's Questions for them. */
 export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initialProjectId?: string; initialAsks?: string[] }) {
   const data = useAppData();
+  const localTemplates = usePreviewTemplates();
   const t = useTranslations("drafts");
-  const tEyebrow = useTranslations("eyebrow");
   const tTone = useTranslations("tone");
   const tEditor = useTranslations("editor");
   const router = useRouter();
@@ -48,6 +52,12 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
   const [recipient, setRecipient] = useState(recipientFor(initial?.counterpartyId));
   const [mode, setMode] = useState("");
   const [showArchive, setShowArchive] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(true);
+  const replyLibraryId = useId();
+  // Keep optional reference text out of the initial phone reading path.
+  useEffect(() => {
+    if (window.matchMedia("(max-width: 680px)").matches) queueMicrotask(() => setLibraryOpen(false));
+  }, []);
   const file = useRef<HTMLInputElement>(null);
   const templates = data.templates.filter((tpl) => tpl.projectType === type && tpl.archived === showArchive);
   const project = data.projects.find((p) => p.id === projectId);
@@ -170,120 +180,9 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
     <div className="draft-workspace">
       <fieldset className="draft-edit-fields" disabled={!!pendingChange}>
         <div className="draft-layout">
-          <section className="surface draft-memory">
-            <div className="section-header">
-              <div>
-                <span>{tEyebrow("replyLibrary")}</span>
-                <h2>{t("libraryTitle")}</h2>
-              </div>
-              <button onClick={() => setEditor({ kind: "template", item: { projectType: type } })}>{t("add")}</button>
-            </div>
-            <label>
-              {t("type")}
-              <select value={type} disabled={!!projectId} onChange={(e) => (setType(e.target.value as ProjectType), setTemplateId(""))}>
-                {projectTypes.map((pt) => (
-                  <option key={pt.key} value={pt.key}>
-                    {labels.projectType(pt.key)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <p className="muted">{t("libraryHelp")}</p>
-            <button className="secondary" onClick={() => setEditor({ kind: "template", item: starterTemplate(type) })}>
-              {t("useStarter", { type: labels.projectType(type) })}
-            </button>
-            <label className="check-line">
-              <input
-                type="checkbox"
-                checked={showArchive}
-                onChange={(e) => {
-                  setShowArchive(e.target.checked);
-                  setTemplateId(""); // an archived template can't be applied
-                }}
-              />
-              {t("archivedTemplates")}
-            </label>
-            {/* Scrolls on its own on narrow screens, so the composer isn't below every template. */}
-            <div className="template-list" role="region" aria-label={t("templateList")} tabIndex={0}>
-              {templates.map((tpl) => (
-                <article className={`template-card ${templateId === tpl.id ? "is-selected" : ""}`} key={tpl.id}>
-                  <label className="check-line">
-                    <input type="radio" name="template" checked={templateId === tpl.id} disabled={tpl.archived} onChange={() => setTemplateId(tpl.id)} />
-                    <strong>{tpl.title}</strong>
-                  </label>
-                  <small>
-                    {tpl.kind === "template" ? t("kindTemplate") : t("kindPastReply")} · {localeNames[tpl.language]}
-                    {tpl.tone ? ` · ${tpl.tone}` : ""}
-                  </small>
-                  <details className="template-preview">
-                    <summary>{t("previewTemplate")}</summary>
-                    <p className="prewrap">{toDisplay(tpl.body, uiLocale)}</p>
-                  </details>
-                  <div className="row-actions">
-                    <button className="text-button" onClick={() => setEditor({ kind: "template", item: toRecord(tpl) })}>
-                      {t("edit")}
-                    </button>
-                    {tpl.kind === "past_reply" && (
-                      <button
-                        className="text-button"
-                        onClick={() =>
-                          setEditor({
-                            kind: "template",
-                            item: { ...toRecord(tpl), id: "", title: t("templateCopyTitle", { title: tpl.title.slice(0, 190) }), kind: "template" },
-                          })
-                        }
-                      >
-                        {t("saveAsTemplateAndEdit")}
-                      </button>
-                    )}
-                    <button
-                      className="text-button"
-                      disabled={pending}
-                      onClick={() =>
-                        startTransition(async () => {
-                          if (templateId === tpl.id) setTemplateId("");
-                          setNotice((await archiveTemplate(tpl.id, !tpl.archived)) ?? "");
-                        })
-                      }
-                    >
-                      {tpl.archived ? t("restore") : t("archive")}
-                    </button>
-                  </div>
-                </article>
-              ))}
-              {!templates.length && <p className="empty">{t("noTemplates")}</p>}
-            </div>
-            <input
-              ref={file}
-              type="file"
-              hidden
-              accept=".txt,.md,.eml"
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                e.target.value = "";
-                if (!f) return;
-                if (f.size > 30000) return setNotice(t("importTooBig"));
-                setEditor({
-                  kind: "template",
-                  item: { title: f.name, projectType: type, body: (await f.text()).slice(0, 10000), kind: "past_reply" },
-                });
-              }}
-            />
-            <button className="secondary" onClick={() => file.current?.click()}>
-              {t("import")}
-            </button>
-          </section>
-          <section className="surface draft-composer">
-            <div className="section-header">
-              <div>
-                <span>{tEyebrow("draftComposer")}</span>
-                <h2>{t("composerTitle", { type: labels.projectType(type) })}</h2>
-              </div>
-              <button onClick={() => requestChange(() => resetTo(undefined))}>{t("clear")}</button>
-            </div>
-
-            <section className="draft-section" aria-label={t("sectionOffer")}>
-              <h3>{t("sectionOffer")}</h3>
+          <div className="draft-reference">
+            <section className="surface draft-offer" aria-label={t("sectionOffer")}>
+              <h2>{t("sectionOffer")}</h2>
               <label>
                 {t("project")}
                 <select
@@ -303,7 +202,17 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
                     ))}
                 </select>
               </label>
-              <details>
+              <label>
+                {t("type")}
+                <select value={type} disabled={!!projectId} onChange={(e) => (setType(e.target.value as ProjectType), setTemplateId(""))}>
+                  {projectTypes.map((pt) => (
+                    <option key={pt.key} value={pt.key}>
+                      {labels.projectType(pt.key)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <details className="draft-checklist">
                 <summary>{t("whatToConfirm")}</summary>
                 <ul>
                   {labels.projectQuestions(type).map((q) => (
@@ -312,6 +221,121 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
                 </ul>
               </details>
               <label>
+                {t("source")}
+                <textarea rows={4} value={source} onChange={(e) => setSource(e.target.value)} maxLength={20000} />
+              </label>
+            </section>
+
+            <section className="surface draft-memory">
+              <div className="section-header">
+                <div>
+                  <h2><button type="button" className="draft-reply-toggle" aria-expanded={libraryOpen} aria-controls={replyLibraryId} onClick={() => setLibraryOpen(open => !open)}>
+                    {t("libraryTitle")} <span className="draft-template-count">{templates.length}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d={libraryOpen ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"} /></svg>
+                  </button> <InfoHint label={t("libraryTitle")} notes={[t("libraryHelp")]} /></h2>
+                </div>
+                <button onClick={() => setEditor({ kind: "template", item: { projectType: type } })}>{t("add")}</button>
+              </div>
+
+              <div id={replyLibraryId} hidden={!libraryOpen} className="draft-memory-body">
+                <button className="secondary" onClick={() => setEditor({ kind: "template", item: starterTemplate(type) })}>
+                  {t("useStarter", { type: labels.projectType(type) })}
+                </button>
+                <label className="check-line">
+                  <input
+                    type="checkbox"
+                    checked={showArchive}
+                    onChange={(e) => {
+                      setShowArchive(e.target.checked);
+                      setTemplateId(""); // an archived template can't be applied
+                    }}
+                  />
+                  {t("archivedTemplates")}
+                </label>
+                {/* Scrolls on its own on narrow screens, so the composer isn't below every template. */}
+                <div className="template-list" role="region" aria-label={t("templateList")} tabIndex={0}>
+                  {templates.map((tpl) => (
+                    <article className={`template-card ${templateId === tpl.id ? "is-selected" : ""}`} key={tpl.id}>
+                      <label className="check-line">
+                        <input type="radio" name="template" checked={templateId === tpl.id} disabled={tpl.archived} onChange={() => setTemplateId(tpl.id)} />
+                        <strong title={tpl.title}>{tpl.title}</strong>
+                      </label>
+                      <small>
+                        {tpl.kind === "template" ? t("kindTemplate") : t("kindPastReply")} · {localeNames[tpl.language]}
+                        {tpl.tone ? ` · ${tpl.tone}` : ""}
+                      </small>
+                      <details className="template-preview">
+                        <summary>{t("previewTemplate")}</summary>
+                        <p className="prewrap">{toDisplay(tpl.body, uiLocale)}</p>
+                      </details>
+                      <div className="row-actions">
+                        <button className="text-button" onClick={() => setEditor({ kind: "template", item: toRecord(tpl) })}>
+                          {t("edit")}
+                        </button>
+                        {tpl.kind === "past_reply" && (
+                          <button
+                            className="text-button"
+                            onClick={() =>
+                              setEditor({
+                                kind: "template",
+                                item: { ...toRecord(tpl), id: "", title: t("templateCopyTitle", { title: tpl.title.slice(0, 190) }), kind: "template" },
+                              })
+                            }
+                          >
+                            {t("saveAsTemplateAndEdit")}
+                          </button>
+                        )}
+                        <button
+                          className="text-button"
+                          disabled={pending}
+                          onClick={() =>
+                            startTransition(async () => {
+                              if (templateId === tpl.id) setTemplateId("");
+                              if (data.preview) localTemplates.archive(tpl.id, !tpl.archived);
+                              else setNotice((await archiveTemplate(tpl.id, !tpl.archived)) ?? "");
+                            })
+                          }
+                        >
+                          {tpl.archived ? t("restore") : t("archive")}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                  {!templates.length && <p className="empty">{t("noTemplates")}</p>}
+                </div>
+                <input
+                  ref={file}
+                  type="file"
+                  hidden
+                  accept=".txt,.md,.eml"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!f) return;
+                    if (f.size > 30000) return setNotice(t("importTooBig"));
+                    setEditor({
+                      kind: "template",
+                      item: { title: f.name, projectType: type, body: (await f.text()).slice(0, 10000), kind: "past_reply" },
+                    });
+                  }}
+                />
+                <button className="secondary" onClick={() => file.current?.click()}>
+                  {t("import")}
+                </button>
+
+              </div>
+            </section>
+          </div>
+          <section className="surface draft-composer">
+            <div className="section-header">
+              <div>
+                <h2>{t("composerTitle", { type: labels.projectType(type) })}</h2>
+              </div>
+              <button onClick={() => requestChange(() => resetTo(undefined))}>{t("clear")}</button>
+            </div>
+
+            <div className="draft-address">
+              <label>
                 {t("subject")}
                 <input value={subject} onChange={(e) => setSubject(e.target.value)} />
               </label>
@@ -319,21 +343,16 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
                 {t("recipient")}
                 <input type="email" value={recipient} onChange={(e) => setRecipient(e.target.value)} />
               </label>
-              <label>
-                {t("source")}
-                <textarea rows={5} value={source} onChange={(e) => setSource(e.target.value)} maxLength={20000} />
-              </label>
-            </section>
-
+            </div>
             <section className="draft-section draft-generation" aria-label={t("sectionSettings")}>
-              <h3>{t("sectionSettings")}</h3>
+              <h3>{t("sectionSettings")} <InfoHint label={t("sectionSettings")} notes={[t("templateHelp"), t("toneHelp")]} /></h3>
               <div className="draft-template-context">
                 <span>{t("selectedTemplate")}</span>
                 <strong>{selectedTemplate ? selectedTemplate.title : t("noTemplateSelected")}</strong>
                 {selectedTemplate && <small>{selectedTemplate.kind === "template" ? t("kindTemplate") : t("kindPastReply")}</small>}
               </div>
               <label>
-                {t("tone")}
+                {t("savedTemplateTone")}
                 <select value={tone} onChange={(e) => setTone(e.target.value)}>
                   {(["natural", "brief", "warm"] as const).map((key) => (
                     <option key={key}>{tTone(key)}</option>
@@ -348,24 +367,25 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
               >
                 {t("apply")}
               </button>
-              {!source.trim() && <p className="muted">{t("needSource")}</p>}
-              {!selectedTemplate && <p className="muted">{t("needTemplate")}</p>}
-              <p className="muted">{t("aiSoon")}</p>
+              {!selectedTemplate ? <p className="muted">{t("needTemplate")}</p> : !source.trim() && <p className="muted">{t("needSource")}</p>}
             </section>
 
             <section className="draft-section draft-writing" aria-label={t("sectionReply")}>
-              <h3>{t("sectionReply")}</h3>
               {notice && (
                 <p className="notice error" role="alert">
                   {notice}
                 </p>
               )}
               <div className="draft-output">
-                <span>{mode || t("editableDraft")}</span>
-                <p className="draft-save-status" role="status">
-                  {dirty ? t("unsavedChanges") : t("newDraft")}
-                </p>
-                <textarea aria-label={t("editableDraft")} rows={12} value={body} onChange={(e) => setBody(e.target.value)} />
+                <div className="draft-output-heading">
+                  <label htmlFor="reply-body">{t("editableDraft")}</label>
+                  <span className="draft-save-status" role="status">
+                    {dirty ? t("unsavedChanges") : t("newDraft")}
+                    <InfoHint label={t("save")} notes={[t("saveSoon")]} above />
+                  </span>
+                </div>
+                {mode && <p className="draft-mode" role="status">{mode}</p>}
+                <textarea id="reply-body" aria-label={t("editableDraft")} rows={14} value={body} onChange={(e) => setBody(e.target.value)} />
               </div>
               <div className="draft-actions">
                 <button
@@ -379,37 +399,28 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
                   className="secondary"
                   disabled={!body.trim()}
                   onClick={async () => {
-                    await navigator.clipboard.writeText(body);
-                    setNotice("");
-                    setMode(t("copied"));
+                    try { await navigator.clipboard.writeText(body); setNotice(""); setMode(t("copied")); }
+                    catch { setNotice(t("copyFailed")); }
                   }}
                 >
                   {t("copy")}
                 </button>
-                <button className="primary" disabled title={t("saveSoon")}>
-                  {t("save")}
-                </button>
+                <a
+                  className={`primary ${!body.trim() ? "disabled" : ""}`}
+                  aria-disabled={!body.trim()}
+                  href={body.trim() ? gmailComposeUrl(recipient, subject, body) : undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("openGmail")}
+                </a>
+                <InfoHint label={t("openGmail")} notes={[t("reviewBeforeSend"), t("openGmailHelp")]} above />
               </div>
-              <a
-                className={`secondary full section-gap ${!body.trim() ? "disabled" : ""}`}
-                aria-disabled={!body.trim()}
-                href={body.trim() ? gmailComposeUrl(recipient, subject, body) : undefined}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {t("openGmail")}
-              </a>
-              <p className="muted">{t("openGmailHelp")}</p>
             </section>
           </section>
         </div>
-        <section className="surface padded section-gap saved-drafts">
-          <div className="section-header">
-            <div>
-              <span>{tEyebrow("savedDrafts")}</span>
-              <h2>{t("savedTitle")}</h2>
-            </div>
-          </div>
+        <details className="surface padded section-gap saved-drafts compact-disclosure">
+          <summary>{t("savedTitle")} <span className="muted">({data.drafts.filter(d => !d.archived).length})</span></summary>
           {data.drafts
             .filter((d) => !d.archived)
             .map((d) => (
@@ -420,8 +431,9 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
               </div>
             ))}
           {!data.drafts.filter((d) => !d.archived).length && <p className="empty">{t("savedEmpty")}</p>}
-        </section>
+        </details>
       </fieldset>
+      <DocumentLibrary />
       {pendingChange && (
         <Modal title={t("confirmTitle")} onClose={() => setPendingChange(null)}>
           <p>{pendingChange.replace ? t("replaceMessage") : t("leaveMessage")}</p>

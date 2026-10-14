@@ -14,10 +14,10 @@ import { Widget } from "../widget";
 export function ActionsWidget({ ctx: { data, today, items } }: { ctx: OverviewContext }) {
   const t = useTranslations("today");
   const { list } = useNotifications();
-  const actions = todayActions({ reminders: list.filter((n) => !n.snoozedUntil), inbox: data.inbox, items, today });
-  const analyzing = data.inbox.filter((m) => m.status === "pending").length;
+  const actions = todayActions({ reminders: list.filter((n) => !n.snoozedUntil), inbox: data.inboxOverview?.review.map(m => ({ ...m, analysis: { title: m.title } })) ?? data.inbox, items, today });
+  const analyzing = data.inboxOverview?.counts.pending ?? data.inbox.filter((m) => m.status === "pending").length;
   return (
-    <Widget id="actions" title={t("actionsTitle")} count={actions.length}>
+    <Widget id="actions" title={t("actionsTitle")} count={actions.length + (data.inboxOverview ? data.inboxOverview.counts.analyzed - data.inboxOverview.review.length : 0)}>
       {analyzing > 0 && (
         <p className="today-analyzing" role="status">
           <Loader2 size={16} aria-hidden="true" />
@@ -27,6 +27,7 @@ export function ActionsWidget({ ctx: { data, today, items } }: { ctx: OverviewCo
       {actions.map((a) => (
         <ActionRow key={a.id} action={a} today={today} />
       ))}
+      {!!data.inboxOverview && data.inboxOverview.counts.analyzed > data.inboxOverview.review.length && <a className="text-button" href="/inbox">{t("reviewMore", { count: data.inboxOverview.counts.analyzed })}</a>}
       {!actions.length && !analyzing && <p className="empty">{t("actionsEmpty")}</p>}
     </Widget>
   );
@@ -55,7 +56,7 @@ function ActionRow({ action: a, today }: { action: TodayAction; today: string })
             href: `/calendar?date=${a.date}`,
           };
   return (
-    <button className="today-action" onClick={() => router.push(row.href)}>
+    <button data-preview-safe="true" className="today-action" onClick={() => router.push(row.href)}>
       {row.tag}
       <span>
         <strong>{row.title}</strong>

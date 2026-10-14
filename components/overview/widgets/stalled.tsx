@@ -13,7 +13,7 @@ const SHOWN = 5;
 export function StalledWidget({ ctx: { data, today } }: { ctx: OverviewContext }) {
   const t = useTranslations("today");
   const router = useRouter();
-  const deals = stalledDeals({ projects: data.projects, inbox: data.inbox, today, timeZone: data.talent.timeZone });
+  const deals = stalledDeals({ projects: data.projects, inbox: data.inbox, latestActivity: data.inboxOverview?.latestActivity, today, timeZone: data.talent.timeZone });
   const negotiating = data.projects.filter((p) => !p.archived && phaseOf(p.stage) === "negotiation").length;
   return (
     <Widget id="stalled" title={t("stalledTitle")} count={deals.length}>
@@ -21,7 +21,7 @@ export function StalledWidget({ ctx: { data, today } }: { ctx: OverviewContext }
         <p className="empty">{negotiating ? t("stalledNone", { count: negotiating, days: STALLED_DAYS }) : t("stalledNoDeals")}</p>
       )}
       {deals.slice(0, SHOWN).map(({ project, quietDays }) => (
-        <button key={project.id} className="today-action" onClick={() => router.push(`/projects?id=${project.id}`)}>
+        <button data-preview-safe="true" key={project.id} className="today-action" onClick={() => router.push(`/projects?id=${project.id}`)}>
           <span className="reminder-status">{t("stalledDays", { days: quietDays })}</span>
           <span>
             <strong>{project.title}</strong>

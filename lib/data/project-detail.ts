@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { db } from "@/lib/db";
-import { auditLog, message, messageAnalysis, project, projectContact, projectOrganization } from "@/lib/db/schema";
+import { auditLog, grantApplication, grantOpportunity, message, messageAnalysis, project, projectContact, projectOrganization } from "@/lib/db/schema";
 import type { ChangeRecord } from "@/lib/domain/intake";
 import type { ProjectDetail, Stage } from "@/lib/types";
 
@@ -23,6 +23,10 @@ export async function getProjectDetail(talentId: string, projectId: string): Pro
     .from(project)
     .where(and(eq(project.id, projectId), eq(project.talentId, talentId)));
   if (!owned) return null;
+
+  const grantApplications = await db.select({ id: grantApplication.id, title: grantOpportunity.title }).from(grantApplication)
+    .innerJoin(grantOpportunity, eq(grantOpportunity.id, grantApplication.opportunityId))
+    .where(and(eq(grantApplication.talentId, talentId), eq(grantApplication.projectId, projectId)));
 
   const people = await db
     .select({ contactId: projectContact.contactId, label: projectContact.label })
@@ -66,6 +70,7 @@ export async function getProjectDetail(talentId: string, projectId: string): Pro
 
   return {
     projectId,
+    grantApplications,
     details: owned.details,
     notes: owned.notes ?? "",
     people: people.map((p) => ({ contactId: p.contactId, label: p.label ?? "" })),

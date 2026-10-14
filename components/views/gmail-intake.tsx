@@ -3,10 +3,12 @@
 // Intake's Gmail parts (decision 0013): Sync now, and the Waiting and Filtered
 // out lists. We store only ids and what was decided; the sender and subject
 // shown here are read live from Gmail, through the worker, as the list opens.
+import Link from "next/link";
+import { reviewGmail } from "@/lib/actions/mail-review";
 import { RefreshCw } from "lucide-react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { addSenderRule, syncGmail } from "@/lib/actions/mail";
 import { domainOf } from "@/lib/mail/metadata";
@@ -25,6 +27,7 @@ export function GmailSync({ onNotice }: { onNotice: (text: string | null) => voi
   const now = useNow({ updateInterval: 30_000 });
   const [pending, startTransition] = useTransition();
   const c = gmail.connection;
+
   const syncing = !!c?.syncing;
 
   useEffect(() => {
@@ -101,21 +104,30 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
   const [active, setActive] = useState("");
   const [loading, setLoading] = useState(false);
   const c = gmail.connection;
+  const requestRef=useRef<AbortController|null>(null);
   // A finished sync or a moved email changes the counts: read the list again.
   const version = `${c?.lastSyncedAt}:${c?.syncing}:${c?.counts.waiting}:${c?.counts.skipped}`;
   const sorting = !!c?.syncing; // the lists show only what's sorted: wait for the last score
 
   const load = useCallback(
-    async (offset: number) => {
+    async (offset: number, refreshPage = false) => {
+      requestRef.current?.abort();
+      const request=new AbortController();requestRef.current=request;
       setLoading(true);
       try {
-        const res = await fetch(`/api/mail/decisions?${new URLSearchParams({ view, offset: String(offset) })}`, { cache: "no-store" });
+        const res = await fetch(`/api/mail/decisions?${new URLSearchParams({ view, offset: String(offset) })}`, { cache: "no-store", signal:request.signal });
         const page = res.ok ? ((await res.json()) as GmailMailPage) : { items: [], more: false, error: "unavailable" as const };
-        setItems((prev) => (offset ? [...(prev ?? []), ...page.items] : page.items));
-        setMore(page.more);
+        if(request.signal.aborted)return;
+        setItems((prev) => {
+          const rows = refreshPage && prev
+            ? [...prev.slice(0, offset), ...page.items, ...prev.slice(offset + 30)]
+            : offset ? [...(prev ?? []), ...page.items] : page.items;
+          return [...new Map(rows.map(item => [item.id, item])).values()];
+        });
+        if (!refreshPage) setMore(page.more);
         setError(page.error);
-      } finally {
-        setLoading(false);
+      } catch { if(!request.signal.aborted)setError("unavailable"); } finally {
+        if(!request.signal.aborted)setLoading(false);
       }
     },
     [view],
@@ -123,9 +135,17 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
 
   useEffect(() => {
     if (sorting) return;
-    queueMicrotask(() => load(0));
+    queueMicrotask(() => {setItems(null);setActive("");void load(0);});
+    return ()=>requestRef.current?.abort();
   }, [load, version, sorting]);
 
+  const importingIndex = items?.findIndex(item => item.importStatus === "queued") ?? -1;
+  const importingPage = importingIndex < 0 ? -1 : Math.floor(importingIndex / 30) * 30;
+  useEffect(() => {
+    if (importingPage < 0) return;
+    const timer = setInterval(() => { void load(importingPage, true); }, 5000);
+    return () => clearInterval(timer);
+  }, [importingPage, load]);
   const picked = items?.find((i) => i.id === active) ?? items?.[0];
   const peekError = error === "reconnect" ? t("peekError.reconnect") : error === "gmail" || error === "unavailable" ? t("peekError.unavailable") : null;
 
@@ -182,7 +202,7 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
       </section>
       <section className="surface padded inbox-reader" aria-label={tInbox("readerLabel")}>
         {picked && c ? (
-          <GmailMailDetail key={picked.id} item={picked} view={view} accountEmail={c.accountEmail} loadFailed={!!error} onNotice={onNotice} />
+          <GmailMailDetail key={picked.id} item={picked} view={view} accountEmail={c.accountEmail} loadFailed={!!error} onNotice={text => { onNotice(text); void load(Math.floor((items?.findIndex(item => item.id === picked.id) ?? 0) / 30) * 30, true); }} />
         ) : (
           <p className="empty">{tInbox("pick")}</p>
         )}
@@ -204,7 +224,9 @@ function GmailMailDetail({
   loadFailed: boolean; // the live read failed, so a missing subject doesn't mean the email is gone
   onNotice: (text: string | null) => void;
 }) {
-  const timeZone = useAppData().talent.timeZone;
+  const data=useAppData();
+  const timeZone = data.talent.timeZone;
+  const tReview=useTranslations("mailReview");
   const t = useTranslations("gmail");
   const format = useFormatter();
   const [pending, startTransition] = useTransition();
@@ -254,6 +276,14 @@ function GmailMailDetail({
           {t("openInGmail")}
         </a>
       </div>
+      {data.gmail.reviewEnabled && <div className="row-actions section-gap">
+        {item.messageId ? <Link href={`/inbox?message=${item.messageId}`}>{tReview("open")}</Link> : <>
+          {item.kind === "payment" && <p role="note">{tReview("payment")}</p>}
+          {item.importStatus === "error" && <p role="alert">{tReview("importError")}</p>}
+          {(item.outcome === "work" || item.outcome === "unsure") && item.kind !== "payment" && <button className="primary" disabled={pending || item.importStatus === "queued" || loadFailed || item.subject === null} onClick={()=>startTransition(async()=>{try{onNotice(await reviewGmail({id:item.id,choice:"import"}));}catch{onNotice(tReview("unavailable"));}})}>{tReview(item.importStatus === "queued" ? "queued" : "import")}</button>}
+          <button className="secondary" disabled={pending} onClick={()=>startTransition(async()=>{try{onNotice(await reviewGmail({id:item.id,choice:item.outcome === "skipped" ? "restore" : "skip"}));}catch{onNotice(tReview("unavailable"));}})}>{tReview(item.outcome === "skipped" ? "restore" : "skip")}</button>
+        </>}
+      </div>}
       {address && (
         <div className="gmail-rule section-gap">
           {domain && !isPersonalDomain(domain) && (

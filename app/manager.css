@@ -1,0 +1,66 @@
+.manager-workspace { display:grid; gap:24px; min-width:0; }
+.manager-heading,.manager-calendar-header,.manager-tabs { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.manager-heading h1,.manager-heading h2,.manager-calendar-header h2 { margin:0; }
+.manager-heading h1 { font-size:28px; }
+.manager-heading h2,.manager-calendar-header h2 { font-size:18px; }
+.manager-context { margin:0; color:var(--muted); }
+.manager-filters,.manager-panel,.manager-invitations { padding:20px; background:var(--surface); border:1px solid var(--line); border-radius:16px; min-width:0; }
+.manager-artists { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+.manager-artist-choice { display:flex; align-items:center; gap:8px; min-height:44px; padding:8px 12px; border-radius:8px; margin:0; font-size:14px; cursor:pointer; }
+.manager-artist-choice input { width:18px; height:18px; margin:0; }
+.manager-artist-tag { display:inline-block; max-width:100%; overflow-wrap:anywhere; padding:3px 8px; border-radius:6px; font-size:12px; font-weight:600; }
+.artist-0 { background:var(--lime-soft); color:var(--ink-soft); }
+.artist-1 { background:var(--blue-soft); color:var(--ink-soft); }
+.artist-2 { background:var(--paper); color:var(--ink-soft); }
+.manager-range { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
+.manager-range .date-time-field { min-width:0; }
+.manager-tabs > span { margin-left:auto; font-size:13px; color:var(--muted); }
+.manager-empty { padding:32px 20px; border:1px dashed var(--line); border-radius:12px; }
+.manager-empty h2 { font-size:18px; }
+.manager-empty p { color:var(--muted); }
+.manager-calendar-header { margin-bottom:16px; }
+.manager-month-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
+.manager-weekday { text-align:center; padding:8px 0; font-size:12px; color:var(--muted); }
+.manager-day { min-width:0; min-height:88px; padding:8px; border:1px solid var(--line); border-radius:8px; background:var(--surface); text-align:left; position:relative; }
+.manager-day.selected { background:var(--lime-soft); border-color:var(--ink-soft); }
+.manager-day-count { float:right; font-size:12px; color:var(--muted); }
+.manager-day-artists { display:grid; gap:2px; margin-top:8px; }
+.manager-day-artists .manager-artist-tag { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; font-size:10px; }
+.manager-day-artists > span { min-width:0; }
+.manager-agenda { margin-top:20px; }
+.manager-agenda-row { display:flex; align-items:flex-start; gap:16px; padding:12px 0; border-top:1px solid var(--line); }
+.manager-agenda-row time { flex:0 0 90px; font-size:12px; font-variant-numeric:tabular-nums; color:var(--muted); }
+.manager-agenda-row time span { display:block; margin-top:4px; }
+.manager-agenda-row > div { flex:1; min-width:0; }
+.manager-agenda-row strong { display:block; margin-top:6px; font-size:14px; overflow-wrap:anywhere; }
+.manager-message { border-top:1px solid var(--line); padding:12px 0; }
+.manager-message summary { display:flex; gap:12px; align-items:baseline; cursor:pointer; min-height:44px; }
+.manager-message summary > span:nth-child(2) { flex:1; overflow-wrap:anywhere; }
+.manager-message time { font-size:12px; color:var(--muted); }
+.manager-message pre { white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; line-height:1.6; }
+.manager-finance-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-top:16px; }
+.manager-finance-card { border:1px solid var(--line); padding:16px; border-radius:12px; }
+.manager-finance-card header { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; }
+.manager-finance-card dl { display:grid; gap:12px; margin:16px 0 0; }
+.manager-finance-card dl > div { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.manager-finance-card dt { font-size:12px; color:var(--muted); }
+.manager-finance-card dd { margin:0; font-size:14px; font-weight:600; font-variant-numeric:tabular-nums; }
+.manager-invitation,.manager-access-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 0; border-top:1px solid var(--line); }
+.manager-invitation > div { display:flex; gap:8px; }
+.manager-invitations h2 { margin:0 0 16px; font-size:18px; }
+.manager-invite-form { display:flex; align-items:flex-end; flex-wrap:wrap; gap:12px; }
+.manager-invite-form label { display:grid; gap:8px; flex:1; min-width:0; margin:0; font-size:13px; }
+.manager-access-list { margin-top:24px; }
+.manager-access-row > div { display:grid; gap:4px; min-width:0; }
+.manager-access-row span { font-size:12px; color:var(--muted); overflow-wrap:anywhere; }
+@media(max-width:768px) { .manager-workspace { gap:16px; } .manager-panel,.manager-filters,.manager-invitations { padding:16px; } .manager-finance-grid { grid-template-columns:1fr; } .manager-range { display:grid; grid-template-columns:1fr 1fr; align-items:end; } .manager-day { min-height:56px; padding:4px; font-size:12px; } .manager-day-artists { display:none; } .manager-message summary { flex-wrap:wrap; } .manager-access-row,.manager-invitation { flex-wrap:wrap; } .manager-agenda-row { gap:8px; } .manager-agenda-row time { flex-basis:78px; } }
+
+.manager-calendar-header select { width:auto; min-width:120px; max-width:100%; }
+.manager-day:disabled { opacity:.4; cursor:default; }
+
+@media(max-width:480px) { .manager-range { grid-template-columns:1fr; } .manager-day-count { float:none; display:block; font-size:10px; margin-top:4px; } }
+
+.manager-connections summary { cursor:pointer; min-height:32px; font-size:13px; color:var(--muted); }
+
+.manager-workspace .manager-read-content:not([hidden]) { display:grid; gap:24px; min-width:0; }
+@media(max-width:768px) { .manager-workspace .manager-read-content:not([hidden]) { gap:16px; } }

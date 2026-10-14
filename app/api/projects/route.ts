@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { getCurrentTalent, getSession } from "@/lib/auth";
+import { InvalidCursor } from "@/lib/data/page-cursor";
 import { listProjects } from "@/lib/data/projects";
 import { listSorts, listViews, PAGE_MAX, PAGE_SIZE } from "@/lib/domain/project-list";
 
@@ -10,7 +11,7 @@ const params = z.object({
   contact: z.union([z.uuid(), z.literal("")]).catch(""),
   q: z.string().max(200).catch(""),
   sort: z.enum(listSorts).catch("due"),
-  cursor: z.string().max(1000).catch(""),
+  cursor: z.string().max(4000).default(""),
   limit: z.coerce.number().int().min(1).max(PAGE_MAX).catch(PAGE_SIZE),
 });
 
@@ -26,7 +27,12 @@ export async function GET(req: NextRequest) {
   if (!current) return new Response("Not found", { status: 404 });
 
   const search = Object.fromEntries(req.nextUrl.searchParams);
-  const parsed = params.parse({ type: "all", contact: "", q: "", cursor: "", ...search });
-  const page = await listProjects(current.id, current.name, parsed);
-  return Response.json(page, { headers: { "Cache-Control": "private, no-store" } });
+  try {
+    const parsed = params.parse({ type: "all", contact: "", q: "", cursor: "", ...search });
+    const page = await listProjects(current.id, current.name, parsed);
+    return Response.json(page, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    if (error instanceof InvalidCursor || error instanceof z.ZodError) return Response.json({ error: "invalid_cursor" }, { status: 400, headers: { "Cache-Control": "private, no-store" } });
+    throw error;
+  }
 }

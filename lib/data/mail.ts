@@ -25,6 +25,8 @@ export async function listMailDecisions(talentId: string, view: GmailMailView, o
   const rows = await db
     .select({
       id: mailDecision.id,
+      importStatus: mailDecision.importStatus,
+      messageId: mailDecision.messageId,
       gmailId: mailDecision.providerMessageId,
       receivedAt: mailDecision.receivedAt,
       outcome: mailDecision.outcome,
@@ -48,6 +50,8 @@ export async function listMailDecisions(talentId: string, view: GmailMailView, o
   return {
     items: page.map((r) => ({
       id: r.id,
+      importStatus:r.importStatus,
+      messageId:r.messageId,
       gmailId: r.gmailId,
       receivedAt: r.receivedAt.toISOString(),
       outcome: r.outcome,

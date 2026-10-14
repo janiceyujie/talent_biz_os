@@ -31,16 +31,14 @@ export function MoneyWidget({ ctx: { data, today } }: { ctx: OverviewContext }) 
         ),
       }}
     >
-      {rows.every(([, amount]) => !amount) && <p className="empty">{t("moneyNone")}</p>}
+      {rows.every(([, amounts]) => !amounts.length) && <p className="empty">{t("moneyNone")}</p>}
       <dl className="widget-figures">
-        {rows
-          .filter(([, amount]) => amount > 0)
-          .map(([key, amount]) => (
-            <div key={key} className={key === "moneyOverdue" ? "is-overdue" : undefined}>
-              <dt>{t(key)}</dt>
-              <dd>{money(amount)}</dd>
-            </div>
-          ))}
+        {rows.flatMap(([key, amounts]) => amounts.filter((item) => item.amount > 0).map((item) => (
+          <div key={`${key}-${item.currency}`} className={key === "moneyOverdue" ? "is-overdue" : undefined}>
+            <dt>{t(key)}</dt>
+            <dd>{money(item.amount, item.currency)}</dd>
+          </div>
+        )))}
       </dl>
     </Widget>
   );

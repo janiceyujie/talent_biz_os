@@ -14,7 +14,8 @@ import { loadEnvConfig } from "@next/env";
 async function main() {
   loadEnvConfig(process.cwd());
   // Imported after the environment is loaded: lib/db reads DATABASE_URL when it loads.
-  const { run } = await import("graphile-worker");
+  const { run, parseCronItems } = await import("graphile-worker");
+  const { grantsLocalEnabled } = await import("@/lib/grants/config");
   const { taskList } = await import("./tasks");
   const { startHttp } = await import("./http");
   const { freeTierOk } = await import("@/lib/ai/model");
@@ -23,7 +24,9 @@ async function main() {
     connectionString: process.env.DATABASE_URL,
     concurrency: Number(process.env.WORKER_CONCURRENCY || 4),
     taskList,
-    parsedCronItems: [], // no scheduled jobs yet
+    parsedCronItems: parseCronItems([
+      ...(grantsLocalEnabled()&&process.env.GRANTS_SYNC_ENABLED==="1"?[{task:"grants.refresh",match:"0 */6 * * *",options:{maxAttempts:3}}]:[]),
+    ]),
   });
   const http = startHttp();
   await runner.promise;

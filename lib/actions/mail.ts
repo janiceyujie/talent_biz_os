@@ -62,7 +62,7 @@ export async function addSenderRule(data: Record<string, unknown>): Promise<stri
   const found = await db.transaction(async (tx) => {
     const [d] = await tx
       .update(mailDecision)
-      .set({ outcome: verdict === "always" ? "work" : "skipped", decidedBy: "person" })
+      .set({ outcome: verdict === "always" ? "work" : "skipped", decidedBy: "person", importStatus:sql`case when ${mailDecision.messageId} is null then 'idle' else 'imported' end`, importFailure:null })
       .where(and(eq(mailDecision.id, decisionId), eq(mailDecision.talentId, talent.id)))
       .returning({ id: mailDecision.id });
     if (!d) return false;

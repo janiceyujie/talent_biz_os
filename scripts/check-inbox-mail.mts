@@ -97,6 +97,8 @@ try{
  const login=await fetch(`${base}/api/auth/sign-in/email`,{method:"POST",headers:{"Content-Type":"application/json",Origin:base},body:JSON.stringify({email,password})});
  ok(login.status===200,"Fixture sign-in");const cookie=login.headers.getSetCookie().map(v=>v.split(";")[0]).join(";");
  const get=(path:string,authenticated=true)=>fetch(`${base}${path}`,{headers:authenticated?{Cookie:cookie}:{},redirect:"manual"});
+ const signedInRedirect=await get("/sign-in");
+ ok(signedInRedirect.status===307&&signedInRedirect.headers.get("location")==="/","Verified session redirects to home");
  ok((await get("/api/inbox",false)).status===401,"Anonymous list denied");
  const response=await get("/api/inbox?dismissed=false");ok(response.status===200&&response.headers.get("cache-control")?.includes("no-store"),"Private HTTP list");ok((await response.json()).items.length===20,"HTTP page bounded");
  ok((await get(`/api/inbox/${seen[204]}`)).status===200,"HTTP old detail");ok((await get(`/api/inbox/${foreign.id}`)).status===404,"HTTP foreign detail denied");ok((await get("/api/inbox?cursor=broken")).status===400,"HTTP invalid cursor");

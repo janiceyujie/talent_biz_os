@@ -13,9 +13,8 @@ export function proxy(request: NextRequest) {
   if (!signedIn && !onAuthPage) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
-  if (signedIn && onAuthPage && pathname !== "/reset-password") {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
+  // A cookie can be expired or signed by an old local secret. Auth pages
+  // must remain reachable; only a verified session can redirect from sign-in.
   return NextResponse.next();
 }
 

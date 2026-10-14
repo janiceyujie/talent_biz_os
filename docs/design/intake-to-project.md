@@ -74,7 +74,7 @@ A field the message doesn't mention is never proposed. A value equal to the curr
 
 ## The screens (see the mockup)
 
-1. **Inbox, message selected**: a two- or three-line summary, the original collapsed, and "這則訊息屬於哪個合作案？" with the suggested project, "new project", and "another project".
+1. **Inbox, message selected**, in sections, top to bottom as it's read: a header (title, status, then sender · source · time on one line); flags as a strip, one line each with the words they're about; **Needs your reply** (short asks, the reply deadline beside the heading); **Terms** as aligned rows (dates, place, the work, fee with "Not given" when an offer has none, payment, what isn't stated); a **Summary** section only when the original is long (over 1,200 characters, files, or a transcript); the **Original message**, three lines with Show all, its files below; then **File under a project** ("這則訊息屬於哪個合作案？" became 歸入合作案) with the one primary button, and a new project's prefilled fields folded under "Check the details". Open in Gmail and a ⋯ menu (Retry, Dismiss, Not work) sit quietly below; Extracted facts and the transcript stay folded at the bottom.
 2a. **Existing project**: the change checklist on the left; the project as it is now on the right. "套用 N 項更新", "套用並擬回覆".
 2b. **New project**: the editable proposed project, then the contact, the reply to-do, and the to-confirm list as tickable extras. "建立合作案", "建立並擬回覆".
 2c. **Payment**: the matched expected payment, the amount and date received (editable), and the shortfall.

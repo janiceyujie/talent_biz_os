@@ -736,10 +736,25 @@
     "source": "來源",
     "receivedAt": "收件時間",
     "filedOn": "所屬合作案",
-    "filesNotRead": "這個模型無法讀取附件，只分析了信件內文。"
+    "filesNotRead": "這個模型無法讀取附件，只分析了信件內文。",
+    "review": {
+      "summary": "摘要",
+      "asks": "需要你回覆",
+      "replyBy": "回覆期限 {date}",
+      "terms": "合作條件",
+      "date": "日期",
+      "place": "地點",
+      "fee": "酬勞",
+      "payment": "付款",
+      "notStated": "尚未說明",
+      "notGiven": "未提供",
+      "showAll": "展開全文",
+      "showLess": "收合",
+      "more": "更多動作"
+    }
   },
   "intake": {
-    "targetHeading": "這則訊息屬於哪個合作案？",
+    "targetHeading": "歸入合作案",
     "suggested": "建議",
     "reason": {
       "contact": "同一聯絡人：{value}",
@@ -810,7 +825,8 @@
       "datesHint": "日期先存在合作案上；簽約後再加入行程。",
       "create": "建立合作案",
       "creating": "建立中…",
-      "moreFields": "其他欄位（{count}）"
+      "moreFields": "其他欄位（{count}）",
+      "checkFields": "確認細節：合作方、金額、日期、備註"
     },
     "earlierDate": "先前的訊息提過這個日期，但合作案上還沒記；套用後會記在合作案上。",
     "contractSigned": "已簽署",
@@ -1217,7 +1233,6 @@
     "unsureNotice": "不確定這是不是工作信，為保險起見先收進來。",
     "itsWork": "是工作信",
     "notWork": "不是工作",
-    "notWorkNever": "不是工作，且不再收這個寄件者的信",
     "skippedAttachments": "未收進的附件（請在 Gmail 開啟）：{names}",
     "wasWork": "這是工作信",
     "bringingIn": "正在收進，稍後會出現在「訊息」。",
@@ -1225,7 +1240,10 @@
     "keepFiled": "保留已歸入合作案的信",
     "keepFiledHint": "其餘的移除",
     "keepNone": "全部移除",
-    "keepNoneHint": "包括已歸入合作案的信"
+    "keepNoneHint": "包括已歸入合作案的信",
+    "notWorkTitle": "不是工作信？",
+    "notWorkBody": "這封信會移出進件分類，內文與附件會刪除。它仍會列在「已過濾」，可按「這是工作信」收回。",
+    "notWorkNeverFrom": "也不再收 {sender} 的信"
   },
   "settings": {
     "name": "藝名或品牌名稱",

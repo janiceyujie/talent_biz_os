@@ -31,7 +31,7 @@ const detailKeys = [
 export const modelOutput = z.object({
   language: z.string().describe("BCP 47 code of the language the message is written in, e.g. zh-TW, en, ja"),
   title: z.string().describe("Short name for the work, in the output language"),
-  summary: z.string().describe("Two or three sentences, in the output language"),
+  summary: z.string().describe("One sentence, only when the message is long or hard to follow; empty otherwise. In the output language"),
   counterparty: z.object({
     name: z.string().describe("The person who wrote — not the company"),
     company: z.string().describe("Their company, venue, brand, or agency"),
@@ -69,10 +69,10 @@ export const modelOutput = z.object({
       }),
     )
     .describe("Fields for the chosen project type and intent, only those the message states"),
-  asks: z.array(z.string()).describe("What the sender is asking for, in the output language"),
+  asks: z.array(z.string()).describe("What the sender wants from the artist, each a short phrase, in the output language"),
   missing: z
     .array(z.string())
-    .describe("What to confirm with the sender: details a professional needs that the message doesn't state. In the output language"),
+    .describe("What to confirm with the sender: details a professional needs that the message doesn't state, a few words each. In the output language"),
   assumptions: z
     .array(
       z.object({
@@ -85,7 +85,7 @@ export const modelOutput = z.object({
     .array(
       z.object({
         kind: z.enum(modelFlagKinds),
-        note: z.string().describe("What looks wrong, in one sentence, in the output language"),
+        note: z.string().describe("What looks wrong, in a few words, without repeating the facts; in the output language"),
         asStated: z.string().describe("The exact words"),
       }),
     )

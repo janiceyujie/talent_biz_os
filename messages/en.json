@@ -736,10 +736,25 @@
     "source": "Source",
     "receivedAt": "Received",
     "filedOn": "Project",
-    "filesNotRead": "This model couldn't read the attachments, so only the email's text was analyzed."
+    "filesNotRead": "This model couldn't read the attachments, so only the email's text was analyzed.",
+    "review": {
+      "summary": "Summary",
+      "asks": "Needs your reply",
+      "replyBy": "Reply by {date}",
+      "terms": "Terms",
+      "date": "Date",
+      "place": "Place",
+      "fee": "Fee",
+      "payment": "Payment",
+      "notStated": "Not stated",
+      "notGiven": "Not given",
+      "showAll": "Show all",
+      "showLess": "Show less",
+      "more": "More actions"
+    }
   },
   "intake": {
-    "targetHeading": "Which project is this message about?",
+    "targetHeading": "File under a project",
     "suggested": "Suggested",
     "reason": {
       "contact": "Same contact: {value}",
@@ -810,7 +825,8 @@
       "datesHint": "Dates stay on the project; they go on the calendar once it's signed.",
       "create": "Create project",
       "creating": "Creating…",
-      "moreFields": "More fields ({count})"
+      "moreFields": "More fields ({count})",
+      "checkFields": "Check the details: client, fee, dates, notes"
     },
     "earlierDate": "An earlier message gave this date, but the project doesn't have it yet; applying adds it.",
     "contractSigned": "Signed",
@@ -1217,7 +1233,6 @@
     "unsureNotice": "Not sure this is work. It was brought in to be safe.",
     "itsWork": "It's work",
     "notWork": "Not work",
-    "notWorkNever": "Not work, and never from this sender",
     "skippedAttachments": "Not brought in (open it in Gmail): {names}",
     "wasWork": "This was work",
     "bringingIn": "Bringing it in. It will appear in Messages.",
@@ -1225,7 +1240,10 @@
     "keepFiled": "Keep what's filed under projects",
     "keepFiledHint": "Remove the rest",
     "keepNone": "Remove everything",
-    "keepNoneHint": "Including email filed under projects"
+    "keepNoneHint": "Including email filed under projects",
+    "notWorkTitle": "Not work?",
+    "notWorkBody": "It leaves Intake, and its text and attachments are deleted. It stays listed in Filtered out, where This was work brings it back.",
+    "notWorkNeverFrom": "Also stop bringing in mail from {sender}"
   },
   "settings": {
     "name": "Artist or brand name",

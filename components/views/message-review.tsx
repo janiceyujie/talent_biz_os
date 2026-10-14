@@ -6,6 +6,7 @@
 import { useTranslations } from "next-intl";
 import { useMemo, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { InfoHint } from "@/components/app/info-hint";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { applyMessage, createProjectFromMessage, type NewProjectInput } from "@/lib/actions/intake";
 import { dateInZone } from "@/lib/domain/dates";
@@ -435,72 +436,77 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
 
   return (
     <div className="proposed-changes new-project">
-      <h3>{t("new.heading")}</h3>
-      <p className="muted">{t("new.hint")}</p>
+      <h3>
+        {t("new.heading")} <InfoHint notes={[t("new.hint")]} />
+      </h3>
       <div className="editor-form">
         <label>
           {tEditor("field.projectTitle")}
           <input required value={project.title} onChange={(e) => set({ title: e.target.value })} />
         </label>
-        <div className="form-grid">
+        {/* Filled in from the message: open only to correct something. */}
+        <details className="more-fields new-fields">
+          <summary>{t("new.checkFields")}</summary>
+          <div className="form-grid">
+            <label>
+              {tEditor("field.counterparty")}
+              <input value={project.counterparty} onChange={(e) => set({ counterparty: e.target.value })} />
+            </label>
+            <label>
+              {tEditor("field.type")}
+              <select value={project.type} onChange={(e) => set({ type: e.target.value as ProjectType })}>
+                {projectTypes.map((p) => (
+                  <option key={p.key} value={p.key}>
+                    {labels.projectType(p.key)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="form-grid">
+            <label>
+              {tEditor("field.amount")}
+              <input type="number" min={0} value={project.quotedAmount} onChange={(e) => set({ quotedAmount: e.target.value })} />
+            </label>
+            <label>
+              {tEditor("field.taxRate")}
+              <input type="number" min={0} max={100} value={project.taxRate} onChange={(e) => set({ taxRate: e.target.value })} />
+            </label>
+            <label className="inline-check">
+              <input type="checkbox" checked={project.taxIncluded} onChange={(e) => set({ taxIncluded: e.target.checked })} />
+              {tEditor("field.taxIncluded")}
+            </label>
+          </div>
+          {a.money.asStated && <span className="stated">「{a.money.asStated}」</span>}
+          <div className="form-grid">{stated.map(fieldInput)}</div>
+          {unstated.length > 0 && (
+            <details className="more-fields">
+              <summary>{t("new.moreFields", { count: unstated.length })}</summary>
+              <div className="form-grid">{unstated.map(fieldInput)}</div>
+            </details>
+          )}
+          <fieldset className="new-dates">
+            <legend>{tEditor("field.date")}</legend>
+            {project.dates.map((d, i) => (
+              <div key={i} className="new-date">
+                <input aria-label={t("new.dateWhat")} placeholder={t("new.dateWhat")} value={d.what} onChange={(e) => setDate(i, { what: e.target.value })} />
+                <input type="date" aria-label={tEditor("field.date")} value={d.date} onChange={(e) => setDate(i, { date: e.target.value })} />
+                <input type="time" aria-label={tEditor("field.time")} value={d.time} onChange={(e) => setDate(i, { time: e.target.value })} />
+                <button type="button" className="text-button" onClick={() => set({ dates: project.dates.filter((_, j) => j !== i) })}>
+                  {t("new.removeDate")}
+                </button>
+              </div>
+            ))}
+            <button type="button" className="text-button" onClick={() => set({ dates: [...project.dates, { what: "", date: "", time: "", timeZone: "" }] })}>
+              {t("new.addDate")}
+            </button>
+            <small className="muted">{t("new.datesHint")}</small>
+          </fieldset>
           <label>
-            {tEditor("field.counterparty")}
-            <input value={project.counterparty} onChange={(e) => set({ counterparty: e.target.value })} />
+            {tEditor("field.notes")}
+            <textarea rows={4} value={project.notes} onChange={(e) => set({ notes: e.target.value })} />
           </label>
-          <label>
-            {tEditor("field.type")}
-            <select value={project.type} onChange={(e) => set({ type: e.target.value as ProjectType })}>
-              {projectTypes.map((p) => (
-                <option key={p.key} value={p.key}>
-                  {labels.projectType(p.key)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="form-grid">
-          <label>
-            {tEditor("field.amount")}
-            <input type="number" min={0} value={project.quotedAmount} onChange={(e) => set({ quotedAmount: e.target.value })} />
-          </label>
-          <label>
-            {tEditor("field.taxRate")}
-            <input type="number" min={0} max={100} value={project.taxRate} onChange={(e) => set({ taxRate: e.target.value })} />
-          </label>
-          <label className="inline-check">
-            <input type="checkbox" checked={project.taxIncluded} onChange={(e) => set({ taxIncluded: e.target.checked })} />
-            {tEditor("field.taxIncluded")}
-          </label>
-        </div>
-        {a.money.asStated && <span className="stated">「{a.money.asStated}」</span>}
-        <div className="form-grid">{stated.map(fieldInput)}</div>
-        {unstated.length > 0 && (
-          <details className="more-fields">
-            <summary>{t("new.moreFields", { count: unstated.length })}</summary>
-            <div className="form-grid">{unstated.map(fieldInput)}</div>
-          </details>
-        )}
-        <fieldset className="new-dates">
-          <legend>{tEditor("field.date")}</legend>
-          {project.dates.map((d, i) => (
-            <div key={i} className="new-date">
-              <input aria-label={t("new.dateWhat")} placeholder={t("new.dateWhat")} value={d.what} onChange={(e) => setDate(i, { what: e.target.value })} />
-              <input type="date" aria-label={tEditor("field.date")} value={d.date} onChange={(e) => setDate(i, { date: e.target.value })} />
-              <input type="time" aria-label={tEditor("field.time")} value={d.time} onChange={(e) => setDate(i, { time: e.target.value })} />
-              <button type="button" className="text-button" onClick={() => set({ dates: project.dates.filter((_, j) => j !== i) })}>
-                {t("new.removeDate")}
-              </button>
-            </div>
-          ))}
-          <button type="button" className="text-button" onClick={() => set({ dates: [...project.dates, { what: "", date: "", time: "", timeZone: "" }] })}>
-            {t("new.addDate")}
-          </button>
-          <small className="muted">{t("new.datesHint")}</small>
-        </fieldset>
-        <label>
-          {tEditor("field.notes")}
-          <textarea rows={4} value={project.notes} onChange={(e) => set({ notes: e.target.value })} />
-        </label>
+        </details>
       </div>
 
       <h4>{t("new.together")}</h4>

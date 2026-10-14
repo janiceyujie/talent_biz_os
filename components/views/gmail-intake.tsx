@@ -68,12 +68,15 @@ export type IntakeTab = "messages" | GmailMailView;
 
 /** Messages · Waiting · Filtered out, shown once a mailbox is connected. */
 export function IntakeTabs({ tab, onTab }: { tab: IntakeTab; onTab: (tab: IntakeTab) => void }) {
-  const { gmail } = useAppData();
+  const { gmail, inbox } = useAppData();
   const t = useTranslations("gmail");
   const counts = gmail.connection?.counts;
   if (!counts) return null;
-  const tabs: [IntakeTab, string, number | null][] = [
-    ["messages", t("tabMessages"), null],
+  // Messages counts what's waiting for review, as the Intake badge in the menu does (app-shell).
+  const toReview = inbox.filter((m) => m.status === "analyzed" || m.status === "error").length;
+  // Every tab shows its count, 0 too: a missing number reads as "nothing here" when that isn't known.
+  const tabs: [IntakeTab, string, number][] = [
+    ["messages", t("tabMessages"), toReview],
     ["waiting", t("tabWaiting"), counts.waiting],
     ["skipped", t("tabSkipped"), counts.skipped],
   ];
@@ -82,7 +85,7 @@ export function IntakeTabs({ tab, onTab }: { tab: IntakeTab; onTab: (tab: Intake
       {tabs.map(([key, label, n]) => (
         <button key={key} role="tab" id={`intake-tab-${key}`} aria-selected={tab === key} aria-controls="intake-panel" onClick={() => onTab(key)}>
           {label}
-          {!!n && <span>{n}</span>}
+          <span>{n}</span>
         </button>
       ))}
     </div>

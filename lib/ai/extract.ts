@@ -3,7 +3,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { modelOutput, modelOutputForFiles, normalize, type MessageAnalysis } from "./analysis";
 import { generateObject, ModelError, type CallTrace } from "./model";
 import { messagePrompt, PROMPT_VERSION, systemPrompt } from "./prompts";
-import { findInstructions, rollForwardYearless, stripInvisible, weekdayMismatches, type Flag } from "./safety";
+import { findInstructions, relativeWeekday, rollForwardYearless, stripInvisible, weekdayMismatches, type Flag } from "./safety";
 
 /**
  * One message in, one analysis out: the prompt, the model call, and the
@@ -63,11 +63,18 @@ export async function extractMessage({
   }
   const { object, modelVersion } = result;
   const normalized = normalize(object);
-  // Yearless dates follow the stated rule even when the model bends them.
+  // Dates follow the stated rules even when the model bends them: yearless dates roll forward, and
+  // "next week's Monday" is counted in code: from the day it arrived, for text and email. Not for
+  // screenshots, whose chat may be from another day.
+  const fromToday = !files.length || textIfFilesUnreadable;
+  const counted = (date: string, asStated: string) => (fromToday ? relativeWeekday(asStated, today) : null) ?? rollForwardYearless(date, asStated, today);
+  const replyBy = counted(normalized.replyBy, normalized.replyByStated);
   const analysis = {
     ...normalized,
-    dates: normalized.dates.map((d) => ({ ...d, date: rollForwardYearless(d.date, d.asStated, today) })),
-    replyBy: rollForwardYearless(normalized.replyBy, normalized.replyByStated, today),
+    dates: normalized.dates.map((d) => ({ ...d, date: counted(d.date, d.asStated) })),
+    replyBy,
+    // The model's note on how it counted a date it got wrong would now contradict the date shown.
+    assumptions: replyBy !== normalized.replyBy ? normalized.assumptions.filter((x) => x.about !== "replyBy") : normalized.assumptions,
     transcriptWithheld,
     filesNotRead,
   };

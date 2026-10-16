@@ -1,10 +1,12 @@
 import "server-only";
 
-// A small Gmail API v1 client: only the metadata reads (decision 0013). Plain
+// A small Gmail API v1 client: metadata reads, and for email brought in, the
+// full message and its attachments (decision 0013). Plain
 // fetch, no SDK, like lib/calendar/google/api.ts. GMAIL_API_URL points it at a
 // fake Gmail in tests; production leaves it unset.
 
 import { metadataHeaders } from "../metadata";
+import type { GmailFullMessage } from "./parts";
 
 const base = () => (process.env.GMAIL_API_URL || "https://gmail.googleapis.com/gmail/v1").replace(/\/$/, "");
 
@@ -99,5 +101,9 @@ export function gmailApi(token: string) {
       q.append("fields", `id,threadId,labelIds,internalDate,payload/headers${snippet ? ",snippet" : ""}`);
       return call<GmailMetadata>(token, `/messages/${encodeURIComponent(id)}?${q}`);
     },
+    /** The whole message, parts and all: only for email brought in. Attachments come separately. */
+    full: (id: string) => call<GmailFullMessage>(token, `/messages/${encodeURIComponent(id)}?format=full`),
+    attachment: (messageId: string, attachmentId: string) =>
+      call<{ data: string; size: number }>(token, `/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`),
   };
 }

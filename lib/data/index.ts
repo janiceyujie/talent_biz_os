@@ -109,10 +109,10 @@ export const getAppData = cache(async (): Promise<AppData> => {
   const [mailCounts, senderRules, scoring] = await Promise.all([
     mailbox
       ? db
-          .select({ outcome: mailDecision.outcome, n: count() })
+          .select({ outcome: mailDecision.outcome, inMessages: sql<boolean>`${mailDecision.messageId} is not null`, n: count() })
           .from(mailDecision)
           .where(eq(mailDecision.connectionId, mailbox.id))
-          .groupBy(mailDecision.outcome)
+          .groupBy(mailDecision.outcome, sql`${mailDecision.messageId} is not null`)
       : [],
     db
       .select({ id: mailSenderRule.id, kind: mailSenderRule.kind, value: mailSenderRule.value, verdict: mailSenderRule.verdict })
@@ -128,7 +128,9 @@ export const getAppData = cache(async (): Promise<AppData> => {
           .then((r) => !!r[0]?.scoring)
       : false,
   ]);
-  const mailCount = (o: string) => mailCounts.find((r) => r.outcome === o)?.n ?? 0;
+  const mailCount = (o: string) => mailCounts.find((r) => r.outcome === o && !r.inMessages)?.n ?? 0;
+  // Waiting: decided as work, or not yet, and not in Messages yet (brought in mail is a message there).
+  const waitingCount = mailCount("work") + mailCount("unsure") + mailCount("pending");
   // This person's own Google calendars shown here (decision 0009, phase 2): only they see them.
   const importSources = connection
     ? await db.select().from(calendarImportSource).where(eq(calendarImportSource.connectionId, connection.id))
@@ -278,7 +280,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
               (scoring || (!!mailbox.syncRequestedAt && (!mailbox.lastSyncedAt || mailbox.syncRequestedAt > mailbox.lastSyncedAt))),
             connectedAt: mailbox.createdAt.toISOString(),
             updatedAt: mailbox.updatedAt.toISOString(), // when the status last changed
-            counts: { waiting: mailCount("work") + mailCount("unsure") + mailCount("pending"), skipped: mailCount("skipped") },
+            counts: { waiting: waitingCount, skipped: mailCount("skipped") + mailCount("not_work") },
           }
         : null,
       senderRules,
@@ -369,6 +371,16 @@ export const getAppData = cache(async (): Promise<AppData> => {
         files: fileRows
           .filter((f) => f.messageId === m.id)
           .map((f) => ({ id: f.id, contentType: f.contentType, filename: f.filename ?? "", sizeBytes: f.sizeBytes })),
+        gmail:
+          m.channel === "gmail" && m.externalRef
+            ? {
+                gmailId: m.externalRef,
+                sender: m.sender ?? "",
+                subject: m.subject ?? "",
+                unsure: m.relevance === "unsure",
+                skippedAttachments: m.skippedAttachments ?? [],
+              }
+            : null,
       };
     }),
   };

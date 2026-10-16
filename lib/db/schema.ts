@@ -481,7 +481,12 @@ export const calendarEvent = pgTable(
 // add-on, and forwarding later). Its analysis is the model's proposal, versioned
 // per message; nothing becomes a project, to-do, or event until a person confirms.
 
-export const messageChannels = ["paste", "upload", "gmail_addon", "forwarded_email"] as const;
+export const messageChannels = ["paste", "upload", "gmail", "gmail_addon", "forwarded_email"] as const;
+export const messageDirections = ["received", "sent"] as const;
+// From the relevance check: `unsure` is shown as "Not sure this is work".
+export const messageRelevance = ["sure", "unsure"] as const;
+/** A Gmail attachment that wasn't fetched (not a PDF or image, or too big): listed, so the person knows it's there. */
+export type SkippedAttachment = { filename: string; mimeType: string; sizeBytes: number };
 export const messageStatuses = ["pending", "analyzed", "confirmed", "dismissed", "error"] as const;
 
 export const message = pgTable(
@@ -492,11 +497,20 @@ export const message = pgTable(
       .notNull()
       .references(() => talent.id, { onDelete: "cascade" }),
     projectId: uuid().references(() => project.id, { onDelete: "set null" }), // null until confirmed
-    submittedBy: uuid()
-      .notNull()
-      .references(() => person.id),
+    submittedBy: uuid().references(() => person.id), // who sent it in; for Gmail, who connected the mailbox
     channel: text({ enum: messageChannels }).notNull(),
-    externalRef: text(), // Gmail message id, when channel = gmail_addon
+    externalRef: text(), // Gmail message id, when channel = gmail or gmail_addon
+    // A connected mailbox's email (decision 0013). Kept, unlinked, if the mailbox is disconnected and filed mail kept.
+    connectionId: uuid().references((): AnyPgColumn => mailConnection.id, { onDelete: "set null" }),
+    providerThreadId: text(),
+    headerMessageId: text(), // Message-ID, In-Reply-To, References: for threading
+    inReplyTo: text(),
+    references: text(),
+    direction: text({ enum: messageDirections }).notNull().default("received"),
+    relevance: text({ enum: messageRelevance }),
+    sender: text(), // "Name <address>", as the email states it (a claim, decision 0007)
+    subject: text(),
+    skippedAttachments: jsonb().$type<SkippedAttachment[]>(),
     receivedAt: timestamp({ withTimezone: true }).notNull(),
     bodyText: text(), // the message's text: pasted text, an email's plain-text body
     dedupKey: text().notNull(), // paste: sha256 of the normalized text
@@ -509,7 +523,10 @@ export const message = pgTable(
     unique("message_talent_dedup_key").on(t.talentId, t.dedupKey),
     index("message_talent_status_idx").on(t.talentId, t.status),
     index("message_project_idx").on(t.projectId),
+    index("message_connection_thread_idx").on(t.connectionId, t.providerThreadId),
     check("message_channel_check", oneOf(t.channel, messageChannels)),
+    check("message_direction_check", oneOf(t.direction, messageDirections)),
+    check("message_relevance_check", oneOf(t.relevance, messageRelevance)),
     check("message_status_check", oneOf(t.status, messageStatuses)),
   ],
 ).enableRLS();
@@ -853,11 +870,12 @@ export const mailConnection = pgTable(
 // (decision 0013): ids only, never a sender or subject. Filtered out and
 // Waiting in Intake read those live from Gmail, through the worker. Removed
 // with the connection. `pending` waits for the model step; `unsure` is between
-// its two thresholds ("Not sure this is work").
-export const mailDecisionOutcomes = ["work", "skipped", "pending", "unsure"] as const;
+// its two thresholds ("Not sure this is work"). `not_work`: brought in, then the
+// analysis or the person said it isn't work, so its body and files were deleted.
+export const mailDecisionOutcomes = ["work", "skipped", "pending", "unsure", "not_work"] as const;
 // Who decided: a rule (lib/mail/relevance/rules.ts), the model, the person with
 // a sender rule, or `gone` when the email was deleted in Gmail before the model saw it.
-export const mailDecisionDeciders = [...ruleIds, "model", "person", "gone"] as const;
+export const mailDecisionDeciders = [...ruleIds, "model", "analysis", "person", "gone"] as const;
 
 export const mailDecision = pgTable(
   "mail_decision",

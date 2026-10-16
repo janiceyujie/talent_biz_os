@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { mailConnection, mailDecision } from "@/lib/db/schema";
 import { peek } from "@/lib/mail/worker-client";
@@ -8,7 +8,7 @@ import type { GmailMailPage, GmailMailView } from "@/lib/types";
 const PAGE_SIZE = 30;
 const outcomes = {
   waiting: ["work", "unsure", "pending"],
-  skipped: ["skipped"],
+  skipped: ["skipped", "not_work"],
 } as const;
 
 /**
@@ -33,7 +33,8 @@ export async function listMailDecisions(talentId: string, view: GmailMailView, o
       kind: mailDecision.kind,
     })
     .from(mailDecision)
-    .where(and(eq(mailDecision.connectionId, c.id), inArray(mailDecision.outcome, outcomes[view])))
+    // Brought in already: it's in Messages instead.
+    .where(and(eq(mailDecision.connectionId, c.id), inArray(mailDecision.outcome, outcomes[view]), isNull(mailDecision.messageId)))
     .orderBy(desc(mailDecision.receivedAt), desc(mailDecision.id))
     .limit(PAGE_SIZE + 1)
     .offset(offset);

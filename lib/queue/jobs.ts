@@ -13,8 +13,11 @@ export const jobs = {
   "mail.sync": z.strictObject({ connectionId: z.uuid() }),
   /** The model step for one email the rules left pending (lib/mail/jobs/relevance.ts). */
   "mail.relevance": z.strictObject({ decisionId: z.uuid() }),
+  /** Bring one email in: body and attachments into message and file, then analysis (lib/mail/jobs/fetch.ts). */
+  "mail.fetch": z.strictObject({ decisionId: z.uuid() }),
   /** Revoke a mailbox's token at Google and delete the connection (lib/mail/jobs/disconnect.ts). */
-  "mail.disconnect": z.strictObject({ connectionId: z.uuid() }),
+  // keep: "filed" keeps email filed under a project; "none" removes everything brought in.
+  "mail.disconnect": z.strictObject({ connectionId: z.uuid(), keep: z.enum(["filed", "none"]).default("none") }),
 };
 
 export type JobName = keyof typeof jobs;
@@ -34,6 +37,8 @@ export const jobAttempts: Record<JobName, number> = {
   "mail.sync": 5,
   // The model busy or unreachable: a few tries, then the email stays "Not decided yet" until the next Sync now.
   "mail.relevance": 5,
+  // Gmail or storage unreachable: a few tries, then the email stays in Waiting until the next Sync now.
+  "mail.fetch": 5,
   // Google unreachable: a few more tries, then the row is deleted anyway.
   "mail.disconnect": 5,
 };
@@ -53,6 +58,18 @@ export const relevanceJobKey = (decisionId: string) => `mail.relevance:${decisio
  * model handles best.
  */
 export const relevanceQueue = (connectionId: string) => `mail-relevance:${connectionId}`;
+
+/** The key that keeps one email from being brought in twice at once. */
+export const fetchJobKey = (decisionId: string) => `mail.fetch:${decisionId}`;
+
+/** Bringing email in: its own queue per mailbox, one at a time, beside scoring and the sync. */
+export const fetchQueue = (connectionId: string) => `mail-fetch:${connectionId}`;
+
+/**
+ * Analysis runs on a queue per talent: one at a time for each artist, so a
+ * month of history brought in at once can't hold up everyone else's.
+ */
+export const analysisQueue = (talentId: string) => `analyze:${talentId}`;
 
 /** One queue per mailbox: its jobs run one at a time, in order (docs/design/gmail-ingestion.md, Jobs). */
 export const mailQueue = (connectionId: string) => `mail:${connectionId}`;

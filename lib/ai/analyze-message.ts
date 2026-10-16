@@ -4,7 +4,9 @@ import { db } from "@/lib/db";
 import { file, message, messageAnalysis, talent } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
 import { toLocale, type Locale } from "@/lib/i18n/config";
+import { dropBroughtIn } from "@/lib/mail/not-work";
 import { readBytes } from "@/lib/storage";
+import { notWork } from "./analysis";
 import { extractMessage } from "./extract";
 import { canAnalyze } from "./usage";
 import { ModelError } from "./model";
@@ -12,6 +14,7 @@ import { ModelError } from "./model";
 /**
  * Analyze one message and store a new analysis version. Marks the message analyzed, or error with the reason.
  * Runs as a queued job, so it may run twice: a message no longer pending was already handled.
+ * An email brought in from Gmail that the analysis finds isn't work loses its body and files at once (decision 0013).
  */
 export async function analyzeMessage(messageId: string, outputLocale: Locale) {
   const [row] = await db
@@ -20,6 +23,9 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
       status: message.status,
       submittedBy: message.submittedBy,
       body: message.bodyText,
+      channel: message.channel,
+      sender: message.sender,
+      subject: message.subject,
       receivedAt: message.receivedAt,
       timeZone: talent.timeZone,
     })
@@ -45,8 +51,13 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
     const files = await Promise.all(
       stored.map(async (f, i) => ({ name: f.filename ?? `file-${i + 1}`, mimeType: f.contentType, data: await readBytes(f.storageKey) })),
     );
+    const gmail = row.channel === "gmail";
+    // An email's sender and subject are part of what it says: who's asking, and about what.
+    const header = gmail ? `From: ${row.sender ?? ""}\nSubject: ${row.subject ?? ""}\n\n` : "";
     const { analysis, modelVersion, promptVersion } = await extractMessage({
-      body: row.body ?? "",
+      body: header + (row.body ?? ""),
+      fromMailbox: gmail,
+      textIfFilesUnreadable: gmail,
       files,
       today: dateInZone(row.timeZone, 0, row.receivedAt),
       timeZone: row.timeZone,
@@ -68,6 +79,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
         .set({ status: "analyzed", failure: null })
         .where(and(eq(message.id, messageId), eq(message.status, "pending")));
     });
+    if (gmail && notWork(analysis)) await dropBroughtIn(row.talentId, messageId, "analysis");
   } catch (e) {
     // The code is shown to the person in their language (inbox.failure.*); details go to the log.
     const failure = e instanceof ModelError ? e.code : "unexpected";

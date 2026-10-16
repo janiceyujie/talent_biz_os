@@ -3,6 +3,7 @@ import type { MailRef } from "../metadata";
 import type { MailProvider } from "../provider";
 import { gmailApi, GmailError } from "./api";
 import { toMetadata } from "./parse";
+import { readMessage } from "./parts";
 
 export { GmailError };
 
@@ -59,5 +60,16 @@ export function gmailProvider(accessToken: string): MailProvider {
         throw e;
       }
     },
+
+    async getMessage(id) {
+      try {
+        return readMessage(await api.full(id));
+      } catch (e) {
+        if (e instanceof GmailError && e.status === 404) return null;
+        throw e;
+      }
+    },
+
+    getAttachment: async (messageId, attachmentId) => Buffer.from((await api.attachment(messageId, attachmentId)).data, "base64url"),
   };
 }

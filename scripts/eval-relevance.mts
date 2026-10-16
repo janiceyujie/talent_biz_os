@@ -18,10 +18,10 @@ const arg = (name: string) => {
   const i = process.argv.indexOf(`--${name}`);
   return i > 0 ? process.argv[i + 1] : undefined;
 };
-if (arg("provider")) process.env.AI_RELEVANCE_PROVIDER = arg("provider");
-if (arg("model")) process.env.AI_RELEVANCE_MODEL = arg("model");
+if (arg("provider")) process.env.AI_MAILBOX_PROVIDER = arg("provider");
+if (arg("model")) process.env.AI_MAILBOX_MODEL = arg("model");
 const only = arg("only");
-const pause = Number(arg("pause") ?? (process.env.AI_RELEVANCE_PROVIDER === "gemini" ? 4000 : 0)); // free tiers limit requests a minute
+const pause = Number(arg("pause") ?? (process.env.AI_MAILBOX_PROVIDER === "gemini" ? 4000 : 0)); // free tiers limit requests a minute
 
 const { scoreMail } = await import("../lib/mail/relevance/score");
 const { modelFor } = await import("../lib/ai/model");

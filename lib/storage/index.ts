@@ -1,6 +1,7 @@
 import "server-only";
 import {
   CreateBucketCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
@@ -86,4 +87,14 @@ export async function readStream(key: string) {
 export async function writeBytes(key: string, bytes: Uint8Array, contentType: string) {
   await ensureBucket();
   await s3().send(new PutObjectCommand({ Bucket: config.bucket, Key: key, Body: bytes, ContentType: contentType }));
+}
+
+/** Delete objects, e.g. the files of email marked Not work. Keys that don't exist are fine. */
+export async function removeObjects(keys: string[]) {
+  for (let i = 0; i < keys.length; i += 1000) {
+    const batch = keys.slice(i, i + 1000);
+    if (!batch.length) continue;
+    const res = await s3().send(new DeleteObjectsCommand({ Bucket: config.bucket, Delete: { Objects: batch.map((Key) => ({ Key })), Quiet: true } }));
+    if (res.Errors?.length) throw new Error(`storage: ${res.Errors.length} objects not deleted (${res.Errors[0]?.Code})`);
+  }
 }

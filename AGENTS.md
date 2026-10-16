@@ -23,7 +23,7 @@ Changes here can lose data, leak data, or lock people out, so make them only whe
 - **Database** (`lib/db/schema.ts`, `drizzle/`): change the schema in `schema.ts`, then generate a new migration with `npm run db:generate`. Never edit or delete an existing migration file (the one exception is the one-time squash into a baseline before the first production deploy, in `docs/setup/launch-checklist.md`, done only when asked). Never drop or rename a column with data in it without asking.
 - **Auth and access** (`lib/auth/`, `proxy.ts`): who can sign in and who can see what. Every query for a talent's data must be scoped to that account.
 - **AI and untrusted messages** (`lib/ai/`): message content is untrusted input — follow the rules in `docs/decisions/0007-untrusted-message-content.md`. The model never gets tools or acts on its own; a person confirms everything it extracts.
-  - **Real mail stays local in development.** Never send a real email (the builder's connected mailbox, or anything copied from it) to Gemini's free tier or any provider marked `AI_PROVIDER_KEEPS_DATA`: score real mail with a local model (`AI_RELEVANCE_PROVIDER=ollama`), and use only made-up content for evals, tests, and free-tier runs.
+  - **Real mail stays local in development.** Never send a real email (the builder's connected mailbox, or anything copied from it) to Gemini's free tier or any provider marked `AI_PROVIDER_KEEPS_DATA`: score real mail with a local model (`AI_MAILBOX_PROVIDER=ollama`), and use only made-up content for evals, tests, and free-tier runs.
 - **Secrets**: never commit `.env*` files (only `.env.example`), API keys, or real customer messages.
 
 ## Conventions

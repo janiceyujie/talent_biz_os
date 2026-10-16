@@ -1,6 +1,7 @@
 import type { Task } from "graphile-worker";
 import { analyzeMessage, markAnalysisFailed } from "@/lib/ai/analyze-message";
 import { disconnectMailbox } from "@/lib/mail/jobs/disconnect";
+import { fetchDecision } from "@/lib/mail/jobs/fetch";
 import { scoreDecision } from "@/lib/mail/jobs/relevance";
 import { syncMailbox } from "@/lib/mail/jobs/sync";
 import { jobs, type JobName } from "@/lib/queue/jobs";
@@ -29,8 +30,12 @@ export const taskList: Record<JobName, Task> = {
     const { decisionId } = jobs["mail.relevance"].parse(payload);
     await scoreDecision(decisionId);
   },
+  "mail.fetch": async (payload) => {
+    const { decisionId } = jobs["mail.fetch"].parse(payload);
+    await fetchDecision(decisionId);
+  },
   "mail.disconnect": async (payload, { job }) => {
-    const { connectionId } = jobs["mail.disconnect"].parse(payload);
-    await disconnectMailbox(connectionId, { lastAttempt: job.attempts >= job.max_attempts });
+    const { connectionId, keep } = jobs["mail.disconnect"].parse(payload);
+    await disconnectMailbox(connectionId, { lastAttempt: job.attempts >= job.max_attempts, keep });
   },
 };

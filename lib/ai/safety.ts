@@ -87,6 +87,26 @@ export function rollForwardYearless(date: string, asStated: string, today: strin
   return thisYear >= cutoff.toISOString().slice(0, 10) ? thisYear : `${Number(today.slice(0, 4)) + 1}${monthDay}`;
 }
 
+const zhWeekdayFromMonday: Record<string, number> = { 一: 0, 二: 1, 三: 2, 四: 3, 五: 4, 六: 5, 日: 6, 天: 6 };
+
+/**
+ * A weekday named relative to the week, computed instead of trusted to the
+ * model, which gets the week wrong now and then: this week's, next week's, or
+ * the week after's weekday X (the Chinese phrases), weeks starting on Monday,
+ * as the prompt defines them. Null when the words also give a date, or aren't
+ * such a phrase. English "next Monday" stays with the model: its meaning varies.
+ */
+export function relativeWeekday(asStated: string, today: string): string | null {
+  if (/\d{1,2}\s*[/月.-]\s*\d{1,2}/.test(asStated)) return null; // a date stated outright wins
+  const m = /(下下|下|這|这|本)\s*(?:個|个)?\s*(?:週|周|星期|禮拜|礼拜)\s*([一二三四五六日天])/.exec(asStated);
+  if (!m) return null;
+  const weeks = m[1] === "下下" ? 2 : m[1] === "下" ? 1 : 0;
+  const day = new Date(`${today}T12:00:00Z`);
+  const monday = day.getUTCDate() - ((day.getUTCDay() + 6) % 7);
+  day.setUTCDate(monday + 7 * weeks + zhWeekdayFromMonday[m[2]]);
+  return day.toISOString().slice(0, 10);
+}
+
 /** Dates whose stated weekday doesn't match the date ("11/14 (Fri)" when 11/14 is a Saturday). */
 export function weekdayMismatches<D extends { date: string; asStated: string }>(dates: readonly D[]) {
   return dates.filter((d) => {

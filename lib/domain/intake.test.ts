@@ -13,6 +13,7 @@ const analysis = (over: Partial<MessageAnalysis> = {}): MessageAnalysis => ({
   summary: "",
   transcript: "",
   transcriptWithheld: false,
+  filesNotRead: false,
   counterparty: { name: "Maya", company: "Blue Room", email: "maya@blueroom.example", phone: "" },
   dates: [],
   money: { amount: null, currency: "", taxIncluded: null, asStated: "" },

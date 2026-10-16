@@ -9,6 +9,7 @@ import type { MailProvider } from "../provider";
 import { readMetadata } from "../read";
 import { ruleContext } from "../relevance/context";
 import { decideAll, RULES_VERSION } from "../relevance/rules";
+import { queueFetching } from "./fetch";
 import { queueScoring } from "./relevance";
 
 // mail.sync (docs/design/gmail-ingestion.md, Jobs): find the mailbox's new
@@ -86,8 +87,10 @@ async function sync(c: Connection) {
       failure: null,
     })
     .where(and(eq(mailConnection.id, c.id), inArray(mailConnection.status, ["connected", "error"])));
-  // Also anything still pending from before: a model that was down, or the rules-only version.
+  // What's pending goes to the model, and what's work is brought in; anything left from before too
+  // (a model or Gmail that was down, the rules-only version).
   await queueScoring(c.id);
+  await queueFetching(c.id);
 }
 
 /**

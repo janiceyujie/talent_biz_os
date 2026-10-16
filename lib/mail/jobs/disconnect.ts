@@ -1,19 +1,21 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { mailConnection } from "@/lib/db/schema";
+import { file, mailConnection, message } from "@/lib/db/schema";
 import { open } from "@/lib/keys";
+import { removeObjects } from "@/lib/storage";
 import { OAuthError, revokeToken } from "../oauth";
 import { fromColumns, tokenAad } from "../token";
 
 /**
- * mail.disconnect (decision 0013): withdraw our access at Google, then delete
- * the connection. Runs in the worker, the only place that can decrypt the
- * token. If Google can't be reached by the last attempt, the row goes anyway:
- * the token is then unusable to us, and the artist can remove access in their
- * Google account.
+ * mail.disconnect (decision 0013): withdraw our access at Google, remove what
+ * the mailbox brought in (all of it, or all but what's filed under a project,
+ * as the artist chose), then delete the connection and its decisions. Runs in
+ * the worker, the only place that can decrypt the token. If Google can't be
+ * reached by the last attempt, the rest goes ahead anyway: the token is then
+ * unusable to us, and the artist can remove access in their Google account.
  */
-export async function disconnectMailbox(connectionId: string, { lastAttempt }: { lastAttempt: boolean }) {
+export async function disconnectMailbox(connectionId: string, { lastAttempt, keep }: { lastAttempt: boolean; keep: "filed" | "none" }) {
   const [c] = await db.select().from(mailConnection).where(eq(mailConnection.id, connectionId));
   if (!c) return; // already gone: this job ran before
   try {
@@ -23,5 +25,20 @@ export async function disconnectMailbox(connectionId: string, { lastAttempt }: {
     // Ids and codes only: never the token.
     console.error("mail.disconnect: couldn't revoke at Google, deleting anyway", connectionId, e instanceof OAuthError ? e.code : (e as Error)?.name);
   }
+  await removeBroughtIn(connectionId, keep);
   await db.delete(mailConnection).where(eq(mailConnection.id, connectionId));
+}
+
+/** Delete the messages this mailbox brought in, with their files in storage; "filed" keeps those filed under a project. */
+async function removeBroughtIn(connectionId: string, keep: "filed" | "none") {
+  const doomed = await db
+    .select({ id: message.id })
+    .from(message)
+    .where(and(eq(message.connectionId, connectionId), keep === "filed" ? isNull(message.projectId) : undefined));
+  for (let i = 0; i < doomed.length; i += 500) {
+    const ids = doomed.slice(i, i + 500).map((m) => m.id);
+    const keys = await db.select({ key: file.storageKey }).from(file).where(inArray(file.messageId, ids));
+    await removeObjects(keys.map((k) => k.key)); // the bytes first: a retry still finds the rows
+    await db.delete(message).where(inArray(message.id, ids)); // files and analyses go with them
+  }
 }

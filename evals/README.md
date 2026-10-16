@@ -43,7 +43,7 @@ Some cases attack the pipeline: instructions aimed at the model (plain, disguise
 - the lowest-scoring work case, and what a few low thresholds would keep and filter.
 
 ```
-npm run eval:relevance                                   # AI_RELEVANCE_PROVIDER / AI_RELEVANCE_MODEL from .env.local
+npm run eval:relevance                                   # AI_MAILBOX_PROVIDER / AI_MAILBOX_MODEL from .env.local
 npm run eval:relevance -- --provider gemini
 npm run eval:relevance -- --provider ollama --model qwen3:8b
 MAIL_RELEVANCE_LOW=0.3 npm run eval:relevance            # try other thresholds

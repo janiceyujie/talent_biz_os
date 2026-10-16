@@ -654,7 +654,8 @@
       "paste": "貼上",
       "upload": "上傳",
       "gmail_addon": "Gmail",
-      "forwarded_email": "轉寄信件"
+      "forwarded_email": "轉寄信件",
+      "gmail": "Gmail"
     },
     "pendingBody": "AI 正在整理這則訊息，完成後會自動顯示。本機模型約需半分鐘。",
     "failed": "分析沒有完成：{reason}",
@@ -734,10 +735,26 @@
     "backToList": "返回訊息列表",
     "source": "來源",
     "receivedAt": "收件時間",
-    "filedOn": "所屬合作案"
+    "filedOn": "所屬合作案",
+    "filesNotRead": "這個模型無法讀取附件，只分析了信件內文。",
+    "review": {
+      "summary": "摘要",
+      "asks": "需要你回覆",
+      "replyBy": "回覆期限 {date}",
+      "terms": "合作條件",
+      "date": "日期",
+      "place": "地點",
+      "fee": "酬勞",
+      "payment": "付款",
+      "notStated": "尚未說明",
+      "notGiven": "未提供",
+      "showAll": "展開全文",
+      "showLess": "收合",
+      "more": "更多動作"
+    }
   },
   "intake": {
-    "targetHeading": "這則訊息屬於哪個合作案？",
+    "targetHeading": "歸入合作案",
     "suggested": "建議",
     "reason": {
       "contact": "同一聯絡人：{value}",
@@ -808,7 +825,8 @@
       "datesHint": "日期先存在合作案上；簽約後再加入行程。",
       "create": "建立合作案",
       "creating": "建立中…",
-      "moreFields": "其他欄位（{count}）"
+      "moreFields": "其他欄位（{count}）",
+      "checkFields": "確認細節：合作方、金額、日期、備註"
     },
     "earlierDate": "先前的訊息提過這個日期，但合作案上還沒記；套用後會記在合作案上。",
     "contractSigned": "已簽署",
@@ -1141,9 +1159,9 @@
     "tabMessages": "訊息",
     "tabWaiting": "等待中",
     "tabSkipped": "已過濾",
-    "aboutWaiting": "看起來是工作信，或是無法只靠寄件者與主旨判斷的信。",
+    "aboutWaiting": "尚在判斷或收進中的信。收進後會移到「訊息」。",
     "aboutSkipped": "只依寄件者與主旨判斷不是工作信，這些信的內容都不會保留。",
-    "emptyWaiting": "沒有等待中的信。",
+    "emptyWaiting": "沒有等待中的信。工作信會收進「訊息」。",
     "emptySkipped": "沒有被過濾的信。",
     "notSyncedYet": "按「立即同步」開始整理你的信。",
     "from": "寄件者",
@@ -1157,7 +1175,8 @@
       "work": "工作信",
       "pending": "尚未判斷",
       "skipped": "已過濾",
-      "unsure": "不確定"
+      "unsure": "不確定",
+      "not_work": "不是工作"
     },
     "rule": {
       "sender_always": "你的規則：一律收進",
@@ -1174,7 +1193,8 @@
       "person": "由你移動",
       "pending": "沒有符合的規則，之後會再判斷。",
       "model": "模型",
-      "gone": "檢查前已在 Gmail 刪除"
+      "gone": "檢查前已在 Gmail 刪除",
+      "analysis": "分析判斷不是工作信"
     },
     "peekError": {
       "reconnect": "請到「設定」重新連結 Gmail，才能看到寄件者與主旨。",
@@ -1209,7 +1229,21 @@
       "personal": "私人信件",
       "notification": "系統通知",
       "other": "其他"
-    }
+    },
+    "unsureNotice": "不確定這是不是工作信，為保險起見先收進來。",
+    "itsWork": "是工作信",
+    "notWork": "不是工作",
+    "skippedAttachments": "未收進的附件（請在 Gmail 開啟）：{names}",
+    "wasWork": "這是工作信",
+    "bringingIn": "正在收進，稍後會出現在「訊息」。",
+    "keepTitle": "從 Gmail 收進的信",
+    "keepFiled": "保留已歸入合作案的信",
+    "keepFiledHint": "其餘的移除",
+    "keepNone": "全部移除",
+    "keepNoneHint": "包括已歸入合作案的信",
+    "notWorkTitle": "不是工作信？",
+    "notWorkBody": "這封信會移出進件分類，內文與附件會刪除。它仍會列在「已過濾」，可按「這是工作信」收回。",
+    "notWorkNeverFrom": "也不再收 {sender} 的信"
   },
   "settings": {
     "name": "藝名或品牌名稱",

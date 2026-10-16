@@ -35,7 +35,7 @@ const payment = (over: Partial<StatefulNotification> = {}) =>
 const reminder = (source: "event" | "todo", over: Partial<StatefulNotification> = {}) =>
   ({ ...base, id: `calendar:${source}`, kind: "calendar", source, calendarKind: "meeting", marker: null, location: "", urgency: "today", ...over }) as StatefulNotification;
 const message = (status: InboxMessage["status"]): InboxMessage =>
-  ({ id: `m-${status}`, channel: "paste", body: "", receivedAt: "2026-10-05T00:00:00Z", status, failure: null, projectId: null, analysis: null, files: [] }) as InboxMessage;
+  ({ id: `m-${status}`, channel: "paste", body: "", receivedAt: "2026-10-05T00:00:00Z", status, failure: null, projectId: null, analysis: null, files: [], gmail: null }) as InboxMessage;
 
 describe("todayActions", () => {
   test("events stay in the schedule; payments and to-dos are actions", () => {

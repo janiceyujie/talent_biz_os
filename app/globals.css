@@ -3115,6 +3115,176 @@ a.disabled {
   font-size: 15px;
   line-height: 1.7;
 }
+/* A message in sections, top to bottom as it's read (docs/design/intake-to-project.md, screen 1):
+   each heading larger and darker than its content, a divider between sections */
+.review-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+.review-head h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.35;
+}
+.review-head .message-status {
+  margin: 4px 0 0;
+}
+.review-meta {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.review-flags {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid #f2b8b2;
+  border-radius: 10px;
+  background: #fdecea;
+  color: #7a271f;
+  font-size: 13px;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+.review-flags li {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.review-flags svg {
+  flex: none;
+  transform: translateY(2px);
+}
+.review-flags .stated {
+  color: #9a4a42;
+}
+.review-section {
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.review-section > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.review-section h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.review-section > header h3 {
+  margin: 0;
+}
+.review-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.review-deadline {
+  color: #a2332b;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.review-asks {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.review-terms {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.review-terms > div {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px;
+}
+.review-terms dt {
+  color: var(--muted);
+}
+.review-terms dd {
+  margin: 0;
+  color: var(--ink-soft);
+}
+.review-terms dd small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.review-terms dd.gap {
+  color: var(--muted);
+  font-style: italic;
+}
+.review-original .mail-subject {
+  margin: 0 0 2px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.review-original .mail-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.review-original .mail-body.clipped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.review-original .message-files {
+  margin-top: 12px;
+}
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.review-quiet {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+.review-quiet a {
+  color: var(--muted);
+}
+.inbox-reader .message-review {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.inbox-reader .message-review > h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.inbox-reader .message-review .target {
+  font-size: 14px;
+}
+.inbox-reader .message-review .target strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.notice.error p {
+  margin: 0 0 8px;
+}
 .message-more {
   margin-top: 18px;
   display: flex;
@@ -3722,6 +3892,20 @@ button.primary.danger {
   display: grid;
   gap: 4px;
   color: var(--muted);
+  font-size: 13px;
+}
+.notice.gmail-unsure p {
+  margin: 0 0 8px;
+}
+.notice.gmail-unsure .row-actions {
+  margin: 0;
+}
+p.gmail-skipped {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.notice.gmail-free-tier {
+  margin: 0;
   font-size: 13px;
 }
 .gmail-rules h3 {

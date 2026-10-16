@@ -10,7 +10,7 @@ import { db } from "@/lib/db";
 import { message, messageAnalysis } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { queue } from "@/lib/queue";
-import { analyzeJobKey } from "@/lib/queue/jobs";
+import { analysisQueue, analyzeJobKey } from "@/lib/queue/jobs";
 import { errorText, firstIssue } from "./validation";
 
 const MAX_LENGTH = 50_000;
@@ -47,7 +47,7 @@ export async function submitPastedMessage(
       })
       .onConflictDoNothing({ target: [message.talentId, message.dedupKey] })
       .returning({ id: message.id });
-    if (row) await queue.enqueue("message.analyze", { messageId: row.id, locale }, { tx, jobKey: analyzeJobKey(row.id) });
+    if (row) await queue.enqueue("message.analyze", { messageId: row.id, locale }, { tx, jobKey: analyzeJobKey(row.id), queueName: analysisQueue(talent.id) });
     return row;
   });
   if (!created) {
@@ -75,7 +75,7 @@ export async function reanalyzeMessage(id: string): Promise<string | null> {
       .set({ status: "pending", failure: null })
       .where(and(eq(message.id, id), eq(message.talentId, talent.id), inArray(message.status, ["analyzed", "error"])))
       .returning({ id: message.id });
-    if (rows.length) await queue.enqueue("message.analyze", { messageId: id, locale }, { tx, jobKey: analyzeJobKey(id) });
+    if (rows.length) await queue.enqueue("message.analyze", { messageId: id, locale }, { tx, jobKey: analyzeJobKey(id), queueName: analysisQueue(talent.id) });
     return rows.length > 0;
   });
   if (!found) return fail("messageNotFound");

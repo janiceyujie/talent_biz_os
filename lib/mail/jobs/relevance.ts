@@ -10,12 +10,14 @@ import { gmailProvider } from "../gmail";
 import { RULES_VERSION } from "../relevance/rules";
 import { scoreMail } from "../relevance/score";
 import { outcomeFor } from "../relevance/thresholds";
+import { queueFetch } from "./fetch";
 
 // mail.relevance (docs/design/gmail-ingestion.md, Jobs): the model step for one
 // email the rules left pending. Reads its sender, subject, labels, and Gmail's
 // short preview (never the body), asks the relevance model, and records the
 // score and kind. One job per email, so an email can't sway another's score
-// (decision 0007) and a failure retries only that email. Safe to run twice.
+// (decision 0007) and a failure retries only that email. Work and Not sure
+// are then brought in (./fetch.ts). Safe to run twice.
 
 /** Queue the model step for every email of this mailbox still pending. */
 export async function queueScoring(connectionId: string) {
@@ -77,9 +79,11 @@ export async function scoreDecision(decisionId: string) {
       })
       .where(and(eq(mailDecision.id, d.id), eq(mailDecision.outcome, "pending")))
       .returning({ id: mailDecision.id });
+    if (!updated) return;
+    if (outcome !== "skipped") await queueFetch(c.id, d.id, tx);
     // Thread memory: the rest of a work thread is work, without asking the model again.
-    if (updated && outcome === "work")
-      await tx
+    if (outcome === "work") {
+      const joined = await tx
         .update(mailDecision)
         .set({ outcome: "work", decidedBy: "thread", classifierVersion: RULES_VERSION })
         .where(
@@ -89,6 +93,9 @@ export async function scoreDecision(decisionId: string) {
             eq(mailDecision.outcome, "pending"),
             ne(mailDecision.id, d.id),
           ),
-        );
+        )
+        .returning({ id: mailDecision.id });
+      for (const j of joined) await queueFetch(c.id, j.id, tx);
+    }
   });
 }

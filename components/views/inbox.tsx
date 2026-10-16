@@ -5,8 +5,11 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type RefObject } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
+import { MoreMenu } from "./more-menu";
 import { ANALYSIS_POLL_MS, PasteDialog } from "@/components/app/paste-dialog";
-import { FileText } from "lucide-react";
+import { FileText, TriangleAlert } from "lucide-react";
+import { markNotWork, markSureWork } from "@/lib/actions/mail";
 import { dismissMessage, reanalyzeMessage } from "@/lib/actions/messages";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
@@ -92,7 +95,7 @@ export function InboxView() {
       </section>
       <IntakeTabs tab={data.gmail.connection ? tab : "messages"} onTab={setTab} />
       {data.gmail.connection && tab !== "messages" ? (
-        <GmailMail view={tab} onNotice={setNotice} />
+        <GmailMail key={tab} view={tab} onNotice={setNotice} />
       ) : (
         <div className="inbox-layout section-gap">
           <section className="surface padded inbox-messages" aria-label={t("listLabel")}>
@@ -196,7 +199,7 @@ function failureText(failure: string | null, t: ReturnType<typeof useTranslation
 
 /** A message's title before or without an analysis: its first line, or how many files it has. */
 function fallbackTitle(m: InboxMessage, t: ReturnType<typeof useTranslations<"inbox">>) {
-  return firstLine(m.body) || (m.files.length ? t("filesCount", { count: m.files.length }) : t("untitled"));
+  return m.gmail?.subject || firstLine(m.body) || (m.files.length ? t("filesCount", { count: m.files.length }) : t("untitled"));
 }
 
 function StatusChip({ status }: { status: InboxMessage["status"] }) {
@@ -208,65 +211,293 @@ function StatusChip({ status }: { status: InboxMessage["status"] }) {
 function MessageDetail({ message, headingRef }: { message: InboxMessage; headingRef: RefObject<HTMLHeadingElement | null> }) {
   const t = useTranslations("inbox");
   const labels = useLabels();
+  const tGmail = useTranslations("gmail");
   const format = useFormatter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [notWorkOpen, setNotWorkOpen] = useState(false);
+  const [never, setNever] = useState(false); // also a "never" rule for the sender
   const run = (action: () => Promise<string | null>) => startTransition(async () => setError(await action()));
   const a = message.analysis;
   const analyzed = !!a && message.status !== "pending";
   const data = useAppData();
   const filedOn = message.projectId ? data.projects.find((p) => p.id === message.projectId) : undefined;
+  const gmailUrl =
+    message.gmail && data.gmail.connection
+      ? `https://mail.google.com/mail/?${new URLSearchParams({ authuser: data.gmail.connection.accountEmail })}#all/${message.gmail.gmailId}`
+      : null;
 
-  // Read, then decide (docs/design/intake-to-project.md, screen 1): a short summary and the files up
-  // top, then which project it belongs to and what it changes; the AI's full reading and the original
-  // text are one click away.
+  // The journey, top to bottom (docs/design/intake-to-project.md, screen 1): who and what (triage);
+  // what they want and on what terms (understand); the original, a glance away; then the one decision,
+  // where it's filed, with one primary button. Rare actions wait in the ⋯ menu.
+  const long = message.body.length > SHORT_MESSAGE || message.files.length > 0 || !!a?.transcript;
   return (
     <>
-      <div className="mail-tags">
+      <header className="review-head">
+        <h2 ref={headingRef} tabIndex={-1}>
+          {a?.title || fallbackTitle(message, t)}
+        </h2>
         <StatusChip status={message.status} />
-        {analyzed && <em className="message-status intent-chip">{labels.intent(a.intent)}</em>}
-      </div>
-      <h2 ref={headingRef} tabIndex={-1}>
-        {a?.title || fallbackTitle(message, t)}
-      </h2>
-      <dl className="mail-metadata">
-        <div>
-          <dt>{t("source")}</dt>
-          <dd>{t(`channel.${message.channel}`)}</dd>
-        </div>
-        <div>
-          <dt>{t("receivedAt")}</dt>
-          <dd>
-            <time dateTime={message.receivedAt}>
-              {format.dateTime(new Date(message.receivedAt), { dateStyle: "medium", timeStyle: "short", timeZone: data.talent.timeZone })}
-            </time>{" "}
-            · {data.talent.timeZone}
-          </dd>
-        </div>
-        {filedOn && (
-          <div>
-            <dt>{t("filedOn")}</dt>
-            <dd>
-              {filedOn.title} · {labels.stage(filedOn.stage)}
-            </dd>
-          </div>
-        )}
-      </dl>
+        <p className="review-meta">
+          {message.gmail?.sender && (
+            <>
+              <span title={message.gmail.sender}>{senderName(message.gmail.sender)}</span>
+              {" · "}
+            </>
+          )}
+          {t(`channel.${message.channel}`)}
+          {" · "}
+          {/* Date and time formatted apart and joined with a plain space: the separator Intl puts between
+              them (a thin space in Node's locale data) differs from the browser's, which breaks hydration. */}
+          <time dateTime={message.receivedAt} title={data.talent.timeZone}>
+            {format.dateTime(new Date(message.receivedAt), { month: "numeric", day: "numeric", timeZone: data.talent.timeZone })}{" "}
+            {format.dateTime(new Date(message.receivedAt), { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: data.talent.timeZone })}
+          </time>
+          {filedOn && (
+            <>
+              {" · "}
+              {t("filedOn")} {filedOn.title} · {labels.stage(filedOn.stage)}
+            </>
+          )}
+        </p>
+      </header>
 
+      {analyzed && <Flags analysis={a} />}
+      {message.gmail?.unsure && (
+        <div className="notice gmail-unsure" role="note">
+          <p>{tGmail("unsureNotice")}</p>
+          <div className="row-actions">
+            <button className="secondary" disabled={pending} onClick={() => run(() => markSureWork(message.id))}>
+              {tGmail("itsWork")}
+            </button>
+            <button className="text-button" disabled={pending} onClick={() => setNotWorkOpen(true)}>
+              {tGmail("notWork")}
+            </button>
+          </div>
+        </div>
+      )}
       {message.status === "pending" && <p className="notice analyzing">{t("pendingBody")}</p>}
       {message.status === "error" && (
-        <p className="notice error" role="alert">
-          {t("failed", { reason: failureText(message.failure, t) })}
-        </p>
+        <div className="notice error" role="alert">
+          <p>{t("failed", { reason: failureText(message.failure, t) })}</p>
+          <button className="secondary" disabled={pending} onClick={() => run(() => reanalyzeMessage(message.id))}>
+            {t("reanalyze")}
+          </button>
+        </div>
       )}
       {a && message.status === "analyzed" && a.intent === "other" && a.confidence < 0.5 && (
         <p className="notice" role="note">
           {t("notWork")}
         </p>
       )}
-      {analyzed && <Flags analysis={a} />}
-      {analyzed && a.summary && <p className="message-summary">{a.summary}</p>}
 
+      {analyzed && long && a.summary && (
+        <section className="review-section">
+          <h3>{t("review.summary")}</h3>
+          <p className="review-text">{a.summary}</p>
+        </section>
+      )}
+      {analyzed && <Asks analysis={a} />}
+      {analyzed && <Terms analysis={a} />}
+      <Original message={message} />
+
+      {message.status === "analyzed" && a && <MessageReview key={a.promptVersion + a.modelVersion} message={message} />}
+      {message.status === "confirmed" && message.projectId && (
+        <div className="row-actions section-gap">
+          <Link className="primary" href={`/projects?id=${message.projectId}`}>
+            {t("viewProject")}
+          </Link>
+        </div>
+      )}
+
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
+      <footer className="review-quiet">
+        {gmailUrl && (
+          <a href={gmailUrl} target="_blank" rel="noopener noreferrer">
+            {tGmail("openInGmail")}
+          </a>
+        )}
+        {message.status === "dismissed" && (
+          <button className="text-button" disabled={pending} onClick={() => run(() => dismissMessage(message.id, false))}>
+            {t("restore")}
+          </button>
+        )}
+        {(analyzed || message.gmail) && message.status !== "confirmed" && (
+          <MoreMenu label={t("review.more")}>
+            {message.status === "analyzed" && (
+              <button role="menuitem" disabled={pending} onClick={() => run(() => reanalyzeMessage(message.id))}>
+                {t("reanalyze")}
+              </button>
+            )}
+            {(message.status === "analyzed" || message.status === "error") && (
+              <button role="menuitem" disabled={pending} onClick={() => run(() => dismissMessage(message.id, true))}>
+                {t("dismiss")}
+              </button>
+            )}
+            {message.gmail && (
+              <button role="menuitem" disabled={pending} onClick={() => setNotWorkOpen(true)}>
+                {tGmail("notWork")}
+              </button>
+            )}
+          </MoreMenu>
+        )}
+      </footer>
+
+      {analyzed && (
+        <div className="message-more">
+          <details className="original-message">
+            <summary>{a.assumptions.length ? t("factsWithAssumptions", { count: a.assumptions.length }) : t("facts")}</summary>
+            <AnalysisView analysis={a} />
+          </details>
+          {a.transcriptWithheld && <p className="muted">{t("transcriptWithheld")}</p>}
+          {a.transcript && (
+            <details className="original-message">
+              <summary>{t("transcript")}</summary>
+              <p className="prewrap mail-body">{a.transcript}</p>
+            </details>
+          )}
+        </div>
+      )}
+
+      {notWorkOpen && message.gmail && (
+        <ConfirmDialog
+          title={tGmail("notWorkTitle")}
+          confirmLabel={tGmail("notWork")}
+          pending={pending}
+          onClose={() => setNotWorkOpen(false)}
+          onConfirm={() =>
+            startTransition(async () => {
+              const failure = await markNotWork(message.id, never);
+              setError(failure);
+              setNotWorkOpen(false);
+            })
+          }
+        >
+          <p>{tGmail("notWorkBody")}</p>
+          {message.gmail.sender && (
+            <label className="check-line">
+              <input type="checkbox" checked={never} onChange={(e) => setNever(e.target.checked)} />
+              {tGmail("notWorkNeverFrom", { sender: message.gmail.sender })}
+            </label>
+          )}
+        </ConfirmDialog>
+      )}
+    </>
+  );
+}
+
+/** Over this many characters, or with files, a message is long: it gets a summary, and its original starts folded. */
+const SHORT_MESSAGE = 1200;
+/** The original shows this much before "Show all". */
+const PREVIEW_CHARS = 280;
+
+/** "Name <a@b.com>" → "Name"; a bare address stays. */
+const senderName = (sender: string) => sender.match(/^\s*"?([^"<]+?)"?\s*</)?.[1] ?? sender;
+
+type Analysis = NonNullable<InboxMessage["analysis"]>;
+const isoDay = (format: ReturnType<typeof useFormatter>, iso: string) =>
+  format.dateTime(new Date(`${iso}T12:00:00Z`), { year: "numeric", month: "numeric", day: "numeric", weekday: "short", timeZone: "UTC" });
+
+/** What the sender wants from the person, and by when. */
+function Asks({ analysis: a }: { analysis: Analysis }) {
+  const t = useTranslations("inbox.review");
+  const format = useFormatter();
+  const asks = a.asks.filter(Boolean).slice(0, 4);
+  if (!asks.length && !a.replyBy) return null;
+  return (
+    <section className="review-section">
+      <header>
+        <h3>{t("asks")}</h3>
+        {a.replyBy && <span className="review-deadline">{t("replyBy", { date: isoDay(format, a.replyBy) })}</span>}
+      </header>
+      {!!asks.length && (
+        <ul className="review-asks">
+          {asks.map((x, i) => (
+            <li key={i}>{x}</li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// Detail fields worth a row of their own, in this order, when the message states them.
+const termKeys = ["deliverables", "workDescription", "platforms", "postingDate", "usageRights", "term", "exclusivity", "setLength"];
+
+/** The terms to check, as aligned rows: dates, place, the work, fee; what isn't stated. Each value's exact words are on hover. */
+function Terms({ analysis: a }: { analysis: Analysis }) {
+  const t = useTranslations("inbox.review");
+  const tInbox = useTranslations("inbox");
+  const labels = useLabels();
+  const format = useFormatter();
+  const money = useMoney();
+  const fee =
+    a.money.amount && a.money.amount > 0
+      ? `${a.money.currency === "TWD" || !a.money.currency ? money(a.money.amount) : `${a.money.currency} ${a.money.amount}`}${
+          a.money.taxIncluded === null ? "" : ` (${a.money.taxIncluded ? tInbox("taxIncluded") : tInbox("taxExcluded")})`
+        }`
+      : a.money.asStated;
+  // A fee matters for offers and deals; elsewhere a missing one isn't news.
+  const feeMatters = ["inquiry", "negotiation", "confirmation", "contract"].includes(a.intent);
+  const place = [a.details.city?.value, a.details.venue?.value].filter(Boolean).join(" · ");
+  const rows: { key: string; label: string; value: string; note?: string; stated?: string; gap?: boolean }[] = [
+    ...a.dates.slice(0, 3).map((d, i) => ({
+      key: `date-${i}`,
+      label: t("date"),
+      value: [d.date ? isoDay(format, d.date) : d.asStated, d.time].filter(Boolean).join(" "),
+      note: d.what,
+      stated: d.asStated,
+    })),
+    ...(place ? [{ key: "place", label: t("place"), value: place, stated: a.details.venue?.asStated || a.details.city?.asStated }] : []),
+    ...termKeys
+      .filter((k) => a.details[k]?.value)
+      .map((k) => ({ key: k, label: labels.detailField(a.projectType, k), value: a.details[k].value, stated: a.details[k].asStated })),
+    ...(fee || feeMatters ? [{ key: "fee", label: t("fee"), value: fee || t("notGiven"), stated: a.money.asStated, gap: !fee }] : []),
+    ...(a.paymentTerms ? [{ key: "payment", label: t("payment"), value: a.paymentTerms }] : []),
+    ...(a.missing.length ? [{ key: "missing", label: t("notStated"), value: format.list(a.missing.slice(0, 4), { type: "conjunction" }) }] : []),
+  ];
+  if (!rows.length) return null;
+  return (
+    <section className="review-section">
+      <h3>{t("terms")}</h3>
+      <dl className="review-terms">
+        {rows.map((r) => (
+          <div key={r.key} title={r.stated ? `「${r.stated}」` : undefined}>
+            <dt>{r.label}</dt>
+            <dd className={r.gap ? "gap" : undefined}>
+              {r.value}
+              {r.note && <small> {r.note}</small>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+/** The message itself: a few lines, the rest a click away; open in full when the person asks or there's no analysis. */
+function Original({ message }: { message: InboxMessage }) {
+  const t = useTranslations("inbox");
+  const tGmail = useTranslations("gmail");
+  const [all, setAll] = useState(!message.analysis);
+  const clipped = !all && message.body.length > PREVIEW_CHARS;
+  if (!message.body && !message.files.length) return null;
+  return (
+    <section className="review-section review-original">
+      <header>
+        <h3>{t("original")}</h3>
+        {message.body.length > PREVIEW_CHARS && (
+          <button className="link-button" aria-expanded={all} onClick={() => setAll(!all)}>
+            {all ? t("review.showLess") : t("review.showAll")}
+          </button>
+        )}
+      </header>
+      {message.gmail?.subject && <p className="mail-subject">{message.gmail.subject}</p>}
+      {message.body && <p className={clipped ? "prewrap mail-body clipped" : "prewrap mail-body"}>{message.body}</p>}
       {message.files.length > 0 && (
         <div className="message-files" aria-label={t("files")}>
           {message.files.map((f) => (
@@ -284,98 +515,47 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
           ))}
         </div>
       )}
-
-      {message.status === "analyzed" && a && <MessageReview key={a.promptVersion + a.modelVersion} message={message} />}
-      {message.status === "confirmed" && message.projectId && (
-        <div className="row-actions section-gap">
-          <Link className="primary" href={`/projects?id=${message.projectId}`}>
-            {t("viewProject")}
-          </Link>
-        </div>
+      {!!message.gmail?.skippedAttachments.length && (
+        <p className="muted gmail-skipped">{tGmail("skippedAttachments", { names: message.gmail.skippedAttachments.map((f) => f.filename).join(", ") })}</p>
       )}
-
-      <div className="message-more">
-        {analyzed && (
-          <details className="original-message">
-            <summary>{a.assumptions.length ? t("factsWithAssumptions", { count: a.assumptions.length }) : t("facts")}</summary>
-            <AnalysisView analysis={a} />
-          </details>
-        )}
-        {a?.transcriptWithheld && <p className="muted">{t("transcriptWithheld")}</p>}
-        {a?.transcript && (
-          <details className="original-message">
-            <summary>{t("transcript")}</summary>
-            <p className="prewrap mail-body">{a.transcript}</p>
-          </details>
-        )}
-        {message.body && (
-          <details className="original-message" open={!a}>
-            <summary>{t("original")}</summary>
-            <p className="prewrap mail-body">{message.body}</p>
-          </details>
-        )}
-      </div>
-
-      {error && (
-        <p className="notice error" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="row-actions section-gap">
-        {(message.status === "analyzed" || message.status === "error") && (
-          <button className="secondary" disabled={pending} onClick={() => run(() => reanalyzeMessage(message.id))}>
-            {t("reanalyze")}
-          </button>
-        )}
-        {(message.status === "analyzed" || message.status === "error") && (
-          <button className="text-button" disabled={pending} onClick={() => run(() => dismissMessage(message.id, true))}>
-            {t("dismiss")}
-          </button>
-        )}
-        {message.status === "dismissed" && (
-          <button className="secondary" disabled={pending} onClick={() => run(() => dismissMessage(message.id, false))}>
-            {t("restore")}
-          </button>
-        )}
-      </div>
-    </>
+      {message.analysis?.filesNotRead && <p className="muted">{t("filesNotRead")}</p>}
+    </section>
   );
 }
 
-/** Warnings stay at the top, above anything the person might act on (decision 0007). */
-function Flags({ analysis: a }: { analysis: NonNullable<InboxMessage["analysis"]> }) {
+/** Warnings stay at the top, above anything the person might act on (decision 0007): one line each. */
+function Flags({ analysis: a }: { analysis: Analysis }) {
   const t = useTranslations("inbox");
   const labels = useLabels();
   const format = useFormatter();
   if (!a.flags.length) return null;
   return (
-    <div className="notice analysis-flags" role="alert">
-      <strong>{t("flagsTitle")}</strong>
-      <ul>
-        {a.flags.map((f, i) => {
-          // The weekday check knows exactly what's wrong; say it rather than the general label.
-          const weekday = f.kind === "inconsistency" && f.source === "check" ? weekdayMismatchOf(a.dates, f.asStated) : null;
-          const day = (n: number) => format.dateTime(new Date(Date.UTC(2026, 1, 1 + n, 12)), { weekday: "long", timeZone: "UTC" }); // 2026-02-01 is a Sunday
-          return (
-            <li key={i}>
+    <ul className="review-flags" role="alert" aria-label={t("flagsTitle")}>
+      {a.flags.map((f, i) => {
+        // The weekday check knows exactly what's wrong; say it rather than the general label.
+        const weekday = f.kind === "inconsistency" && f.source === "check" ? weekdayMismatchOf(a.dates, f.asStated) : null;
+        const day = (n: number) => format.dateTime(new Date(Date.UTC(2026, 1, 1 + n, 12)), { weekday: "long", timeZone: "UTC" }); // 2026-02-01 is a Sunday
+        return (
+          <li key={i}>
+            <TriangleAlert size={14} aria-hidden="true" />
+            <span>
               {weekday
                 ? t("weekdayMismatch", {
                     date: format.dateTime(new Date(`${weekday.date}T12:00:00Z`), { month: "numeric", day: "numeric", timeZone: "UTC" }),
                     actual: day(weekday.actual),
                     stated: day(weekday.stated),
                   })
-                : labels.flag(f.kind)}
-              {f.note && <span className="flag-note"> {f.note}</span>}
-              {f.asStated && <small className="muted stated">{t("statedAs", { text: f.asStated })}</small>}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+                : f.note || labels.flag(f.kind)}
+              {f.asStated && !weekday && <span className="stated"> 「{f.asStated}」</span>}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
-function AnalysisView({ analysis: a }: { analysis: NonNullable<InboxMessage["analysis"]> }) {
+function AnalysisView({ analysis: a }: { analysis: Analysis }) {
   const t = useTranslations("inbox");
   const labels = useLabels();
   const money = useMoney();

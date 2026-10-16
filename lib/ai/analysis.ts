@@ -31,7 +31,7 @@ const detailKeys = [
 export const modelOutput = z.object({
   language: z.string().describe("BCP 47 code of the language the message is written in, e.g. zh-TW, en, ja"),
   title: z.string().describe("Short name for the work, in the output language"),
-  summary: z.string().describe("Two or three sentences, in the output language"),
+  summary: z.string().describe("One sentence, only when the message is long or hard to follow; empty otherwise. In the output language"),
   counterparty: z.object({
     name: z.string().describe("The person who wrote — not the company"),
     company: z.string().describe("Their company, venue, brand, or agency"),
@@ -69,10 +69,10 @@ export const modelOutput = z.object({
       }),
     )
     .describe("Fields for the chosen project type and intent, only those the message states"),
-  asks: z.array(z.string()).describe("What the sender is asking for, in the output language"),
+  asks: z.array(z.string()).describe("What the sender wants from the artist, each a short phrase, in the output language"),
   missing: z
     .array(z.string())
-    .describe("What to confirm with the sender: details a professional needs that the message doesn't state. In the output language"),
+    .describe("What to confirm with the sender: details a professional needs that the message doesn't state, a few words each. In the output language"),
   assumptions: z
     .array(
       z.object({
@@ -85,7 +85,7 @@ export const modelOutput = z.object({
     .array(
       z.object({
         kind: z.enum(modelFlagKinds),
-        note: z.string().describe("What looks wrong, in one sentence, in the output language"),
+        note: z.string().describe("What looks wrong, in a few words, without repeating the facts; in the output language"),
         asStated: z.string().describe("The exact words"),
       }),
     )
@@ -155,6 +155,7 @@ export function normalize(o: ModelOutput & { transcript?: string }) {
     summary: clean(o.summary),
     transcript: clean(o.transcript ?? "", 8000), // read from files; empty for text messages
     transcriptWithheld: false, // the provider refused to write one out (extract.ts)
+    filesNotRead: false, // the model couldn't read the files, so only the text was analyzed (extract.ts)
     counterparty: {
       name: clean(o.counterparty.name, 200),
       company: clean(o.counterparty.company, 200),
@@ -186,7 +187,11 @@ export function normalize(o: ModelOutput & { transcript?: string }) {
       .slice(0, 10)
       .map((x) => ({ about: x.about as AssumptionTopic, note: clean(x.note, 300) }))
       .filter((x) => x.note),
-    flags: o.flags.slice(0, 5).map((f): Flag => ({ kind: f.kind, note: clean(f.note, 300), asStated: clean(f.asStated, 300), source: "model" })),
+    // A model may repeat a flag: one per kind and quote.
+    flags: o.flags
+      .map((f): Flag => ({ kind: f.kind, note: clean(f.note, 300), asStated: clean(f.asStated, 300), source: "model" }))
+      .filter((f, i, all) => all.findIndex((g) => g.kind === f.kind && g.asStated === f.asStated) === i)
+      .slice(0, 5),
     confidence: Math.min(1, Math.max(0, Number.isFinite(o.confidence) ? o.confidence : 0)),
   };
 }
@@ -212,6 +217,7 @@ export function upgradeAnalysis(raw: unknown): MessageAnalysis {
       flags: a.flags ?? [],
       transcript: a.transcript ?? "",
       transcriptWithheld: a.transcriptWithheld ?? false,
+      filesNotRead: a.filesNotRead ?? false,
       assumptions: a.assumptions ?? [], // older analyses kept assumptions inside "missing"
     };
   const legacyIntent: Record<string, Intent> = { gig_offer: "inquiry", contract: "contract", payment_note: "payment" };
@@ -226,6 +232,15 @@ export function upgradeAnalysis(raw: unknown): MessageAnalysis {
     flags: [],
     transcript: "",
     transcriptWithheld: false,
+    filesNotRead: false,
     assumptions: [],
   };
 }
+
+/**
+ * The analysis says a message isn't work: intent `other` and nothing to act
+ * on, no dates, fee, payment terms, details, asks, or flags (decision 0013).
+ * "Other" alone isn't enough: thanks after a show, with photos, is still work.
+ */
+export const notWork = (a: Pick<MessageAnalysis, "intent" | "dates" | "money" | "paymentTerms" | "details" | "asks" | "flags">) =>
+  a.intent === "other" && !a.dates.length && !a.money.amount && !a.paymentTerms && !a.details.length && !a.asks.length && !a.flags.length;

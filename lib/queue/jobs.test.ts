@@ -22,6 +22,17 @@ describe("job payloads", () => {
     assert.equal(jobs["mail.relevance"].safeParse({ decisionId: id, snippet: "Booking" }).success, false);
   });
 
+  test("a fetch job carries only the decision id", () => {
+    assert.equal(jobs["mail.fetch"].safeParse({ decisionId: id }).success, true);
+    assert.equal(jobs["mail.fetch"].safeParse({ decisionId: id, body: "Fee NT$12,000" }).success, false);
+  });
+
+  test("a disconnect job carries the connection id and what to keep, nothing else", () => {
+    assert.deepEqual(jobs["mail.disconnect"].parse({ connectionId: id }), { connectionId: id, keep: "none" }); // queued before the choice existed
+    assert.equal(jobs["mail.disconnect"].safeParse({ connectionId: id, keep: "filed" }).success, true);
+    assert.equal(jobs["mail.disconnect"].safeParse({ connectionId: id, keep: "some" }).success, false);
+  });
+
   test("a disconnect job carries only the connection id", () => {
     assert.equal(jobs["mail.disconnect"].safeParse({ connectionId: id }).success, true);
     assert.equal(jobs["mail.disconnect"].safeParse({ connectionId: id, token: "1//x" }).success, false);

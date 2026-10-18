@@ -21,6 +21,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { InvoiceSnapshot } from "../invoices/types";
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
 import { supportedCurrencies } from "../domain/money";
@@ -184,6 +185,8 @@ export const organization = pgTable(
       .references(() => talent.id, { onDelete: "cascade" }),
     name: text().notNull(),
     notes: text(),
+    billingAddress: text(),
+    billingEmail: text(),
     archivedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -231,6 +234,7 @@ export const contact = pgTable(
     organizationId: uuid().references(() => organization.id, { onDelete: "set null" }),
     email: text(),
     phone: text(),
+    billingAddress: text(),
     notes: text(),
     archivedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
@@ -254,7 +258,7 @@ export const project = pgTable(
     stage: text({ enum: projectStages }).notNull().default("offer"),
     quotedAmount: numeric({ precision: 12, scale: 2, mode: "number" }), // as entered; see taxIncluded
     quoteCurrency: char({ length: 3 }).notNull().default("TWD"),
-    taxRate: numeric({ precision: 5, scale: 2, mode: "number" }).notNull().default(0),
+    taxRate: numeric({ precision: 7, scale: 4, mode: "number" }).notNull().default(0),
     taxIncluded: boolean().notNull().default(false),
     details: jsonb().$type<ProjectDetails>().notNull().default({}),
     notes: text(),
@@ -398,13 +402,15 @@ export const payment = pgTable(
     label: text().notNull(),
     amount: numeric({ precision: 12, scale: 2, mode: "number" }).notNull(),
     currency: char({ length: 3 }).notNull().default("TWD"),
-    taxRate: numeric({ precision: 5, scale: 2, mode: "number" }).notNull().default(0),
+    taxRate: numeric({ precision: 7, scale: 4, mode: "number" }).notNull().default(0),
     taxIncluded: boolean().notNull().default(false),
     recordedOn: date().notNull(), // recorded on
     dueOn: date(),
+    invoiceOn: date(), // optional preparation reminder, distinct from payment due date
     status: text({ enum: paymentStatuses }).notNull().default("expected"),
     settledAmount: numeric({ precision: 12, scale: 2, mode: "number" }),
     settledOn: date(),
+    receipts: jsonb().$type<import("@/lib/domain/payment-receipts").PaymentReceipt[]>().notNull().default([]),
     method: text(),
     invoiceRef: text(),
     notes: text(),
@@ -415,6 +421,7 @@ export const payment = pgTable(
   },
   (t) => [
     index("payment_talent_status_due_idx").on(t.talentId, t.status, t.dueOn),
+    index("payment_talent_invoice_on_idx").on(t.talentId, t.invoiceOn),
     index("payment_project_idx").on(t.projectId),
     check("payment_direction_check", oneOf(t.direction, paymentDirections)),
     check("payment_installment_check", oneOf(t.installment, paymentInstallments)),
@@ -1020,3 +1027,93 @@ export const managerEntitlement = pgTable("manager_entitlement", {
   check("manager_entitlement_source_check",oneOf(t.source,["local_trial","subscription"])),
   check("manager_entitlement_limit_check",sql`${t.artistLimit} between 0 and 100`),
 ]).enableRLS();
+
+// Invoice snapshots and delivery state are independent of cash receipt records.
+export const invoice = pgTable("invoice", {
+  id: id(), talentId: uuid().notNull().references(()=>talent.id,{onDelete:"cascade"}),
+  paymentId: uuid().notNull().references(()=>payment.id,{onDelete:"restrict"}),
+  projectId: uuid().references(()=>project.id,{onDelete:"set null"}),
+  number: text().notNull(), issueOn: date().notNull(), dueOn: date().notNull(),
+  snapshot: jsonb().$type<InvoiceSnapshot>().notNull(),
+  status: text({enum:["scheduled","draft","sending","sent","delivery_unknown","cancelled","draft_queued","draft_creating","gmail_draft","draft_unknown","draft_missing"]}).notNull(),
+  revision: integer().notNull().default(1), storageKey:text(), messageId:text(),
+  autoGmailDraft: boolean().notNull().default(false),
+  gmailConnectionId: uuid().references(()=>mailConnection.id,{onDelete:"set null"}),
+  gmailAccountSubject: text(), gmailAccountEmail: text(), gmailDraftId: text(),
+  gmailMessageId: text(), gmailError: text(), gmailCheckedAt: timestamp({withTimezone:true}),
+  sentAt:timestamp({withTimezone:true}), approvedBy:uuid().references(()=>person.id,{onDelete:"set null"}),
+  createdAt:createdAt(), updatedAt:updatedAt(),
+},t=>[
+  unique("invoice_talent_number_unique").on(t.talentId,t.number),
+  uniqueIndex("invoice_active_payment_unique").on(t.paymentId).where(sql`${t.status} <> 'cancelled'`),
+  index("invoice_talent_list_idx").on(t.talentId,t.createdAt,t.id),
+  index("invoice_schedule_idx").on(t.status,t.issueOn),
+  check("invoice_dates_check",sql`${t.dueOn} >= ${t.issueOn}`),
+  check("invoice_status_check",oneOf(t.status,["scheduled","draft","sending","sent","delivery_unknown","cancelled","draft_queued","draft_creating","gmail_draft","draft_unknown","draft_missing"])),
+]).enableRLS();
+export const invoiceCounter = pgTable("invoice_counter", {
+  talentId:uuid().primaryKey().references(()=>talent.id,{onDelete:"cascade"}),
+  value:integer().notNull().default(0),
+}).enableRLS();
+
+// Public tax reference data. These tables contain no customer data. Imports are
+// local operator actions; public application routes can only read them.
+export const taxSource = pgTable("tax_source", {
+  state: char({ length: 2 }).primaryKey(),
+  directoryUrl: text().notNull(),
+  rateIndexUrl: text(),
+  boundaryIndexUrl: text(),
+  coverage: text().notNull().default("pending"),
+  checkedAt: timestamp({ withTimezone: true }),
+});
+export const taxRateBatch = pgTable("tax_rate_batch", {
+  id: id(), state: char({ length: 2 }).notNull().references(() => taxSource.state),
+  provider: text().notNull(), sourceUrl: text().notNull(), contentHash: text().notNull(), sourceStorageKey: text(),
+  retrievedAt: timestamp({ withTimezone: true }).notNull(), active: boolean().notNull().default(false),
+  rowCount: integer().notNull(),
+}, t => [uniqueIndex("tax_batch_revision").on(t.state, t.contentHash)]);
+export const taxRate = pgTable("tax_rate", {
+  id: id(), batchId: uuid().notNull().references(() => taxRateBatch.id),
+  state: char({ length: 2 }).notNull(), code: text().notNull(), name: text().notNull(), county: text().notNull().default(""),
+  kind: text().notNull(), rate: numeric({ precision: 7, scale: 4, mode: "number" }).notNull(),
+  interstateRate: numeric({ precision: 7, scale: 4, mode: "number" }),
+  foodRate: numeric({ precision: 7, scale: 4, mode: "number" }),
+  foodInterstateRate: numeric({ precision: 7, scale: 4, mode: "number" }),
+  validFrom: date().notNull(), validThrough: date(), notes: text().notNull().default(""),
+}, t => [index("tax_rate_lookup").on(t.state, t.kind, t.name), index("tax_rate_batch_lookup").on(t.batchId),
+  uniqueIndex("tax_rate_revision").on(t.batchId, t.code, t.validFrom),
+  check("tax_rate_range", sql`${t.rate} >= 0 and ${t.rate} <= 100`),
+  check("tax_rate_dates", sql`${t.validThrough} is null or ${t.validThrough} >= ${t.validFrom}`),
+  check("tax_rate_kind", oneOf(t.kind, ["component", "combined"]))]);
+export const taxServiceRule = pgTable("tax_service_rule", {
+  id: id(), state: char({ length: 2 }).notNull().references(() => taxSource.state),
+  category: text().notNull(), delivery: text().notNull(), status: text().notNull().default("pending"),
+  treatment: text().notNull().default("unknown"), sourceUrl: text(), contentHash: text().notNull(),
+  conditions: jsonb().$type<string[]>().notNull(), validFrom: date(), validThrough: date(),
+  reviewedAt: timestamp({ withTimezone: true }),
+}, t => [index("tax_rule_lookup").on(t.state, t.category, t.delivery), uniqueIndex("tax_rule_revision").on(t.state, t.category, t.delivery, t.contentHash),
+  check("tax_rule_review", sql`${t.status} <> 'reviewed' or (${t.sourceUrl} is not null and ${t.validFrom} is not null and ${t.validThrough} is not null and ${t.reviewedAt} is not null)`)]);
+
+// Unreviewed public evidence is deliberately separate from calculation-ready rates.
+export const taxReferenceRelease = pgTable("tax_reference_release", {
+  id: id(), contentHash: text().notNull().unique(), parserVersion: text().notNull(),
+  manifestStorageKey: text().notNull(), importedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  active: boolean().notNull().default(false), rowCount: integer().notNull(),
+});
+export const taxReference = pgTable("tax_reference", {
+  id: id(), releaseId: uuid().notNull().references(() => taxReferenceRelease.id),
+  state: char({ length: 2 }).notNull().references(() => taxSource.state),
+  code: text().notNull(), name: text().notNull(), level: text().notNull(), scope: text().notNull(),
+  rate: numeric({ precision: 7, scale: 4, mode: "number" }),
+  sourceUrl: text().notNull(), sourceHash: text(), sourceStorageKey: text(),
+  checkedAt: timestamp({ withTimezone: true }).notNull(), sourceStatus: text().notNull(),
+  validFrom: date(), validThrough: date(), dateBasis: text().notNull(),
+  status: text().notNull().default("pending"), reasons: jsonb().$type<string[]>().notNull(), notes: text().notNull(),
+}, t => [index("tax_reference_lookup").on(t.releaseId, t.state, t.level, t.name),
+  uniqueIndex("tax_reference_revision").on(t.releaseId, t.state, t.code),
+  check("tax_reference_rate", sql`${t.rate} is null or (${t.rate} >= 0 and ${t.rate} <= 100)`),
+  check("tax_reference_dates", sql`${t.validFrom} is null or ${t.validThrough} is null or ${t.validThrough} >= ${t.validFrom}`),
+  check("tax_reference_pending", sql`${t.status} = 'pending'`),
+  check("tax_reference_evidence", sql`${t.sourceStatus} = 'pending' or (${t.sourceStatus} = 'retained' and ${t.sourceHash} is not null and ${t.sourceStorageKey} is not null)`),
+  check("tax_reference_level", oneOf(t.level, ["state", "local", "combined", "localSummary"])),
+  check("tax_reference_date_basis", oneOf(t.dateBasis, ["effective", "snapshot", "administrative", "unknown"]))]);

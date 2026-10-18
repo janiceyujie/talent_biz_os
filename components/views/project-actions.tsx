@@ -5,17 +5,22 @@ import { usePreviewAction } from "@/components/app/preview-action";
 import { Check, ChevronRight, Circle, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
+import { InfoHint } from "@/components/app/info-hint";
 import { useAppData } from "@/components/app/app-data";
 import { calendarRecord, projectRecord, toRecord, type Editor } from "@/components/app/record-editor";
 import { setTodoDone as setTodoDoneRemote } from "@/lib/actions/calendar";
 import { calendarPoints } from "@/lib/calendar/points";
 import { dateInZone } from "@/lib/domain/dates";
 import { isSigned } from "@/lib/domain/phases";
-import { projectSettlement } from "@/lib/domain/workflow";
+import { paymentRemaining, projectSettlement } from "@/lib/domain/workflow";
+import { useLabels } from "@/lib/i18n/labels";
 import { useMoney } from "@/lib/i18n/format";
 import type { Project, ProjectSummary } from "@/lib/types";
 import { useClosingChecks, type ClosingCheck } from "./project-workflow-panel";
 import { useDue } from "./use-due";
+import { ProjectSettledPayments } from "./project-settled-payments";
+import { activeReceipts } from "@/lib/domain/payment-receipts";
+import { ProjectOutstandingPayments } from "./project-outstanding-payments";
 
 type Notice = { message: string; action?: { label: string; onClick: () => void } };
 type Tab = "money" | "travel";
@@ -25,7 +30,7 @@ type Tab = "money" | "travel";
  * open to-dos (any can be ticked; the soonest is the next step), then, once
  * signed, what it still needs before it can close, each with the action that
  * fixes it. Checks aren't ticked: they're met when the data says so, and then
- * fold into "done". Folded, the header still names the next thing to do.
+ * fold into the satisfied closing checks. Folded, the header still names the next thing to do.
  */
 export function ProjectActions({
   project,
@@ -35,6 +40,7 @@ export function ProjectActions({
   notify,
   folded,
   onFold,
+  onReviewStage,
 }: {
   project: ProjectSummary;
   full: Project | null;
@@ -43,40 +49,59 @@ export function ProjectActions({
   notify: (n: Notice) => void;
   folded: boolean;
   onFold: (folded: boolean) => void;
+  onReviewStage: () => void;
 }) {
   const setTodoDone = usePreviewAction(setTodoDoneRemote);
   const data = useAppData();
   const t = useTranslations("projects.actions");
   const tProjects = useTranslations("projects");
   const due = useDue();
-  const [, startTransition] = useTransition();
+  const labels = useLabels();
+  const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  // Ticked here and not back from the server yet: shown ticked, then gone.
-  const [ticked, setTicked] = useState<Set<string>>(new Set());
+  // Keep the saving checkbox checked until refreshed data moves it to history.
+  const [completingId, setCompletingId] = useState<string | null>(null);
+  const [completedOpen, setCompletedOpen] = useState(false);
   const live = !project.archived;
   const signed = live && isSigned(project.stage);
-  const checks = useClosingChecks(signed ? full : null);
-  const open = checks.filter((c) => !c.met);
+  const checks = useClosingChecks(signed && project.stage !== "closed" ? full : null);
+  const outstanding = signed ? data.payments
+    .filter(p => p.projectId === project.id && !p.voided && paymentRemaining(p) > 0)
+    .sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999") || a.label.localeCompare(b.label) || a.id.localeCompare(b.id)) : [];
+  const settled = data.payments
+    .filter(p => p.projectId === project.id && !p.voided && p.status !== "cancelled" && paymentRemaining(p) === 0 && activeReceipts(p).length > 0)
+    .sort((a, b) => (b.settledDate ?? "").localeCompare(a.settledDate ?? "") || a.label.localeCompare(b.label) || a.id.localeCompare(b.id));
+  // Replace aggregate collection/cost blockers with actionable rows, without duplicating them.
+  const open = checks.filter(c => !c.met && !(c.key === "received" && outstanding.some(p => p.direction === "in")) && !(c.key === "costs" && outstanding.some(p => p.direction === "out")));
   const met = checks.filter((c) => c.met);
 
-  const todos = data.calendar
-    .filter((c) => c.projectId === project.id && c.source === "todo" && !c.archived && !c.done)
+  const projectTodos = data.calendar
+    .filter((c) => c.projectId === project.id && c.source === "todo" && !c.archived)
     .sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999") || a.title.localeCompare(b.title));
 
+  const todos = projectTodos.filter((c) => !c.done);
+  const completed = projectTodos.filter((c) => c.done);
+
+  const reopen = (id: string) => {
+    setCompletingId(null);
+    startTransition(async () => {
+      const failure = await setTodoDone(id, false);
+      setError(failure);
+    });
+  };
+
   const complete = (id: string, title: string) => {
-    setTicked((s) => new Set(s).add(id)); // outside the transition, so it shows now
+    setCompletingId(id);
     startTransition(async () => {
       const failure = await setTodoDone(id, true);
       setError(failure);
-      if (failure) return setTicked((s) => new Set([...s].filter((x) => x !== id)));
+      if (failure) return;
+      setCompletedOpen(true);
       notify({
-        message: tProjects("doneToast", { title }),
+        message: t("completedToast", { title }),
         action: {
           label: tProjects("undo"),
-          onClick: () => {
-            setTicked((s) => new Set([...s].filter((x) => x !== id)));
-            startTransition(async () => setError(await setTodoDone(id, false)));
-          },
+          onClick: () => reopen(id),
         },
       });
     });
@@ -98,8 +123,8 @@ export function ProjectActions({
       });
     else if (f.kind === "received" && f.paymentId) {
       const payment = data.payments.find((p) => p.id === f.paymentId);
-      // Recording money that came in starts at its status (expected → received).
-      if (payment) edit({ kind: "payment", item: toRecord(payment), focus: "status" });
+      // Go straight to the next receipt; preserve the original amount and receipt history.
+      if (payment) edit({ kind: "payment", item: { ...toRecord(payment), receiptEntry: true }, focus: "settledAmount" });
     } else if (f.kind === "schedule") showTab("travel");
     else showTab("money");
   };
@@ -108,9 +133,9 @@ export function ProjectActions({
     return { edit: t("fixEdit"), billing: t("fixBilling"), received: t("fixReceived"), schedule: t("fixSchedule"), money: t("fixMoney") }[c.fix.kind];
   };
 
-  const left = todos.filter((x) => !ticked.has(x.id));
-  const count = left.length + open.length;
-  const nextUp = left[0]?.title ?? open[0]?.open;
+  const left = todos.filter((x) => !pending || completingId !== x.id);
+  const count = left.length + open.length + outstanding.length;
+  const nextUp = left[0]?.title ?? outstanding[0]?.label ?? open[0]?.open;
 
   return (
     <section className={`actions-card ${folded ? "is-folded" : ""}`} aria-label={t("title")}>
@@ -119,23 +144,24 @@ export function ProjectActions({
           <button className="actions-toggle" aria-expanded={!folded} onClick={() => onFold(!folded)}>
             <ChevronRight className="actions-chevron" size={16} aria-hidden="true" />
             {t("title")}
-            {count > 0 && <span className="count-pill">{count}</span>}
+            {left.length > 0 && <span className="count-pill">{left.length}</span>}
             {folded && nextUp && <span className="actions-summary">{nextUp}</span>}
           </button>
         </h3>
+        <InfoHint notes={[t("completionHint")]} />
       </header>
 
       {!folded && todos.length > 0 && (
         <ul className="todo-list">
           {todos.map((x, i) => {
             const d = due(x.date || null);
-            const isTicked = ticked.has(x.id);
+            const isTicked = pending && completingId === x.id;
             return (
               <li key={x.id} className={isTicked ? "is-ticked" : ""}>
                 <input
                   type="checkbox"
                   checked={isTicked}
-                  disabled={!live || isTicked}
+                  disabled={!live || pending || isTicked}
                   aria-label={tProjects("markDone", { title: x.title })}
                   onChange={() => complete(x.id, x.title)}
                 />
@@ -158,6 +184,46 @@ export function ProjectActions({
           <Plus size={14} aria-hidden="true" />
           {t("addTodo")}
         </button>
+      )}
+
+      {!folded && completed.length > 0 && (
+        <details className="checks-done completed-todos" open={completedOpen} onToggle={(e) => setCompletedOpen(e.currentTarget.open)}>
+          <summary>
+            <ChevronRight className="completed-chevron" size={14} aria-hidden="true" />
+            {t("completedTodos", { count: completed.length })}
+          </summary>
+          <ul className="todo-list">
+            {completed.map((x) => (
+              <li key={x.id} className="is-ticked">
+                <input
+                  type="checkbox"
+                  checked
+                  disabled={!live || pending}
+                  aria-label={t("reopenTodo", { title: x.title })}
+                  onChange={() => reopen(x.id)}
+                />
+                <button className="todo-title" onClick={() => edit({ kind: "calendar", item: calendarRecord(x) })}>
+                  {x.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {!folded && live && completed.length > 0 && todos.length === 0 && !["closed", "declined", "cancelled"].includes(project.stage) && (
+        <div className="todo-handoff">
+          <span>{t("tasksFinished", { stage: labels.stage(project.stage) })}</span>
+          <button className="text-button" onClick={onReviewStage}>{t("reviewStage")}</button>
+        </div>
+      )}
+
+      {!folded && (outstanding.length > 0 || settled.length > 0) && (
+        <div className="project-payment-actions">
+          <ProjectOutstandingPayments payments={outstanding.filter(p => p.direction === "in")} direction="in" edit={edit} />
+          <ProjectOutstandingPayments payments={outstanding.filter(p => p.direction === "out")} direction="out" edit={edit} />
+          <ProjectSettledPayments payments={settled} edit={edit} />
+        </div>
       )}
 
       {!folded && signed && full && open.length > 0 && (
@@ -195,7 +261,7 @@ export function ProjectActions({
         </details>
       )}
 
-      {!folded && count === 0 && <p className="muted actions-empty">{signed && full && !open.length ? t("allClear") : t("nothing")}</p>}
+      {!folded && count === 0 && <p className="muted actions-empty">{project.stage === "closed" ? t("completed") : signed && full && !open.length ? t("allClear") : t("nothing")}</p>}
       {error && (
         <p className="notice error" role="alert">
           {error}
@@ -247,13 +313,15 @@ export function ProjectGlance({
           <strong>{tProjects("quoteNotSet")}</strong>
         ) : signed ? (
           <>
-            <strong>{tWorkflow("receivedOf", { received: money(settlement.received), quoted: money(settlement.quoted) })}</strong>
+            <strong>{settlement.withheld > 0
+              ? tWorkflow("receivedWithholding", { received: money(settlement.received, project.currency), withheld: money(settlement.withheld, project.currency) })
+              : tWorkflow("receivedOf", { received: money(settlement.received, project.currency), quoted: money(settlement.quoted, project.currency) })}</strong>
             <span className="meter" aria-hidden="true">
-              <span style={{ width: `${Math.min(100, settlement.quoted ? (settlement.received / settlement.quoted) * 100 : 0)}%` }} />
+              <span style={{ width: `${Math.min(100, settlement.quoted ? ((settlement.received + settlement.withheld) / settlement.quoted) * 100 : 0)}%` }} />
             </span>
           </>
         ) : (
-          <strong>{money(settlement.quoted)}</strong>
+          <strong>{money(settlement.quoted, project.currency)}</strong>
         )}
       </button>
       <button className="glance-card" onClick={() => showTab("travel")}>

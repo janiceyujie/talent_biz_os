@@ -5,7 +5,7 @@
 // src/components/planner/model.ts), on real data instead of a demo scenario.
 import { wallTimeToUtc } from "@/lib/domain/dates";
 import { isSigned } from "@/lib/domain/phases";
-import { paymentTotal } from "@/lib/domain/workflow";
+import { paymentRemaining } from "@/lib/domain/workflow";
 import type { AppData, CalendarKind } from "@/lib/types";
 
 export type PlanItem = {
@@ -218,7 +218,7 @@ export function planItems(data: Pick<AppData, "calendar" | "payments" | "project
   }
   // Money expected on a date, for signed work or no project: shown, edited in the ledger.
   for (const pay of data.payments) {
-    if (pay.voided || pay.status !== "expected" || !pay.dueDate) continue;
+    if (pay.voided || paymentRemaining(pay) <= 0 || !pay.dueDate) continue;
     const p = projectOf(pay.projectId);
     if (p && (p.archived || !isSigned(p.stage))) continue;
     items.push({
@@ -237,7 +237,7 @@ export function planItems(data: Pick<AppData, "calendar" | "payments" | "project
       client: p?.counterparty ?? "",
       done: false,
       note: "",
-      amount: paymentTotal(pay) * (pay.direction === "out" ? -1 : 1),
+      amount: paymentRemaining(pay) * (pay.direction === "out" ? -1 : 1),
       external: null,
     });
   }

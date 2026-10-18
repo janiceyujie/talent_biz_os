@@ -6,7 +6,7 @@ import { KeyConfigError, keyProvider, seal } from "@/lib/keys";
 import type { HistoryMode } from "./history";
 import { authorizationUrl, exchangeCode, idTokenClaims, newState, oauthClient, OAuthError, pkce, revokeToken } from "./oauth";
 import { openState, sealState, STATE_TTL_SECONDS } from "./oauth-state";
-import { grantsGmail } from "./scope";
+import { grantsGmail, grantsDrafts } from "./scope";
 import { toColumns, tokenAad } from "./token";
 
 // Connecting a mailbox (decision 0013, 0016), called by the thin routes in
@@ -19,6 +19,7 @@ const stateSecret = () => process.env.BETTER_AUTH_SECRET ?? "";
 
 /** What the settings row says after the round trip: a key under gmail.result. */
 export type ConnectResult =
+  | "draftNotGranted"
   | "connected"
   | "notConfigured"
   | "expired"
@@ -42,13 +43,13 @@ export function mailConfigured() {
 }
 
 /** Google's consent URL and the cookie that remembers this attempt. */
-export function startConnect(o: { personId: string; talentId: string; historyMode: HistoryMode }): { url: string; cookie: string } | { error: ConnectResult } {
+export function startConnect(o: { personId: string; talentId: string; historyMode: HistoryMode; drafts?: boolean }): { url: string; cookie: string } | { error: ConnectResult } {
   const client = oauthClient();
   if (!client || !mailConfigured()) return { error: "notConfigured" };
   const { verifier, challenge } = pkce();
   const state = newState();
   const cookie = sealState({ ...o, state, verifier, expiresAt: Date.now() + STATE_TTL_SECONDS * 1000 }, stateSecret());
-  return { url: authorizationUrl({ clientId: client.id, redirectUri: redirectUri(), state, challenge }), cookie };
+  return { url: authorizationUrl({ clientId: client.id, redirectUri: redirectUri(), state, challenge, drafts: o.drafts }), cookie };
 }
 
 /** Back from Google: check it's the same attempt and person, trade the code, store the encrypted refresh token. */
@@ -110,5 +111,5 @@ export async function finishConnect(o: {
       // A reconnect keeps the history choice and the sync cursor.
       set: { ...token, connectedBy: o.personId, accountEmail: account.email, scopes: tokens.scope ?? "", status: "connected", failure: null },
     });
-  return "connected";
+  return remembered.drafts && !grantsDrafts(tokens.scope) ? "draftNotGranted" : "connected";
 }

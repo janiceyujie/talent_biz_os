@@ -13,7 +13,9 @@ import { AssistantDock } from "./assistant-dock";
 import { WorkspaceSearch } from "./workspace-search";
 import { AccountMenu } from "./account-menu";
 import { Companion } from "./companion";
-import { NotificationList, ReminderToast, useNotifications } from "./notifications";
+import { NotificationList, useNotifications } from "./notifications";
+import { ReminderProvider } from "./reminder-feed";
+import "@/app/briefing.css";
 import { PreviewBanner, useAppData } from "./app-data";
 import { Modal } from "./modal";
 import { isActive, nav } from "./nav";
@@ -28,9 +30,9 @@ const rememberCollapsed = (collapsed: boolean) => {
   }
 };
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children }: { children: ReactNode; sessionKey: string }) {
   const data = useAppData();
-  return <AssistantProvider key={`${data.talent.id}:${data.person.email}:${Boolean(data.preview)}`}><ShellContent>{children}</ShellContent></AssistantProvider>;
+  return <AssistantProvider key={`${data.talent.id}:${data.person.email}:${Boolean(data.preview)}`}><ReminderProvider><ShellContent>{children}</ShellContent></ReminderProvider></AssistantProvider>;
 }
 
 function ShellContent({ children }: { children: ReactNode }) {
@@ -258,8 +260,7 @@ function ShellContent({ children }: { children: ReactNode }) {
           <NotificationList open={open} />
         </Modal>
       )}
-      <AssistantDock hidden={mobile || showNotifications} />
-      <ReminderToast onOpen={() => setShowNotifications(true)} suppress={portfolioActive || showNotifications || showSearch || companionOpen || pathname.startsWith("/grants") || pathname === "/manager" || pathname.startsWith("/manager/")} />
+      <AssistantDock hidden={mobile || showNotifications || showSearch} />
 
     </div>
   );

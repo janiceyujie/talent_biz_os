@@ -1,3 +1,4 @@
+import { grantsDrafts } from "@/lib/mail/scope";
 import "server-only";
 import {managerLocalEnabled} from "@/lib/manager/config";
 import {getManagerCapability} from "./manager-entitlement";
@@ -102,6 +103,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     .select({
       id: mailConnection.id,
       accountEmail: mailConnection.accountEmail,
+      scopes: mailConnection.scopes,
       status: mailConnection.status,
       failure: mailConnection.failure,
       historyMode: mailConnection.historyMode,
@@ -268,6 +270,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       freeTier: keepsData(modelFor("relevance").provider) && freeTierOk(),
       connection: mailbox
         ? {
+            draftGranted: grantsDrafts(mailbox.scopes),
             accountEmail: mailbox.accountEmail,
             status: mailbox.status,
             failure: mailbox.failure,
@@ -307,8 +310,9 @@ export const getAppData = cache(async (): Promise<AppData> => {
       notes: c.notes ?? "",
       archived: c.archivedAt !== null,
       organizationId: c.organizationId,
+      billingAddress: c.billingAddress ?? "",
     })),
-    organizations: organizationRows.map((o) => ({ id: o.id, name: o.name, notes: o.notes ?? "", archived: o.archivedAt !== null })),
+    organizations: organizationRows.map((o) => ({ id: o.id, name: o.name, notes: o.notes ?? "", archived: o.archivedAt !== null, billingAddress: o.billingAddress ?? "", billingEmail: o.billingEmail ?? "" })),
     distinctOrganizations: distinctRows.map((r) => pairKey(r.a, r.b)),
     projectPeople: projectPeopleRows,
     calendar,
@@ -326,9 +330,11 @@ export const getAppData = cache(async (): Promise<AppData> => {
       recordedDate: p.recordedOn,
       dueDate: p.dueOn,
       status: p.status,
+      receipts: p.receipts,
       settledAmount: p.settledAmount,
       settledDate: p.settledOn,
       invoiceRef: p.invoiceRef ?? "",
+      invoiceOn: p.invoiceOn,
       notes: p.notes ?? "",
       voided: p.voidedAt !== null,
     })),

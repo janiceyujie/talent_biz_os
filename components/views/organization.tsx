@@ -1,4 +1,5 @@
 "use client";
+import { paymentRemaining } from "@/lib/domain/workflow";
 
 import { usePreviewAction } from "@/components/app/preview-action";
 
@@ -46,7 +47,7 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
   const clientOf = new Set(projects.filter((p) => p.primary).map((p) => p.projectId));
   const payments = data.payments.filter((p) => p.projectId && clientOf.has(p.projectId) && p.direction === "in" && !p.voided && p.status !== "cancelled");
   const received = totalsByCurrency(payments, paymentCash);
-  const outstanding = totalsByCurrency(payments.filter((p) => p.status === "expected"), paymentTotal);
+  const outstanding = totalsByCurrency(payments.filter((p) => paymentRemaining(p) > 0), paymentRemaining);
   const titleOf = (projectId: string | null) => projects.find((p) => p.projectId === projectId)?.title ?? "";
 
   return (
@@ -197,7 +198,7 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
           <p>{t("removePersonBody")}</p>
         </ConfirmDialog>
       )}
-      {editing && <EditOrganization id={id} name={org.name} notes={org.notes} onDone={() => setEditing(false)} />}
+      {editing && <EditOrganization id={id} name={org.name} notes={org.notes} billingAddress={org.billingAddress} billingEmail={org.billingEmail} onDone={() => setEditing(false)} />}
       {adding && <AddPerson organizationId={id} taken={people.map((c) => c.id)} onDone={() => setAdding(false)} />}
     </div>
   );
@@ -208,19 +209,23 @@ export function EditOrganization({
   id = "",
   name = "",
   notes = "",
+  billingAddress = "",
+  billingEmail = "",
   onDone,
   onSaved,
 }: {
   id?: string;
   name?: string;
   notes?: string;
+  billingAddress?: string;
+  billingEmail?: string;
   onDone: () => void;
   onSaved?: (id: string) => void;
 }) {
   const t = useTranslations("organizations");
   const { preview } = useAppData();
   const tPreview = useTranslations("preview");
-  const [values, setValues] = useState({ name, notes });
+  const [values, setValues] = useState({ name, notes, billingAddress, billingEmail });
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   return (
@@ -242,6 +247,11 @@ export function EditOrganization({
           {t("name")} *
           <input autoFocus required maxLength={200} value={values.name} onChange={(e) => setValues({ ...values, name: e.target.value })} />
         </label>
+        <details open={!!(billingAddress || billingEmail)}>
+          <summary>{t("billingDetails")}</summary>
+          <label>{t("billingAddress")}<textarea rows={3} maxLength={600} value={values.billingAddress} onChange={(e) => setValues({ ...values, billingAddress: e.target.value })} /></label>
+          <label>{t("billingEmail")}<input type="email" maxLength={254} value={values.billingEmail} onChange={(e) => setValues({ ...values, billingEmail: e.target.value })} /></label>
+        </details>
         <label>
           {t("notes")}
           <textarea rows={3} maxLength={10000} value={values.notes} onChange={(e) => setValues({ ...values, notes: e.target.value })} />

@@ -93,3 +93,10 @@
 @media(max-width:600px){.grant-tasks li{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}.grant-tasks label{align-items:flex-start}.grant-task-date{max-width:none;justify-self:end;display:flex;align-items:center;gap:6px}.grant-tasks label span{overflow-wrap:anywhere}}
 
 .inbox-empty-layout{grid-template-columns:minmax(0,1fr)}
+
+/* Keep the detail dismissal available while reading a long opportunity. */
+.grant-detail-top { position:sticky; top:calc(var(--topbar) + 8px); z-index:2; background:var(--surface); padding-block:8px; margin-block:-8px; }
+.grant-detail-top .icon-button { flex-shrink:0; }
+
+/* Clip horizontal overflow without creating a non-scrolling sticky ancestor. */
+.page-content:has(.grants-workspace) { overflow:clip; }

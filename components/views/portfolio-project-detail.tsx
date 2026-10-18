@@ -1,4 +1,5 @@
 "use client";
+import { paymentRemaining } from "@/lib/domain/workflow";
 import {useEffect,useRef,useState} from "react";
 import {useFormatter,useTranslations} from "next-intl";
 import {ArrowLeft} from "lucide-react";
@@ -6,7 +7,7 @@ import type {ProjectSummary} from "@/lib/types";
 import type {ManagerProjectData} from "@/lib/manager/project-types";
 import {useLabels} from "@/lib/i18n/labels";
 import {useMoney} from "@/lib/i18n/format";
-import {projectQuoteTotal,paymentCash,paymentTotal} from "@/lib/domain/workflow";
+import {projectQuoteTotal,paymentCash} from "@/lib/domain/workflow";
 import {InfoHint} from "@/components/app/info-hint";
 type Tab="overview"|"calendar"|"money"|"contracts"|"timeline";
 export function PortfolioProjectDetail({project,onBack}:{project:ProjectSummary;onBack:()=>void}){
@@ -34,7 +35,7 @@ export function PortfolioProjectDetail({project,onBack}:{project:ProjectSummary;
       {data&&<>
         {tab==="overview"&&<div className="portfolio-detail"><dl>{fields.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>{!!full?.details.toConfirm?.length&&<section><h3>{t("confirm")}</h3><ul>{full.details.toConfirm.map((value,index)=><li key={index}>{value}</li>)}</ul></section>}{full?.notes&&<section><h3>{t("notes")}</h3><p className="portfolio-pre-wrap">{full.notes}</p></section>}{data.detail.offerText&&<details><summary>{t("offer")}</summary><p className="portfolio-pre-wrap">{data.detail.offerText}</p></details>}{!fields.length&&!full?.notes&&!data.detail.offerText&&!full?.details.toConfirm?.length&&<p className="empty">{t("empty")}</p>}</div>}
         {tab==="calendar"&&<div>{data.calendar.filter(row=>!row.archived).map(row=><div className="portfolio-schedule-row" key={`${row.source}:${row.id}`}><strong>{row.title}</strong><time>{row.date} {row.time}<small>{row.timeZone}</small></time><span>{row.done?t("done"):labels.calendarKind(row.kind)}</span></div>)}{full?.details.dates?.map((row,index)=><div className="portfolio-schedule-row" key={index}><strong>{row.what}</strong><time>{row.date} {row.time}<small>{row.timeZone}</small></time></div>)}{!data.calendar.some(row=>!row.archived)&&!full?.details.dates?.length&&<p className="empty">{t("empty")}</p>}</div>}
-        {tab==="money"&&<div>{data.payments.filter(row=>!row.voided).map(row=><div className="portfolio-schedule-row" key={row.id}><strong>{row.label}</strong><span>{labels.direction(row.direction)} · {labels.paymentStatus(row)}</span><span>{money(row.status==="settled"?paymentCash(row):paymentTotal(row),row.currency)}</span><time>{row.settledDate||row.dueDate||row.recordedDate}</time></div>)}{!data.payments.some(row=>!row.voided)&&<p className="empty">{t("empty")}</p>}</div>}
+        {tab==="money"&&<div>{data.payments.filter(row=>!row.voided).map(row=><div className="portfolio-schedule-row" key={row.id}><strong>{row.label}</strong><span>{labels.direction(row.direction)} · {labels.paymentStatus(row)}</span><span>{money(paymentRemaining(row)>0?paymentRemaining(row):paymentCash(row),row.currency)}</span><time>{row.settledDate||row.dueDate||row.recordedDate}</time></div>)}{!data.payments.some(row=>!row.voided)&&<p className="empty">{t("empty")}</p>}</div>}
         {tab==="contracts"&&<div>{data.contracts.map(row=><details className="portfolio-contract-version" key={row.id}><summary>{t("version",{version:row.version})} · {t(`contractStatus.${row.status}`)}</summary><dl>{row.terms.fee!==null&&<div><dt>{t("fee")}</dt><dd>{money(row.terms.fee,project.currency)}</dd></div>}{row.terms.paymentTerms&&<div><dt>{t("paymentTerms")}</dt><dd>{row.terms.paymentTerms}</dd></div>}{row.terms.keyTerms&&<div><dt>{t("keyTerms")}</dt><dd>{row.terms.keyTerms}</dd></div>}{Object.entries(row.terms.fields).map(([name,value])=><div key={name}><dt>{labels.detailField(project.type,name)}</dt><dd>{value}</dd></div>)}</dl></details>)}{!data.contracts.length&&<p className="empty">{t("empty")}</p>}</div>}
         {tab==="timeline"&&<div>{data.detail.timeline.map(row=><details className="portfolio-contract-version" key={row.messageId}><summary>{format.dateTime(new Date(row.receivedAt),{dateStyle:"medium"})} · {row.title}</summary>{row.summary&&<p>{row.summary}</p>}{row.stage&&<p>{labels.stage(row.stage.from)} → {labels.stage(row.stage.to)}</p>}</details>)}{!data.detail.timeline.length&&<p className="empty">{t("empty")}</p>}</div>}
       </>}

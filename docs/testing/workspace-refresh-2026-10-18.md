@@ -16,10 +16,18 @@ Keep Janice's canonical Gmail fetch and action-oriented message review. Retain o
 
 ## Migration boundary
 
-All migrations already on main, including `0029_gmail_messages.sql`, remain unchanged. Foundation additions are generated as `0030_workspace_foundation.sql`. Subsequent changes must follow it.
+All migrations already on main, including `0029_gmail_messages.sql`, remain unchanged. Foundation additions are generated as `0030_workspace_foundation.sql`. Invoice, tax-reference and receipt-ledger additions follow in `0031_invoice_settlement.sql`. The daily reminder branch adds no migration.
 
 A developer database that previously applied Timothy's old `0029_integrated_local_features.sql` has a different history. Do not blindly apply this chain to that database or edit the migration journal. Back up first, migrate a separate database, then copy and verify application data. The original local database is retained for rollback.
 
 ## Foundation validation
 
 Type check, lint, 257 unit tests, 2,414 translation keys, 74 registry labels, and webpack production build pass. The isolated build uses the repository CI placeholders. Synthetic Gmail regression checks cover concurrent import, retries, attachment notices, paginated details, and ownership or classification changes during fetch. Real Gmail and paid model calls are not used.
+
+## Invoice and settlement validation
+
+The branch passes lint, type checking, 313 unit tests, 2,942 translation keys and 74 registry labels. The two-step migration chain was applied to a separate local database; hashes and row counts match all original columns in all 46 application tables after data copy. Original data and the previous migration history remain backed up.
+
+Local HTTP acceptance on the integrated implementation covers 153 receipt checks (including withholding plus partial payments, correction/reversal, outstanding costs and re-closing), 125 invoice checks, 112 workspace/manager/grant checks, 40 inbox checks and 33 pagination checks. The fake Gmail suite passed 120 checks, created four synthetic drafts, and made zero send or overwrite calls. PDF attachment bytes match private storage. No customer email is sent. The standard Turbopack production build also passes with isolated dependencies. Test worktrees require their own dependency tree for the normal bundler: symlinked Next.js dependencies produced inconsistent request context during the isolated test run.
+
+The tax data importer and UI retain reference-only states as pending for invoice applicability. A reference row is not a reviewed service tax rule. See the tax setup documents for coverage limits and refresh work still required before production.

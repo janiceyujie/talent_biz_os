@@ -1,4 +1,4 @@
-import { paymentCash, paymentTotal } from "@/lib/domain/workflow";
+import { paymentCash, paymentTotal, paymentRemaining, paymentWithheld } from "@/lib/domain/workflow";
 import { minorUnitFactor, minorUnits } from "@/lib/domain/money";
 import type { AppData, ProjectDetail } from "@/lib/types";
 export const ASSISTANT_PROMPT_VERSION = "taloox-assistant-context-v3";
@@ -20,12 +20,12 @@ export function assistantContext(data: AssistantSource, projectId: string | unde
   const currency = selected?.currency ?? "TWD";
   const payments = data.payments.filter(p => !p.voided && p.status !== "cancelled" && p.currency === currency && (!projectId || p.projectId === projectId));
   const sum = (direction: "in" | "out", status: "expected" | "settled") => payments
-    .filter(p => p.direction === direction && p.status === status)
-    .reduce((n, p) => n + minorUnits(p.status === "settled" ? paymentCash(p) : paymentTotal(p), currency), 0) / minorUnitFactor(currency);
+    .filter(p => p.direction === direction)
+    .reduce((n, p) => n + minorUnits(status === "settled" ? paymentCash(p) : paymentRemaining(p), currency), 0) / minorUnitFactor(currency);
   const calendar = data.calendar.filter(c => !c.archived && !c.done && (!projectId || c.projectId === projectId));
   return { sample, today, timeZone: data.talent.timeZone, scope: selected ? "selected project" : "workspace aggregates only", currency, totalsScope: "all recorded dates, not a monthly summary", moneyBasis: "tax-inclusive cash; pending is not received revenue", money: { received: sum("in", "settled"), receivable: sum("in", "expected"), paid: sum("out", "settled"), payable: sum("out", "expected") },
     project: selected ? { title: selected.title, counterparty: selected.counterparty, stage: selected.stage, quotedAmount: selected.quotedAmount, taxRate: selected.taxRate, taxIncluded: selected.taxIncluded, details: detail?.details ?? selected.details, notes: (detail?.notes ?? "").slice(0,1500), offerText: (detail?.offerText ?? "").slice(0,3000) } : null,
-    payments: selected ? payments.slice(0,12).map(p=>({label:p.label,direction:p.direction,status:p.status,dueDate:p.dueDate,settledDate:p.settledDate,taxInclusiveAmount:paymentTotal(p),actualCash:paymentCash(p)})) : [], paymentsOmitted: selected ? Math.max(0,payments.length-12) : payments.length,
+    payments: selected ? payments.slice(0,12).map(p=>({label:p.label,direction:p.direction,status:p.status,dueDate:p.dueDate,settledDate:p.settledDate,taxInclusiveAmount:paymentTotal(p),actualCash:paymentCash(p),withheld:paymentWithheld(p),remaining:paymentRemaining(p)})) : [], paymentsOmitted: selected ? Math.max(0,payments.length-12) : payments.length,
     projectCount: data.projects.filter(p => !p.archived).length,
     calendar: selected ? calendar.slice(0,12).map(c => ({ title:c.title, date:c.date, time:c.time, timeZone:c.timeZone })) : [], calendarOmitted: selected ? Math.max(0,calendar.length-12) : calendar.length,
   };

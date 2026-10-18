@@ -1,3 +1,4 @@
+import "@/app/invoices.css";
 import "@/app/portfolio.css";
 import {PortfolioProvider} from "@/components/app/portfolio-provider";
 import {getManagerCapability} from "@/lib/data/manager-entitlement";
@@ -18,7 +19,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   if (process.env.LOCAL_TRIAL_WORKSPACE_ID === data.talent.id) previewAvailable = false;
   return (
     <AppDataProvider key={`${data.talent.id}:${data.person.email}`} data={data} previewAvailable={previewAvailable}>
-      <PortfolioProvider artists={artists} capability={capability}><AppShell>{children}</AppShell></PortfolioProvider>
+      <PortfolioProvider artists={artists} capability={capability}><AppShell sessionKey={session?.sessionId ?? ""}>{children}</AppShell></PortfolioProvider>
     </AppDataProvider>
   );
 }

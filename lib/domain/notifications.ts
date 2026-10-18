@@ -1,11 +1,12 @@
 // In-app notifications: computed on read from calendar items and payments,
 // never stored. Ids are stable so per-person read/snooze state
 // (notification_state) can refer to them. Pure functions; run anywhere.
+import type { InvoiceStatus } from "@/lib/invoices/types";
 import { calendarPoints, pointKind } from "@/lib/calendar/points";
 import type { AppData, CalendarKind, NotificationState } from "@/lib/types";
 import { dateInZone, exactInstant } from "./dates";
 import { isSigned } from "./phases";
-import { paymentTotal } from "./workflow";
+import { paymentRemaining } from "./workflow";
 
 /** Most urgent first: timed and within two hours, then overdue, then today, then the rest. */
 export const urgencies = ["soon", "overdue", "today", "upcoming"] as const;
@@ -27,7 +28,8 @@ type Base = {
 export type Notification = Base &
   (
     | { kind: "calendar"; source: "event" | "todo"; calendarKind: CalendarKind; marker: ReturnType<typeof pointKind>; location: string }
-    | { kind: "receivable" | "payable"; amount: number }
+    | { kind: "receivable" | "payable"; amount: number; currency?: string }
+    | { kind: "invoice"; number: string; status: InvoiceStatus | "unprepared" }
   );
 
 /**
@@ -64,7 +66,7 @@ export function compareNotifications(a: Notification, b: Notification) {
  * week or overdue. Items linked to an archived or unsigned project are left
  * out: execution work belongs to signed projects.
  */
-export function notifications(data: AppData, now = new Date()): Notification[] {
+export function notifications(data: AppData, now = new Date(), includeTodayHistory = false): Notification[] {
   const talentZone = data.talent.timeZone;
   const liveSigned = new Set(data.projects.filter((p) => !p.archived && isSigned(p.stage)).map((p) => p.id));
   const calendar = calendarPoints(data.calendar)
@@ -73,7 +75,7 @@ export function notifications(data: AppData, now = new Date()): Notification[] {
     .flatMap((p): Notification[] => {
       const { urgency, dueAt } = timing(p.date, p.time, p.timeZone, now);
       // A to-do past its time is overdue; an event that already happened isn't.
-      if (urgency === "overdue" && p.item.source === "event") return [];
+      if (urgency === "overdue" && p.item.source === "event" && !(includeTodayHistory && ((p.time && dueAt !== null ? dateInZone(talentZone, 0, new Date(dueAt)) : p.date) === dateInZone(talentZone, 0, now) || data.notificationState[`calendar:${p.item.id}:${p.end ? "end:" : ""}${p.date}:${p.time}`]?.snoozedUntil))) return [];
       return [{
         id: `calendar:${p.item.id}:${p.end ? "end:" : ""}${p.date}:${p.time}`,
         kind: "calendar",
@@ -92,12 +94,13 @@ export function notifications(data: AppData, now = new Date()): Notification[] {
     });
   const soon = dateInZone(talentZone, WINDOW_DAYS, now);
   const payments = data.payments
-    .filter((p) => !p.voided && p.status === "expected" && p.dueDate && p.dueDate <= soon)
+    .filter((p) => !p.voided && paymentRemaining(p) > 0 && p.dueDate && p.dueDate <= soon)
     .map((p): Notification => ({
       id: `payment:${p.id}:${p.dueDate}`,
       kind: p.direction === "in" ? "receivable" : "payable",
       title: p.label,
-      amount: paymentTotal(p),
+      amount: paymentRemaining(p),
+      currency: p.currency,
       date: p.dueDate!,
       time: "",
       timeZone: talentZone,
@@ -108,7 +111,7 @@ export function notifications(data: AppData, now = new Date()): Notification[] {
 }
 
 /** A notification id as the server accepts it: what notifications() produces. */
-export const notificationIdPattern = /^(calendar:[0-9a-f-]{36}:(end:)?\d{4}-\d{2}-\d{2}:(\d{2}:\d{2})?|payment:[0-9a-f-]{36}:\d{4}-\d{2}-\d{2})$/;
+export const notificationIdPattern = /^(calendar:[0-9a-f-]{36}:(end:)?\d{4}-\d{2}-\d{2}:(\d{2}:\d{2})?|payment:[0-9a-f-]{36}:\d{4}-\d{2}-\d{2}|billing:[0-9a-f-]{36}:\d{4}-\d{2}-\d{2}|invoice:[0-9a-f-]{36}:[1-9]\d{0,8}:\d{4}-\d{2}-\d{2})$/;
 
 /**
  * Notifications with this person's read and snooze state. A snooze that has

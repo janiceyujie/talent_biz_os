@@ -8,13 +8,19 @@ import { useLabels } from "@/lib/i18n/labels";
 import { defaultProjectType, projectTypes } from "@/lib/project-types";
 import { saveContact } from "@/lib/actions/contacts";
 import { saveCalendarItem } from "@/lib/actions/calendar";
-import { savePayment } from "@/lib/actions/payments";
+import { savePayment, savePaymentWithId } from "@/lib/actions/payments";
 import { saveProject } from "@/lib/actions/projects";
 import { saveTemplate } from "@/lib/actions/templates";
 import { localeNames, locales, toLocale } from "@/lib/i18n/config";
 import { placeholderKeys, placeholderName, toDisplay, toStored } from "@/lib/templates/placeholders";
 import { isSigned } from "@/lib/domain/phases";
+import { paymentBalance, receiptHistory, type PaymentReceipt } from "@/lib/domain/payment-receipts";
+import { money } from "@/lib/domain/money";
 import { supportedCurrencies } from "@/lib/domain/money";
+import { moneyPreview } from "@/lib/domain/money-preview";
+import { PaymentReceiptHistory } from "./payment-receipt-history";
+import { ReceiptCorrection } from "./receipt-correction";
+import { MoneyBreakdown, SettlementAmount } from "./money-preview";
 import { placeSuggestions } from "@/lib/calendar/places";
 import {
   calendarKinds,
@@ -84,16 +90,19 @@ export function RecordEditor({
   editor,
   onClose,
   onSaved,
+  onPrepareInvoice,
 }: {
   editor: Editor;
   onClose: () => void;
   onSaved?: (data: RecordData) => void;
+  onPrepareInvoice?: (data: RecordData) => void;
 }) {
   const data$ = useAppData();
   const localTemplates = usePreviewTemplates();
   const tPreview = useTranslations("preview");
   const t = useTranslations("editor");
   const tFinance = useTranslations("finance");
+  const tInvoice = useTranslations("invoices");
   const tProjects = useTranslations("projects");
   const tTone = useTranslations("tone");
   const labels = useLabels();
@@ -120,7 +129,7 @@ export function RecordEditor({
       travel: "",
       notes: "",
     },
-    contact: { name: "", role: "counterparty", organizationId: "", organizationName: "", email: "", phone: "", notes: "" },
+    contact: { name: "", role: "counterparty", organizationId: "", organizationName: "", email: "", phone: "", billingAddress: "", notes: "" },
     calendar: {
       title: "",
       date: today,
@@ -152,6 +161,7 @@ export function RecordEditor({
       settledDate: "",
       settledAmount: "",
       invoiceRef: "",
+      invoiceOn: "",
       amount: 0,
       currency: "TWD",
       taxRate: 5,
@@ -170,8 +180,25 @@ export function RecordEditor({
   useEffect(() => {
     if (editor.focus) form.current?.querySelector<HTMLElement>(`[data-field="${editor.focus}"]`)?.focus();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on opening
+  const originalPayment = kind === "payment" ? data$.payments.find(p => p.id === editor.item?.id) : undefined;
+  const [correction, setCorrection] = useState<{receipt: PaymentReceipt; operation: "correct" | "withdraw"} | null>(null);
+  const history = originalPayment ? receiptHistory(originalPayment) : [];
+  const balance = originalPayment ? paymentBalance(originalPayment) : null;
   const [data, setData] = useState<RecordData>(() => {
     const initial = { ...defaults[kind], ...editor.item };
+    if (kind === "payment") {
+      initial.receiptId = crypto.randomUUID();
+      initial.receiptRevision = history.length;
+      initial.shortfallReason = "";
+      initial.withheldAmount = "";
+      initial.settledAmount = "";
+      // Editing metadata must not silently record a second cash movement.
+      if (originalPayment) initial.status = editor.item?.receiptEntry || (!history.length && editor.item?.status === "settled") ? "settled" : "expected";
+      if (initial.status === "settled") initial.settledDate = today;
+    }
+    if (kind === "payment" && !initial.id && !editor.item?.currency && initial.projectId) {
+      initial.currency = data$.projects.find((p) => p.id === initial.projectId)?.currency ?? initial.currency;
+    }
     // Templates are stored with neutral placeholders; edit them in the reader's language.
     if (kind === "template") initial.body = toDisplay(String(initial.body), uiLocale);
     // A contact's organisation, as the picker shows it; a company typed before organisations existed becomes one on save.
@@ -192,9 +219,17 @@ export function RecordEditor({
   const [initialData] = useState(data);
   const dirty = JSON.stringify(data) !== JSON.stringify(initialData);
   const [confirming, setConfirming] = useState(false);
+  const keepEditing = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    // React can reuse the cancel button, so autofocus does not run on this transition.
+    if (confirming) keepEditing.current?.focus();
+  }, [confirming]);
   const requestClose = () => {
     if (pending) return; // a save in flight decides the outcome
-    if (dirty) setConfirming(true);
+    if (dirty) {
+      setConfirming(true);
+      if (confirming) keepEditing.current?.focus();
+    }
     else onClose();
   };
   useEffect(() => {
@@ -211,6 +246,8 @@ export function RecordEditor({
     setData((d) => ({
       ...d,
       [key]: value,
+      ...(key === "shortfallReason" && value !== "withholding" ? { withheldAmount: "" } : {}),
+      ...(key === "direction" ? { shortfallReason: "", withheldAmount: "" } : {}),
       ...(key === "status" ? { settledDate: value === "settled" ? d.settledDate || today : "" } : {}),
       ...(key === "projectId" && value ? { currency: data$.projects.find((p) => p.id === String(value))?.currency ?? d.currency } : {}),
       // An arrival or check-out usually happens in the same zone; start from it.
@@ -241,21 +278,23 @@ export function RecordEditor({
           <textarea
             aria-label={label}
             data-field={key}
+            disabled={disabled}
             rows={4}
             required={required}
-            maxLength={10000}
+            maxLength={key === "billingAddress" ? 600 : 10000}
             value={String(data[key] ?? "")}
             onChange={(e) => change(key, e.target.value)}
           />
         ) : type === "checkbox" ? (
-          <input aria-label={label} type="checkbox" checked={!!data[key]} onChange={(e) => change(key, e.target.checked)} />
+          <input aria-label={label} type="checkbox" disabled={disabled} checked={!!data[key]} onChange={(e) => change(key, e.target.checked)} />
         ) : (
           <input
             aria-label={label}
             data-field={key}
+            disabled={disabled}
             type={type}
             required={required}
-            step={type === "number" ? (key === "amount" || key === "quotedAmount" || key === "settledAmount") && data.currency === "JPY" ? "1" : "0.01" : undefined}
+            step={type === "number" ? key === "taxRate" ? "0.0001" : (key === "amount" || key === "quotedAmount" || key === "settledAmount") && data.currency === "JPY" ? "1" : "0.01" : undefined}
             min={type === "number" ? 0 : undefined}
             max={key === "taxRate" ? 100 : undefined}
             maxLength={200}
@@ -291,16 +330,22 @@ export function RecordEditor({
     <fieldset className="form-section">
       <legend>{legend}</legend>
       <div className="form-grid">
-        {field(amountKey, amountLabel, "number", amountRequired)}
-        {field("currency", t("field.currency"), "text", true, currencyOptions, undefined, amountKey === "quotedAmount" && projectCurrencyLocked)}
-        {field("taxRate", t("field.taxRate"), "number", true)}
-        {field("taxIncluded", t("field.taxIncluded"), "checkbox")}
+        {field(amountKey, amountLabel, "number", amountRequired, undefined, undefined, kind === "payment" && history.length > 0)}
+        {field("currency", t("field.currency"), "text", true, currencyOptions, undefined, (amountKey === "quotedAmount" && projectCurrencyLocked) || (kind === "payment" && history.length > 0))}
+        {field("taxRate", t("field.taxRate"), "number", true, undefined, undefined, kind === "payment" && history.length > 0)}
+        {field("taxIncluded", t("field.taxIncluded"), "checkbox", false, undefined, undefined, kind === "payment" && history.length > 0)}
       </div>
+      <MoneyBreakdown totals={moneyPreview(data[amountKey], data.taxRate, !!data.taxIncluded, String(data.currency))} currency={String(data.currency)} />
       {amountKey === "quotedAmount" && projectCurrencyLocked && <small className="muted">{t("projectCurrencyLocked")}</small>}
     </fieldset>
   );
   // Income is collected, a cost is paid: the payment form's words follow the direction.
   const out = data.direction === "out";
+
+  const canPrepareInvoice = !!onPrepareInvoice && kind === "payment" && !data.id && !!data.projectId &&
+    data.direction === "in" && data.status === "expected" && data.currency === "USD" && Number(data.amount) > 0 && !data.invoiceRef;
+
+  if (correction && originalPayment) return <ReceiptCorrection payment={originalPayment} receipt={correction.receipt} operation={correction.operation} today={today} onCancel={() => setCorrection(null)} onDone={onClose}/>;
 
   return (
     <Modal title={t(editor.item?.id ? "titleEdit" : "titleNew", { kind })} onClose={requestClose}>
@@ -320,14 +365,23 @@ export function RecordEditor({
           setPending(true);
           // A typed main contact who isn't a contact yet is added as one, with any details given.
           const typedContact = kind === "project" && !data.counterpartyId && String(data.contactName ?? "").trim();
-          const failure = await onSave(
-            typedContact ? { ...data, newContact: { email: "", phone: "", ...newContact, name: typedContact } } : data,
-          );
-          setPending(false);
-          if (failure) setError(failure);
-          else {
-            onSaved?.(data);
-            onClose();
+          const prepareInvoice = (e.nativeEvent as SubmitEvent).submitter instanceof HTMLButtonElement &&
+            ((e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement).value === "invoice";
+          const input = typedContact ? { ...data, newContact: { email: "", phone: "", ...newContact, name: typedContact } } : data;
+          try {
+            const result = kind === "payment" ? await savePaymentWithId(input) : await onSave(input);
+            const failure = typeof result === "string" ? result : result && "error" in result ? result.error : null;
+            if (failure) setError(failure);
+            else {
+              const saved = result && typeof result === "object" && "id" in result ? { ...data, id: result.id } : data;
+              onSaved?.(saved);
+              onClose();
+              if (prepareInvoice) onPrepareInvoice?.(saved);
+            }
+          } catch {
+            setError(tInvoice("error"));
+          } finally {
+            setPending(false);
           }
         }}
       >
@@ -398,6 +452,7 @@ export function RecordEditor({
                 {field("email", t("field.email"), "email")}
                 {field("phone", t("field.phone"), "tel")}
               </div>
+              {field("billingAddress", t("field.billingAddress"), "textarea")}
               {field("notes", t("field.notes"), "textarea")}
             </>
           )}
@@ -494,26 +549,37 @@ export function RecordEditor({
               {/* What it is and which way it goes, then how much, then when it moves. */}
               {field("label", t("field.label"), "text", true)}
               {projectLink()}
-              {field("direction", t("field.direction"), "text", true, options(["in", "out"] as const, labels.direction))}
+              {field("direction", t("field.direction"), "text", true, options(["in", "out"] as const, labels.direction), undefined, history.length > 0)}
               {pricing("amount")}
               <fieldset className="form-section">
                 <legend>{t(out ? "section.paying" : "section.collecting")}</legend>
                 <div className="form-grid">
                   {field(
                     "status",
-                    t(out ? "field.statusOut" : "field.statusIn"),
+                    t("settlement.entry"),
                     "text",
                     true,
-                    options(["expected", "settled"] as const, (status) => labels.paymentStatus({ status, direction: out ? "out" : "in" })),
+                    [["expected", t("settlement.noEntry")], ...(!balance || balance.remaining > 0 ? [["settled", t(out ? "settlement.recordPaid" : "settlement.recordReceived")] as Option] : [])],
                   )}
                   {field("installment", t("field.installment"), "text", true, options(["regular", "deposit", "balance"] as const, labels.installment))}
                   {data.status === "settled" && field("settledDate", t(out ? "field.settledDateOut" : "field.settledDateIn"), "date", true)}
-                  {data.status === "settled" && field("settledAmount", t("field.settledAmount"), "number")}
+                  {data.status === "settled" && <SettlementAmount totals={history.length && balance ? {net: balance.remaining, tax: 0, total: balance.remaining} : moneyPreview(data.amount, data.taxRate, !!data.taxIncluded, String(data.currency))} currency={String(data.currency)} out={out} value={String(data.settledAmount ?? "")} onChange={value => change("settledAmount", value)} reason={String(data.shortfallReason ?? "")} onReasonChange={value => change("shortfallReason", value)} withheldValue={String(data.withheldAmount ?? "")} onWithheldChange={value => change("withheldAmount", value)} />}
                   {field("dueDate", t(out ? "field.dueDateOut" : "field.dueDateIn"), "date")}
                   {field("recordedDate", t("field.recordedDate"), "date", true)}
                 </div>
                 <p className="muted">{t(out ? "paymentHelpOut" : "paymentHelpIn")}</p>
               </fieldset>
+              {history.length > 0 && balance && <details className="form-details" open>
+                <summary data-field="receiptHistory">{t("settlement.history")}</summary>
+                <dl className="editor-money-summary">
+                  <div><dt>{t(out ? "settlement.actualPaid" : "settlement.actualReceived")}</dt><dd>{money(balance.cash, uiLocale, String(data.currency))}</dd></div>
+                  <div><dt>{t("settlement.withheld")}</dt><dd>{money(balance.withheld, uiLocale, String(data.currency))}</dd></div>
+                  <div className="is-total"><dt>{t("settlement.remaining")}</dt><dd>{money(balance.remaining, uiLocale, String(data.currency))}</dd></div>
+                </dl>
+                {originalPayment && <PaymentReceiptHistory key={originalPayment.id} payment={originalPayment} timeZone={data$.talent.timeZone} preview={!!data$.preview} disabled={dirty || !!data$.preview || !!originalPayment.voided} onAmend={(receipt, operation) => setCorrection({receipt,operation})} />}
+                {dirty && <p className="muted">{t("receiptCorrection.saveFirst")}</p>}
+              </details>}
+              {!out && data.currency === "USD" && field("invoiceOn", t("field.invoiceOn"), "date")}
               <details className="form-details">
                 <summary>{t("section.other")}</summary>
                 {field("invoiceRef", t("field.invoiceRef"))}
@@ -569,7 +635,7 @@ export function RecordEditor({
         {confirming ? (
           <footer className="modal-actions" role="alertdialog" aria-label={t("unsaved")}>
             <p className="muted">{t("unsaved")}</p>
-            <button type="button" className="secondary" autoFocus onClick={() => setConfirming(false)}>
+            <button type="button" className="secondary" ref={keepEditing} onClick={() => setConfirming(false)}>
               {t("keepEditing")}
             </button>
             <button type="button" className="primary" onClick={onClose}>
@@ -581,9 +647,14 @@ export function RecordEditor({
             <button type="button" className="secondary" disabled={pending} onClick={requestClose}>
               {t("cancel")}
             </button>
-            <button disabled={!onSave || pending || (!!data$.preview && kind !== "template")} type="submit" className="primary">
+            <button disabled={!onSave || pending || (!!data$.preview && kind !== "template")} type="submit" className={canPrepareInvoice ? "secondary" : "primary"}>
               {pending ? t("saving") : t("save")}
             </button>
+            {canPrepareInvoice && (
+              <button disabled={pending || !!data$.preview} type="submit" name="next" value="invoice" className="primary">
+                {tInvoice("saveAndPrepare")}
+              </button>
+            )}
           </footer>
         )}
       </form>

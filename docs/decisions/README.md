@@ -38,3 +38,5 @@ When a choice is easy to get wrong later, was argued over, or trades something a
 | [0014](0014-hosting-and-job-queue.md) | Singapore on Supabase and Render, with Graphile Worker as the job queue | Accepted |
 | [0015](0015-production-model-providers.md) | OpenAI and Anthropic in production, one primary and one backup | Accepted |
 | [0016](0016-mailbox-tokens-and-key-management.md) | Mailbox tokens: envelope encryption with Cloud KMS | Accepted |
+
+| [0024](0024-gmail-invoice-drafts.md) | Optional Gmail invoice drafts; owners send in Gmail | Accepted locally; pilot pending |

@@ -20,11 +20,14 @@ async function main() {
   const { startHttp } = await import("./http");
   const { freeTierOk } = await import("@/lib/ai/model");
   freeTierOk(); // throws when AI_FREE_TIER_OK=1 in production: refuse to start
+  const {prepareInvoices}=await import("@/lib/invoices/service");
+  await prepareInvoices();
   const runner = await run({
     connectionString: process.env.DATABASE_URL,
     concurrency: Number(process.env.WORKER_CONCURRENCY || 4),
     taskList,
     parsedCronItems: parseCronItems([
+      {task:"invoice.prepare",match:"*/5 * * * *",options:{maxAttempts:3}},
       ...(grantsLocalEnabled()&&process.env.GRANTS_SYNC_ENABLED==="1"?[{task:"grants.refresh",match:"0 */6 * * *",options:{maxAttempts:3}}]:[]),
     ]),
   });

@@ -31,10 +31,10 @@ export function totalsByCurrency<T extends { currency: Currency }>(rows: T[], am
 export function quote(amount: number, rate: number, included: boolean, currency = "TWD") {
   const scale = minorUnitFactor(currency);
   const units = minorUnits(amount, currency);
-  // Rates are converted to integer basis points before multiplying to avoid
-  // binary float rounding at half-unit tax boundaries.
-  const basis = BigInt(Math.round(rate * 100));
-  const base = BigInt(10000);
+  // Preserve four decimal places in percentage rates (for example 8.875%).
+  // Integer arithmetic avoids binary float rounding at half-cent boundaries.
+  const basis = BigInt(Math.round(rate * 10000));
+  const base = BigInt(1000000);
   const round = (n: bigint, d: bigint) => Number((n * BigInt(2) + d) / (d * BigInt(2)));
   const net = included ? round(BigInt(units) * base, base + basis) : units;
   const total = included ? units : units + round(BigInt(units) * basis, base);

@@ -14,7 +14,7 @@ import { disconnectGmail, removeSenderRule } from "@/lib/actions/mail";
 import type { HistoryMode } from "@/lib/mail/history";
 import { SettingsRow } from "./settings-row";
 
-const results = ["connected", "notConfigured", "expired", "cancelled", "notGranted", "noOffline", "otherAccount", "disconnecting", "googleError"] as const;
+const results = ["draftNotGranted", "connected", "notConfigured", "expired", "cancelled", "notGranted", "noOffline", "otherAccount", "disconnecting", "googleError"] as const;
 type Result = (typeof results)[number];
 const POLL_MS = 3000; // while disconnecting, look again this often until the row is gone
 const SLOW_MS = 60_000; // a disconnect normally takes seconds; past this, say so
@@ -205,6 +205,7 @@ function ConnectDialog({ reconnect, defaultMode, onClose }: { reconnect: boolean
   const { gmail } = useAppData();
   const t = useTranslations("gmail");
   const [mode, setMode] = useState<HistoryMode>(defaultMode);
+  const [drafts, setDrafts] = useState(gmail.connection?.draftGranted ?? false);
   const options: { value: HistoryMode; label: string; hint: string; recommended?: boolean }[] = [
     { value: "30_days", label: t("history30"), hint: t("history30Hint"), recommended: true },
     { value: "new_only", label: t("historyNew"), hint: t("historyNewHint") },
@@ -229,12 +230,14 @@ function ConnectDialog({ reconnect, defaultMode, onClose }: { reconnect: boolean
         </fieldset>
       )}
       {gmail.freeTier && <p className="notice gmail-free-tier">{t("freeTierNotice")}</p>}
+      <label className="invoice-check"><input type="checkbox" checked={drafts} onChange={e=>setDrafts(e.target.checked)} />{t("draftAccess")}</label>
+      {drafts && <p className="notice">{t("draftDisclosure")}</p>}
       <p className="gmail-account-note">{t("accountNote")}</p>
       <footer className="modal-actions">
         <button className="secondary" onClick={onClose}>
           {t("cancel")}
         </button>
-        <a className="primary" href={`/api/mail/connect?history=${mode}`}>
+        <a className="primary" href={`/api/mail/connect?history=${mode}${drafts ? "&drafts=1" : ""}`}>
           {t("continue")}
         </a>
       </footer>

@@ -40,3 +40,7 @@
 
 .finance-toolbar > .date-time-field { flex:0 1 172px; }
 @media(max-width:600px) { .finance-toolbar > .date-time-field { flex:1 1 140px; } }
+
+/* The picker may scroll on short screens; its close control stays visible. */
+.date-time-popover header { position:sticky; top:-12px; z-index:1; background:var(--surface); box-shadow:0 -12px 0 var(--surface); }
+.date-time-popover { overscroll-behavior:contain; }

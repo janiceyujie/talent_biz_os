@@ -2849,7 +2849,7 @@ summary:focus-visible {
 /* The phases, each over its two stages (three equal columns over six equal steps). */
 .stepper-phases {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
   margin-bottom: 8px;
   color: var(--muted);
   font-size: 12px;
@@ -5203,7 +5203,7 @@ a.deal-record:hover {
 @media (max-width: 600px) { .cost-metrics { grid-template-columns: 1fr; gap: 16px; } .cost-analysis .page-title { flex-wrap: wrap; } }
 
 /* Navigation stays available throughout an optional role change. */
-.role-change-header { display: flex; gap: 12px; }
+.role-change-header { display: flex; gap: 12px; position: sticky; top: 0; z-index: 5; background: var(--paper); padding-block: 12px; margin-block: -12px; }
 .role-close { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; color: var(--ink); background: var(--surface); }
 .role-brand-home { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 44px; color: inherit; text-decoration: none; border-radius: 10px; }
 .role-change-header .language-switch { margin-left: auto; }
@@ -5270,7 +5270,7 @@ a.deal-record:hover {
 .assistant-launcher { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 12px 16px; border: 1px solid var(--accent); border-radius: 999px; color: var(--surface); background: var(--accent); box-shadow: 0 4px 16px #203f3520; font: inherit; cursor: pointer; }
 .assistant-launcher-pending { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .assistant-dock-panel { width: min(440px, calc(100vw - 32px)); max-height: min(720px, calc(100dvh - 112px)); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 12px 40px #203f3526; overflow: hidden; }
-.assistant-dock-heading { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.assistant-dock-heading { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .assistant-dock-heading h2 { margin: 0; font-size: var(--text-body); }
 .assistant-dock-heading > div { display: flex; gap: 4px; }
 .assistant-dock-action { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: 8px; color: var(--ink); background: transparent; cursor: pointer; }
@@ -5478,6 +5478,7 @@ html:has(dialog[open]) .assistant-dock { visibility: hidden; }
   .finance-summary > .metric-card:first-child { border-start-start-radius: 15px; border-start-end-radius: 15px; border-end-start-radius: 0; }
 }
 
+
 /* Inbox focus mode: queue and reader own their scrolling, never the whole document. */
 .inbox-workspace .inbox-focus-layout {
   grid-template-columns: minmax(0, 1fr);
@@ -5519,4 +5520,101 @@ html:has(dialog[open]) .assistant-dock { visibility: hidden; }
 @media (max-width: 900px) {
   .page-content:has(.inbox-focus-layout.is-reading) > .page-title,
   .inbox-workspace:has(.inbox-focus-layout.is-reading) > .inbox-intake-toolbar { display: none; }
+}
+
+/* Keep task history distinct from data-derived closing checks. */
+.completed-todos { padding: 8px 0; }
+.completed-todos > summary { min-height: 32px; }
+.completed-todos[open] .completed-chevron { transform: rotate(90deg); }
+.completed-todos .todo-title { white-space: normal; overflow-wrap: anywhere; }
+.completed-todos .todo-list { max-height: 240px; overflow-y: auto; overscroll-behavior: contain; }
+
+/* Project progress remains visible; explicit controls complement the stage dots. */
+.deal-stage-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.deal-current-stage { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.deal-current-stage > span { color: var(--muted); font-size: var(--text-meta); }
+.deal-current-stage > strong { color: var(--accent); }
+.deal-stage-toolbar button { min-height: 40px; }
+.deal-next-step { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.deal-next-step > button { width: auto; }
+.deal-settled { color: var(--accent); font-size: var(--text-meta); font-weight: 600; }
+.deal-stage-toolbar .text-button { font-size: var(--text-meta); text-decoration: underline; text-underline-offset: 3px; }
+.project-stage-form { display: grid; gap: 12px; }
+.project-stage-form p { margin: 0; }
+.stage-current-summary { display: flex; flex-wrap: wrap; gap: 8px; color: var(--muted); }
+.stage-current-summary strong { color: var(--accent); }
+.stage-destination { font-weight: 600; }
+.stage-close-checks { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+.stage-close-checks ul { padding-left: 20px; margin: 10px 0 14px; }
+.stage-acknowledge { display: flex; align-items: flex-start; gap: 10px; }
+.stage-acknowledge input { flex: 0 0 auto; margin-top: 4px; }
+.stage-record-note { font-size: var(--text-meta); }
+.project-stage-form .form-actions > button { width: auto; }
+.project-stage-form .form-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.todo-handoff { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; padding: 12px 0; color: var(--accent); font-size: var(--text-meta); }
+.todo-handoff button { min-height: 40px; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 600px) {
+  .deal-stage-toolbar { gap: 8px; margin-bottom: 16px; }
+  .deal-next-step, .deal-next-step > button { width: 100%; }
+  .project-stage-form .form-actions > button { flex: 1 1 100%; white-space: normal; }
+}
+
+/* Mobile navigation can scroll without losing its close control. */
+@media (max-width: 800px) {
+  .sidebar > .brand { position:sticky; top:-22px; z-index:1; flex-shrink:0; background:var(--nav-surface); padding-top:22px; margin-top:-22px; }
+}
+
+/* Outstanding project payments share the task surface and open the receipt editor in place. */
+.project-payment-actions { margin-top: 12px; border-top: 1px solid var(--line); }
+.project-open-payments + .project-open-payments { border-top: 1px solid var(--line); }
+.project-open-payments > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; color: var(--ink); font-weight: 600; font-size: var(--text-meta); list-style: none; }
+.project-open-payments > summary::-webkit-details-marker { display: none; }
+.project-open-payments[open] > summary > svg { transform: rotate(90deg); }
+.project-open-payments ul { list-style: none; margin: 0; padding: 0; }
+.project-open-payments li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: var(--text-meta); }
+.project-open-payment-copy { min-width: 0; flex: 1; }
+.project-open-payment-copy > strong { display: block; overflow-wrap: anywhere; }
+.project-open-payment-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; color: var(--muted); }
+.project-open-payment-action { display: flex; align-items: center; flex: 0 0 auto; justify-content: flex-end; gap: 12px; }
+.project-open-payment-action > strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.deal-detail .project-open-payment-action > button { flex: 0 0 auto; min-height: 40px; min-width: 0; width: auto; white-space: nowrap; padding: 0 12px; }
+.project-open-payments > .text-button { min-height: 44px; }
+@media (max-width: 600px) {
+  .project-open-payments li { align-items: stretch; flex-direction: column; gap: 8px; }
+  .project-open-payment-action { justify-content: space-between; }
+  .deal-detail .project-open-payment-action > button { min-height: 44px; }
+}
+
+.deal-archive-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.deal-archive-prompt > p { margin: 0; flex: 1 1 220px; font-size: 14px; }
+.deal-detail .deal-archive-prompt > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  min-width: 0;
+  min-height: 44px;
+  flex: 0 0 auto;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+@media (max-width: 600px) {
+  .deal-detail .deal-archive-prompt > button { width: 100%; }
 }

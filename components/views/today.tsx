@@ -1,5 +1,6 @@
 "use client";
 import {usePortfolio} from "@/components/app/portfolio-provider";
+import {InvoiceNotice} from "@/components/invoices/panel";
 import { GrantNotice } from "./grants";
 
 // Today: a welcome for a new workspace, then the overview's widgets
@@ -49,6 +50,7 @@ export function TodayView() {
           </div>
         </section>
       )}
+      <InvoiceNotice/>
       <Overview />
       {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
     </>

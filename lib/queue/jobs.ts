@@ -6,9 +6,16 @@ import { locales } from "@/lib/i18n/config";
 // content, so the job table holds nothing someone could read
 // (docs/decisions/0014-hosting-and-job-queue.md).
 
+// Graphile adds only scheduling metadata to recurring jobs; application data stays empty.
+const scheduledPayload = z.strictObject({
+  _cron: z.strictObject({ ts: z.iso.datetime(), backfilled: z.boolean() }).optional(),
+});
+
 export const jobs = {
+  "invoice.prepare": scheduledPayload,
+  "invoice.gmail": z.strictObject({talentId:z.uuid(), invoiceId:z.uuid(), revision:z.number().int().positive(), mode:z.enum(["create","sync"])}),
   "mail.review": z.strictObject({decisionId:z.uuid(),mode:z.enum(["preview","import"])}),
-  "grants.refresh": z.strictObject({}),
+  "grants.refresh": scheduledPayload,
   /** Analyze one message and store a new analysis version (lib/ai/analyze-message.ts). */
   "message.analyze": z.strictObject({ messageId: z.uuid(), locale: z.enum(locales) }),
   /** Find a mailbox's new email, run the rules, record the decisions (lib/mail/jobs/sync.ts). */
@@ -32,6 +39,8 @@ export type JobPayload<N extends JobName> = z.infer<(typeof jobs)[N]>;
  * 25 would keep trying for about 3 days.
  */
 export const jobAttempts: Record<JobName, number> = {
+  "invoice.prepare": 3,
+  "invoice.gmail": 1,
   "mail.review": 1,
   "mail.sync": 5,
   "grants.refresh": 3,

@@ -470,7 +470,7 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
             </label>
             <label>
               {tEditor("field.taxRate")}
-              <input type="number" min={0} max={100} value={project.taxRate} onChange={(e) => set({ taxRate: e.target.value })} />
+              <input type="number" min={0} max={100} step="0.0001" value={project.taxRate} onChange={(e) => set({ taxRate: e.target.value })} />
             </label>
             <label className="inline-check">
               <input type="checkbox" checked={project.taxIncluded} onChange={(e) => set({ taxIncluded: e.target.checked })} />

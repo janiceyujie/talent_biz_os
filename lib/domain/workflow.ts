@@ -1,5 +1,6 @@
 // Project workflow rules: settlement, reply templates, summaries, notifications.
 // Pure functions over AppData so they run on the server or in the browser.
+import { cashInRange, paymentBalance, activeReceipts } from "./payment-receipts";
 import { projectTypes } from "@/lib/project-types";
 import { contentWords, displayName, placeholderKey, type PlaceholderKey } from "@/lib/templates/placeholders";
 import type { AppData, Payment, Project, ProjectSummary, ReplyTemplate } from "@/lib/types";
@@ -9,8 +10,10 @@ import { minorUnitFactor, minorUnits, quote } from "./money";
 export const paymentTotal = (p: Pick<Payment, "amount" | "taxRate" | "taxIncluded" | "currency">) =>
   quote(p.amount, p.taxRate, p.taxIncluded, p.currency).total;
 
-/** Cash that actually moved for a settled payment: the settled amount, or the full total. */
-export const paymentCash = (p: Payment) => (p.status === "settled" ? (p.settledAmount ?? paymentTotal(p)) : 0);
+/** Cash that actually moved, including partial receipts; withholding is excluded. */
+export const paymentCash = (p: Payment) => paymentBalance(p).cash;
+export const paymentRemaining = (p: Payment) => paymentBalance(p).remaining;
+export const paymentWithheld = (p: Payment) => paymentBalance(p).withheld;
 
 /** The tax-inclusive quote, or null while the fee isn't decided (quote not set). */
 export const projectQuoteTotal = (p: Pick<Project, "quotedAmount" | "taxRate" | "taxIncluded" | "currency">) =>
@@ -18,8 +21,8 @@ export const projectQuoteTotal = (p: Pick<Project, "quotedAmount" | "taxRate" | 
 
 /**
  * Quoted vs. billed vs. received for one project, plus what still blocks
- * closing. `shortfall` is billed income that settled for less than its total
- * (withholding, fees) — shown on its own rather than left as outstanding.
+ * closing. Unpaid differences remain pending; confirmed withholding is separate
+ * from both pending balances and cash received.
  */
 export function projectSettlement(data: AppData, project: ProjectSummary) {
   const rows = data.payments.filter((p) => p.projectId === project.id && p.currency === project.currency && !p.voided && p.status !== "cancelled");
@@ -27,21 +30,32 @@ export function projectSettlement(data: AppData, project: ProjectSummary) {
   const units = (n: number) => minorUnits(n, project.currency);
   const factor = minorUnitFactor(project.currency);
   const sum = (list: Payment[], value: (p: Payment) => number) => list.reduce((n, p) => n + units(value(p)), 0);
-  const settled = income.filter((p) => p.status === "settled");
+
   const quoteTotal = projectQuoteTotal(project);
   const quoted = units(quoteTotal ?? 0);
   const billed = sum(income, paymentTotal);
-  const received = sum(settled, paymentCash);
+  const received = sum(income, paymentCash);
   return {
     quoted: quoteTotal === null ? null : quoted / factor,
     billed: billed / factor,
     received: received / factor,
-    pending: sum(income.filter((p) => p.status === "expected"), paymentTotal) / factor,
-    shortfall: (sum(settled, paymentTotal) - received) / factor,
+    pending: sum(income, paymentRemaining) / factor,
+    withheld: sum(income, paymentWithheld) / factor,
+    shortfall: 0, // Unpaid differences are already included in pending; withholding is separate.
     unbilled: quoteTotal === null ? 0 : (quoted - billed) / factor, // nothing to compare while the quote is unset
     openItems: data.calendar.filter((c) => c.projectId === project.id && c.source === "todo" && !c.archived && !c.done),
-    unpaidCosts: rows.filter((p) => p.direction === "out" && p.status === "expected"),
+    unpaidCosts: rows.filter((p) => p.direction === "out" && paymentRemaining(p) > 0),
   };
+}
+
+/** Financial handoff only: the confirmation dialog still reviews unfinished work. */
+export function canReviewProjectClosure(data: AppData, project: ProjectSummary) {
+  if (project.archived || project.stage !== "collecting_payment") return false;
+  const settlement = projectSettlement(data, project);
+  // Check every currency: an unpaid foreign-currency cost must also block the handoff.
+  const unpaid = data.payments.some(p => p.projectId === project.id && !p.voided && paymentRemaining(p) > 0);
+  return !unpaid && settlement.quoted !== null && settlement.billed > 0 &&
+    settlement.unbilled === 0 && settlement.received + settlement.withheld > 0;
 }
 
 /** Thrown for a past reply: it carries an old project's names and fees, so it's never applied directly. */
@@ -80,25 +94,17 @@ export function renderTemplate(template: ReplyTemplate, source: string, project:
 /** Date a payment counts on: settled date once settled, otherwise the recorded date. */
 export const paymentDate = (p: Payment) => (p.status === "settled" ? p.settledDate || p.recordedDate : p.recordedDate);
 
-/** Cash-basis totals for one currency and date range; settled rows count their cash. */
+/** Cash-basis totals by receipt date, with outstanding balances grouped by recorded date. */
 export function summarize(data: Pick<AppData, "payments">, from = "", to = "9999-12-31", currency: Payment["currency"] = "TWD") {
-  const rows = data.payments.filter(
-    (p) => p.currency === currency && !p.voided && p.status !== "cancelled" && paymentDate(p) >= from && paymentDate(p) <= to,
-  );
-  const value = (p: Payment) => (p.status === "settled" ? paymentCash(p) : paymentTotal(p));
-  const sum = (match: (p: Payment) => boolean) =>
-    rows.filter(match).reduce((n, p) => n + minorUnits(value(p), p.currency), 0) / minorUnitFactor(currency);
-  return {
-    rows,
-    received: sum((p) => p.direction === "in" && p.status === "settled"),
-    receivable: sum((p) => p.direction === "in" && p.status === "expected"),
-    paid: sum((p) => p.direction === "out" && p.status === "settled"),
-    payable: sum((p) => p.direction === "out" && p.status === "expected"),
-    split: projectTypes.map((t) => ({
-      type: t.key,
-      amount: sum((p) => p.direction === "in" && p.status === "settled" && p.projectType === t.key),
-    })),
-  };
+  const live = data.payments.filter(p => p.currency === currency && !p.voided && p.status !== "cancelled");
+  const inRange = (date: string) => date >= from && date <= to;
+  const rows = live.filter(p => inRange(p.recordedDate) || activeReceipts(p).some(r => inRange(r.date)));
+  const sum = (direction: Payment["direction"], cash: boolean, type?: Payment["projectType"]) => rows
+    .filter(p => p.direction === direction && (!type || p.projectType === type))
+    .reduce((n, p) => n + minorUnits(cash ? cashInRange(p, from, to) : inRange(p.recordedDate) ? paymentRemaining(p) : 0, currency), 0) / minorUnitFactor(currency);
+  return { rows, received: sum("in", true), receivable: sum("in", false), paid: sum("out", true), payable: sum("out", false),
+    split: projectTypes.map(t => ({ type: t.key, amount: sum("in", true, t.key) })) };
+
 }
 
 /** Signed and not finished: execution, or settlement still collecting. */

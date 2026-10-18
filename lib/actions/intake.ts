@@ -20,7 +20,7 @@ import { auditLog, calendarEvent, contact, contract, message, messageAnalysis, p
 import { dateInZone } from "@/lib/domain/dates";
 import { filedMessages, keptFields, proposeChanges, withField, type Change, type ChangeRecord, type IntakeContext } from "@/lib/domain/intake";
 import { isSigned } from "@/lib/domain/phases";
-import { paymentTotal } from "@/lib/domain/workflow";
+import { appendReceipt, paymentBalance } from "@/lib/domain/payment-receipts";
 import { projectType, projectTypeKeys } from "@/lib/project-types";
 import { stages, type ProjectDate, type ProjectDetails, type Stage } from "@/lib/types";
 import { errorText } from "./validation";
@@ -180,16 +180,14 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
           const [p] = await tx
             .select()
             .from(payment)
-            .where(and(eq(payment.id, c.paymentId), eq(payment.talentId, talent.id), eq(payment.projectId, target.id), eq(payment.status, "expected")))
+            .where(and(eq(payment.id, c.paymentId), eq(payment.talentId, talent.id), eq(payment.projectId, target.id)))
             .for("update");
-          if (!p) return fail("proposalChanged");
-          const total = paymentTotal({ ...p, currency: "TWD" });
+          if (!p || p.voidedAt || paymentBalance(p).remaining <= 0) return fail("proposalChanged");
+
           await tx
             .update(payment)
             .set({
-              status: "settled",
-              settledOn: c.settledOn,
-              settledAmount: c.amount === total ? null : c.amount, // null = the full total
+              ...appendReceipt(p, { id: input.messageId, date: c.settledOn, cash: c.amount, reason: "unpaid" }),
               invoiceRef: p.invoiceRef || c.invoiceRef || null,
             })
             .where(eq(payment.id, p.id));
@@ -264,6 +262,10 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
     }
 
     details = { ...details, dates: kept.filter((d): d is ProjectDate => d !== null) };
+    if (finalStage === "closed") {
+      const balances = await tx.select().from(payment).where(and(eq(payment.projectId, target.id), eq(payment.talentId, talent.id)));
+      if (balances.some(p => !p.voidedAt && paymentBalance(p).remaining > 0)) finalStage = current.stage;
+    }
     await tx
       .update(project)
       .set({ ...projectSet, details, stage: finalStage })
@@ -314,7 +316,7 @@ const newProjectInput = z.object({
     type: z.enum(projectTypeKeys, "typeRequired"),
     counterparty: optional(200),
     quotedAmount: z.number().min(0).max(1e10).multipleOf(0.01).nullable(),
-    taxRate: z.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
+    taxRate: z.number().min(0).max(100, "taxRateRange").multipleOf(0.0001),
     taxIncluded: z.boolean(),
     fields: z.record(z.string(), z.string().trim().max(1000)),
     dates: z.array(projectDate).max(20),

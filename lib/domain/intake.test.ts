@@ -276,12 +276,12 @@ describe("proposeChanges", () => {
     assert.deepEqual(byKind(changes, "field").map((c) => c.kind === "field" && c.key), ["setLength"]);
   });
 
-  test("payment sent: the one expected payment is settled with the shortfall, and the project closes", () => {
+  test("payment sent with a shortfall: record the receipt but do not propose closing", () => {
     const a = analysis({ intent: "payment", details: { paymentStatus: { value: "已匯出", asStated: "" }, amountDue: { value: "NT$19,950", asStated: "尾款 NT$19,950" } } });
     const { changes } = proposeChanges(a, project({ stage: "collecting_payment" }), ctx({ payments: [payment()] }));
     const settle = one(changes, "settlePayment");
     assert.deepEqual([settle.paymentId, settle.expected, settle.amount, settle.settledOn, settle.ticked], ["pay1", 21000, 19950, "2026-10-04", true]);
-    assert.deepEqual(one(changes, "stage").to, "closed");
+    assert.equal(byKind(changes, "stage").length, 0);
     assert.equal(changes.find((c) => c.kind === "todo" && c.purpose === "reply")?.ticked, false);
   });
 

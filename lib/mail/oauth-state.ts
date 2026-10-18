@@ -9,7 +9,7 @@ import type { HistoryMode } from "./history";
 export const STATE_COOKIE = "mail_oauth";
 export const STATE_TTL_SECONDS = 10 * 60;
 
-export type ConnectState = { state: string; verifier: string; personId: string; talentId: string; historyMode: HistoryMode; expiresAt: number };
+export type ConnectState = { state: string; verifier: string; personId: string; talentId: string; historyMode: HistoryMode; drafts?: boolean; expiresAt: number };
 
 const AAD = "mail-oauth-state";
 const keyFrom = (secret: string) => Buffer.from(hkdfSync("sha256", secret, "", AAD, 32));

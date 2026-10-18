@@ -1,0 +1,5 @@
+.briefing-snooze { min-width:0; flex:1; }
+.briefing-snooze > small { display:block; color:var(--muted); font-size:.875rem; }
+.briefing-snooze-options, .briefing-snooze-options form { margin-top:.75rem; }
+.briefing-date-fields { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.75rem; margin-bottom:.75rem; }
+@media(max-width:480px) { .briefing-snooze { flex-basis:100%; } .briefing-date-fields { grid-template-columns:minmax(0,1fr); } }

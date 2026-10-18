@@ -20,6 +20,7 @@ const contactInput = z.object({
     .optional()
     .transform((v) => v || null),
   phone: optionalText,
+  billingAddress: z.string().trim().max(600).transform((v) => v || null).optional(),
   notes: optionalText,
   // Where they work (decision 0012): an organisation picked, or a name typed for a new one; both "" to clear.
   // Left out entirely (e.g. editing name and phone from a project), the organisation doesn't change.

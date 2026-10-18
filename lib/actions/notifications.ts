@@ -31,18 +31,20 @@ export async function markNotificationsRead(notificationIds: string[]): Promise<
   return null;
 }
 
-/** Snooze one notification for an hour, or end its snooze. The deadline is the server's clock. */
-export async function snoozeNotification(notificationId: string, snooze: boolean): Promise<string | null> {
+/** Snooze by duration or absolute time, or end its snooze. Durations use the server clock. */
+export async function snoozeNotification(notificationId: string, snooze: boolean | string | number): Promise<string | null> {
   const person = await requirePerson();
   const fail = await errorText();
   if (!ids.safeParse([notificationId]).success) return fail("invalid");
-  const snoozedUntil = snooze ? new Date(Date.now() + SNOOZE_MS) : null;
+  const instant = typeof snooze === "string" ? Date.parse(snooze) : typeof snooze === "number" ? Date.now() + snooze * 60_000 : snooze ? Date.now() + SNOOZE_MS : null;
+  if (instant !== null && (!Number.isFinite(instant) || instant <= Date.now() || instant > Date.now() + 30 * 86400_000)) return fail("invalid");
+  const snoozedUntil = instant === null ? null : new Date(instant);
   await db
     .insert(notificationState)
-    .values({ personId: person.personId, notificationId, snoozedUntil })
+    .values({ personId: person.personId, notificationId, snoozedUntil, readAt: null })
     .onConflictDoUpdate({
       target: [notificationState.personId, notificationState.notificationId],
-      set: { snoozedUntil },
+      set: { snoozedUntil, readAt: null },
     });
   refresh();
   return null;

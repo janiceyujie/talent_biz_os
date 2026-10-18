@@ -6,7 +6,7 @@ import type { MessageAnalysis } from "@/lib/ai/analysis";
 import { projectType } from "@/lib/project-types";
 import type { CalendarItem, Contact, Contract, ContractTerms, Payment, Project, ProjectDate, ProjectSummary, ProjectDetails, Stage, TermChange } from "@/lib/types";
 import { isSigned } from "./phases";
-import { paymentTotal } from "./workflow";
+import { paymentRemaining } from "./workflow";
 
 export type IntakeContext = {
   projects: ProjectSummary[];
@@ -154,10 +154,10 @@ export function suggestTargets(a: MessageAnalysis, ctx: IntakeContext): TargetSu
 
     if (a.intent === "payment") {
       const amount = statedAmount(a);
-      const match = amount ? expectedIncome(project, ctx.payments).find((p) => near(paymentTotal(p), amount)) : undefined;
+      const match = amount ? expectedIncome(project, ctx.payments).find((p) => near(paymentRemaining(p), amount)) : undefined;
       if (match) {
         score += 2;
-        reasons.push({ kind: "payment", value: paymentTotal(match) });
+        reasons.push({ kind: "payment", value: paymentRemaining(match) });
       }
     }
 
@@ -291,7 +291,7 @@ function statedAmount(a: MessageAnalysis) {
 const near = (expected: number, amount: number) => amount <= expected && amount >= expected * 0.85;
 
 const expectedIncome = (project: Pick<Project, "id">, payments: Payment[]) =>
-  payments.filter((p) => p.projectId === project.id && p.direction === "in" && p.status === "expected" && !p.voided);
+  payments.filter((p) => p.projectId === project.id && p.direction === "in" && paymentRemaining(p) > 0 && !p.voided);
 
 /** Words in the message that mean a contract is coming. A hint for a to-do the person ticks, not a fact. */
 const promisesContract = (a: MessageAnalysis) =>
@@ -379,10 +379,10 @@ function paymentChanges(a: MessageAnalysis, project: Project, ctx: IntakeContext
   const paid = statusIs(a, /sent|paid|已匯|已付|已轉|已支付|匯出|入帳|付款完成/i);
 
   if (paid) {
-    const byAmount = amount ? expected.filter((p) => near(paymentTotal(p), amount)) : [];
+    const byAmount = amount ? expected.filter((p) => near(paymentRemaining(p), amount)) : [];
     const match = byAmount.length === 1 ? byAmount[0] : expected.length === 1 ? expected[0] : undefined;
     if (match) {
-      const total = paymentTotal(match);
+      const total = paymentRemaining(match);
       out.push({
         id: "payment",
         kind: "settlePayment",
@@ -395,7 +395,7 @@ function paymentChanges(a: MessageAnalysis, project: Project, ctx: IntakeContext
         invoiceRef: a.details.invoiceRef?.value ?? "",
       });
       // The last one in: the project is settled.
-      if (expected.length === 1 && project.stage !== "closed") out.push(...stageChange(project, "closed", true));
+      if (expected.length === 1 && (amount ?? total) >= total && project.stage !== "closed") out.push(...stageChange(project, "closed", true));
     } else if (amount && !expected.length) {
       out.push({ id: "payment", kind: "newPayment", ticked: false, asStated, label: "received", amount, settled: true, date: ctx.receivedOn });
     } else if (expected.length) {
@@ -407,8 +407,8 @@ function paymentChanges(a: MessageAnalysis, project: Project, ctx: IntakeContext
         ticked: false,
         asStated,
         paymentId: first.id,
-        expected: paymentTotal(first),
-        amount: amount ?? paymentTotal(first),
+        expected: paymentRemaining(first),
+        amount: amount ?? paymentRemaining(first),
         settledOn: ctx.receivedOn,
         invoiceRef: a.details.invoiceRef?.value ?? "",
       });
@@ -416,7 +416,7 @@ function paymentChanges(a: MessageAnalysis, project: Project, ctx: IntakeContext
   } else if (statusIs(a, /request|invoice|發票|請款|開立/i)) {
     out.push({ id: "todo:sendInvoice", kind: "todo", ticked: true, asStated, purpose: "sendInvoice", dueDate: addDays(ctx.receivedOn, 3) });
   } else if (statusIs(a, /remind|提醒|催/i)) {
-    const target = (amount ? expected.find((p) => near(paymentTotal(p), amount)) : undefined) ?? (expected.length === 1 ? expected[0] : undefined);
+    const target = (amount ? expected.find((p) => near(paymentRemaining(p), amount)) : undefined) ?? (expected.length === 1 ? expected[0] : undefined);
     if (target) out.push({ id: "paymentNote", kind: "paymentNote", ticked: true, asStated, paymentId: target.id, note: a.summary });
   }
   return out;

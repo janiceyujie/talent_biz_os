@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { MAIL_SCOPES } from "./scope";
+import { MAIL_SCOPES, GMAIL_COMPOSE_SCOPE } from "./scope";
 
 // Google OAuth for the mailbox connection (decision 0016): authorization code
 // with PKCE, plain fetch. GOOGLE_OAUTH_AUTH_URL, GOOGLE_OAUTH_TOKEN_URL, and
@@ -26,12 +26,12 @@ export const challengeFor = (verifier: string) => base64url(createHash("sha256")
 export const newState = () => base64url(randomBytes(24));
 
 /** Google's consent screen. `prompt=consent` with offline access, so Google returns a refresh token every time. */
-export function authorizationUrl(o: { clientId: string; redirectUri: string; state: string; challenge: string }) {
+export function authorizationUrl(o: { clientId: string; redirectUri: string; state: string; challenge: string; drafts?: boolean }) {
   const q = new URLSearchParams({
     client_id: o.clientId,
     redirect_uri: o.redirectUri,
     response_type: "code",
-    scope: MAIL_SCOPES.join(" "),
+    scope: [...MAIL_SCOPES, ...(o.drafts ? [GMAIL_COMPOSE_SCOPE] : [])].join(" "),
     access_type: "offline",
     prompt: "select_account consent",
     include_granted_scopes: "false", // only this flow's scopes, not sign-in's or Calendar's

@@ -20,12 +20,13 @@ import { archiveProject as archiveProjectRemote, setProjectStage as setProjectSt
 import { useMoney } from "@/lib/i18n/format";
 import { mainStages, phaseOf, phases, type Phase } from "@/lib/domain/phases";
 import { listSorts, type ListSort, type ListView } from "@/lib/domain/project-list";
-import { projectQuoteTotal } from "@/lib/domain/workflow";
+import { canReviewProjectClosure, projectQuoteTotal } from "@/lib/domain/workflow";
 import { calendarPoints } from "@/lib/calendar/points";
 import { useLabels } from "@/lib/i18n/labels";
 import { projectTypes } from "@/lib/project-types";
 import type { ProjectSummary, Stage } from "@/lib/types";
 import { ProjectActions, ProjectGlance } from "./project-actions";
+import { ProjectStageDialog } from "./project-stage-dialog";
 import { ProjectWorkflowPanel } from "./project-workflow-panel";
 import { useDue } from "./use-due";
 import { MoreMenu } from "./more-menu";
@@ -85,6 +86,7 @@ export function ProjectsView({readOnly=false}:{readOnly?:boolean}={}) {
   const t = useTranslations("projects");
   const labels = useLabels();
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [invoicePayment, setInvoicePayment] = useState<{id: string; projectId: string} | null>(null);
   // What just happened, at the bottom of the screen: a move between tabs, a finished step (with Undo).
   const [notice, setNotice] = useState<Notice | null>(null);
   const [search, setSearch] = useState(initial.q);
@@ -137,6 +139,20 @@ export function ProjectsView({readOnly=false}:{readOnly?:boolean}={}) {
   // A linked project shows even before its page has loaded (the layout's summary has it).
   const linked = selected ? visible.find((p) => p.id === selected) ?? data.projects.find((p) => p.id === selected && p.archived === archived) : undefined;
   const active = linked ?? visible[0];
+  // Follow the selected project when another editor reopens settlement or changes its archive state.
+  const watched = data.projects.find(p => p.id === (selected || active?.id));
+  const priorProject = useRef(watched);
+  useEffect(() => {
+    const previous = priorProject.current;
+    priorProject.current = watched;
+    if (!watched || previous?.id !== watched.id) return;
+    if (previous.stage === watched.stage && previous.archived === watched.archived) return;
+    queueMicrotask(() => {
+      setSelected(watched.id);
+      if (previous.archived !== watched.archived) setScope(watched.archived ? "archived" : "phase");
+      if (scope === "phase" || previous.archived !== watched.archived) setPhase(phaseOf(watched.stage));
+    });
+  }, [watched, scope]);
   const priorArtistScope=useRef(artistScope);
   useEffect(()=>{if(priorArtistScope.current!==artistScope){priorArtistScope.current=artistScope;queueMicrotask(()=>{setSelected("");setDetailOpen(false);});}},[artistScope]);
   const quoteText = (p: ProjectSummary) => {
@@ -398,12 +414,15 @@ export function ProjectsView({readOnly=false}:{readOnly?:boolean}={}) {
           readOnly?<PortfolioProjectDetail key={active.id} project={active} onBack={backToList}/>:<ProjectDetail
             key={active.id}
             project={active}
+            invoicePaymentId={invoicePayment?.projectId === active.id ? invoicePayment.id : undefined}
+            onInvoiceDismiss={() => setInvoicePayment(null)}
             edit={setEditor}
             onBack={backToList}
-            onMoved={(next, from) => {
+            onMoved={(stage) => {
+              setSelected(active.id);
+              const next = phaseOf(stage);
               if (scope === "phase") setPhase(next);
-              // A new phase means a different tab: say where it went, so the switch isn't a surprise.
-              if (next !== from) setNotice({ message: t("movedTo", { phase: t(`phase.${next}`) }) });
+              setNotice({ message: t("stageChange.saved", { stage: labels.stage(stage), phase: t(`phase.${next}`) }) });
             }}
             notify={setNotice}
             todosFolded={todosFolded}
@@ -416,8 +435,25 @@ export function ProjectsView({readOnly=false}:{readOnly?:boolean}={}) {
         <RecordEditor
           editor={editor}
           onClose={() => setEditor(null)}
+          onPrepareInvoice={(saved) => {
+            const projectId = String(saved.projectId || "");
+            if (!projectId) return;
+            setSelected(projectId);
+            setDetailOpen(true);
+            setInvoicePayment({id: String(saved.id), projectId});
+          }}
           // Show a saved project under its phase tab.
-          onSaved={(saved) => editor.kind === "project" && setPhase(phaseOf(saved.stage as Stage))}
+          onSaved={(saved) => {
+            if (editor.kind === "payment" && editor.item?.receiptEntry) {
+              setNotice({message:t("outstanding.saved")});
+              return;
+            }
+            if (editor.kind !== "project") return;
+            const stage = saved.stage as Stage;
+            setPhase(phaseOf(stage));
+            if (editor.item?.id && editor.item.stage !== stage)
+              setNotice({ message: t("stageChange.saved", { stage: labels.stage(stage), phase: t(`phase.${phaseOf(stage)}`) }) });
+          }}
         />
       )}
     </div>
@@ -427,6 +463,8 @@ export function ProjectsView({readOnly=false}:{readOnly?:boolean}={}) {
 /** One project: who and what, its stage, the next step and money at a glance, then the rest in tabs. */
 function ProjectDetail({
   project,
+  invoicePaymentId,
+  onInvoiceDismiss,
   edit,
   onBack,
   onMoved,
@@ -435,10 +473,12 @@ function ProjectDetail({
   onFoldTodos,
 }: {
   project: ProjectSummary;
+  invoicePaymentId?: string;
+  onInvoiceDismiss: () => void;
   edit: (e: Editor) => void;
   onBack: () => void;
-  /** After a stage change: the project's phase now, and before. */
-  onMoved: (phase: Phase, from: Phase) => void;
+  /** After a confirmed stage change, follow the project and announce its new location. */
+  onMoved: (stage: Stage) => void;
   notify: (notice: Notice) => void;
   todosFolded: boolean;
   onFoldTodos: (folded: boolean) => void;
@@ -451,12 +491,22 @@ function ProjectDetail({
   const archiveProject = usePreviewAction(archiveProjectRemote);
   const setProjectStage = usePreviewAction(setProjectStageRemote);
   const [tab, setTab] = useState<Tab>("overview");
+  const [requestedStage, setRequestedStage] = useState<Stage | null>(null);
+  const nextStage = mainStages[mainStages.indexOf(project.stage) + 1];
+  const requestStage = (stage: Stage) => {
+    setError(null);
+    setRequestedStage(stage);
+  };
+  useEffect(() => {
+    if (invoicePaymentId) queueMicrotask(() => setTab("money"));
+  }, [invoicePaymentId]);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const { detail, loading, failed } = useProjectDetail(project);
   // The full project (details, notes) arrives with the detail; until then the summary shows.
   const full = detail ? withDetail(project, detail) : null;
+  const reviewClosure = canReviewProjectClosure(data, project);
   const exited = project.stage === "declined" || project.stage === "cancelled";
   const counts: Record<Tab, number> = {
     overview: 0,
@@ -498,14 +548,43 @@ function ProjectDetail({
 
   const moveTo = (stage: Stage) =>
     startTransition(async () => {
-      const failure = await setProjectStage(project.id, stage);
-      setError(failure);
-      // Follow the project to its new phase tab.
-      if (!failure) onMoved(phaseOf(stage), phaseOf(project.stage));
+      try {
+        const failure = await setProjectStage(project.id, stage);
+        setError(failure);
+        if (!failure) {
+          setRequestedStage(null);
+          onMoved(stage);
+        }
+      } catch {
+        setError(t("stageChange.failed"));
+      }
+    });
+
+  const changeArchive = (archived: boolean) =>
+    startTransition(async () => {
+      setError(null);
+      try {
+        const failure = await archiveProject(project.id, archived);
+        setError(failure);
+        if (!failure) notify({ message: t(archived ? "archiveSaved" : "restoreSaved") });
+      } catch {
+        setError(t("archiveFailed"));
+      }
     });
 
   return (
     <article className="deal-detail deal-dossier">
+      {requestedStage && <ProjectStageDialog
+        project={project}
+        full={full}
+        target={requestedStage}
+        pending={pending}
+        error={error}
+        onTarget={requestStage}
+        onClose={() => { if (!pending) { setRequestedStage(null); setError(null); } }}
+        onConfirm={() => moveTo(requestedStage)}
+        onMoney={() => { setRequestedStage(null); openTab("money"); }}
+      />}
       {/* Two boxes: where the project stands and what to do about it, then its details under tabs. */}
       <section className="surface dossier-box">
         <button className="text-button deal-back" onClick={onBack}>
@@ -535,10 +614,10 @@ function ProjectDetail({
               <MoreMenu label={t("more")}>
                 {!exited && !project.archived && (
                   <>
-                    <button role="menuitem" disabled={pending} onClick={() => moveTo("declined")}>
+                    <button role="menuitem" disabled={pending} onClick={() => requestStage("declined")}>
                       {t("markDeclined")}
                     </button>
-                    <button role="menuitem" disabled={pending} onClick={() => moveTo("cancelled")}>
+                    <button role="menuitem" disabled={pending} onClick={() => requestStage("cancelled")}>
                       {t("markCancelled")}
                     </button>
                   </>
@@ -546,7 +625,7 @@ function ProjectDetail({
                 <button
                   role="menuitem"
                   disabled={pending}
-                  onClick={() => startTransition(async () => setError(await archiveProject(project.id, !project.archived)))}
+                  onClick={() => changeArchive(!project.archived)}
                 >
                   {project.archived ? t("restore") : t("archive")}
                 </button>
@@ -558,6 +637,22 @@ function ProjectDetail({
         {/* Where it stands, on its own tinted strip: one line through the six stages, the phases the
             tabs show named above them. Each step is a button that moves the project there. */}
         <div className="deal-status">
+          <div className="deal-stage-toolbar">
+            <div className="deal-current-stage">
+              <span>{t("stageChange.current")}</span>
+              <strong>{labels.stage(project.stage)}</strong>
+              {!project.archived && <button className="text-button" disabled={pending} onClick={() => requestStage(project.stage)}>{t("stageChange.choose")}</button>}
+            </div>
+            {project.archived && <button className="secondary" disabled={pending} onClick={() => changeArchive(false)}>{t("restoreProject")}</button>}
+            {!project.archived && !exited && nextStage && (
+              <div className="deal-next-step">
+                {reviewClosure && <span className="deal-settled" role="status">{t("stageChange.paymentsSettled")}</span>}
+                <button className={reviewClosure ? "primary" : "secondary"} disabled={pending} onClick={() => requestStage(nextStage)}>
+                  {reviewClosure ? t("stageChange.reviewClosure") : t("stageChange.next", { stage: labels.stage(nextStage) })}
+                </button>
+              </div>
+            )}
+          </div>
           <div className="stage-bar">
             {exited && (
               <span className="stage-exited" aria-current="step">
@@ -566,7 +661,7 @@ function ProjectDetail({
             )}
             <div className="stepper">
               <div className="stepper-phases" aria-hidden="true">
-                {(["negotiation", "execution", "settlement"] as const).map((ph) => (
+                {phases.map((ph) => (
                   <span key={ph} className={phaseOf(project.stage) === ph ? "current" : ""}>
                     {t(`phase.${ph}`)}
                   </span>
@@ -581,7 +676,7 @@ function ProjectDetail({
                       aria-current={stage === project.stage ? "step" : undefined}
                       className={at >= 0 && i < at ? "complete" : stage === project.stage ? "current" : ""}
                     >
-                      <button disabled={pending || project.archived} onClick={() => stage !== project.stage && moveTo(stage)}>
+                      <button disabled={pending || project.archived || stage === project.stage} aria-label={t("stageChange.step", { stage: labels.stage(stage) })} onClick={() => requestStage(stage)}>
                         {/* The phase row above is visual only; say it here for screen readers. */}
                         <span className="sr-only">{t(`phase.${phaseOf(stage)}`)} · </span>
                         {labels.stage(stage)}
@@ -593,19 +688,21 @@ function ProjectDetail({
             </div>
             <InfoHint notes={[t(`stageNote.${project.stage}`), tWorkflow("stageNote")]} />
           </div>
+          {!project.archived && phaseOf(project.stage) === "ended" && (
+            <div className="deal-archive-prompt">
+              <p>{t("archivePrompt")}</p>
+              <button className="secondary" disabled={pending} onClick={() => changeArchive(true)}>
+                <Archive size={16} aria-hidden="true" />
+                {t("archiveProject")}
+              </button>
+            </div>
+          )}
           {error && (
             <p className="notice error" role="alert">
               {error}
             </p>
           )}
-          {!project.archived && phaseOf(project.stage) === "negotiation" && (
-            <div className="deal-sign-prompt">
-              <span>{t("signPrompt")}</span>
-              <button className="secondary" disabled={pending} onClick={() => moveTo("signed")}>
-                {t("markSigned")}
-              </button>
-            </div>
-          )}
+
         </div>
 
         {/* First, what needs doing; then the money, what's coming up, and the notes, at a glance. */}
@@ -617,6 +714,7 @@ function ProjectDetail({
           notify={notify}
           folded={todosFolded}
           onFold={onFoldTodos}
+          onReviewStage={() => requestStage(nextStage ?? project.stage)}
         />
         <ProjectGlance project={project} full={full} edit={edit} showTab={openTab} />
       </section>
@@ -646,7 +744,7 @@ function ProjectDetail({
               {loading ? <p className="muted">{t("loading")}</p> : <ProjectTimeline project={project} entries={detail?.timeline ?? []} />}
             </DealCard>
           )}
-          {tab === "money" && full && <ProjectWorkflowPanel project={full} edit={edit} />}
+          {tab === "money" && full && <ProjectWorkflowPanel project={full} edit={edit} invoicePaymentId={invoicePaymentId} onInvoiceDismiss={onInvoiceDismiss} />}
           {tab === "travel" && (
             <DealCard title={t("tab.travel")}>
               <TravelItinerary project={project} edit={edit} />

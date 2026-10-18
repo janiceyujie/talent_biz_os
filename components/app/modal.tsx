@@ -36,7 +36,7 @@ export function Modal({ title, children, onClose, narrow = false }: { title: str
           ×
         </button>
       </header>
-      {children}
+      <div className="modal-body">{children}</div>
     </dialog>
   );
 }

@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: { "/api/invoices/**/*": ["./assets/fonts/*.ttf"] },
   // A second dev server (end-to-end tests with a fake Google) needs its own build folder;
   // unset everywhere else.
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),

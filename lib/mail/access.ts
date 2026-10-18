@@ -15,12 +15,12 @@ type Connection = typeof mailConnection.$inferSelect;
 /** Google no longer accepts the refresh token (access removed, consent expired): only reconnecting helps. */
 export class MailAccessLost extends Error {}
 
-const cache = new Map<string, { token: string; expiresAt: number }>();
+const cache = new Map<string, { token: string; expiresAt: number; grant: string }>();
 const MARGIN_MS = 60_000; // refresh a minute early
 
 export async function accessToken(c: Connection): Promise<string> {
   const hit = cache.get(c.id);
-  if (hit && hit.expiresAt - MARGIN_MS > Date.now()) return hit.token;
+  if (hit && hit.grant === c.refreshTokenNonce && hit.expiresAt - MARGIN_MS > Date.now()) return hit.token;
   const client = oauthClient();
   if (!client) throw new Error("mail: Google OAuth client not configured");
   try {
@@ -32,6 +32,7 @@ export async function accessToken(c: Connection): Promise<string> {
     });
     cache.set(c.id, {
       token: res.access_token,
+      grant: c.refreshTokenNonce,
       expiresAt: Date.now() + res.expires_in * 1000,
     });
     return res.access_token;

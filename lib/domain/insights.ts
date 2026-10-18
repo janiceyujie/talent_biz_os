@@ -3,7 +3,8 @@ import type { AppData, Organization, Payment, ProjectSummary } from "@/lib/types
 import { dateInZone } from "./dates";
 import { minorUnitFactor, minorUnits, totalsByCurrency, type Currency } from "./money";
 import { isSigned } from "./phases";
-import { paymentCash, paymentTotal, projectQuoteTotal } from "./workflow";
+import { cashInRange } from "./payment-receipts";
+import { paymentRemaining, paymentTotal, projectQuoteTotal } from "./workflow";
 
 const live = (p: Payment) => !p.voided && p.status !== "cancelled";
 
@@ -31,10 +32,10 @@ export function financeInsights(data: AppData, now = new Date(), currency: Curre
   const unbilled = quoted.reduce((n, p) => n + Math.max(0, units(projectQuoteTotal(p)!) - billedFor(p)), 0);
 
   const aging = Object.fromEntries(agingBuckets.map((b) => [b, 0])) as Record<(typeof agingBuckets)[number], number>;
-  for (const p of payments.filter((x) => x.direction === "in" && x.status === "expected")) {
+  for (const p of payments.filter((x) => x.direction === "in" && paymentRemaining(x) > 0)) {
     const late = p.dueDate ? daysBetween(p.dueDate, today) : null;
     const bucket = late === null ? "noDueDate" : late <= 0 ? "notDue" : late <= 30 ? "late1to30" : "late31plus";
-    aging[bucket] += units(paymentTotal(p));
+    aging[bucket] += units(paymentRemaining(p));
   }
 
   const monthly = Array.from({ length: 6 }, (_, i) => {
@@ -43,8 +44,8 @@ export function financeInsights(data: AppData, now = new Date(), currency: Curre
     const month = d.toISOString().slice(0, 7);
     const cash = (direction: Payment["direction"]) =>
       payments
-        .filter((x) => x.direction === direction && x.status === "settled" && (x.settledDate ?? "").startsWith(month))
-        .reduce((n, x) => n + units(paymentCash(x)), 0) / factor;
+        .filter((x) => x.direction === direction)
+        .reduce((n, x) => n + units(cashInRange(x, `${month}-01`, `${month}-31`)), 0) / factor;
     return { month, received: cash("in"), paid: cash("out") };
   });
 
@@ -82,13 +83,13 @@ export function partnerInsights(data: AppData, now = new Date()) {
           total: paymentTotal(x),
           currency: x.currency,
           lateDays: x.dueDate
-            ? Math.max(0, daysBetween(x.dueDate, x.status === "settled" ? (x.settledDate ?? today) : today))
+            ? Math.max(0, daysBetween(x.dueDate, paymentRemaining(x) === 0 ? (x.settledDate ?? today) : today))
             : null,
         }))
         .sort((a, b) => (b.dueDate ?? b.recordedDate).localeCompare(a.dueDate ?? a.recordedDate));
-      const paid = rows.filter((x) => x.status === "settled" && x.dueDate && x.settledDate);
+      const paid = rows.filter((x) => paymentRemaining(x) === 0 && x.dueDate && x.settledDate);
       const late = paid.filter((x) => x.lateDays! > 0);
-      const overdue = rows.filter((x) => x.status === "expected" && x.dueDate && x.dueDate < today);
+      const overdue = rows.filter((x) => paymentRemaining(x) > 0 && x.dueDate && x.dueDate < today);
       return {
         organization,
         projects,
@@ -98,7 +99,7 @@ export function partnerInsights(data: AppData, now = new Date()) {
         onTimeRate: paid.length ? Math.round(((paid.length - late.length) / paid.length) * 100) : null,
         averageLateDays: late.length ? Math.round(late.reduce((n, x) => n + x.lateDays!, 0) / late.length) : 0,
         overdueCount: overdue.length,
-        overdueByCurrency: totalsByCurrency(overdue, (x) => x.total),
+        overdueByCurrency: totalsByCurrency(overdue, paymentRemaining),
         unknownDue: rows.filter((x) => !x.dueDate).length,
         evidence: (paid.length < 3
           ? "tooFew"

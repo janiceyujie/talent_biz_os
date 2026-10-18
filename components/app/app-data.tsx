@@ -12,6 +12,8 @@ export function PreviewBanner() { return useContext(PreviewBannerContext); }
 const PreviewTemplatesContext = createContext<{ save: (template: ReplyTemplate) => void; archive: (id: string, archived: boolean) => void } | null>(null);
 export function usePreviewTemplates() { return useContext(PreviewTemplatesContext)!; }
 const AppDataContext = createContext<AppData | null>(null);
+const WorkspaceTalentContext = createContext<AppData["talent"] | null>(null);
+export function useWorkspaceTalent() { return useContext(WorkspaceTalentContext)!; }
 const RealWorkspaceContext = createContext<() => void>(() => {});
 /** A link to persisted records leaves the demonstration collections before navigating. */
 export function useRealWorkspace() { return useContext(RealWorkspaceContext); }
@@ -39,10 +41,10 @@ export function AppDataProvider({ data, children, previewAvailable = false }: { 
       <button type="button" className="secondary" onClick={toggle}>{enabled?t("exit"):t("enter")}</button>
     </aside>;
   if(!ready)return <div className="portfolio-loading" role="status" aria-busy="true">{t("loading")}</div>;
-  return <RealWorkspaceContext.Provider value={openRealWorkspace}><PreviewBannerContext.Provider value={banner}><AppDataContext.Provider value={active?{...workspaceSamples(data),templates}:data}>
+  return <WorkspaceTalentContext.Provider value={data.talent}><RealWorkspaceContext.Provider value={openRealWorkspace}><PreviewBannerContext.Provider value={banner}><AppDataContext.Provider value={active?{...workspaceSamples(data),templates}:data}>
 
     <PreviewTemplatesContext.Provider value={{save, archive}}>{children}</PreviewTemplatesContext.Provider>
-  </AppDataContext.Provider></PreviewBannerContext.Provider></RealWorkspaceContext.Provider>;
+  </AppDataContext.Provider></PreviewBannerContext.Provider></RealWorkspaceContext.Provider></WorkspaceTalentContext.Provider>;
 }
 
 /** Read-only page-local collections never change the shell or mutation workspace. */

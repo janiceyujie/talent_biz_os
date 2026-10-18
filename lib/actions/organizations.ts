@@ -15,6 +15,8 @@ const orgInput = z.object({
   id: z.union([z.uuid(), z.literal("")]).optional(),
   name: z.string().trim().min(1, "organizationNameRequired").max(200),
   notes: optionalText,
+  billingAddress: z.string().trim().max(600).transform((v) => v || null).optional(),
+  billingEmail: z.union([z.email("emailInvalid").max(254), z.literal("")]).transform((v) => v || null).optional(),
 });
 
 /** Create or rename an organisation. Returns its id, or an error. */
@@ -23,15 +25,15 @@ export async function saveOrganization(data: Record<string, unknown>): Promise<{
   const fail = await errorText();
   const parsed = orgInput.safeParse(data);
   if (!parsed.success) return { error: fail(firstIssue(parsed.error)) };
-  const { id, name, notes } = parsed.data;
+  const { id, name, notes, billingAddress, billingEmail } = parsed.data;
   const result = await db.transaction(async (tx) => {
     if (!id) {
-      const [created] = await tx.insert(organization).values({ talentId: talent.id, name, notes }).returning({ id: organization.id });
+      const [created] = await tx.insert(organization).values({ talentId: talent.id, name, notes, billingAddress, billingEmail }).returning({ id: organization.id });
       return { id: created.id };
     }
     const rows = await tx
       .update(organization)
-      .set({ name, notes })
+      .set({ name, notes, billingAddress, billingEmail })
       .where(and(eq(organization.id, id), eq(organization.talentId, talent.id)))
       .returning({ id: organization.id });
     if (!rows.length) return { error: fail("organizationNotFound") };

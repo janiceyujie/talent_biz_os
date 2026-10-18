@@ -1,5 +1,5 @@
 import { assistantContext, type AssistantSource } from "./assistant-context";
-import { paymentTotal } from "@/lib/domain/workflow";
+import { paymentRemaining } from "@/lib/domain/workflow";
 import { minorUnitFactor, minorUnits } from "@/lib/domain/money";
 import type { TokenUsage } from "./local-budget";
 
@@ -28,15 +28,15 @@ export function localAssistantReply(data: AssistantSource, query: string, projec
   const prefix = sample ? t("sample") + "\n" : "";
   if (intent === "receivable" || intent === "payable") {
     const direction = intent === "receivable" ? "in" : "out";
-    const payments = data.payments.filter(p => !p.voided && p.status === "expected" && p.direction === direction && (!projectId || p.projectId === projectId && p.currency === context.currency));
+    const payments = data.payments.filter(p => !p.voided && paymentRemaining(p) > 0 && p.direction === direction && (!projectId || p.projectId === projectId && p.currency === context.currency));
     const currencies = [...new Set(payments.map(p => p.currency))].sort();
     if (!currencies.length) currencies.push(context.currency);
     const format = (value:number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
     const totals = currencies.map(currency => {
-      const total=payments.filter(p=>p.currency===currency).reduce((sum,p)=>sum+minorUnits(paymentTotal(p),currency),0)/minorUnitFactor(currency);
+      const total=payments.filter(p=>p.currency===currency).reduce((sum,p)=>sum+minorUnits(paymentRemaining(p),currency),0)/minorUnitFactor(currency);
       return t(intent==="receivable"?"receivableCurrency":"payableCurrency",{currency,amount:format(total)});
     });
-    const details = payments.slice(0, 30).map(p => t("paymentCurrencyLine", { label: p.label, currency:p.currency, amount:format(paymentTotal(p)), date: p.dueDate || t("dateUnknown") }));
+    const details = payments.slice(0, 30).map(p => t("paymentCurrencyLine", { label: p.label, currency:p.currency, amount:format(paymentRemaining(p)), date: p.dueDate || t("dateUnknown") }));
     if (payments.length > 30) details.push(t("omitted", { count: payments.length - 30 }));
     return prefix + [...totals, t("moneyBasis"), ...details].join("\n");
   }

@@ -41,13 +41,13 @@ export async function getManagerOverview(personId:string,requested:string[]|unde
     db.select({id:message.id,artistId:message.talentId,receivedAt:message.receivedAt,status:message.status,body:message.bodyText}).from(message)
       .innerJoin(membership,and(eq(membership.talentId,message.talentId),access))
       .where(and(inArray(message.talentId,ids),sql`${message.receivedAt}>=${start}::date and ${message.receivedAt}<(${end}::date + interval '1 day')`,sql`${message.status}<>'dismissed'`)).orderBy(desc(message.receivedAt)).limit(151),
-    db.select({talentId:payment.talentId,currency:payment.currency,amount:payment.amount,settledAmount:payment.settledAmount,direction:payment.direction,status:payment.status,taxRate:payment.taxRate,taxIncluded:payment.taxIncluded,voidedAt:payment.voidedAt}).from(payment)
+    db.select({talentId:payment.talentId,currency:payment.currency,amount:payment.amount,settledAmount:payment.settledAmount,receipts:payment.receipts,settledOn:payment.settledOn,dueOn:payment.dueOn,recordedOn:payment.recordedOn,direction:payment.direction,status:payment.status,taxRate:payment.taxRate,taxIncluded:payment.taxIncluded,voidedAt:payment.voidedAt}).from(payment)
       .innerJoin(membership,and(eq(membership.talentId,payment.talentId),access))
-      .where(and(inArray(payment.talentId,ids),isNull(payment.voidedAt),sql`(case when ${payment.status}='settled' then ${payment.settledOn} else coalesce(${payment.dueOn},${payment.recordedOn}) end) between ${start} and ${end}`)),
+      .where(and(inArray(payment.talentId,ids),isNull(payment.voidedAt),sql`(coalesce(${payment.dueOn},${payment.recordedOn}) between ${start} and ${end} or ${payment.settledOn} between ${start} and ${end} or exists (select 1 from jsonb_array_elements(${payment.receipts}) r where r->>'date' between ${start} and ${end}))`)),
   ]);
   const currentCapability=await requireManagerCapability(personId);
   selectManagedArtists(await getManagerRoster(personId),ids,currentCapability.artistLimit);
   const calendar=[...events.map(row=>({...row,date:row.date,time:row.time?.slice(0,5)||"",source:"event" as const})),...tasks.filter(row=>row.date).map(row=>({...row,date:row.date!,time:row.time?.slice(0,5)||"",source:"todo" as const}))]
     .sort((a,b)=>wallTimeToUtc(a.date,a.time||"00:00",a.timeZone).getTime()-wallTimeToUtc(b.date,b.time||"00:00",b.timeZone).getTime());
-  return {...base,limitReached:calendar.length>300||messages.length>150,calendar:calendar.slice(0,300),messages:messages.slice(0,150).map(row=>({...row,receivedAt:row.receivedAt.toISOString(),body:(row.body||"").slice(0,10000)})),finance:managerFinance(payments)};
+  return {...base,limitReached:calendar.length>300||messages.length>150,calendar:calendar.slice(0,300),messages:messages.slice(0,150).map(row=>({...row,receivedAt:row.receivedAt.toISOString(),body:(row.body||"").slice(0,10000)})),finance:managerFinance(payments,start,end)};
 }

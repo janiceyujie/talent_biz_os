@@ -1549,20 +1549,35 @@ small {
   border-radius: 18px;
   background: var(--surface);
   color: var(--ink);
-  overflow-y: auto;
+  overflow: hidden;
   box-shadow: 0 24px 90px #0004;
+}
+.modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+/* Only the body scrolls, keeping the close action visible on long forms. */
+.modal-body {
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+  margin: -4px;
 }
 .modal::backdrop {
   background: #1118;
   backdrop-filter: blur(3px);
 }
 .modal > header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 20px;
 }
+.modal > header .icon-button { flex-shrink: 0; }
 .modal h2 {
   font-size: 23px;
   margin: 0;
@@ -1594,6 +1609,8 @@ small {
   grid-template-columns: 1fr 1fr;
   gap: 15px;
 }
+.modal-actions[role="alertdialog"] { flex-wrap: wrap; }
+.modal-actions[role="alertdialog"] > p { flex-basis: 100%; margin: 0; }
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -4730,6 +4747,7 @@ p.gmail-skipped {
   position: fixed;
   inset: 0 0 0 auto;
   width: min(520px, 100vw);
+  max-width: 100vw;
   height: 100dvh;
   max-height: 100dvh;
   margin: 0;
@@ -4739,9 +4757,12 @@ p.gmail-skipped {
   border-radius: 0;
   background: var(--surface);
   color: var(--ink);
-  overflow-y: auto;
+  overflow: hidden;
   box-shadow: -12px 0 40px #0002;
 }
+.cash-scenario-panel[open] { display: flex; flex-direction: column; }
+.cash-scenario-panel > .cash-scenario-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-inline: 4px; margin-inline: -4px; }
+.cash-scenario-panel-header, .cash-scenario-panel-header .icon-button { flex-shrink: 0; }
 .cash-scenario-panel::backdrop { background: #1118; backdrop-filter: blur(2px); }
 .cash-scenario-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
 .cash-scenario-panel-header h2 { margin: 0; font-size: 1.25rem; }
@@ -4766,3 +4787,50 @@ p.gmail-skipped {
 .creator-platform-note { padding:12px 20px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); line-height:1.5; }
 
 .list-page-loader { display: flex; justify-content: center; align-items: center; gap: 0.75rem; min-height: 2rem; padding: 0.5rem; color: var(--muted); }
+
+/* Compact, live totals share the same money calculation as the ledger. */
+.editor-money-summary { display:flex; flex-wrap:wrap; align-items:baseline; gap:12px 24px; margin:16px 0 0; padding:12px; border-radius:10px; background:var(--accent-soft); }
+.editor-money-summary > div { min-width:0; }
+.editor-money-summary dt { color:var(--muted); font-size:var(--text-meta); }
+.editor-money-summary dd { margin:4px 0 0; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.editor-money-summary .is-total { margin-left:auto; font-weight:650; text-align:right; }
+.editor-money-summary .is-total dt { color:var(--ink); }
+.editor-settlement { min-width:0; }
+.editor-settlement label { margin-bottom:6px; }
+.editor-settlement-expected { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; margin-top:6px; font-size:var(--text-meta); color:var(--muted); }
+.editor-settlement-expected .text-button { padding:4px 0; white-space:nowrap; }
+.editor-settlement .editor-settlement-difference { margin:6px 0 0; color:var(--ink); font-size:var(--text-meta); border-left:3px solid var(--amber, #b46b16); padding-left:8px; }
+
+.receipt-reason { display: grid; gap: 8px; }
+.receipt-history { list-style: none; padding: 0; }
+.receipt-history li { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 8px 0; border-bottom: 1px solid var(--border); }
+
+.receipt-actions { display: flex; gap: 16px; }
+.receipt-actions button { min-height: 36px; }
+.receipt-audit-note { flex-basis: 100%; color: var(--muted); overflow-wrap: anywhere; font-size: .875rem; }
+
+.receipt-audit-list { list-style:none; margin:12px 0 0; padding:0; }
+.receipt-audit-list > li { padding:16px 0; border-bottom:1px solid var(--line); min-width:0; }
+.receipt-audit-heading { display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.receipt-audit-heading > span, .receipt-audit-meta, .receipt-audit-date { font-size:var(--text-meta); color:var(--muted); }
+.receipt-audit-meta { display:flex; flex-wrap:wrap; gap:4px 12px; margin-top:4px; overflow-wrap:anywhere; }
+.receipt-audit-date { margin:8px 0; }
+.receipt-audit-table-wrap { max-width:100%; overflow-x:auto; }
+.receipt-audit-table { width:100%; border-collapse:collapse; font-size:var(--text-meta); }
+.receipt-audit-table th, .receipt-audit-table td { padding:8px; text-align:right; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.receipt-audit-table th:first-child { text-align:left; }
+.receipt-audit-table thead { background:var(--surface-subtle, #f4f7f5); color:var(--muted); }
+.receipt-audit-table tbody tr + tr { border-top:1px solid var(--line); }
+.receipt-audit-amounts { display:flex; gap:8px 16px; flex-wrap:wrap; font-variant-numeric:tabular-nums; }
+.receipt-audit-list .receipt-audit-note { margin:8px 0; }
+.receipt-audit-list .receipt-actions { justify-content:flex-end; }
+.receipt-audit-list .receipt-actions button { min-height:44px; }
+
+.editor-form > .form-details { min-width:0; }
+@media (max-width:600px) {
+  .receipt-audit-table thead { display:none; }
+  .receipt-audit-table tbody, .receipt-audit-table tr { display:block; }
+  .receipt-audit-table tbody th { display:block; text-align:left; background:var(--surface-subtle, #f4f7f5); }
+  .receipt-audit-table td { display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px 8px; }
+  .receipt-audit-table td::before { content:attr(data-label); color:var(--muted); text-align:left; }
+}

@@ -17,6 +17,7 @@ export const getSession = cache(async () => {
   if (!session) return null;
   return {
     personId: session.user.id,
+    sessionId: session.session.id,
     email: session.user.email,
     displayName: session.user.name,
     locale: session.user.locale,

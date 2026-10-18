@@ -105,11 +105,12 @@ export type Contact = {
   phone: string;
   notes: string;
   archived: boolean;
+  billingAddress?: string;
   organizationId: string | null; // where they work (decision 0012); none for an independent
 };
 
 /** A company, organisation, band, or label the talent works with (decision 0012). */
-export type Organization = { id: string; name: string; notes: string; archived: boolean };
+export type Organization = { id: string; name: string; notes: string; archived: boolean; billingAddress?: string; billingEmail?: string };
 
 // One calendar list over two tables: calendar_event (things that happen) and
 // todo (deadlines). `kind` decides which table a new item goes to.
@@ -180,7 +181,9 @@ export type Payment = {
   status: "expected" | "settled" | "cancelled";
   settledAmount: number | null; // what actually arrived or was paid; null = the full total
   settledDate: string | null;
+  receipts?: import("@/lib/domain/payment-receipts").PaymentReceipt[];
   invoiceRef: string;
+  invoiceOn?: string | null; // optional date to start preparing this receivable’s invoice
   notes: string;
   voided: boolean; // Void: a mistaken or duplicate entry, out of every total
 };
@@ -340,6 +343,7 @@ export type AppData = {
     available: boolean;
     freeTier: boolean; // Gmail content may go to a free tier that keeps what it's sent (AI_FREE_TIER_OK, decision 0015)
     connection: {
+      draftGranted?: boolean;
       accountEmail: string;
       status: "connected" | "reconnect_needed" | "error" | "disconnecting";
       failure: string | null;

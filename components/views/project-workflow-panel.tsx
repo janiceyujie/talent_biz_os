@@ -1,7 +1,9 @@
 "use client";
+import { paymentRemaining } from "@/lib/domain/workflow";
 
 import { usePreviewAction } from "@/components/app/preview-action";
 
+import {InvoicePanel} from "@/components/invoices/panel";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
@@ -48,7 +50,7 @@ export function useClosingChecks(project: Project | null): ClosingCheck[] {
   const settlement = projectSettlement(data, project);
   const items = data.calendar.filter((c) => c.projectId === project.id && !c.archived);
   const expected = data.payments
-    .filter((p) => p.projectId === project.id && !p.voided && p.direction === "in" && p.status === "expected")
+    .filter((p) => p.projectId === project.id && !p.voided && p.direction === "in" && paymentRemaining(p) > 0)
     .sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999"));
   const all: (ClosingCheck & { always: boolean })[] = [
     { key: "quote", always: true, met: project.quotedAmount !== null, open: t("warn.quoteNotSet"), done: t("met.quote"), fix: { kind: "edit", field: "quotedAmount" } },
@@ -59,27 +61,27 @@ export function useClosingChecks(project: Project | null): ClosingCheck[] {
       key: "billing",
       always: true,
       met: settlement.unbilled <= 0 && settlement.billed > 0,
-      open: settlement.unbilled > 0 ? t("warn.unbilled", { amount: money(settlement.unbilled) }) : t("warn.notBilled"),
+      open: settlement.unbilled > 0 ? t("warn.unbilled", { amount: money(settlement.unbilled, project.currency) }) : t("warn.notBilled"),
       done: t("met.billing"),
       fix: { kind: "billing", amount: Math.max(0, settlement.unbilled) },
     },
     {
       key: "received",
       always: true,
-      met: settlement.pending <= 0 && settlement.received > 0,
-      open: settlement.pending > 0 ? t("warn.pending", { amount: money(settlement.pending) }) : t("warn.nothingReceived"),
+      met: settlement.pending <= 0 && settlement.received + settlement.withheld > 0,
+      open: settlement.pending > 0 ? t("warn.pending", { amount: money(settlement.pending, project.currency) }) : t("warn.nothingReceived"),
       done: t("met.received"),
       fix: { kind: "received", paymentId: expected[0]?.id ?? null },
     },
-    { key: "overbilled", always: false, met: settlement.unbilled >= 0, open: t("warn.overbilled", { amount: money(-settlement.unbilled) }), done: "", fix: { kind: "money" } },
-    { key: "shortfall", always: false, met: settlement.shortfall <= 0, open: t("warn.shortfall", { amount: money(settlement.shortfall) }), done: "", fix: { kind: "money" } },
+    { key: "overbilled", always: false, met: settlement.unbilled >= 0, open: t("warn.overbilled", { amount: money(-settlement.unbilled, project.currency) }), done: "", fix: { kind: "money" } },
+    { key: "shortfall", always: false, met: settlement.shortfall <= 0, open: t("warn.shortfall", { amount: money(settlement.shortfall, project.currency) }), done: "", fix: { kind: "money" } },
     { key: "costs", always: false, met: !settlement.unpaidCosts.length, open: t("warn.unpaidCosts", { count: settlement.unpaidCosts.length }), done: "", fix: { kind: "money" } },
   ];
   return all.filter((c) => c.always || !c.met).map(({ key, met, open, done, fix }) => ({ key, met, open, done, fix }));
 }
 
 /** A project's money: settlement totals, its payments, the deposit/balance split, and the closing check. */
-export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit: (e: Editor) => void }) {
+export function ProjectWorkflowPanel({ project, edit, invoicePaymentId, onInvoiceDismiss }: { project: Project; edit: (e: Editor) => void; invoicePaymentId?: string; onInvoiceDismiss?: () => void }) {
   const createPaymentPlan = usePreviewAction(createPaymentPlanRemote);
   const data = useAppData();
   const t = useTranslations("workflow");
@@ -108,6 +110,7 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
 
   return (
     <section className="deal-workflow deal-cards" aria-label={t("section")}>
+      {!data.preview && <InvoicePanel projectId={project.id} requestedPaymentId={invoicePaymentId} onDismiss={onInvoiceDismiss}/>}
       <DealCard title={t("payments")}>
         <dl>
           {[
@@ -115,7 +118,7 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
             [t("billed"), settlement.billed],
             [t("received"), settlement.received],
             [t("outstanding"), settlement.pending],
-            ...(settlement.shortfall > 0 ? [[t("shortfall"), settlement.shortfall] as const] : []),
+            ...(settlement.withheld > 0 ? [[t("withheld"), settlement.withheld] as const] : []),
           ].map(([label, value]) => (
             <div key={String(label)}>
               <dt>{label}</dt>
@@ -159,7 +162,7 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
                 <button className="deal-record" onClick={() => edit({ kind: "payment", item: toRecord(p) })}>
                   <span>{p.label}</span>
                   <small>{labels.paymentStatus(p)}</small>
-                  <strong>{money(p.amount)}</strong>
+                  <strong>{money(p.amount, p.currency)}</strong>
                 </button>
               </li>
             ))}

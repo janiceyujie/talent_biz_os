@@ -1,3 +1,4 @@
+import {prepareInvoices} from "@/lib/invoices/service";
 import { processMailReview } from "@/lib/mail/jobs/review";
 import { refreshGrantSources } from "@/lib/grants/sync";
 import type { Task } from "graphile-worker";
@@ -12,6 +13,12 @@ import { jobs, type JobName } from "@/lib/queue/jobs";
 // a job can run again after a crash or a redeploy.
 
 export const taskList: Record<JobName, Task> = {
+  "invoice.gmail": async payload => {
+    const input = jobs["invoice.gmail"].parse(payload);
+    const { processInvoiceGmail } = await import("@/lib/invoices/gmail-worker");
+    await processInvoiceGmail(input);
+  },
+  "invoice.prepare": async payload => { jobs["invoice.prepare"].parse(payload); await prepareInvoices(); },
   "mail.review": async payload => { const {decisionId,mode}=jobs["mail.review"].parse(payload); await processMailReview(decisionId,mode); },
   "grants.refresh": async payload => { jobs["grants.refresh"].parse(payload); if((await refreshGrantSources()).some(r=>!r.ok))throw new Error("grant_source_refresh_failed"); },
   "message.analyze": async (payload, { job }) => {

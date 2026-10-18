@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const { person, talent } = await requireTalent();
   const asked = req.nextUrl.searchParams.get("history");
   const historyMode: HistoryMode = historyModes.includes(asked as HistoryMode) ? (asked as HistoryMode) : "30_days";
-  const started = startConnect({ personId: person.personId, talentId: talent.id, historyMode });
+  const started = startConnect({ personId: person.personId, talentId: talent.id, historyMode, drafts: req.nextUrl.searchParams.get("drafts") === "1" });
   if ("error" in started) return NextResponse.redirect(new URL(`/settings?gmail=${started.error}`, req.url));
   const res = NextResponse.redirect(started.url);
   res.cookies.set(STATE_COOKIE, started.cookie, {

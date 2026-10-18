@@ -1,5 +1,7 @@
 "use client";
+import { paymentRemaining, paymentWithheld } from "@/lib/domain/workflow";
 
+import {InvoicePanel} from "@/components/invoices/panel";
 import { DateTimeInput } from "@/components/app/date-time-input";
 import { InfoHint } from "@/components/app/info-hint";
 
@@ -123,7 +125,7 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
 
   function exportCsv() {
     const table = [
-      (["recorded", "settled", "installment", "name", "direction", "category", "currency", "net", "tax", "total", "status", "due", "invoice"] as const).map(
+      (["recorded", "settled", "installment", "name", "direction", "category", "currency", "net", "tax", "total", "cash", "withheld", "remaining", "status", "due", "invoice"] as const).map(
         (column) => t(`csv.${column}`),
       ),
       ...rows.map((p) => {
@@ -139,6 +141,9 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
           amounts.net,
           amounts.tax,
           amounts.total,
+          paymentCash(p),
+          paymentWithheld(p),
+          paymentRemaining(p),
           labels.paymentStatus(p),
           p.dueDate,
           p.invoiceRef,
@@ -175,6 +180,7 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
         <Metric label={t("metricPayable")} value={money(s.payable, currency)} note={t("metricPayableNote")} />
       </section>
       <FinanceInsights currency={currency} />
+      {!readOnly && <InvoicePanel />}
       <details className="surface padded compact-disclosure finance-tools">
         <summary>{t("toolsTitle")}</summary>
       <div className="finance-tools-body">
@@ -193,7 +199,7 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
           </label>
           <label>
             {t("taxRate")}
-            <input type="number" min="0" max="100" step="0.01" value={rate} onChange={(e) => setRate(Number(e.target.value))} />
+            <input type="number" min="0" max="100" step="0.0001" value={rate} onChange={(e) => setRate(Number(e.target.value))} />
           </label>
           <div className="segmented">
             <button className={!included ? "active" : ""} aria-pressed={!included} onClick={() => setIncluded(false)}>
@@ -274,15 +280,15 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
                   </td>
                   <td>
                     {labels.paymentStatus(p)}
-                    {p.direction === "in" && p.status === "expected" && p.dueDate && p.dueDate < today && (
+                    {p.direction === "in" && paymentRemaining(p) > 0 && p.dueDate && p.dueDate < today && (
                       <span className="danger-text"> · {t("overdue")}</span>
                     )}
                   </td>
                   <td>
                     {money(paymentTotal(p), p.currency)}
-                    {p.status === "settled" && paymentCash(p) !== paymentTotal(p) && (
+                    {(paymentCash(p) > 0 || paymentWithheld(p) > 0) && (
                       <small>
-                        {t("settledGap", { direction: p.direction, cash: money(paymentCash(p), p.currency), gap: money(paymentTotal(p) - paymentCash(p), p.currency) })}
+                        {t("receiptBalance", { cash: money(paymentCash(p), p.currency), withheld: money(paymentWithheld(p), p.currency), remaining: money(paymentRemaining(p), p.currency) })}
                       </small>
                     )}
                   </td>
@@ -291,11 +297,11 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
                       <button className="secondary compact" onClick={() => setEditor({ kind: "payment", item: toRecord(p) })}>
                         {t("edit")}
                       </button>
-                      {p.status === "expected" && !p.voided && (
+                      {paymentRemaining(p) > 0 && !p.voided && (
                         <button
                           className="secondary compact"
                           onClick={() =>
-                            setEditor({ kind: "payment", item: { ...toRecord(p), status: "settled", settledDate: today } })
+                            setEditor({ kind: "payment", item: { ...toRecord(p), status: "settled", receiptEntry: true, settledDate: today } })
                           }
                         >
                           {t("markSettled", { direction: p.direction })}

@@ -1,5 +1,6 @@
 "use client";
 
+import { paymentBalance, type PaymentBalanceSource } from "@/lib/domain/payment-receipts";
 import { useTranslations } from "next-intl";
 import type { Intent } from "@/lib/ai/extraction/intents";
 import type { FlagKind } from "@/lib/ai/safety";
@@ -18,10 +19,14 @@ export function useLabels() {
     transportMode: (m: TransportMode) => t(`transportMode.${m}`),
     direction: (d: Payment["direction"]) => t(`direction.${d}`),
     installment: (i: Payment["installment"]) => t(`installment.${i}`),
-    paymentStatus: (p: Pick<Payment, "direction" | "status">) =>
+    paymentStatus: (p: Pick<Payment, "direction" | "status"> & Partial<PaymentBalanceSource>) =>
       p.status === "cancelled"
         ? t("paymentStatus.cancelled")
-        : t(`paymentStatus.${p.status}${p.direction === "in" ? "In" : "Out"}`),
+        : p.amount !== undefined && paymentBalance(p as PaymentBalanceSource).remaining > 0
+          ? t(`paymentStatus.${paymentBalance(p as PaymentBalanceSource).cash > 0 ? "partial" : "expected"}${p.direction === "in" ? "In" : "Out"}`)
+          : p.amount !== undefined && paymentBalance(p as PaymentBalanceSource).withheld > 0
+            ? t("paymentStatus.withholding")
+            : t(`paymentStatus.${p.status}${p.direction === "in" ? "In" : "Out"}`),
     projectType: (k: ProjectType) => t(`projectType.${k}.label`),
     intent: (k: Intent) => t(`intent.${k}`),
     flag: (k: FlagKind) => t(`flag.${k}`),

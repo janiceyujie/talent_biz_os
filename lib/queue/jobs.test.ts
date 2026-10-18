@@ -47,3 +47,13 @@ describe("job payloads", () => {
     assert.notEqual(analyzeJobKey(id), analyzeJobKey("9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"));
   });
 });
+
+
+test("scheduled jobs accept Graphile cron metadata but reject application content", () => {
+  for (const name of ["invoice.prepare", "grants.refresh"] as const) {
+    assert.equal(jobs[name].safeParse({}).success, true);
+    assert.equal(jobs[name].safeParse({_cron:{ts:"2026-10-17T02:40:00.000Z",backfilled:false}}).success, true);
+    assert.equal(jobs[name].safeParse({_cron:{ts:"not-a-date",backfilled:false}}).success, false);
+    assert.equal(jobs[name].safeParse({body:"A private email"}).success, false);
+  }
+});

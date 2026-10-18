@@ -15,3 +15,14 @@ test("preview list keeps samples visible after paginated-project integration", (
   assert.equal(previewProjectPage(data, { ...params, q: "headphone" }).total, 1);
   assert.equal(previewProjectPage(data, { ...params, view: "archived" }).total, 0);
 });
+
+test("completed projects leave settlement; archiving and reopening remain separate", () => {
+  const project={...data.projects[0],id:"completed",stage:"closed" as const,archived:false};
+  const sample={...data,projects:[project]};
+  let page=previewProjectPage(sample,{...params,view:"ended"});
+  assert.equal(page.items[0].id,project.id);assert.equal(page.counts.settlement,0);assert.equal(page.counts.ended,1);assert.equal(page.counts.all,1);
+  page=previewProjectPage({...sample,projects:[{...project,archived:true}]},{...params,view:"archived"});
+  assert.equal(page.total,1);assert.equal(page.counts.ended,0);assert.equal(page.counts.all,0);
+  page=previewProjectPage({...sample,projects:[{...project,stage:"collecting_payment"}]},{...params,view:"settlement"});
+  assert.equal(page.total,1);assert.equal(page.counts.ended,0);
+});

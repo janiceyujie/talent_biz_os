@@ -1,4 +1,5 @@
 "use client";
+import { paymentCash, paymentRemaining } from "@/lib/domain/workflow";
 
 import { ArrowDownUp, ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -89,7 +90,7 @@ type RowSort = (typeof rowSorts)[number];
 
 const matches = (x: Row, filter: StatusFilter) =>
   filter === "all" ||
-  (filter === "settled" ? x.status === "settled" : x.status === "expected" && (filter === "open" || (x.lateDays ?? 0) > 0));
+  (filter === "settled" ? paymentRemaining(x) === 0 : paymentRemaining(x) > 0 && (filter === "open" || (x.lateDays ?? 0) > 0));
 const dateOf = (x: Row) => x.dueDate ?? x.recordedDate;
 const compare: Record<RowSort, (a: Row, b: Row) => number> = {
   dueNew: (a, b) => dateOf(b).localeCompare(dateOf(a)),
@@ -235,7 +236,7 @@ function PartnerReport({ report, onBack }: { report: Report; onBack: () => void 
               [...groups].map(([projectId, items]) => {
                 const project = projectOf(projectId);
                 const all = report.rows.filter((x) => x.projectId === projectId);
-                const received = all.filter((x) => x.status === "settled").reduce((n, x) => n + x.total, 0);
+                const received = all.reduce((n, x) => n + paymentCash(x), 0);
                 const total = all.reduce((n, x) => n + x.total, 0);
                 return (
                   <tbody key={projectId}>

@@ -9,6 +9,7 @@ import { auditLog, contact, organization, payment, project } from "@/lib/db/sche
 import { organizationNamed, setClient } from "@/lib/data/organizations";
 import { projectTypeKeys } from "@/lib/project-types";
 import { supportedCurrencies } from "@/lib/domain/money";
+import { paymentBalance } from "@/lib/domain/payment-receipts";
 import { stages, type Stage } from "@/lib/types";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
@@ -44,7 +45,7 @@ const projectInput = z
       .optional()
       .transform((v) => (v === "" || v === undefined ? null : v)),
     currency: z.enum(supportedCurrencies),
-    taxRate: z.coerce.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
+    taxRate: z.coerce.number().min(0).max(100, "taxRateRange").multipleOf(0.0001),
     taxIncluded: z.boolean(),
     deliverables: optionalText,
     rights: optionalText,
@@ -134,12 +135,16 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
     const [existing] = await tx
       .select({ stage: project.stage, details: project.details, quoteCurrency: project.quoteCurrency })
       .from(project)
-      .where(and(eq(project.id, input.id), eq(project.talentId, talent.id)));
+      .where(and(eq(project.id, input.id), eq(project.talentId, talent.id))).for("update");
     if (!existing) return fail("projectNotFound");
     if (existing.quoteCurrency !== input.currency) {
       const [linkedPayment] = await tx.select({ id: payment.id }).from(payment)
         .where(and(eq(payment.projectId, input.id), eq(payment.talentId, talent.id))).limit(1);
       if (linkedPayment) return fail("projectCurrencyLocked");
+    }
+    if (input.stage === "closed") {
+      const outstanding = await tx.select().from(payment).where(and(eq(payment.projectId, input.id), eq(payment.talentId, talent.id))).for("update");
+      if (outstanding.some(p => !p.voidedAt && paymentBalance(p).remaining > 0)) return fail("projectOutstanding");
     }
     // The form edits only some details; keep the rest (deal fields, dates, to-confirm list from messages).
     const details = { ...existing.details, ...values.details };
@@ -161,8 +166,12 @@ export async function setProjectStage(id: string, stage: Stage): Promise<string 
     const [existing] = await tx
       .select({ stage: project.stage })
       .from(project)
-      .where(and(eq(project.id, id), eq(project.talentId, talent.id)));
+      .where(and(eq(project.id, id), eq(project.talentId, talent.id))).for("update");
     if (!existing) return fail("projectNotFound");
+    if (stage === "closed") {
+      const outstanding = await tx.select().from(payment).where(and(eq(payment.projectId, id), eq(payment.talentId, talent.id))).for("update");
+      if (outstanding.some(p => !p.voidedAt && paymentBalance(p).remaining > 0)) return fail("projectOutstanding");
+    }
     if (existing.stage === stage) return null;
     await tx.update(project).set({ stage }).where(and(eq(project.id, id), eq(project.talentId, talent.id)));
     await logStageChange(tx, talent.id, person.personId, id, existing.stage, stage);

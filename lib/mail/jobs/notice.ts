@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, inArray, lt } from "drizzle-orm";
 import { ModelError } from "@/lib/ai/model";
+import { canScore } from "@/lib/ai/usage";
 import { db } from "@/lib/db";
 import { mailConnection, mailDecision, message, talent } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
@@ -37,6 +38,7 @@ export async function pathFor(d: Decision, c: Connection, mail: MailProvider): P
   if (d.kind) return d.kind === "bank_notice" ? "notice" : "normal";
   const meta = await mail.getMetadata(d.providerMessageId, { snippet: true });
   if (!meta || !isBulk(meta)) return "normal"; // gone: the normal path records it when it finds nothing
+  if (!(await canScore(c.talentId))) return "wait"; // the mailbox's daily cap
   let scored;
   try {
     scored = await scoreMail(meta, { task: "relevance", talentId: c.talentId }, true);
@@ -58,6 +60,7 @@ export async function bringNotice(d: Decision, c: Connection, mail: MailProvider
     await db.update(mailDecision).set({ outcome: "skipped", decidedBy: "gone" }).where(eq(mailDecision.id, d.id));
     return;
   }
+  if (!(await canScore(c.talentId))) return; // the mailbox's daily cap: stays in Waiting for a later check
   const [t] = await db.select({ timeZone: talent.timeZone }).from(talent).where(eq(talent.id, c.talentId));
   const receivedOn = dateInZone(t.timeZone, 0, meta.receivedAt);
 

@@ -115,7 +115,8 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | Provider keys |
 | `AI_MODEL_<PROVIDER>_<ROLE>` | e.g. `AI_MODEL_ANTHROPIC_RELEVANCE`; roles `RELEVANCE`, `ANALYSIS`, `ANALYSIS_COMPLEX` |
 | `AI_FREE_TIER_OK` | Allows Gmail content to reach a provider marked `AI_PROVIDER_KEEPS_DATA` (never with `APP_ENV=production`) |
-| `AI_MAILBOX_PROVIDER`, `AI_MAILBOX_MODEL` | Development: mailbox content (relevance, and analysis of what's brought in) on its own provider and model; replaced by the role models with `ai-providers` |
+| `AI_MAILBOX_PROVIDER`, `AI_MAILBOX_MODEL` | Development: mailbox content (relevance, and analysis of what's brought in) on its own provider and model; unset, it goes to the primary |
+| `AI_PRIMARY`, `AI_BACKUP`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `AI_MODEL_<PROVIDER>_<ROLE>` | The paid providers and their model per role (decision 0015) |
 | `MAIL_RELEVANCE_HIGH`, `MAIL_RELEVANCE_LOW` | The two thresholds: 0.6 and 0.4, from the first relevance eval |
 | `MAIL_KEY_DEV` | The local data-key master key (development only) |
 | `GCP_PROJECT`, `KMS_KEY_NAME`, `GCP_KMS_CREDENTIALS` | Cloud KMS (encrypt-only credential on web, decrypt-only on the worker) |
@@ -144,7 +145,7 @@ One theme per branch, each mergeable on its own and testable on the builder's ow
 | 6 | `payment-notices` | The restricted path, the unmatched payment card, expiry | Bank notices matched to payments |
 | 7 | `gmail-threads` | Thread as the top suggestion and File all, sent mail in relevant threads (analyzed as the artist's side, filed at once when it proposes nothing), contact proposals on existing projects, reply to-do completion with Undo | A negotiation tracked as one project |
 | 8 | `gmail-push-backfill` | Watch + Pub/Sub pull when configured, otherwise a 2-minute poll; renewal; reconciliation; the history read started on connect; deleting skipped decisions after 90 days; a daily queue cleanup (jobs that gave up more than 14 days ago, unused queue rows; Graphile keeps failed jobs until deleted); "Checked 2 min ago" with Check now | Mail arrives without Sync now |
-| 9 | `ai-providers` | OpenAI and Anthropic adapters; evals on both | Paid models; required before anyone else's mail (can move up to right after 4) |
+| 9 | `ai-providers` | OpenAI and Anthropic adapters (official SDKs), a model per role, the backup on outage, routing to the large model; evals on both | Paid models; required before anyone else's mail (can move up to right after 4) |
 | 10 | `deploy-render` | `Dockerfile`, `render.yaml`, Cloud KMS provider, Supabase project, Google Cloud setup | The first person besides the builder connects |
 
 **Alongside**: start Google verification once branch 2 works (privacy policy, verified domain, scope reasons, demo video), then CASA preparation.

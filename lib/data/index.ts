@@ -239,7 +239,8 @@ export const getAppData = cache(async (): Promise<AppData> => {
       workspaceOwner: current.role === "owner", // only owners change the workspace's name and zone
     },
     calendarFeed: Boolean(memberRow?.feedHash),
-    aiDataNotice: process.env.AI_PROVIDER_KEEPS_DATA === "1" ? aiServiceName(process.env.AI_PROVIDER) : null,
+    // The provider paste and upload actually use (AI_PRIMARY, or AI_PROVIDER in development).
+    aiDataNotice: keepsData(modelFor("analysis", false).provider) ? aiServiceName(modelFor("analysis", false).provider) : null,
     aiUsage: await dailyUsage(current.id),
     externalEvents: importedRows.map((e) => {
       const source = importSources.find((x) => x.id === e.sourceId)!;
@@ -399,5 +400,5 @@ export const getAppData = cache(async (): Promise<AppData> => {
 
 /** How the AI service is named to people, for the data notice. */
 function aiServiceName(provider: string | undefined) {
-  return ({ gemini: "Google Gemini", anthropic: "Anthropic Claude", ollama: "Ollama" } as Record<string, string>)[provider ?? ""] ?? "AI";
+  return ({ gemini: "Google Gemini", anthropic: "Anthropic Claude", openai: "OpenAI", ollama: "Ollama" } as Record<string, string>)[provider ?? ""] ?? "AI";
 }

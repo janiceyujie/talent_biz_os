@@ -241,7 +241,7 @@ try {
  const bankPayment=await action("savePaymentWithId",[{...input,label:"Bank notice integration QA",amount:1000,taxRate:0}]);ok(bankPayment.id);
  const makeNotice=async(amount:number,currency="TWD")=>{
   const id=randomUUID();const notice={amount,currency,date:today,payer:"Synthetic payer",last4:"1234"};
-  await q`insert into message(id,talent_id,submitted_by,channel,dedup_key,status,kind,notice) values(${id},${actors[0].talentId},${actors[0].personId},'paste',${id},'analyzed','payment_notice',${q.json(notice)})`;
+  await q`insert into message(id,talent_id,submitted_by,channel,dedup_key,status,kind,notice,received_at) values(${id},${actors[0].talentId},${actors[0].personId},'paste',${id},'analyzed','payment_notice',${q.json(notice)},now())`;
   return id;
  };
  const bankOne=await makeNotice(600);

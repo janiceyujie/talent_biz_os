@@ -103,6 +103,34 @@ try{
  const response=await get("/api/inbox?dismissed=false");ok(response.status===200&&response.headers.get("cache-control")?.includes("no-store"),"Private HTTP list");ok((await response.json()).items.length===20,"HTTP page bounded");
  ok((await get(`/api/inbox/${seen[204]}`)).status===200,"HTTP old detail");ok((await get(`/api/inbox/${foreign.id}`)).status===404,"HTTP foreign detail denied");ok((await get("/api/inbox?cursor=broken")).status===400,"HTTP invalid cursor");
  ok((await get("/inbox")).status===200,"Inbox page renders");
+ // Janice's thread metadata must survive our paged inbox (layout inbox is empty).
+ const threadIds=[randomUUID(),randomUUID(),randomUUID()];
+ for(let i=0;i<3;i++){
+  await db.insert(s.message).values({id:threadIds[i],talentId:own,submittedBy:owner,channel:"gmail",connectionId:connection,externalRef:`thread-${i}`,providerThreadId:"qa-thread",sender:"Brand <brand@example.invalid>",direction:i===2?"sent":"received",bodyText:"Synthetic logistics only",dedupKey:threadIds[i],status:i===0?"confirmed":"analyzed",projectId:i===0?project:null,receivedAt:new Date(`2026-10-14T1${i}:00:00Z`)});
+  const a={...analysis,intent:"logistics" as const,projectType:"other" as const,money:{amount:null,currency:"",taxIncluded:null,asStated:""},counterparty:{name:"",company:"",email:"",phone:""}};
+  await db.insert(s.messageAnalysis).values({messageId:threadIds[i],talentId:own,intent:a.intent,analysis:a,confidence:a.confidence,modelVersion:"fixture",promptVersion:"fixture"});
+ }
+ const thread=await inboxDetail(own,threadIds[1]);
+ ok(thread?.threadContext?.projectId===project&&thread.threadContext.replied,"Paged detail finds earlier filed project and later own reply");
+ ok(thread?.threadContext?.waitingIds.includes(threadIds[2]),"Thread batch includes waiting reply outside page");
+ const ownReply=await inboxDetail(own,threadIds[2]);ok(ownReply?.gmail?.sent,"Own sent reply remains distinct");
+ const [doneReply]=await db.insert(s.todo).values({talentId:own,projectId:project,title:"Thread reply task",type:"reply",timeZone:"UTC",status:"done",completedAt:new Date(),completedByMessageId:threadIds[2]}).returning();
+ ok((await inboxDetail(own,threadIds[2]))?.completedTodos?.some(t=>t.id===doneReply.id),"Completed reply task visible on its message");
+ async function threadAction(name:string,args:unknown[]){
+  const {readFile}=await import("node:fs/promises");const manifest=JSON.parse(await readFile(".next/dev/server/server-reference-manifest.json","utf8"));
+  const entry=Object.entries(manifest.node).find(([,v])=>(v as {exportedName:string}).exportedName===name);assert.ok(entry);
+  const r=await fetch(`${base}/inbox`,{method:"POST",headers:{Cookie:cookie,Origin:base,"Content-Type":"text/plain;charset=UTF-8","Next-Action":entry[0]},body:JSON.stringify(args)});assert.equal(r.status,200);const lines=(await r.text()).split("\n"),root=lines.find(l=>l.startsWith("0:"))!;const id=JSON.parse(root.slice(2)).a?.replace("$@","");const result=lines.findLast(l=>l.startsWith(`${id}:`)&&/^(null|"|\[|\{)/.test(l.slice(String(id).length+1)));assert.ok(result);return JSON.parse(result.slice(String(id).length+1));
+ }
+ ok(await threadAction("reopenReplies",[threadIds[2]])===null,"Undo opens only the reply's completed tasks");
+ ok(!(await inboxDetail(own,threadIds[2]))?.completedTodos?.length,"Completed list refreshes after undo");
+ const batch=await threadAction("fileThread",[{messageIds:threadIds.slice(1),projectId:project}]);
+ ok(batch.left===0,"Batch files waiting thread with fresh paged context");
+ const filedThread=await q`select id,status,project_id from message where id in (${threadIds[1]},${threadIds[2]})`;
+ ok(filedThread.every(m=>m.status==="confirmed"&&m.project_id===project),"Both thread messages filed on intended project");
+ const paymentNotice=randomUUID();await db.insert(s.message).values({id:paymentNotice,talentId:own,submittedBy:owner,channel:"gmail",connectionId:connection,externalRef:"bank-qa",dedupKey:paymentNotice,status:"analyzed",kind:"payment_notice",notice:{amount:400,currency:"TWD",date:null,payer:null,last4:null},receivedAt:new Date()});
+ const noticeList=await listInbox(own,inboxListParams.parse({}));ok(noticeList.items.some(m=>m.id===paymentNotice&&m.notice?.amount===400),"Paged summaries expose notice fields without a body");
+ ok((await inboxDetail(own,paymentNotice))?.body==="","Restricted notice has no stored body");
+
  console.log(JSON.stringify({checks,paidCalls:0,realGmailCalls:0,messages:205,queue:emitted.map(e=>e.name)}));
  if(process.argv.includes("--keep-for-browser")){
    await writeFile("/private/tmp/taloox-inbox-identity.json",JSON.stringify({email,password,own,other,owner,stranger,connection,oldMessage:seen[204]}),{mode:0o600});

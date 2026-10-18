@@ -223,7 +223,7 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
           await tx
             .update(payment)
             .set({
-              ...appendReceipt(p, { id: input.messageId, date: c.settledOn, cash: c.amount, reason: "unpaid" }),
+              ...appendReceipt(p, { id: input.messageId, date: c.settledOn, cash: c.amount, reason: "unpaid", recordedAt: new Date().toISOString(), recordedBy: person.personId }),
               invoiceRef: p.invoiceRef || c.invoiceRef || null,
             })
             .where(eq(payment.id, p.id));

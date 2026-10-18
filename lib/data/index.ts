@@ -281,8 +281,9 @@ export const getAppData = cache(async (): Promise<AppData> => {
             historyMode: mailbox.historyMode,
             lastSyncedAt: mailbox.lastSyncedAt?.toISOString() ?? null,
             syncing:
-              mailbox.status === "connected" &&
-              (scoring || (!!mailbox.syncRequestedAt && (!mailbox.lastSyncedAt || mailbox.syncRequestedAt > mailbox.lastSyncedAt))),
+              mailbox.status === "connected" && !!mailbox.syncRequestedAt && (!mailbox.lastSyncedAt || mailbox.syncRequestedAt > mailbox.lastSyncedAt),
+            // Emails the model is still scoring: a backlog on a slow local model can take a while.
+            sorting: mailbox.status === "connected" && scoring ? mailCount("pending") : 0,
             connectedAt: mailbox.createdAt.toISOString(),
             updatedAt: mailbox.updatedAt.toISOString(), // when the status last changed
             counts: { waiting: waitingCount, skipped: mailCount("skipped") + mailCount("not_work") },

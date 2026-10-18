@@ -6,11 +6,11 @@ import { accessToken, dropAccessToken, MailAccessLost, markReconnectNeeded } fro
 import { gmailProvider, GmailError } from "../gmail";
 import type { MailRef } from "../metadata";
 import type { MailProvider } from "../provider";
+import { pushConfigured, pushTopic } from "../pubsub";
 import { readMetadata } from "../read";
 import { ruleContext } from "../relevance/context";
 import { decideAll, RULES_VERSION } from "../relevance/rules";
 import { queueFetching } from "./fetch";
-import { expireNotices } from "./notice";
 import { queueScoring } from "./relevance";
 
 // mail.sync (docs/design/gmail-ingestion.md, Jobs): find the mailbox's new
@@ -47,9 +47,8 @@ export async function syncMailbox(connectionId: string, { lastAttempt }: { lastA
 }
 
 async function sync(c: Connection) {
-  // Until scheduled jobs arrive (gmail-push-backfill), each sync clears notices left too long.
-  await expireNotices(c.talentId);
   const mail = gmailProvider(await accessToken(c));
+  if (pushConfigured()) await keepWatching(c, mail);
   const { refs, cursor } = await whatsNew(c, mail);
   const fresh = await undecided(c.id, refs);
   const ctx = await ruleContext(c.talentId, c.id);
@@ -91,7 +90,11 @@ async function sync(c: Connection) {
     })
     .where(and(eq(mailConnection.id, c.id), inArray(mailConnection.status, ["connected", "error"])));
   // What's pending goes to the model, and what's work is brought in; anything left from before too
-  // (a model or Gmail that was down, the rules-only version).
+  // (a model or Gmail that was down, the rules-only version). Not on every scheduled check with
+  // nothing new: a model that's down would be retried for every email every few minutes. New mail,
+  // connecting, or Check now try them again.
+  const asked = !!c.syncRequestedAt && (!c.lastSyncedAt || c.syncRequestedAt > c.lastSyncedAt);
+  if (!asked && !fresh.length) return;
   await queueScoring(c.id);
   await queueFetching(c.id);
 }
@@ -160,4 +163,23 @@ async function undecided(connectionId: string, refs: MailRef[]): Promise<MailRef
     for (const r of rows) decided.add(r.id);
   }
   return unique.filter((r) => !decided.has(r.id)).slice(0, MAX_MAIL);
+}
+
+const WATCH_RENEW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Push (decision 0013): a Gmail watch lasts at most 7 days, so a sync renews
+ * one that ends within a day, or starts it (the first sync after connecting).
+ * The 15-minute poll means every connected mailbox syncs often enough. A
+ * failure here never fails the sync: the poll still finds the mail.
+ */
+async function keepWatching(c: Connection, mail: MailProvider) {
+  if (c.watchExpiresAt && c.watchExpiresAt.getTime() - Date.now() > WATCH_RENEW_MS) return;
+  try {
+    const { expiresAt } = await mail.watch(pushTopic());
+    await db.update(mailConnection).set({ watchExpiresAt: expiresAt }).where(eq(mailConnection.id, c.id));
+  } catch (e) {
+    if (e instanceof MailAccessLost) throw e;
+    console.error("mail.sync watch failed", c.id, e instanceof GmailError ? `${e.status} ${e.reason}` : (e as Error)?.name);
+  }
 }

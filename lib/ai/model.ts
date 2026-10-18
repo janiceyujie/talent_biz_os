@@ -214,35 +214,48 @@ async function ollama<T>({ system, prompt, schema, attachments = [] }: Structure
     throw new ModelError("unsupported_file", `The local model ${model} can't read images`);
   const images = attachments.map((a) => Buffer.from(a.data).toString("base64"));
   const url = (process.env.OLLAMA_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
-  let response: Response;
-  try {
-    response = await fetch(`${url}/api/chat`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        think: false, // reasoning models: answer directly; the schema is the whole output
-        format: z.toJSONSchema(schema), // Ollama constrains generation to this schema
-        options: { temperature: 0 },
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt, ...(images.length ? { images } : {}) },
-        ],
-      }),
-      signal: AbortSignal.timeout(180_000),
-    });
-  } catch (e) {
-    throw new ModelError("unreachable", `Couldn't reach Ollama at ${url} (${e instanceof Error ? e.message : e}). Is it running?`);
-  }
-  if (!response.ok) throw new ModelError("unreachable", `Ollama answered ${response.status}: ${(await response.text()).slice(0, 300)}`);
-  const body = (await response.json()) as { message?: { content?: string }; prompt_eval_count?: number; eval_count?: number };
-  return {
-    object: parseAgainst(schema, body.message?.content ?? ""),
-    modelVersion: `ollama:${model}`,
-    inputTokens: body.prompt_eval_count ?? null,
-    outputTokens: body.eval_count ?? null,
-  };
+  return oneAtATime(async () => {
+    let response: Response;
+    try {
+      response = await fetch(`${url}/api/chat`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          model,
+          stream: false,
+          think: false, // reasoning models: answer directly; the schema is the whole output
+          format: z.toJSONSchema(schema), // Ollama constrains generation to this schema
+          options: { temperature: 0 },
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: prompt, ...(images.length ? { images } : {}) },
+          ],
+        }),
+        signal: AbortSignal.timeout(180_000),
+      });
+    } catch (e) {
+      throw new ModelError("unreachable", `Couldn't reach Ollama at ${url} (${e instanceof Error ? e.message : e}). Is it running?`);
+    }
+    if (!response.ok) throw new ModelError("unreachable", `Ollama answered ${response.status}: ${(await response.text()).slice(0, 300)}`);
+    const body = (await response.json()) as { message?: { content?: string }; prompt_eval_count?: number; eval_count?: number };
+    return {
+      object: parseAgainst(schema, body.message?.content ?? ""),
+      modelVersion: `ollama:${model}`,
+      inputTokens: body.prompt_eval_count ?? null,
+      outputTokens: body.eval_count ?? null,
+    };
+  });
+}
+
+// A local model answers one request at a time and queues the rest; a request
+// waiting there would use up its own timeout behind the others. The worker's
+// jobs (scoring, payment notices, analyses) run side by side, so they take
+// turns here instead, and the timeout counts only the request being answered.
+let ollamaTurn: Promise<unknown> = Promise.resolve();
+function oneAtATime<T>(call: () => Promise<T>): Promise<T> {
+  const turn = ollamaTurn.then(call, call);
+  ollamaTurn = turn.catch(() => undefined);
+  return turn;
 }
 
 async function gemini<T>(request: StructuredRequest<T>, models: string[]): Promise<ProviderResult<T>> {

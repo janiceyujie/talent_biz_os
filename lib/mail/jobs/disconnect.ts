@@ -4,11 +4,13 @@ import { db } from "@/lib/db";
 import { file, mailConnection, message } from "@/lib/db/schema";
 import { open } from "@/lib/keys";
 import { removeObjects } from "@/lib/storage";
+import { accessToken } from "../access";
+import { gmailProvider } from "../gmail";
 import { OAuthError, revokeToken } from "../oauth";
 import { fromColumns, tokenAad } from "../token";
 
 /**
- * mail.disconnect (decision 0013): withdraw our access at Google, remove what
+ * mail.disconnect (decision 0013): stop push notices, withdraw our access at Google, remove what
  * the mailbox brought in (all of it, or all but what's filed under a project,
  * as the artist chose), then delete the connection and its decisions. Runs in
  * the worker, the only place that can decrypt the token. If Google can't be
@@ -18,6 +20,11 @@ import { fromColumns, tokenAad } from "../token";
 export async function disconnectMailbox(connectionId: string, { lastAttempt, keep }: { lastAttempt: boolean; keep: "filed" | "none" }) {
   const [c] = await db.select().from(mailConnection).where(eq(mailConnection.id, connectionId));
   if (!c) return; // already gone: this job ran before
+  // Push notices stop first, while the token still works; revoking ends them within days anyway.
+  if (c.watchExpiresAt && c.watchExpiresAt > new Date())
+    await gmailProvider(await accessToken(c))
+      .stopWatch()
+      .catch((e) => console.error("mail.disconnect: couldn't stop the watch", connectionId, (e as Error)?.name));
   try {
     await revokeToken(await open(fromColumns(c), tokenAad(c.talentId, c.accountSubject)));
   } catch (e) {

@@ -334,7 +334,8 @@ export type AppData = {
       failure: string | null;
       historyMode: "30_days" | "new_only";
       lastSyncedAt: string | null;
-      syncing: boolean; // Sync now pressed and not finished, or emails still being scored
+      syncing: boolean; // Check now (or connecting) and that check not finished
+      sorting: number; // emails still being scored by the model
       connectedAt: string;
       updatedAt: string;
       counts: { waiting: number; skipped: number }; // Intake's Waiting and Filtered out

@@ -115,18 +115,18 @@ export async function bringNotice(d: Decision, c: Connection, mail: MailProvider
   });
 }
 
-/** Notices left unhandled for 30 days: their fields are deleted; the decision stays, with the Gmail link. */
-export async function expireNotices(talentId: string) {
+/** Notices left unhandled for 30 days, for one talent or all: their fields are deleted; the decision stays, with the Gmail link. */
+export async function expireNotices(talentId?: string) {
   const old = await db
-    .select({ id: message.id })
+    .select({ id: message.id, talentId: message.talentId })
     .from(message)
     .where(
       and(
-        eq(message.talentId, talentId),
+        talentId ? eq(message.talentId, talentId) : undefined,
         eq(message.kind, "payment_notice"),
         inArray(message.status, ["analyzed", "dismissed"]),
         lt(message.createdAt, new Date(Date.now() - NOTICE_TTL_DAYS * DAY_MS)),
       ),
     );
-  for (const m of old) await dropBroughtIn(talentId, m.id, "expired");
+  for (const m of old) await dropBroughtIn(m.talentId, m.id, "expired");
 }

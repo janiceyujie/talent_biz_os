@@ -1162,11 +1162,11 @@
       "googleError": "Google returned an error. Try again in a moment."
     },
     "connectSummary": "Read-only access. Only work email is brought in.",
-    "syncNow": "Sync now",
-    "syncing": "Syncing…",
-    "syncedAt": "Synced {time}",
-    "neverSynced": "Not synced yet",
-    "syncFailed": "Last sync failed",
+    "syncNow": "Check now",
+    "syncing": "Checking…",
+    "syncedAt": "Checked {time}",
+    "neverSynced": "Not checked yet",
+    "syncFailed": "Last check failed",
     "lastSynced": "Last synced",
     "never": "Never",
     "tabsLabel": "What to show",
@@ -1258,7 +1258,9 @@
     "keepNoneHint": "Including email filed under projects",
     "notWorkTitle": "Not work?",
     "notWorkBody": "It leaves Intake, and its text and attachments are deleted. It stays listed in Filtered out, where This was work brings it back.",
-    "notWorkNeverFrom": "Also stop bringing in mail from {sender}"
+    "notWorkNeverFrom": "Also stop bringing in mail from {sender}",
+    "autoInfo": "New mail arrives on its own. Check now to look right away, say for a reply you're waiting on.",
+    "sortingCount": "sorting {count, plural, one {# email} other {# emails}}"
   },
   "paymentNotice": {
     "chip": "Payment",

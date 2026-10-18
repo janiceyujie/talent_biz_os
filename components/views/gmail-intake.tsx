@@ -1,6 +1,6 @@
 "use client";
 
-// Intake's Gmail parts (decision 0013): Sync now, and the Waiting and Filtered
+// Intake's Gmail parts (decision 0013): when mail was last checked, and the Waiting and Filtered
 // out lists. We store only ids and what was decided; the sender and subject
 // shown here are read live from Gmail, through the worker, as the list opens.
 import { RefreshCw } from "lucide-react";
@@ -8,15 +8,17 @@ import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { InfoHint } from "@/components/app/info-hint";
 import { addSenderRule, markWasWork, syncGmail } from "@/lib/actions/mail";
 import { domainOf } from "@/lib/mail/metadata";
 import { isPersonalDomain } from "@/lib/mail/relevance/rules";
 import type { GmailMailItem, GmailMailPage, GmailMailView } from "@/lib/types";
 
 const POLL_MS = 3000; // while a sync runs, look again this often
+const IDLE_POLL_MS = 60_000; // otherwise: the worker checks every 2 minutes (15 with push)
 const outcomeChip: Record<GmailMailItem["outcome"], string> = { work: "status-confirmed", unsure: "status-analyzed", pending: "", skipped: "", not_work: "" };
 
-/** The header's Sync now, with when the last sync finished. */
+/** The header's "Checked 2 min ago", with Check now. */
 export function GmailSync({ onNotice }: { onNotice: (text: string | null) => void }) {
   const { gmail } = useAppData();
   const t = useTranslations("gmail");
@@ -26,12 +28,15 @@ export function GmailSync({ onNotice }: { onNotice: (text: string | null) => voi
   const [pending, startTransition] = useTransition();
   const c = gmail.connection;
   const syncing = !!c?.syncing;
+  const sorting = c?.sorting ?? 0;
 
+  // While a check runs or emails are sorted, look again often; otherwise once a minute, so
+  // "Checked 2 min ago" follows the worker's own checks (not while the tab is hidden).
   useEffect(() => {
-    if (!syncing) return;
-    const timer = setInterval(() => router.refresh(), POLL_MS);
+    const busy = syncing || sorting > 0;
+    const timer = setInterval(() => document.visibilityState === "visible" && router.refresh(), busy ? POLL_MS : IDLE_POLL_MS);
     return () => clearInterval(timer);
-  }, [syncing, router]);
+  }, [syncing, sorting, router]);
 
   if (!c || (c.status !== "connected" && c.status !== "error")) return null;
   const status = syncing
@@ -43,13 +48,17 @@ export function GmailSync({ onNotice }: { onNotice: (text: string | null) => voi
             time: format.relativeTime(new Date(c.lastSyncedAt), now),
           })
         : t("neverSynced");
+  // Mail arrives on its own (decision 0013): when it was last checked, and a quiet way to check now.
   return (
     <div className="gmail-sync">
       <span className={c.status === "error" && !syncing ? "gmail-sync-failed" : "muted"} role="status">
+        {(syncing || sorting > 0) && <RefreshCw size={14} aria-hidden="true" className="spinning" />}
         {status}
+        {!syncing && sorting > 0 && ` · ${t("sortingCount", { count: sorting })}`}
       </span>
+      <InfoHint notes={[t("autoInfo")]} />
       <button
-        className="secondary"
+        className="link-button"
         disabled={pending || syncing}
         onClick={() =>
           startTransition(async () => {
@@ -57,7 +66,6 @@ export function GmailSync({ onNotice }: { onNotice: (text: string | null) => voi
           })
         }
       >
-        <RefreshCw size={16} aria-hidden="true" className={syncing ? "spinning" : undefined} />
         {t("syncNow")}
       </button>
     </div>
@@ -105,8 +113,8 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
   const [loading, setLoading] = useState(false);
   const c = gmail.connection;
   // A finished sync or a moved email changes the counts: read the list again.
-  const version = `${c?.lastSyncedAt}:${c?.syncing}:${c?.counts.waiting}:${c?.counts.skipped}`;
-  const sorting = !!c?.syncing; // the lists show only what's sorted: wait for the last score
+  const version = `${c?.lastSyncedAt}:${c?.syncing}:${c?.sorting}:${c?.counts.waiting}:${c?.counts.skipped}`;
+  const sorting = !!c?.syncing; // while a check runs, wait for it; emails still being scored show as Not decided yet
 
   // Only the latest request may fill the list: an older, slower one (a refresh racing it) is ignored.
   const latest = useRef(0);

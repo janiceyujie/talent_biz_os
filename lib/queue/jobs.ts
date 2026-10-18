@@ -18,6 +18,11 @@ export const jobs = {
   /** Revoke a mailbox's token at Google and delete the connection (lib/mail/jobs/disconnect.ts). */
   // keep: "filed" keeps email filed under a project; "none" removes everything brought in.
   "mail.disconnect": z.strictObject({ connectionId: z.uuid(), keep: z.enum(["filed", "none"]).default("none") }),
+  // Scheduled by the worker (worker/schedule.ts); the scheduler adds its own `_cron` details, ignored here.
+  /** A sync for every connected mailbox: the poll, and push's safety net (lib/mail/jobs/reconcile.ts). */
+  "mail.reconcile": z.object({}),
+  /** Daily: old skipped decisions, unhandled payment notices, and jobs that gave up long ago (lib/mail/jobs/cleanup.ts). */
+  "mail.cleanup": z.object({}),
 };
 
 export type JobName = keyof typeof jobs;
@@ -41,6 +46,9 @@ export const jobAttempts: Record<JobName, number> = {
   "mail.fetch": 5,
   // Google unreachable: a few more tries, then the row is deleted anyway.
   "mail.disconnect": 5,
+  // The next run comes on schedule anyway.
+  "mail.reconcile": 1,
+  "mail.cleanup": 3,
 };
 
 /** The key that makes a second "analyze this message" replace a waiting one instead of queueing twice. */

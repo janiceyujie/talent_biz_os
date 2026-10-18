@@ -47,3 +47,5 @@ All checks used local PostgreSQL and synthetic identities. No real Gmail API, pa
 | Local data restore verification | All original columns in 51 public/queue tables matched row counts and content digests; 85 foreign keys checked; no disabled triggers |
 
 The pre-integration database, full Git bundle, local edits archive and a final database dump remain available locally as rollback material. Queue state was preserved, and no locked jobs remained after stopping the previous worker. No local secrets, mailbox contents, database dumps or test credentials belong in the Git branches.
+
+After installing the final local checkout, the 50 inbox assertions passed again on port 3000. A browser test selected an existing TWD 1,000 receivable, confirmed a TWD 400 bank notice with TWD 100 withholding, and reopened today's briefing: the reminder showed TWD 500 still due. PostgreSQL readback confirmed `expected`, cash 400, withholding 100 and the actor ID. The disposable browser identities and records were then removed.

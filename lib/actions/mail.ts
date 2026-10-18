@@ -2,16 +2,20 @@
 
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { mailConnection, mailDecision, mailSenderRule, message } from "@/lib/db/schema";
+import { mailConnection, mailDecision, mailSenderRule, message, payment, talent as talentTable, todo } from "@/lib/db/schema";
+import { dateInZone } from "@/lib/domain/dates";
+import { supportedCurrencies } from "@/lib/domain/money";
 import { queueFetch } from "@/lib/mail/jobs/fetch";
 import { domainOf, parseAddress } from "@/lib/mail/metadata";
 import { dropBroughtIn } from "@/lib/mail/not-work";
 import { isPersonalDomain } from "@/lib/mail/relevance/rules";
 import { queue } from "@/lib/queue";
 import { mailQueue, syncJobKey } from "@/lib/queue/jobs";
+import { checkProjectLink } from "./project-link";
 import { errorText, firstIssue } from "./validation";
 
 // The connected mailbox (decision 0013): Sync now, disconnect, and sender
@@ -175,6 +179,109 @@ export async function markSureWork(messageId: string): Promise<string | null> {
     return !!m;
   });
   if (!found) return fail("invalid");
+  refresh();
+  return null;
+}
+
+class Refused {
+  constructor(readonly key: "paymentNotFound") {}
+}
+
+const recordInput = z.union([z.strictObject({ paymentId: z.uuid() }), z.strictObject({ projectId: z.uuid() })]);
+
+/**
+ * Mark as received, on a payment notice (decision 0013): settles the expected
+ * payment the person picked, or records a new one on a signed project, with
+ * what arrived and when. The notice stays, filed, with its fields.
+ */
+export async function recordNoticePayment(messageId: string, target: { paymentId: string } | { projectId: string }): Promise<string | null> {
+  const { talent } = await requireTalent();
+  const fail = await errorText();
+  const parsed = recordInput.safeParse(target);
+  if (!z.uuid().safeParse(messageId).success || !parsed.success) return fail("invalid");
+  const [m] = await db
+    .select({ notice: message.notice, receivedAt: message.receivedAt, timeZone: talentTable.timeZone })
+    .from(message)
+    .innerJoin(talentTable, eq(talentTable.id, message.talentId))
+    .where(and(eq(message.id, messageId), eq(message.talentId, talent.id), eq(message.kind, "payment_notice"), eq(message.status, "analyzed")));
+  if (!m?.notice) return fail("invalid");
+  const n = m.notice;
+  if (!(supportedCurrencies as readonly string[]).includes(n.currency)) return fail("noticeCurrency");
+  const today = dateInZone(m.timeZone);
+  const settledOn = n.date && n.date <= today ? n.date : dateInZone(m.timeZone, 0, m.receivedAt);
+
+  const target_ = parsed.data;
+  if ("projectId" in target_) {
+    const linkError = await checkProjectLink(talent.id, target_.projectId);
+    if (linkError) return fail(linkError);
+  }
+  const t = await getTranslations("paymentNotice");
+  const done = await db
+    .transaction(async (tx) => {
+      // The notice first: pressed twice, the second finds it filed already and changes nothing.
+      const [claimed] = await tx
+        .update(message)
+        .set({ status: "confirmed", relevance: "sure" })
+        .where(and(eq(message.id, messageId), eq(message.status, "analyzed")))
+        .returning({ id: message.id });
+      if (!claimed) return "invalid" as const;
+      let p: { id: string; projectId: string | null } | undefined;
+      if ("paymentId" in target_) {
+        [p] = await tx
+          .update(payment)
+          .set({ status: "settled", settledAmount: n.amount, settledOn })
+          .where(
+            and(
+              eq(payment.id, target_.paymentId),
+              eq(payment.talentId, talent.id),
+              eq(payment.direction, "in"),
+              eq(payment.status, "expected"),
+              isNull(payment.voidedAt),
+            ),
+          )
+          .returning({ id: payment.id, projectId: payment.projectId });
+        if (!p) throw new Refused("paymentNotFound"); // undoes the claim above
+      } else {
+        [p] = await tx
+          .insert(payment)
+          .values({
+            talentId: talent.id,
+            projectId: target_.projectId,
+            direction: "in",
+            label: n.payer ? t("newLabelFrom", { payer: n.payer }) : t("newLabel"),
+            amount: n.amount,
+            taxIncluded: true,
+            recordedOn: today,
+            status: "settled",
+            settledAmount: n.amount,
+            settledOn,
+          })
+          .returning({ id: payment.id, projectId: payment.projectId });
+      }
+      await tx
+        .update(message)
+        .set({ projectId: p.projectId, notice: { ...n, paymentId: p.id } })
+        .where(eq(message.id, messageId));
+      return null;
+    })
+    .catch((e) => {
+      if (e instanceof Refused) return e.key;
+      throw e;
+    });
+  if (done) return fail(done);
+  refresh();
+  return null;
+}
+
+/** Undo, on the person's own reply: the reply to-dos it marked done are open again. */
+export async function reopenReplies(messageId: string): Promise<string | null> {
+  const { talent } = await requireTalent();
+  const fail = await errorText();
+  if (!z.uuid().safeParse(messageId).success) return fail("invalid");
+  await db
+    .update(todo)
+    .set({ status: "open", completedAt: null, completedByMessageId: null })
+    .where(and(eq(todo.talentId, talent.id), eq(todo.completedByMessageId, messageId), eq(todo.status, "done")));
   refresh();
   return null;
 }

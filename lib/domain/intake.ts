@@ -4,7 +4,8 @@
 // person confirms every item. See docs/design/intake-to-project.md.
 import type { MessageAnalysis } from "@/lib/ai/analysis";
 import { projectType } from "@/lib/project-types";
-import type { CalendarItem, Contact, Contract, ContractTerms, Payment, Project, ProjectDate, ProjectSummary, ProjectDetails, Stage, TermChange } from "@/lib/types";
+import type { AppData, CalendarItem, Contact, Contract, ContractTerms, InboxMessage, Payment, Project, ProjectDate, ProjectSummary, ProjectDetails, Stage, TermChange } from "@/lib/types";
+import { dateInZone } from "./dates";
 import { isSigned } from "./phases";
 import { paymentTotal } from "./workflow";
 
@@ -20,6 +21,17 @@ export type IntakeContext = {
   /** Messages already filed on projects: who sent them and the dates they gave. */
   filed: FiledMessage[];
   contracts: Contract[];
+  /** Who is on each project besides its main contact. */
+  projectPeople: { projectId: string; contactId: string }[];
+  /**
+   * An email's thread (decision 0013): the project a message in it is filed under, whether the
+   * person has replied since, and whether the other side wrote again (the reply to-do follows the latest).
+   */
+  thread: { projectId: string | null; replied: boolean; newer: boolean };
+  /** The person's own reply, read as their side of the deal. */
+  sent: boolean;
+  /** An email's sender as its header states it, for proposing them as a contact. */
+  sender: { name: string; email: string } | null;
 };
 
 export type FiledMessage = {
@@ -27,6 +39,34 @@ export type FiledMessage = {
   counterparty: { name: string; company: string; email: string };
   dates: ProjectDate[];
 };
+
+/** What a proposal for this message knows, built the same way on the review screen and on the server. */
+export function intakeContext(data: AppData, m: InboxMessage): IntakeContext {
+  const thread = m.gmail?.threadId ? data.inbox.filter((x) => x.id !== m.id && x.gmail?.threadId === m.gmail!.threadId) : [];
+  const filed = thread.filter((x) => x.status === "confirmed" && x.projectId).sort((x, y) => y.receivedAt.localeCompare(x.receivedAt));
+  const address = m.gmail?.sender.match(/<([^<>]+)>\s*$/)?.[1] ?? m.gmail?.sender ?? "";
+  return {
+    projects: data.projects,
+    contacts: data.contacts,
+    payments: data.payments,
+    calendar: data.calendar,
+    receivedOn: dateInZone(data.talent.timeZone, 0, new Date(m.receivedAt)),
+    replyWithinDays: data.person.replyWithinDays,
+    filed: m.filed ?? filedMessages(data.inbox, m.id),
+    contracts: data.contracts,
+    projectPeople: data.projectPeople,
+    thread: m.threadContext ?? {
+      projectId: filed[0]?.projectId ?? null,
+      replied: thread.some((x) => x.gmail?.sent && x.receivedAt > m.receivedAt),
+      newer: thread.some((x) => !x.gmail?.sent && !x.notice && x.receivedAt > m.receivedAt),
+    },
+    sent: !!m.gmail?.sent,
+    sender:
+      m.gmail && !m.gmail.sent && address.includes("@")
+        ? { name: m.gmail.sender.match(/^\s*"?([^"<]+?)"?\s*</)?.[1] ?? "", email: address.trim().toLowerCase() }
+        : null,
+  };
+}
 
 /** The filed messages among a list of messages, for matching later ones to their projects. */
 export function filedMessages(
@@ -44,6 +84,7 @@ export function filedMessages(
 // Target: which project is this?
 
 export type TargetReason =
+  | { kind: "thread"; value: string } // a message in the same email thread is filed on the project
   | { kind: "contact"; value: string } // same email, company, or name
   | { kind: "earlier"; value: string } // an earlier message from the same sender is filed on the project
   | { kind: "date"; value: string } // a date the project already has
@@ -105,6 +146,12 @@ export function suggestTargets(a: MessageAnalysis, ctx: IntakeContext): TargetSu
     if (project.archived) continue;
     const reasons: TargetReason[] = [];
     let score = 0;
+
+    // The same email thread outweighs every other sign (decision 0013).
+    if (ctx.thread.projectId === project.id) {
+      score += 10;
+      reasons.push({ kind: "thread", value: "" });
+    }
 
     const contact = ctx.contacts.find((c) => c.id === project.counterpartyId);
     if (contact && same(contact.email, who.email)) {
@@ -238,6 +285,8 @@ export type Change = Base &
     | { kind: "paymentNote"; paymentId: string; note: string }
     | { kind: "todo"; purpose: TodoPurpose; dueDate: string }
     | { kind: "toConfirm"; items: string[] }
+    /** Someone on the thread who isn't on the project: link the contact, or create one (`contactId` null). `label`: their role there. */
+    | { kind: "contact"; contactId: string | null; name: string; email: string; label: string }
     /**
      * A new contract version: its terms, and how they differ from the previous version (or, for
      * the first, where they conflict with the project's agreed terms). `same`: nothing differs from
@@ -254,6 +303,30 @@ export type Change = Base &
         same: boolean;
       }
   );
+
+/** The editable part of each item, in the shape the server's apply action takes. */
+export function initialEdit(c: Change): Record<string, unknown> {
+  switch (c.kind) {
+    case "fee":
+    case "field":
+    case "contractNotes":
+      return { to: c.to };
+    case "date":
+      return { date: c.to.date, time: c.to.time };
+    case "settlePayment":
+      return { amount: c.amount, settledOn: c.settledOn };
+    case "newPayment":
+      return { amount: c.amount, date: c.date };
+    case "todo":
+      return { dueDate: c.dueDate };
+    case "toConfirm":
+      return { items: c.items };
+    case "contact":
+      return { label: c.label };
+    default:
+      return {};
+  }
+}
 
 /** An item as recorded in the audit log and shown on the project timeline: what was (or would have been) changed. */
 export type ChangeRecord = Change;
@@ -441,8 +514,8 @@ export function proposeChanges(a: MessageAnalysis, project: Project, ctx: Intake
       changes.push(...dateChanges(a, project, ctx, true).filter((c) => c.kind === "date" && (!c.from || c.earlier)));
       break;
     case "negotiation":
-      // A proposal isn't an agreement: shown, recorded on the timeline, not ticked.
-      changes.push(...feeChange(a, project, false), ...fieldChanges(a, project, false), ...dateChanges(a, project, ctx, false));
+      // A proposal isn't an agreement: shown, recorded on the timeline, not ticked. The person's own quote is theirs to record.
+      changes.push(...feeChange(a, project, ctx.sent), ...fieldChanges(a, project, ctx.sent), ...dateChanges(a, project, ctx, ctx.sent));
       changes.push(...towardNegotiating);
       break;
     case "confirmation": {
@@ -517,22 +590,50 @@ export function proposeChanges(a: MessageAnalysis, project: Project, ctx: Intake
       break;
   }
 
-  changes.push(...commonChanges(a, project.details.toConfirm ?? [], ctx));
+  changes.push(...contactChange(project, ctx), ...commonChanges(a, project.details.toConfirm ?? [], ctx));
   return { changes, question };
 }
 
-/** For every message: a reply to-do and the open questions to ask the other side. */
+/** A sender not yet on the project: link them if they're a contact already, or add them (decision 0013). */
+function contactChange(project: Project, ctx: IntakeContext): Change[] {
+  const who = ctx.sender;
+  if (ctx.sent || !who?.email) return [];
+  const live = ctx.contacts.filter((c) => !c.archived);
+  const onProject = new Set([project.counterpartyId, ...ctx.projectPeople.filter((p) => p.projectId === project.id).map((p) => p.contactId)]);
+  if (live.some((c) => onProject.has(c.id) && same(c.email, who.email))) return [];
+  const existing = live.find((c) => same(c.email, who.email));
+  return [
+    {
+      id: "contact",
+      kind: "contact",
+      ticked: true,
+      asStated: "",
+      contactId: existing?.id ?? null,
+      name: existing?.name ?? (who.name || who.email),
+      email: who.email,
+      label: "",
+    },
+  ];
+}
+
+/**
+ * For every message: a reply to-do and the open questions to ask the other
+ * side. Not for the person's own reply; no reply to-do once they've replied,
+ * or when the other side wrote again since (the newer message gets it).
+ */
 function commonChanges(a: MessageAnalysis, toConfirm: string[], ctx: IntakeContext): Change[] {
   const out: Change[] = [];
-  out.push({
-    id: "todo:reply",
-    kind: "todo",
-    // A payment notice or a non-work message rarely needs an answer.
-    ticked: a.intent !== "other" && a.intent !== "payment",
-    asStated: a.replyByStated,
-    purpose: "reply",
-    dueDate: a.replyBy || addDays(ctx.receivedOn, ctx.replyWithinDays),
-  });
+  if (ctx.sent) return out;
+  if (!ctx.thread.replied && !ctx.thread.newer)
+    out.push({
+      id: "todo:reply",
+      kind: "todo",
+      // A payment notice or a non-work message rarely needs an answer.
+      ticked: a.intent !== "other" && a.intent !== "payment",
+      asStated: a.replyByStated,
+      purpose: "reply",
+      dueDate: a.replyBy || addDays(ctx.receivedOn, ctx.replyWithinDays),
+    });
   const items = a.missing.filter((m) => !toConfirm.some((t) => same(t, m)));
   if (items.length) out.push({ id: "toConfirm", kind: "toConfirm", ticked: true, asStated: "", items });
   return out;

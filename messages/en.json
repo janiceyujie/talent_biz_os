@@ -822,7 +822,11 @@
       "showLess": "Show less",
       "more": "More actions"
     },
-    "detailUnavailable": "This message could not be loaded. It may have been removed or access may have changed."
+    "detailUnavailable": "This message could not be loaded. It may have been removed or access may have changed.",
+    "yourReply": "Your reply",
+    "sentTo": "You → {to}",
+    "repliesDone": "✓ Done: {titles}",
+    "undo": "Undo"
   },
   "intake": {
     "targetHeading": "File under a project",
@@ -833,7 +837,8 @@
       "detail": "Mentions {value}",
       "title": "Similar title",
       "payment": "An expected payment of {value}",
-      "earlier": "Has an earlier message from {value}"
+      "earlier": "Has an earlier message from {value}",
+      "thread": "Same email thread"
     },
     "newProject": "New project",
     "otherProject": "Another project",
@@ -853,7 +858,8 @@
       "todoAwaitContract": "Add to-do: wait for the contract",
       "todoSendInvoice": "Add to-do: send the invoice",
       "toConfirm": "Add to “to confirm”",
-      "contractVersion": "Add contract version v{version}"
+      "contractVersion": "Add contract version v{version}",
+      "contact": "Add to the project's people"
     },
     "expected": "Expected {amount}",
     "received": "Received",
@@ -913,7 +919,13 @@
       "taxIncluded": "Tax",
       "paymentTerms": "Payment terms",
       "keyTerms": "Key terms"
-    }
+    },
+    "contactLabel": "Role (optional)",
+    "contactExisting": "Already a contact, not on this project yet",
+    "contactNew": "New sender, not a contact yet",
+    "threadWaiting": "{count, plural, one {# more from this thread is waiting} other {# more from this thread are waiting}}",
+    "threadFileAll": "File all {count} here",
+    "threadLeft": "{count, plural, one {# needs your answer first: it's still in Messages} other {# need your answer first: they're still in Messages}}"
   },
   "timeline": {
     "heading": "Timeline",
@@ -934,7 +946,9 @@
     },
     "version": "v{version}",
     "changes": "{count, plural, one {# change} other {# changes}}",
-    "showChanges": "Show changes"
+    "showChanges": "Show changes",
+    "you": "You",
+    "repliesDone": "Done: {titles}"
   },
   "contacts": {
     "search": "Search contacts",
@@ -1369,7 +1383,8 @@
       "negotiation": "negotiation",
       "contract": "contract",
       "logistics": "logistics",
-      "payment": "payment notice",
+      "payment": "payment or invoice",
+      "bank_notice": "bank or payment-app notice",
       "press": "press request",
       "newsletter": "newsletter",
       "marketing": "marketing",
@@ -1392,6 +1407,41 @@
     "notWorkTitle": "Not work?",
     "notWorkBody": "It leaves Intake, and its text and attachments are deleted. It stays listed in Filtered out, where This was work brings it back.",
     "notWorkNeverFrom": "Also stop bringing in mail from {sender}"
+  },
+  "paymentNotice": {
+    "chip": "Payment",
+    "title": "Received {amount}",
+    "rowMatch": "Matches: {payment}",
+    "rowNoMatch": "No matching payment",
+    "rowRecorded": "Recorded: {payment}",
+    "details": "Deposit details",
+    "detailsInfo": "Only these details are kept. The email's text and attachments aren't stored. If you don't act on it, it's deleted after 30 days.",
+    "amount": "Amount",
+    "payer": "From",
+    "date": "Date",
+    "account": "Account",
+    "last4": "ending {last4}",
+    "notGiven": "Not given",
+    "matchHeading": "Matching payment",
+    "noMatch": "No expected payment matches.",
+    "expected": "Expected {amount}",
+    "expectedDue": "Expected {amount} · {date}",
+    "otherPayment": "Another payment…",
+    "existingPayment": "Match an existing payment…",
+    "newPayment": "Add a payment to",
+    "pickPayment": "Choose a payment…",
+    "pickProject": "Choose a project…",
+    "noProjects": "No signed projects yet.",
+    "signedOnly": "Only signed projects are listed.",
+    "shortBy": "{amount} less, likely a transfer fee.",
+    "currencyOnly": "Only NT$ payments can be recorded for now.",
+    "drop": "Drop",
+    "markReceived": "Mark as received",
+    "recorded": "Recorded as received: {payment}",
+    "viewPayments": "View in Finance",
+    "newLabel": "Received",
+    "newLabelFrom": "Received from {payer}",
+    "paymentOption": "{project} · {label}"
   },
   "settings": {
     "name": "Artist or brand name",
@@ -1741,7 +1791,8 @@
     "organizationNotFound": "Organization not found.",
     "clientCantBeRemoved": "This is the project's client. Make another organization the client first, then remove it.",
     "clientRequired": "Enter the client organization.",
-    "gmailNotConnected": "Gmail isn't connected."
+    "gmailNotConnected": "Gmail isn't connected.",
+    "noticeCurrency": "Only NT$ payments can be recorded for now."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",

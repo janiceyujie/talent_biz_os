@@ -5479,20 +5479,17 @@ html:has(dialog[open]) .assistant-dock { visibility: hidden; }
 }
 
 
-/* Inbox focus mode: queue and reader own their scrolling, never the whole document. */
+/* Keep the queue and reader in stable columns, each with independent scrolling. */
 .inbox-workspace .inbox-focus-layout {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.65fr);
   height: var(--inbox-pane-height, 60dvh);
   min-height: 280px;
   align-items: stretch;
 }
-.inbox-workspace .inbox-focus-layout.is-reading {
-  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
-}
 .inbox-focus-layout > [hidden] { display: none !important; }
-.inbox-workspace .inbox-focus-layout .inbox-messages,
-.inbox-workspace .inbox-focus-layout .inbox-reader {
+.inbox-workspace .inbox-focus-layout :is(.inbox-messages, .inbox-reader, .inbox-selection) {
   position: static;
+  min-width: 0;
   min-height: 0;
   height: 100%;
   max-height: none;
@@ -5501,25 +5498,18 @@ html:has(dialog[open]) .assistant-dock { visibility: hidden; }
   scrollbar-gutter: stable;
   overflow-wrap: anywhere;
 }
-.inbox-focus-layout .inbox-selection {
-  min-width: 0;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  background: var(--lime-soft);
-}
-.inbox-selection .inbox-return { display: inline-flex; align-items: center; gap: 8px; }
-.inbox-selection p { margin: 20px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.inbox-selection .inbox-return { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; }
 .inbox-focus-layout :is(.inbox-messages, .inbox-reader):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 900px) {
-  .inbox-workspace .inbox-focus-layout.is-reading { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px; }
+  .inbox-workspace .inbox-focus-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    min-height: 600px;
+    gap: 12px;
+  }
+  .inbox-workspace .inbox-focus-layout.is-reading { grid-template-rows: minmax(210px, 0.75fr) minmax(0, 1.25fr); }
   .inbox-focus-layout .inbox-selection { padding: 12px; }
-  .inbox-selection p { display: none; }
-}
-
-@media (max-width: 900px) {
-  .page-content:has(.inbox-focus-layout.is-reading) > .page-title,
-  .inbox-workspace:has(.inbox-focus-layout.is-reading) > .inbox-intake-toolbar { display: none; }
+  .inbox-selection .inbox-return { margin-bottom: 8px; }
 }
 
 /* Keep task history distinct from data-derived closing checks. */
@@ -5618,3 +5608,7 @@ html:has(dialog[open]) .assistant-dock { visibility: hidden; }
 @media (max-width: 600px) {
   .deal-detail .deal-archive-prompt > button { width: 100%; }
 }
+
+.intake-demo-toolbar, .intake-connect-notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.intake-demo-toolbar { margin: 12px 0; color: var(--muted); font-size: 13px; }
+.intake-demo-toolbar > span, .intake-connect-notice > span { flex: 1 1 240px; }

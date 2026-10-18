@@ -68,24 +68,23 @@ export function GmailSync({ onNotice }: { onNotice: (text: string | null) => voi
 
 export type IntakeTab = "messages" | GmailMailView;
 
-/** Messages · Waiting · Filtered out, shown once a mailbox is connected. */
-export function IntakeTabs({ tab, onTab }: { tab: IntakeTab; onTab: (tab: IntakeTab) => void }) {
+/** Keep navigation discoverable before connecting Gmail and in the isolated preview. */
+export function IntakeTabs({ tab, onTab, previewCounts }: { tab: IntakeTab; onTab: (tab: IntakeTab) => void; previewCounts?: Record<IntakeTab, number> }) {
   const { gmail, inbox, inboxOverview } = useAppData();
   const t = useTranslations("gmail");
   const counts = gmail.connection?.counts;
-  if (!counts) return null;
   // Messages counts what's waiting for review, as the Intake badge in the menu does (app-shell).
   const toReview = inboxOverview ? inboxOverview.counts.analyzed + inboxOverview.counts.error : inbox.filter((m) => m.status === "analyzed" || m.status === "error").length;
   // Every tab shows its count, 0 too: a missing number reads as "nothing here" when that isn't known.
   const tabs: [IntakeTab, string, number][] = [
-    ["messages", t("tabMessages"), toReview],
-    ["waiting", t("tabWaiting"), counts.waiting],
-    ["skipped", t("tabSkipped"), counts.skipped],
+    ["messages", t("tabMessages"), previewCounts?.messages ?? toReview],
+    ["waiting", t("tabWaiting"), previewCounts?.waiting ?? counts?.waiting ?? 0],
+    ["skipped", t("tabSkipped"), previewCounts?.skipped ?? counts?.skipped ?? 0],
   ];
   return (
     <div className="deal-tabs intake-tabs" role="tablist" aria-label={t("tabsLabel")}>
       {tabs.map(([key, label, n]) => (
-        <button key={key} role="tab" id={`intake-tab-${key}`} aria-selected={tab === key} aria-controls="intake-panel" onClick={() => onTab(key)}>
+        <button data-preview-safe="true" key={key} role="tab" id={`intake-tab-${key}`} aria-selected={tab === key} aria-controls="intake-panel" onClick={() => onTab(key)}>
           {label}
           <span>{n}</span>
         </button>
@@ -152,6 +151,28 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
   const picked = items?.find((i) => i.id === active);
   const peekError = error === "reconnect" ? t("peekError.reconnect") : error === "gmail" || error === "unavailable" ? t("peekError.unavailable") : null;
 
+  const renderCard = (m: GmailMailItem) => (
+    <div className={`mail-item single ${picked?.id === m.id ? "is-active" : ""}`} key={m.id}>
+      <button className={`mail-summary ${picked?.id === m.id ? "active" : ""}`} aria-pressed={picked?.id === m.id} onClick={() => setActive(m.id)}>
+        <small>
+          {view === "waiting" && (
+            <em className={`message-status ${outcomeChip[m.outcome]}`}>{t(`outcome.${m.outcome}`)}</em>
+          )}{" "}
+          {m.from ? m.from.name || m.from.address : ""}
+        </small>
+        <strong>{m.subject === null ? (error ? t("notLoaded") : t("unreadable")) : m.subject || t("noSubject")}</strong>
+        <span className="mail-summary-meta">
+          <time dateTime={m.receivedAt}>
+            {format.dateTime(new Date(m.receivedAt), {
+              month: "short",
+              day: "numeric",
+            })}
+          </time>
+        </span>
+      </button>
+    </div>
+  );
+
   if (sorting)
     return (
       <div className="surface padded section-gap" id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${view}`}>
@@ -163,7 +184,7 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
 
   return (
     <div id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${view}`}>
-      <InboxReaderLayout reading={!!picked} title={picked?.subject || t("noSubject")} listLabel={view === "waiting" ? t("tabWaiting") : t("tabSkipped")} onBack={() => setActive("")} list={<>
+      <InboxReaderLayout selectedId={picked?.id ?? ""} selectedCard={picked ? renderCard(picked) : null} listLabel={view === "waiting" ? t("tabWaiting") : t("tabSkipped")} list={<>
         <p className="muted gmail-about">{view === "waiting" ? t("aboutWaiting") : t("aboutSkipped")}</p>
         {peekError && (
           <p className="notice error" role="alert">
@@ -176,27 +197,7 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
             <p>{c?.lastSyncedAt ? (view === "waiting" ? t("emptyWaiting") : t("emptySkipped")) : t("notSyncedYet")}</p>
           </div>
         )}
-        {items?.map((m) => (
-          <div className={`mail-item single ${picked?.id === m.id ? "is-active" : ""}`} key={m.id}>
-            <button className={`mail-summary ${picked?.id === m.id ? "active" : ""}`} aria-pressed={picked?.id === m.id} onClick={() => setActive(m.id)}>
-              <small>
-                {view === "waiting" && (
-                  <em className={`message-status ${outcomeChip[m.outcome]}`}>{t(`outcome.${m.outcome}`)}</em>
-                )}{" "}
-                {m.from ? m.from.name || m.from.address : ""}
-              </small>
-              <strong>{m.subject === null ? (error ? t("notLoaded") : t("unreadable")) : m.subject || t("noSubject")}</strong>
-              <span className="mail-summary-meta">
-                <time dateTime={m.receivedAt}>
-                  {format.dateTime(new Date(m.receivedAt), {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </time>
-              </span>
-            </button>
-          </div>
-        ))}
+        {items?.map(renderCard)}
         {more && (
           <button className="secondary section-gap" disabled={loading} onClick={() => load(items?.length ?? 0)}>
             {loading ? t("loading") : t("showMore")}

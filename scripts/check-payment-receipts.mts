@@ -236,6 +236,32 @@ try {
  const [ir]=await q`select id from invoice where payment_id=${ip.id}`;
  const detail=await (await fetch(`${base}/api/invoices/${ir.id}`,{headers:{Cookie:cookies[0]}})).json();
  ok(detail.remaining>0 && !detail.paid && detail.received<100);
+ // Janice's notice confirmation must append to the audited ledger, not overwrite it.
+ await fetch(`${base}/inbox`,{headers:{Cookie:cookies[0]}});
+ const bankPayment=await action("savePaymentWithId",[{...input,label:"Bank notice integration QA",amount:1000,taxRate:0}]);ok(bankPayment.id);
+ const makeNotice=async(amount:number,currency="TWD")=>{
+  const id=randomUUID();const notice={amount,currency,date:today,payer:"Synthetic payer",last4:"1234"};
+  await q`insert into message(id,talent_id,submitted_by,channel,dedup_key,status,kind,notice) values(${id},${actors[0].talentId},${actors[0].personId},'paste',${id},'analyzed','payment_notice',${q.json(notice)})`;
+  return id;
+ };
+ const bankOne=await makeNotice(600);
+ ok((await action("recordNoticePayment",[bankOne,{paymentId:bankPayment.id,withheld:100,revision:0}],cookies[1]))!==null);
+ ok((await action("recordNoticePayment",[bankOne,{paymentId:bankPayment.id,withheld:500,revision:0}]))!==null);
+ ok((await action("recordNoticePayment",[bankOne,{paymentId:bankPayment.id,withheld:100,revision:0}]))===null);
+ let bank=await load(bankPayment.id);ok(bank.status==="expected"&&bank.receipts.length===1&&Number(bank.settled_amount)===600&&bank.receipts[0].withheld===100&&bank.receipts[0].recorded_by===undefined&&bank.receipts[0].recordedBy===actors[0].personId);
+ ok((await action("recordNoticePayment",[bankOne,{paymentId:bankPayment.id}]))!==null);ok((await load(bankPayment.id)).receipts.length===1);
+ const wrongCurrency=await makeNotice(300,"USD");ok((await action("recordNoticePayment",[wrongCurrency,{paymentId:bankPayment.id}]))!==null);
+ const bankTwo=await makeNotice(300);
+ ok((await action("recordNoticePayment",[bankTwo,{paymentId:bankPayment.id,revision:0}]))!==null);
+ ok((await action("recordNoticePayment",[bankTwo,{paymentId:bankPayment.id,revision:1}]))===null);
+ bank=await load(bankPayment.id);ok(bank.status==="settled"&&bank.receipts.length===2&&Number(bank.settled_amount)===900&&bank.receipts[0].withheld===100);
+ ok((await action("amendPaymentReceipt",[{paymentId:bankPayment.id,targetId:bankTwo,requestId:randomUUID(),revision:2,operation:"withdraw",date:today,cash:0,withheld:0,note:"Bank notice receipt withdrawal QA"}]))===null);
+ bank=await load(bankPayment.id);ok(bank.status==="expected"&&Number(bank.settled_amount)===600&&bank.receipts.length===3&&bank.receipts[0].withheld===100);
+ const bankThree=await makeNotice(300);ok((await action("recordNoticePayment",[bankThree,{paymentId:bankPayment.id,revision:3}]))===null);
+ bank=await load(bankPayment.id);ok(bank.status==="settled"&&bank.receipts.length===4);
+ const bankNew=await makeNotice(200);ok((await action("recordNoticePayment",[bankNew,{projectId:actors[0].projectId}]))===null);
+ const [newNotice]=await q`select notice from message where id=${bankNew}`;const newBank=await load(newNotice.notice.paymentId);ok(newBank.currency==="TWD"&&newBank.receipts.length===1&&newBank.receipts[0].recordedBy===actors[0].personId);
+
  // Leave a fresh unpaid example only when explicitly running interactive QA.
  if(process.argv.includes("--keep-ui")){
   const ui=await action("savePaymentWithId",[{...input,label:"UI Partial Receipt QA"}]);ok(ui.id);

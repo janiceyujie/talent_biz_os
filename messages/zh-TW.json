@@ -890,7 +890,11 @@
       "showLess": "收合",
       "more": "更多動作"
     },
-    "detailUnavailable": "無法載入這封訊息，訊息可能已移除或存取權限已變更。"
+    "detailUnavailable": "無法載入這封訊息，訊息可能已移除或存取權限已變更。",
+    "yourReply": "你的回覆",
+    "sentTo": "你 → {to}",
+    "repliesDone": "✓ 已完成：{titles}",
+    "undo": "復原"
   },
   "intake": {
     "targetHeading": "歸入合作案",
@@ -901,7 +905,8 @@
       "detail": "提到 {value}",
       "title": "名稱相近",
       "payment": "有一筆待收 {value}",
-      "earlier": "這個合作案已有 {value} 的訊息"
+      "earlier": "這個合作案已有 {value} 的訊息",
+      "thread": "同一封信件串"
     },
     "newProject": "新合作案",
     "otherProject": "其他合作案",
@@ -921,7 +926,8 @@
       "todoAwaitContract": "新增待辦：等合約寄來",
       "todoSendInvoice": "新增待辦：開發票給對方",
       "toConfirm": "加入「需向對方確認」",
-      "contractVersion": "新增合約版本 v{version}"
+      "contractVersion": "新增合約版本 v{version}",
+      "contact": "加入合作案聯絡人"
     },
     "expected": "待收 {amount}",
     "received": "已收",
@@ -981,7 +987,13 @@
       "taxIncluded": "稅",
       "paymentTerms": "付款條件",
       "keyTerms": "主要條款"
-    }
+    },
+    "contactLabel": "角色（選填）",
+    "contactExisting": "已是聯絡人，還不在這個合作案",
+    "contactNew": "新的寄件者，還不是聯絡人",
+    "threadWaiting": "這個信件串還有 {count} 封等待中",
+    "threadFileAll": "全部 {count} 封歸入此案",
+    "threadLeft": "有 {count} 封需要你先回答，仍在訊息中"
   },
   "timeline": {
     "heading": "時間軸",
@@ -1002,7 +1014,9 @@
     },
     "version": "v{version}",
     "changes": "{count} 項變更",
-    "showChanges": "查看變更"
+    "showChanges": "查看變更",
+    "you": "你",
+    "repliesDone": "已完成：{titles}"
   },
   "contacts": {
     "search": "搜尋聯絡人",
@@ -1438,7 +1452,8 @@
       "negotiation": "條件洽談",
       "contract": "合約",
       "logistics": "行程安排",
-      "payment": "款項通知",
+      "payment": "款項或發票",
+      "bank_notice": "銀行或支付通知",
       "press": "媒體邀訪",
       "newsletter": "電子報",
       "marketing": "促銷廣告",
@@ -1463,6 +1478,43 @@
     "notWorkNeverFrom": "也不再收 {sender} 的信",
     "draftAccess": "同時允許 TALOOX 建立商業發票草稿",
     "draftDisclosure": "Google 將管理草稿與寄信合併在同一項權限；TALOOX 只建立請款草稿，不會寄出、覆寫或刪除。重新授權時請選擇原本連結的 Gmail 帳號。"
+  },
+  "paymentNotice": {
+    "chip": "收款",
+    "title": "收到 {amount}",
+    "rowMatch": "符合：{payment}",
+    "rowNoMatch": "找不到相符的款項",
+    "rowRecorded": "已記錄：{payment}",
+    "details": "入帳明細",
+    "detailsInfo": "只保留這些欄位，信件內容與附件不會儲存。30 天內未處理會自動刪除。",
+    "amount": "金額",
+    "payer": "匯款人",
+    "date": "日期",
+    "account": "帳戶",
+    "last4": "末四碼 {last4}",
+    "notGiven": "未提供",
+    "matchHeading": "對應的款項",
+    "noMatch": "找不到相符的預計款項。",
+    "expected": "預計 {amount}",
+    "expectedDue": "預計 {amount} · {date}",
+    "otherPayment": "其他款項…",
+    "existingPayment": "對應到現有款項…",
+    "newPayment": "新增款項到",
+    "pickPayment": "選擇款項…",
+    "pickProject": "選擇合作案…",
+    "noProjects": "還沒有已簽約的合作案。",
+    "signedOnly": "只列出已簽約的合作案。",
+    "shortBy": "少 {amount}，可能是匯款手續費。",
+    "currencyOnly": "目前只能記錄新台幣款項。",
+    "drop": "捨棄",
+    "markReceived": "記為已收款",
+    "recorded": "已記為收款：{payment}",
+    "viewPayments": "到財務查看",
+    "newLabel": "入帳",
+    "newLabelFrom": "入帳：{payer}",
+    "paymentOption": "{project} · {label}",
+    "withheld": "已確認扣繳金額（選填）",
+    "remainingAfter": "登錄後仍待收：{amount}，未付差額會保留在提醒。"
   },
   "settings": {
     "name": "藝名或品牌名稱",
@@ -1911,7 +1963,8 @@
     "receiptInvalid": "請確認金額。仍有未付餘額時，才可登錄新的收款或扣繳。",
     "receiptLocked": "已有收付款紀錄，無法修改原始金額、幣別、稅額或收支方向。",
     "projectOutstanding": "這個合作案仍有未付金額，請先登錄收付款或確認扣繳，再結案。",
-    "withholdingInvalid": "請填寫已確認的扣繳金額，須大於 0，且不能超過待收金額扣除本次實收後的差額。"
+    "withholdingInvalid": "請填寫已確認的扣繳金額，須大於 0，且不能超過待收金額扣除本次實收後的差額。",
+    "noticeCurrency": "目前只能記錄新台幣款項。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",

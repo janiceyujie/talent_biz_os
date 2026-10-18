@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { and, asc, count, desc, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { message, messageAnalysis, file } from "@/lib/db/schema";
+import { message, messageAnalysis, file, todo } from "@/lib/db/schema";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { filedMessages } from "@/lib/domain/intake";
 import type { InboxMessage, InboxSummary } from "@/lib/types";
@@ -18,7 +18,7 @@ const latest = (field: string) => sql<string>`(select a.analysis ->> ${field} fr
   order by a.created_at desc, a.id desc limit 1)`;
 const summaryFields = {
   id: message.id, channel: message.channel, status: message.status, projectId: message.projectId,
-  receivedAt: message.receivedAt,
+  receivedAt: message.receivedAt, notice: message.notice, sent: sql<boolean>`${message.direction} = 'sent'`,
   title: sql<string>`left(coalesce(nullif(${latest("title")}, ''), nullif(${message.subject}, ''), nullif(split_part(${message.bodyText}, E'\n', 1), ''), ''), 100)`,
   snippet: sql<string>`left(coalesce(nullif(${latest("summary")}, ''), ${message.bodyText}, ''), 110)`,
   flagged: sql<boolean>`coalesce((select jsonb_array_length(coalesce(a.analysis -> 'flags', '[]'::jsonb)) > 0 from message_analysis a
@@ -37,7 +37,7 @@ export async function listInbox(talentId: string, params: z.infer<typeof inboxLi
     db.select({ value: count() }).from(message).where(filters),
   ]);
   const visible = rows.slice(0, LIST_PAGE_SIZE), last = visible.at(-1);
-  return { items: visible.map(row => ({ id:row.id,channel:row.channel,status:row.status,projectId:row.projectId,title:row.title,snippet:row.snippet,flagged:row.flagged,fileCount:row.fileCount,receivedAt:row.receivedAt.toISOString() })), total: total.value,
+  return { items: visible.map(row => ({ id:row.id,notice:row.notice,sent:row.sent,channel:row.channel,status:row.status,projectId:row.projectId,title:row.title,snippet:row.snippet,flagged:row.flagged,fileCount:row.fileCount,receivedAt:row.receivedAt.toISOString() })), total: total.value,
     nextCursor: rows.length > LIST_PAGE_SIZE && last ? encodePageCursor([last.position, last.id, key]) : null };
 }
 
@@ -73,12 +73,21 @@ export async function inboxDetail(talentId: string, id: string): Promise<InboxMe
   }).from(message).innerJoin(messageAnalysis, and(eq(messageAnalysis.messageId, message.id), eq(messageAnalysis.talentId, talentId)))
     .where(and(eq(message.talentId, talentId), eq(message.status, "confirmed"), ne(message.id, id), sql`${message.projectId} is not null`))
     .orderBy(message.id, desc(messageAnalysis.createdAt), desc(messageAnalysis.id)) : [];
-  return { id: m.id, channel: m.channel, body: m.bodyText ?? "", receivedAt: m.receivedAt.toISOString(), status: m.status,
+  const threadFilter = m.connectionId && m.providerThreadId ? and(eq(message.talentId, talentId), eq(message.connectionId, m.connectionId), eq(message.providerThreadId, m.providerThreadId), ne(message.id, id)) : null;
+  const [completedTodos, threadFacts, filedThread, waitingThread] = await Promise.all([
+    db.select({id:todo.id,title:todo.title}).from(todo).where(and(eq(todo.talentId,talentId),eq(todo.completedByMessageId,id),eq(todo.status,"done"))),
+    threadFilter ? db.select({replied:sql<boolean>`coalesce(bool_or(${message.direction} = 'sent' and ${message.receivedAt} > ${m.receivedAt.toISOString()}::timestamptz), false)`,newer:sql<boolean>`coalesce(bool_or(${message.direction} = 'received' and ${message.kind} = 'message' and ${message.receivedAt} > ${m.receivedAt.toISOString()}::timestamptz), false)`}).from(message).where(threadFilter) : [],
+    threadFilter ? db.select({projectId:message.projectId}).from(message).where(and(threadFilter,eq(message.status,"confirmed"),sql`${message.projectId} is not null`)).orderBy(desc(message.receivedAt),desc(message.id)).limit(1) : [],
+    threadFilter ? db.select({id:message.id}).from(message).where(and(threadFilter,eq(message.status,"analyzed"),eq(message.kind,"message"))).orderBy(asc(message.receivedAt),asc(message.id)).limit(49) : [],
+  ]);
+  return { notice:m.kind === "payment_notice" ? m.notice : null, completedTodos,
+    threadContext:{projectId:filedThread[0]?.projectId ?? null,replied:threadFacts[0]?.replied ?? false,newer:threadFacts[0]?.newer ?? false,waitingIds:waitingThread.map(m=>m.id)},
+    id: m.id, channel: m.channel, body: m.bodyText ?? "", receivedAt: m.receivedAt.toISOString(), status: m.status,
     failure: m.failure, projectId: m.projectId,
     analysis: a ? { ...upgradeAnalysis(a.analysis), modelVersion: a.modelVersion, promptVersion: a.promptVersion } : null,
     files: files.map(f => ({ ...f, filename: f.filename ?? "" })), filed: filedMessages(filed),
     gmail: m.channel === "gmail" && m.externalRef ? {
-      gmailId: m.externalRef, sender: m.sender ?? "", subject: m.subject ?? "",
+      gmailId: m.externalRef, threadId:m.providerThreadId ?? "", sent:m.direction === "sent", recipients:m.recipients ?? "", sender: m.sender ?? "", subject: m.subject ?? "",
       unsure: m.relevance === "unsure", skippedAttachments: m.skippedAttachments ?? [],
     } : null,
   };

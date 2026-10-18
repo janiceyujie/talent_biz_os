@@ -12,6 +12,8 @@ export type EvalCase = {
   message: string;
   /** Screenshots, photos, or PDFs in evals/extraction/files, in order (rendered from sources/). */
   files?: string[];
+  /** The artist's own reply in an email thread, read with the sent-reply prompt (lib/ai/prompts.ts). */
+  sent?: boolean;
   expect: {
     intent?: string;
     projectType?: string;
@@ -361,5 +363,55 @@ Thanks!`,
     note: "The stated weekday doesn't match the date (12/24 is a Thursday)",
     message: `想約 12/24（三）晚上的聖誕派對演出，大約 1 小時，費用 NT$35,000 含稅，地點在信義區。—— 星河活動 Ben`,
     expect: { intent: "inquiry", projectType: "gig", amount: 35000, currency: "TWD", taxIncluded: true, counterpartyName: "Ben", flags: ["inconsistency"] },
+  },
+  {
+    id: "sent-quote-zh",
+    note: "the artist's own reply quoting a fee: their side of a negotiation",
+    sent: true,
+    message: `From: (the artist)
+To: 林美 <lin@lumora.example>
+Subject: Re: Lumora 春季合作
+
+林美您好，謝謝邀請！
+2 支 Reels 加 3 則限動，報價 NT$60,000（含稅），3/1–3/15 都可以配合。
+想請問素材的授權期間是多久？`,
+    expect: {
+      intent: "negotiation",
+      amount: 60000,
+      currency: "TWD",
+      taxIncluded: true,
+      counterpartyName: "林美",
+      email: "lin@lumora.example",
+      replyBy: "",
+      dates: [{ date: "2027-03-01" }],
+    },
+  },
+  {
+    id: "sent-accept-en",
+    note: "the artist accepting the other side's terms",
+    sent: true,
+    message: `From: (the artist)
+To: Sara Kim <sara@harbourlights-fest.example>
+Subject: Re: Harbour Lights 2027
+
+Hi Sara, NT$80,000 for a 45-minute set on August 14 works for me. Happy to confirm — send the contract over when it's ready.`,
+    expect: {
+      intent: "confirmation",
+      amount: 80000,
+      counterpartyName: "Sara",
+      replyBy: "",
+      dates: [{ date: "2027-08-14" }],
+    },
+  },
+  {
+    id: "sent-thanks-zh",
+    note: "a thank-you that proposes nothing",
+    sent: true,
+    message: `From: (the artist)
+To: 舞台監督 阿傑 <stage@riverfest.example>
+Subject: Re: 河岸音樂節 彩排時間
+
+收到，謝謝阿傑！`,
+    expect: { amount: null, replyBy: "" },
   },
 ];

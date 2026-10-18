@@ -1,18 +1,20 @@
 import "server-only";
-import { and, count, eq, gt, isNull, ne, notInArray, or } from "drizzle-orm";
+import { and, count, eq, gt, isNull, notInArray, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { aiCall } from "@/lib/db/schema";
 
 // Usage limits on AI calls (docs/decisions/0008), counted from ai_call. Only
 // real model calls count — replayed recordings cost nothing — and the
-// relevance check on a connected mailbox doesn't (short, cheap, and not the
-// person's action), nor do calls stopped before reaching a model (a file it
+// relevance check and payment-notice read on a connected mailbox don't (short,
+// cheap, and not the person's action), nor do calls stopped before reaching a model (a file it
 // can't read, nothing configured, a missing recording). Limits come from
 // the environment until plans and billing exist.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Failures raised before anything was sent: they cost nothing.
 const neverSent = ["unsupported_file", "not_configured", "replay_missing"];
+// Run by the mailbox on its own, not by the person.
+const mailboxTasks = ["relevance", "payment_notice"];
 const counted = () => and(eq(aiCall.replayed, false), or(isNull(aiCall.failureCode), notInArray(aiCall.failureCode, neverSent)));
 export const dailyLimit = () => Number(process.env.AI_DAILY_ANALYSES || 50);
 const perMessageLimit = () => Number(process.env.AI_MAX_ANALYSES_PER_MESSAGE || 4);
@@ -23,7 +25,7 @@ export async function dailyUsage(talentId: string) {
     .select({ used: count() })
     .from(aiCall)
     .where(
-      and(eq(aiCall.talentId, talentId), counted(), ne(aiCall.task, "relevance"), gt(aiCall.createdAt, new Date(Date.now() - DAY_MS))),
+      and(eq(aiCall.talentId, talentId), counted(), notInArray(aiCall.task, mailboxTasks), gt(aiCall.createdAt, new Date(Date.now() - DAY_MS))),
     );
   const limit = dailyLimit();
   return { used: row.used, limit, remaining: Math.max(0, limit - row.used) };

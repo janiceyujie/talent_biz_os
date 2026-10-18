@@ -12,6 +12,7 @@ import { stripQuoted } from "../clean";
 import { gmailProvider } from "../gmail";
 import { chooseAttachments, FETCH_LIMITS } from "../attachments";
 import type { AttachmentRef } from "../gmail/parts";
+import { senderCheck } from "../sender-auth";
 import { bringNotice, pathFor } from "./notice";
 
 // mail.fetch (docs/design/gmail-ingestion.md, Jobs): bring one email decided
@@ -94,6 +95,7 @@ export async function fetchDecision(decisionId: string) {
           providerThreadId: read.threadId,
           direction: sent ? "sent" : "received",
           recipients: sent ? read.to || null : null,
+          senderCheck: sent ? null : senderCheck(read.authResults),
           headerMessageId: read.headerMessageId || null,
           inReplyTo: read.inReplyTo || null,
           references: read.references || null,

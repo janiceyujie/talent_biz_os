@@ -246,7 +246,8 @@
       "payment_details": "要求付款或提供新的匯款／付款資訊，常見於詐騙。請用你原本就有的聯絡方式向對方確認。",
       "inconsistency": "內容前後不一致。",
       "hidden_text": "含有看不見的字元，可能藏有指示，分析前已移除。",
-      "other": "這則訊息有可疑之處，請多留意。"
+      "other": "這則訊息有可疑之處，請多留意。",
+      "unverified_sender": "Gmail 無法驗證這封信來自寄件者的網域：寄件地址可能是偽造的。"
     }
   },
   "today": {
@@ -759,7 +760,8 @@
     "undo": "復原",
     "historyGroup": "過往信件",
     "historyInfo": "過去 30 天內、兩週沒有新進度的信件串，留著備查；打開時才會分析。",
-    "historyCount": "{count} 封"
+    "historyCount": "{count} 封",
+    "unverifiedSenderPayment": "Gmail 無法驗證寄件者，而這封信提到付款或匯款資料：這是常見的詐騙手法。請先別付款或回覆資料，用你原本就有的聯絡方式向對方確認。"
   },
   "intake": {
     "targetHeading": "歸入合作案",

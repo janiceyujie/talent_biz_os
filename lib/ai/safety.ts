@@ -3,7 +3,8 @@
 // model that misses or obeys an injected instruction still leaves a visible
 // warning for the person. Pure functions; no server-only imports.
 
-export const flagKinds = ["instructions_to_ai", "payment_details", "inconsistency", "hidden_text", "other"] as const;
+// unverified_sender: Gmail's checks failed on the sender's domain (lib/mail/sender-auth.ts); raised by code only.
+export const flagKinds = ["instructions_to_ai", "payment_details", "inconsistency", "hidden_text", "unverified_sender", "other"] as const;
 export type FlagKind = (typeof flagKinds)[number];
 /** Something the person should look at before trusting the analysis. `note` is the model's words, if it raised it. */
 export type Flag = { kind: FlagKind; note: string; asStated: string; source: "model" | "check" };

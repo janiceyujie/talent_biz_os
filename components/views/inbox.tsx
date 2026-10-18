@@ -606,7 +606,9 @@ function Flags({ analysis: a }: { analysis: Analysis }) {
                     actual: day(weekday.actual),
                     stated: day(weekday.stated),
                   })
-                : f.note || labels.flag(f.kind)}
+                : f.kind === "unverified_sender" && a.flags.some((x) => x.kind === "payment_details")
+                  ? t("unverifiedSenderPayment")
+                  : f.note || labels.flag(f.kind)}
               {f.asStated && !weekday && <span className="stated"> 「{f.asStated}」</span>}
             </span>
           </li>

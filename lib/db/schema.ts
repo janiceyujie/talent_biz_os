@@ -26,6 +26,7 @@ import { intentKeys } from "../ai/extraction/intents";
 import { historyModes } from "../mail/history";
 import type { NoticeFields } from "../mail/payment-notice/fields";
 import { mailKinds } from "../mail/relevance/prompt";
+import { senderChecks } from "../mail/sender-auth";
 import { ruleIds } from "../mail/relevance/rules";
 import { contactRoles, stages as projectStages, transportModes, type ContractTerms, type ProjectDetails, type TermChange } from "../types"; // relative: drizzle-kit loads this file too
 
@@ -517,6 +518,8 @@ export const message = pgTable(
     relevance: text({ enum: messageRelevance }),
     sender: text(), // "Name <address>", as the email states it (a claim, decision 0007)
     recipients: text(), // the To line of the person's own sent mail, as written
+    // Gmail's SPF/DKIM/DMARC verdict on an email's sender (lib/mail/sender-auth.ts); null when not from Gmail.
+    senderCheck: text({ enum: senderChecks }),
     subject: text(),
     skippedAttachments: jsonb().$type<SkippedAttachment[]>(),
     receivedAt: timestamp({ withTimezone: true }).notNull(),
@@ -537,6 +540,7 @@ export const message = pgTable(
     check("message_relevance_check", oneOf(t.relevance, messageRelevance)),
     check("message_status_check", oneOf(t.status, messageStatuses)),
     check("message_kind_check", oneOf(t.kind, messageKinds)),
+    check("message_sender_check_check", oneOf(t.senderCheck, senderChecks)),
     // A payment notice keeps its fields only: the database refuses a body on one.
     check("message_notice_check", sql`(${t.kind} = 'payment_notice') = (${t.notice} is not null) and (${t.kind} <> 'payment_notice' or ${t.bodyText} is null)`),
   ],

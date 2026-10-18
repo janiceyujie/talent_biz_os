@@ -34,6 +34,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
       threadId: message.providerThreadId,
       sender: message.sender,
       subject: message.subject,
+      senderCheck: message.senderCheck,
       receivedAt: message.receivedAt,
       timeZone: talent.timeZone,
     })
@@ -75,6 +76,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
       textIfFilesUnreadable: gmail,
       sent,
       thread,
+      senderFailed: row.senderCheck === "failed",
       files,
       today: dateInZone(row.timeZone, 0, row.receivedAt),
       timeZone: row.timeZone,

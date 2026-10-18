@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, inArray, lt } from "drizzle-orm";
 import { ModelError } from "@/lib/ai/model";
+import { canScore } from "@/lib/ai/usage";
 import { db } from "@/lib/db";
 import { mailConnection, mailDecision, message, talent } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
@@ -37,6 +38,7 @@ export async function pathFor(d: Decision, c: Connection, mail: MailProvider): P
   if (d.kind) return d.kind === "bank_notice" ? "notice" : "normal";
   const meta = await mail.getMetadata(d.providerMessageId, { snippet: true });
   if (!meta || !isBulk(meta)) return "normal"; // gone: the normal path records it when it finds nothing
+  if (!(await canScore(c.talentId))) return "wait"; // the mailbox's daily cap
   let scored;
   try {
     scored = await scoreMail(meta, { task: "relevance", talentId: c.talentId }, true);
@@ -58,6 +60,7 @@ export async function bringNotice(d: Decision, c: Connection, mail: MailProvider
     await db.update(mailDecision).set({ outcome: "skipped", decidedBy: "gone" }).where(eq(mailDecision.id, d.id));
     return;
   }
+  if (!(await canScore(c.talentId))) return; // the mailbox's daily cap: stays in Waiting for a later check
   const [t] = await db.select({ timeZone: talent.timeZone }).from(talent).where(eq(talent.id, c.talentId));
   const receivedOn = dateInZone(t.timeZone, 0, meta.receivedAt);
 
@@ -115,18 +118,18 @@ export async function bringNotice(d: Decision, c: Connection, mail: MailProvider
   });
 }
 
-/** Notices left unhandled for 30 days: their fields are deleted; the decision stays, with the Gmail link. */
-export async function expireNotices(talentId: string) {
+/** Notices left unhandled for 30 days, for one talent or all: their fields are deleted; the decision stays, with the Gmail link. */
+export async function expireNotices(talentId?: string) {
   const old = await db
-    .select({ id: message.id })
+    .select({ id: message.id, talentId: message.talentId })
     .from(message)
     .where(
       and(
-        eq(message.talentId, talentId),
+        talentId ? eq(message.talentId, talentId) : undefined,
         eq(message.kind, "payment_notice"),
         inArray(message.status, ["analyzed", "dismissed"]),
         lt(message.createdAt, new Date(Date.now() - NOTICE_TTL_DAYS * DAY_MS)),
       ),
     );
-  for (const m of old) await dropBroughtIn(talentId, m.id, "expired");
+  for (const m of old) await dropBroughtIn(m.talentId, m.id, "expired");
 }

@@ -1,7 +1,7 @@
 import "server-only";
 
 // A small Gmail API v1 client: metadata reads, and for email brought in, the
-// full message and its attachments (decision 0013). Plain
+// full message and its attachments, and the push watch (decision 0013). Plain
 // fetch, no SDK, like lib/calendar/google/api.ts. GMAIL_API_URL points it at a
 // fake Gmail in tests; production leaves it unset.
 
@@ -38,13 +38,15 @@ async function pace(token: string) {
 
 const rateLimited = (status: number, reason: string) => status === 429 || (status === 403 && /rateLimitExceeded/i.test(reason));
 
-async function call<T>(token: string, path: string): Promise<T> {
+async function call<T>(token: string, path: string, body?: unknown): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     await pace(token);
     let res: Response;
     try {
       res = await fetch(`${base()}/users/me${path}`, {
-        headers: { authorization: `Bearer ${token}` },
+        method: body === undefined ? "GET" : "POST",
+        headers: { authorization: `Bearer ${token}`, ...(body === undefined ? {} : { "content-type": "application/json" }) },
+        body: body === undefined ? undefined : JSON.stringify(body),
         signal: AbortSignal.timeout(15_000),
       });
     } catch {
@@ -103,6 +105,9 @@ export function gmailApi(token: string) {
     },
     /** The whole message, parts and all: only for email brought in. Attachments come separately. */
     full: (id: string) => call<GmailFullMessage>(token, `/messages/${encodeURIComponent(id)}?format=full`),
+    /** Push: Gmail posts a notice to this Pub/Sub topic on every change, for up to 7 days. `expiration` is ms since the epoch. */
+    watch: (topicName: string) => call<{ historyId: string; expiration: string }>(token, "/watch", { topicName }),
+    stop: () => call<unknown>(token, "/stop", {}),
     attachment: (messageId: string, attachmentId: string) =>
       call<{ data: string; size: number }>(token, `/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`),
   };

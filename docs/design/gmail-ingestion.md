@@ -84,10 +84,11 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 | `mail.relevance` | `mail.sync`, one per pending email | `mail-relevance:<connection>` | The small model on one `pending` decision: sender, subject, tab, and Gmail's preview, never the body; score and kind into `mail_decision`, `work`, `unsure`, or `skipped` by the thresholds; the rest of a work thread becomes work. Its own queue, so scoring never holds up the next sync; Sync now shows Syncing… until it's done. Built in `relevance-model`; enqueueing `mail.fetch` or the payment path comes with `gmail-ingest` and `payment-notices` |
 | `mail.fetch` | `mail.relevance`, `mail.sync`, This was work, Always bring in | `mail-fetch:<connection>` | The full message (`format=full`): its text with quoted history stripped, the thread headers, sender and subject into `message`; PDFs and images within the upload limits into `file`, other attachments listed by name; the decision linked; `message.analyze` queued, all in one transaction. Built in `gmail-ingest`. A decision of kind `bank_notice` takes the restricted path instead (`lib/mail/jobs/notice.ts`, built in `payment-notices`): the subject and preview, then the body only when they lack the amount or payer, masked in code; the model's fields kept only where code finds them in the text; attachments never fetched; money out dropped |
 | `message.analyze` | `mail.fetch`, paste, upload | `analyze:<talent>` | The existing analysis (a Gmail message with its sender and subject, on the mailbox model); a Gmail message it finds isn't work (intent `other` and nothing to act on) loses its body and files |
-| `mail.history` | Connect | `mail-history` (low priority) | Starts the first `mail.sync` on connect, so the 30-day read no longer waits for Sync now |
-| `mail.watch-renew` | Daily cron | — | Renew each connection's Gmail watch |
-| `mail.reconcile` | Every 15 minutes | — | Enqueue `mail.sync` for each connection |
-| `mail.expire` | Daily cron | — | Delete payment notices left unhandled for 30 days. Until scheduled jobs arrive, each `mail.sync` does it first |
+| (connect) | Connect | `mail:<connection>` | Connecting queues the first `mail.sync` itself, so the 30-day read starts at once (built in `gmail-push-backfill`; no separate history job) |
+| (watch) | each `mail.sync`, with push set up | — | Starts the Gmail watch, or renews one ending within a day; it lasts 7 days, and the poll syncs every mailbox well within that (built in `gmail-push-backfill`; no separate renewal job) |
+| (push) | the worker, while it runs | — | Pulls Gmail's notices from the Pub/Sub subscription and enqueues `mail.sync` for the mailbox each names (`worker/push.ts`) |
+| `mail.reconcile` | Every 15 minutes with push; every 2 minutes without | — | Enqueue `mail.sync` for each connected mailbox |
+| `mail.cleanup` | Daily, 03:30 Taipei | — | Delete skipped decisions after 90 days, payment notices left unhandled for 30 days, jobs that gave up more than 14 days ago, and unused queue rows |
 | `mail.disconnect` | Disconnect | `mail:<connection>` | Stop watch, revoke, delete per the artist's choice |
 | `calendar.sync` | Event changes, Sync now | per connection | Today's Calendar push, with the retries from the launch checklist |
 
@@ -114,7 +115,8 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | Provider keys |
 | `AI_MODEL_<PROVIDER>_<ROLE>` | e.g. `AI_MODEL_ANTHROPIC_RELEVANCE`; roles `RELEVANCE`, `ANALYSIS`, `ANALYSIS_COMPLEX` |
 | `AI_FREE_TIER_OK` | Allows Gmail content to reach a provider marked `AI_PROVIDER_KEEPS_DATA` (never with `APP_ENV=production`) |
-| `AI_MAILBOX_PROVIDER`, `AI_MAILBOX_MODEL` | Development: mailbox content (relevance, and analysis of what's brought in) on its own provider and model; replaced by the role models with `ai-providers` |
+| `AI_MAILBOX_PROVIDER`, `AI_MAILBOX_MODEL` | Development: mailbox content (relevance, and analysis of what's brought in) on its own provider and model; unset, it goes to the primary |
+| `AI_PRIMARY`, `AI_BACKUP`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `AI_MODEL_<PROVIDER>_<ROLE>` | The paid providers and their model per role (decision 0015) |
 | `MAIL_RELEVANCE_HIGH`, `MAIL_RELEVANCE_LOW` | The two thresholds: 0.6 and 0.4, from the first relevance eval |
 | `MAIL_KEY_DEV` | The local data-key master key (development only) |
 | `GCP_PROJECT`, `KMS_KEY_NAME`, `GCP_KMS_CREDENTIALS` | Cloud KMS (encrypt-only credential on web, decrypt-only on the worker) |
@@ -142,8 +144,8 @@ One theme per branch, each mergeable on its own and testable on the builder's ow
 | 5 | `gmail-ingest` | Fetch into `message` and `file` (PDFs and images within the upload limits; other attachments listed), quoted history stripped, thread headers, analysis on a queue per talent and on the mailbox model, Not work (by the person, or the analysis when it finds nothing to act on), This was work, It's work for Not sure, the disconnect choice | Real work email in Intake, analyzed |
 | 6 | `payment-notices` | The restricted path, the unmatched payment card, expiry | Bank notices matched to payments |
 | 7 | `gmail-threads` | Thread as the top suggestion and File all, sent mail in relevant threads (analyzed as the artist's side, filed at once when it proposes nothing), contact proposals on existing projects, reply to-do completion with Undo | A negotiation tracked as one project |
-| 8 | `gmail-push-backfill` | Watch + Pub/Sub pull, renewal, reconciliation, the history read started on connect, deleting skipped decisions after 90 days, a daily queue cleanup (jobs that gave up more than 14 days ago, unused queue rows; Graphile keeps failed jobs until deleted) | Mail arrives without Sync now |
-| 9 | `ai-providers` | OpenAI and Anthropic adapters; evals on both | Paid models; required before anyone else's mail (can move up to right after 4) |
+| 8 | `gmail-push-backfill` | Watch + Pub/Sub pull when configured, otherwise a 2-minute poll; renewal; reconciliation; the history read started on connect; deleting skipped decisions after 90 days; a daily queue cleanup (jobs that gave up more than 14 days ago, unused queue rows; Graphile keeps failed jobs until deleted); "Checked 2 min ago" with Check now | Mail arrives without Sync now |
+| 9 | `ai-providers` | OpenAI and Anthropic adapters (official SDKs), a model per role, the backup on outage, routing to the large model; evals on both | Paid models; required before anyone else's mail (can move up to right after 4) |
 | 10 | `deploy-render` | `Dockerfile`, `render.yaml`, Cloud KMS provider, Supabase project, Google Cloud setup | The first person besides the builder connects |
 
 **Alongside**: start Google verification once branch 2 works (privacy policy, verified domain, scope reasons, demo video), then CASA preparation.

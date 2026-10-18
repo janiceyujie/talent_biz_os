@@ -50,3 +50,7 @@ MAIL_RELEVANCE_LOW=0.3 npm run eval:relevance            # try other thresholds
 ```
 
 Run it on every model named in configuration before relying on it, and whenever the prompt changes. A case the check gets wrong becomes a better prompt in general terms, or a narrower expectation, as for extraction.
+
+### Budget
+
+Every run stops at `--max-calls` (default 200) or `--max-cost` in estimated dollars (default 2), and prints its calls, tokens, and estimated cost; the result file keeps them. The estimate uses the tokens logged in `ai_call` and list prices in `lib/ai/spend.ts` (update them when prices change). `--provider anthropic` or `--provider openai` runs on a paid provider with its model per role; set a spending limit on both keys.

@@ -3924,10 +3924,23 @@ button.primary.danger {
 .gmail-sync .gmail-sync-failed {
   color: var(--red);
 }
-.gmail-sync button {
+.gmail-sync [role="status"] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+/* Sits in a section header, whose eyebrow style would make it orange and bold, or hide it (experience.css) */
+.section-header .gmail-sync > span {
+  display: inline-flex;
+  color: var(--muted);
+  font-weight: 400;
+}
+.section-header .gmail-sync > span.gmail-sync-failed {
+  color: var(--red);
+}
+.gmail-sync .link-button:disabled {
+  color: var(--muted);
+  cursor: default;
 }
 .gmail-sync .spinning {
   animation: spin 1s linear infinite;

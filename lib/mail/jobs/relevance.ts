@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { ModelError } from "@/lib/ai/model";
+import { canScore } from "@/lib/ai/usage";
 import { db } from "@/lib/db";
 import { mailConnection, mailDecision } from "@/lib/db/schema";
 import { queue } from "@/lib/queue";
@@ -54,6 +55,7 @@ export async function scoreDecision(decisionId: string) {
     return;
   }
 
+  if (!(await canScore(c.talentId))) return; // the mailbox's daily cap: stays "Not decided yet" for a later check
   let scored;
   try {
     scored = await scoreMail(mail, { task: "relevance", talentId: c.talentId }, true);

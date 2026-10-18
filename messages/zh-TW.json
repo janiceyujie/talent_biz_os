@@ -1162,11 +1162,11 @@
       "googleError": "Google 回傳錯誤，請稍後再試。"
     },
     "connectSummary": "唯讀權限，只收進工作信。",
-    "syncNow": "立即同步",
-    "syncing": "同步中…",
-    "syncedAt": "{time}同步",
-    "neverSynced": "尚未同步",
-    "syncFailed": "上次同步失敗",
+    "syncNow": "立即檢查",
+    "syncing": "檢查中…",
+    "syncedAt": "{time}檢查過",
+    "neverSynced": "尚未檢查",
+    "syncFailed": "上次檢查失敗",
     "lastSynced": "上次同步",
     "never": "從未",
     "tabsLabel": "顯示內容",
@@ -1258,7 +1258,9 @@
     "keepNoneHint": "包括已歸入合作案的信",
     "notWorkTitle": "不是工作信？",
     "notWorkBody": "這封信會移出進件分類，內文與附件會刪除。它仍會列在「已過濾」，可按「這是工作信」收回。",
-    "notWorkNeverFrom": "也不再收 {sender} 的信"
+    "notWorkNeverFrom": "也不再收 {sender} 的信",
+    "autoInfo": "新信件會自動收進來。想馬上看到（例如正在等的回覆），可以按立即檢查。",
+    "sortingCount": "整理中 {count} 封"
   },
   "paymentNotice": {
     "chip": "收款",

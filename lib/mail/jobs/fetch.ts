@@ -12,9 +12,10 @@ import { stripQuoted } from "../clean";
 import { gmailProvider } from "../gmail";
 import { chooseAttachments, FETCH_LIMITS } from "../attachments";
 import type { AttachmentRef } from "../gmail/parts";
+import { bringNotice, pathFor } from "./notice";
 
 // mail.fetch (docs/design/gmail-ingestion.md, Jobs): bring one email decided
-// as work, or Not sure, into Intake. Its text (quoted history stripped) becomes
+// as work, or Not sure, into Intake (a bank or payment-app notice: ./notice.ts). Its text (quoted history stripped) becomes
 // a message, its PDFs and images become files, and the analysis is queued, all
 // in one transaction. Safe to run twice: the message's dedup key is the
 // mailbox and the Gmail id.
@@ -48,6 +49,10 @@ export async function fetchDecision(decisionId: string) {
   let mail, read;
   try {
     mail = gmailProvider(await accessToken(c));
+    // A bank or payment-app notice takes the restricted path: fields only, never the body or files.
+    const path = await pathFor(d, c, mail);
+    if (path === "wait") return;
+    if (path === "notice") return await bringNotice(d, c, mail, gmailDedupKey(c.id, d.providerMessageId));
     read = await mail.getMessage(d.providerMessageId);
   } catch (e) {
     if (e instanceof MailAccessLost) return markReconnectNeeded(c.id);

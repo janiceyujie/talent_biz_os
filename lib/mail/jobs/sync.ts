@@ -10,6 +10,7 @@ import { readMetadata } from "../read";
 import { ruleContext } from "../relevance/context";
 import { decideAll, RULES_VERSION } from "../relevance/rules";
 import { queueFetching } from "./fetch";
+import { expireNotices } from "./notice";
 import { queueScoring } from "./relevance";
 
 // mail.sync (docs/design/gmail-ingestion.md, Jobs): find the mailbox's new
@@ -46,6 +47,8 @@ export async function syncMailbox(connectionId: string, { lastAttempt }: { lastA
 }
 
 async function sync(c: Connection) {
+  // Until scheduled jobs arrive (gmail-push-backfill), each sync clears notices left too long.
+  await expireNotices(c.talentId);
   const mail = gmailProvider(await accessToken(c));
   const { refs, cursor } = await whatsNew(c, mail);
   const fresh = await undecided(c.id, refs);

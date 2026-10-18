@@ -24,6 +24,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
       submittedBy: message.submittedBy,
       body: message.bodyText,
       channel: message.channel,
+      kind: message.kind,
       sender: message.sender,
       subject: message.subject,
       receivedAt: message.receivedAt,
@@ -32,7 +33,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
     .from(message)
     .innerJoin(talent, eq(talent.id, message.talentId))
     .where(eq(message.id, messageId));
-  if (!row || row.status !== "pending") return;
+  if (!row || row.status !== "pending" || row.kind !== "message") return; // a payment notice has only its fields
   // Usage limits are checked here, where every analysis passes, not only in the actions.
   const allowed = await canAnalyze(row.talentId, messageId);
   if (!allowed.ok) {

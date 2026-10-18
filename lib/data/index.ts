@@ -381,6 +381,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
                 skippedAttachments: m.skippedAttachments ?? [],
               }
             : null,
+        notice: m.kind === "payment_notice" ? m.notice : null,
       };
     }),
   };

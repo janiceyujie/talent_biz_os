@@ -19,6 +19,7 @@ import { weekdayMismatchOf } from "@/lib/ai/safety";
 import type { InboxMessage } from "@/lib/types";
 import { GmailMail, GmailSync, IntakeTabs, type IntakeTab } from "./gmail-intake";
 import { MessageReview } from "./message-review";
+import { NoticeDetail, NoticeRowLine } from "./payment-notice";
 import { UploadDialog } from "./upload-dialog";
 
 // The review queue: messages the person sent in, each with the model's
@@ -30,7 +31,9 @@ const firstLine = (text: string) => text.trim().split("\n")[0]?.slice(0, 80) ?? 
 export function InboxView() {
   const data = useAppData();
   const t = useTranslations("inbox");
+  const tNotice = useTranslations("paymentNotice");
   const tEyebrow = useTranslations("eyebrow");
+  const money = useMoney();
   const router = useRouter();
   const params = useSearchParams();
   const format = useFormatter();
@@ -133,10 +136,25 @@ export function InboxView() {
                 >
                   <small>
                     <StatusChip status={m.status} />
-                    {!!m.analysis?.flags.length && <em className="message-status status-flagged">{t("flagChip")}</em>} {t(`channel.${m.channel}`)}
+                    {!!m.analysis?.flags.length && <em className="message-status status-flagged">{t("flagChip")}</em>}
+                    {m.notice && <em className="message-status status-payment">{tNotice("chip")}</em>} {t(`channel.${m.channel}`)}
                   </small>
-                  <strong>{m.analysis?.title || fallbackTitle(m, t)}</strong>
-                  <span className="mail-snippet">{(m.analysis?.summary || m.body || m.files.map((f) => f.filename).join(", ")).slice(0, 110)}</span>
+                  {m.notice ? (
+                    <>
+                      <strong>
+                        {money(m.notice.amount, m.notice.currency)}
+                        {m.notice.payer && ` · ${m.notice.payer}`}
+                      </strong>
+                      <span className="mail-snippet">
+                        <NoticeRowLine notice={m.notice} />
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <strong>{m.analysis?.title || fallbackTitle(m, t)}</strong>
+                      <span className="mail-snippet">{(m.analysis?.summary || m.body || m.files.map((f) => f.filename).join(", ")).slice(0, 110)}</span>
+                    </>
+                  )}
                   <span className="mail-summary-meta">
                     <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
                     {m.status === "confirmed" && m.projectId && <span>{t("filedChip")}</span>}
@@ -226,6 +244,8 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
     message.gmail && data.gmail.connection
       ? `https://mail.google.com/mail/?${new URLSearchParams({ authuser: data.gmail.connection.accountEmail })}#all/${message.gmail.gmailId}`
       : null;
+
+  if (message.notice) return <NoticeDetail message={message} notice={message.notice} headingRef={headingRef} gmailUrl={gmailUrl} />;
 
   // The journey, top to bottom (docs/design/intake-to-project.md, screen 1): who and what (triage);
   // what they want and on what terms (understand); the original, a glance away; then the one decision,

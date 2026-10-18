@@ -5,12 +5,13 @@ import { file, mailDecision, message } from "@/lib/db/schema";
 import { removeObjects } from "@/lib/storage";
 
 /**
- * An email brought in that isn't work, said by the person (Not work) or by
- * the analysis (decision 0013): its body and files are deleted at once; the
+ * An email brought in that isn't work, said by the person (Not work, or Drop
+ * on a payment notice) or by the analysis (decision 0013), or a payment notice
+ * left unhandled too long: its body, files, and fields are deleted at once; the
  * decision stays, with the Gmail link, as `not_work`. Returns false when it
  * isn't this talent's Gmail message.
  */
-export async function dropBroughtIn(talentId: string, messageId: string, decidedBy: "person" | "analysis") {
+export async function dropBroughtIn(talentId: string, messageId: string, decidedBy: "person" | "analysis" | "expired") {
   const [m] = await db
     .select({ id: message.id })
     .from(message)

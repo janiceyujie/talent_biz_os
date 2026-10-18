@@ -2,6 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
+import { useMoney } from "@/lib/i18n/format";
 import { useRouter } from "next/navigation";
 import { useNotificationText } from "@/components/app/notification-text";
 import { ReminderStatus, useNotifications } from "@/components/app/notifications";
@@ -35,6 +36,8 @@ export function ActionsWidget({ ctx: { data, today, items } }: { ctx: OverviewCo
 /** One thing to act on: a tag for how urgent, what it is, and where it opens. */
 function ActionRow({ action: a, today }: { action: TodayAction; today: string }) {
   const t = useTranslations("today");
+  const tNotice = useTranslations("paymentNotice");
+  const money = useMoney();
   const text = useNotificationText();
   const router = useRouter();
   const when = useWhen(today);
@@ -44,7 +47,9 @@ function ActionRow({ action: a, today }: { action: TodayAction; today: string })
       : a.kind === "review"
         ? {
             tag: <span className="reminder-status today-tag-review">{t("tagReview")}</span>,
-            title: a.message.analysis?.title || t("reviewUntitled"),
+            title: a.message.notice
+              ? tNotice("title", { amount: money(a.message.notice.amount, a.message.notice.currency) })
+              : a.message.analysis?.title || t("reviewUntitled"),
             detail: t("reviewDetail"),
             href: `/inbox?message=${a.message.id}`,
           }

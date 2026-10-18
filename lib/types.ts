@@ -5,6 +5,7 @@ import type { Preferences } from "@/lib/preferences";
 import type { Locale } from "@/lib/i18n/config";
 import type { Appearance, Role } from "@/lib/roles";
 import type { MessageAnalysis } from "@/lib/ai/analysis";
+import type { NoticeFields } from "@/lib/mail/payment-notice/fields";
 import type { ChangeRecord } from "@/lib/domain/intake";
 import type { ProjectType } from "@/lib/project-types";
 
@@ -230,6 +231,8 @@ export type InboxMessage = {
     unsure: boolean; // "Not sure this is work"
     skippedAttachments: { filename: string; mimeType: string; sizeBytes: number }[]; // listed, not fetched
   } | null;
+  // A bank or payment-app notice (decision 0013): only these fields, no body or analysis; null otherwise.
+  notice: NoticeFields | null;
 };
 
 /** What only a project's own screen shows, loaded when it's opened (lib/data/project-detail.ts). */

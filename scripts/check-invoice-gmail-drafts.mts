@@ -132,7 +132,7 @@ const fake=createServer(async(req,res)=>{
 });
 await new Promise<void>((resolve,reject)=>{fake.once("error",reject);fake.listen(54500,"127.0.0.1",resolve);});
 const nextLog=createWriteStream("/private/tmp/invoice-gmail-next.log");
-const next=spawn(process.execPath,["node_modules/next/dist/bin/next","dev",...(process.env.INVOICE_QA_WEBPACK === "1" ? ["--webpack"] : []),"--hostname","127.0.0.1","--port","3002"],{env:{...process.env},stdio:["ignore","pipe","pipe"]});
+const next=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--hostname","127.0.0.1","--port","3002"],{env:{...process.env},stdio:["ignore","pipe","pipe"]});
 next.stdout.pipe(nextLog);next.stderr.pipe(nextLog);
 let runner:Awaited<ReturnType<typeof run>>|undefined;
 const wait=async(check:()=>Promise<boolean>,label:string)=>{for(let i=0;i<120;i++){if(await check())return;await new Promise(r=>setTimeout(r,250));}throw new Error(`Timeout: ${label}`);};

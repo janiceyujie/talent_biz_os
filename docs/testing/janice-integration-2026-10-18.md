@@ -26,3 +26,24 @@ A local database that already applied the old feature-branch `0030_workspace_fou
 - A short payment remains expected. Confirmed withholding is separate from cash and from the amount still owed.
 - Corrections and withdrawals remain append-only and can reopen a completed project. Closing requires all receipts and costs to be settled.
 - Gmail draft tests use a local fake provider, never a customer mailbox or send endpoint.
+
+## Verification results
+
+All checks used local PostgreSQL and synthetic identities. No real Gmail API, paid AI, or email sends were used.
+
+| Check | Result |
+| --- | --- |
+| Unit tests | 358 passed |
+| Receipt lifecycle, notice integration, corrections, withdrawals, multiple installments and costs | 170 assertions passed |
+| Paged inbox, thread filing, reply undo, notice metadata, access boundaries | 50 assertions passed |
+| PDF and fake Gmail draft lifecycle, permissions and retry behavior | 140 assertions passed; 5 fake drafts; 0 send calls |
+| Manager capacity and concurrent final-seat acceptance | 101 assertions passed; 1, 2, 3, 10, 20, 30 artists |
+| Workspace/grant/calendar shared workflow | 112 assertions passed |
+| Daily reminder persistence and isolation | 65 assertions passed |
+| Files, grants and project pagination | 33 assertions passed |
+| TypeScript, ESLint and locale catalogs | Passed; 3,043 translation keys and 74 registry labels |
+| Production build | Passed with the existing non-blocking AI recording-directory tracing warning |
+| Canonical main upgrade and fresh install | 34 migrations applied; canonical migration bytes unchanged |
+| Local data restore verification | All original columns in 51 public/queue tables matched row counts and content digests; 85 foreign keys checked; no disabled triggers |
+
+The pre-integration database, full Git bundle, local edits archive and a final database dump remain available locally as rollback material. Queue state was preserved, and no locked jobs remained after stopping the previous worker. No local secrets, mailbox contents, database dumps or test credentials belong in the Git branches.

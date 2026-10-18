@@ -6,7 +6,7 @@ import { conflicts, plusDays, type PlanItem } from "@/lib/calendar/planner";
 import type { InboxMessage } from "@/lib/types";
 import { urgencies, type StatefulNotification, type Urgency } from "@/lib/domain/notifications";
 
-type ReviewMessage = Pick<InboxMessage, "id" | "status"> & { analysis: { title: string } | null };
+type ReviewMessage = Pick<InboxMessage, "id" | "status" | "notice"> & { analysis: { title: string } | null };
 
 const CLASH_WINDOW_DAYS = 7; // as the reminders
 

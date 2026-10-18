@@ -162,3 +162,12 @@ describe("planItems", () => {
     assert.equal(items[0].amount, 21000);
   });
 });
+
+
+test("payment schedule preserves each artist's currency and outstanding balance",()=>{
+ for(const currency of ["USD","JPY","HKD"] as const){
+  const payment={id:currency,label:"Foreign fee",projectId:null,direction:"in",currency,amount:100,taxRate:0,taxIncluded:true,status:"expected",dueDate:"2026-10-18",receipts:[{id:"r",date:"2026-10-17",cash:30,withheld:10}]} as Payment;
+  const [planned]=planItems(data([],[payment]));
+  assert.equal(planned.currency,currency);assert.equal(planned.amount,60);
+ }
+});

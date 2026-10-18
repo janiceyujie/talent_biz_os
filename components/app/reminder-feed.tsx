@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { compareNotifications, isUnread, notifications, withState, type Notification, type StatefulNotification } from "@/lib/domain/notifications";
 import type { AppData, NotificationState } from "@/lib/types";
 import { useAppData, useWorkspaceTalent } from "./app-data";
-import { usePortfolioWorkspace } from "./portfolio-provider";
+import { usePortfolio, usePortfolioWorkspace } from "./portfolio-provider";
 import { portfolioLink } from "@/lib/manager/selection";
 import { portfolioReminderData } from "@/lib/domain/briefing";
 
@@ -17,8 +17,9 @@ export function ReminderProvider({ children }: { children: ReactNode }) {
   const data = useAppData();
   const ownTalent = useWorkspaceTalent();
   const workspace = usePortfolioWorkspace();
+  const selection = usePortfolio();
   const preview = !!data.preview && !workspace.active;
-  const scopeKey = workspace.active ? `artists:${workspace.data?.selectedIds.slice().sort().join(",") ?? "loading"}` : preview ? "preview" : "workspace";
+  const scopeKey = workspace.active ? `artists:${selection?.ids?.slice().sort().join(",") ?? "none"}` : preview ? "preview" : "workspace";
   const [feed, setFeed] = useState<Feed | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [failed, setFailed] = useState(false);

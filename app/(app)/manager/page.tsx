@@ -15,11 +15,11 @@ export default async function Page({searchParams}:{searchParams:Promise<Record<s
   const initialTab=params.view==="messages"||params.view==="finance"?params.view:"calendar";
   const invitations=await getManagerInvitations();
   let data:ManagerOverview;let errorMessage:string|undefined;
-  try {data=await getManagerOverview(person.personId,requested,start,end);}
+  try {data=await getManagerOverview(person.personId,requested,start,end,initialTab,typeof params.after==="string"?params.after:undefined);}
   catch(error) {
     if(!(error instanceof ManagerScopeError))throw error;
     data={artistLimit:(await getManagerCapability(person.personId)).artistLimit,artists:await getManagerRoster(person.personId),selectedIds:[],calendar:[],messages:[],finance:[],start:dateInZone("UTC",-7),end:dateInZone("UTC",30)};
     errorMessage=t(error.code==="forbidden"?"notFound":error.code);
   }
-  return <ManagerDashboard key={`${data.selectedIds.join()}:${data.start}:${data.end}`} data={data} invitations={invitations} initialTab={initialTab} error={errorMessage}/>;
+  return <ManagerDashboard key={`${data.selectedIds.join()}:${data.start}:${data.end}:${initialTab}:${typeof params.after==="string"?params.after:""}`} data={data} invitations={invitations} initialTab={initialTab} error={errorMessage}/>;
 }

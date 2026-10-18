@@ -96,7 +96,7 @@ for (const c of selected) {
       mimeType: name.endsWith(".pdf") ? "application/pdf" : name.endsWith(".jpg") ? "image/jpeg" : "image/png",
       data: readFileSync(new URL(`../evals/extraction/files/${name}`, import.meta.url)),
     }));
-    const out = await extractMessage({ body: c.message, files, today: RECEIVED.today, timeZone: RECEIVED.timeZone, outputLocale: locale, trace: { task: "eval" } });
+    const out = await extractMessage({ body: c.message, files, today: RECEIVED.today, timeZone: RECEIVED.timeZone, outputLocale: locale, trace: { task: "eval" }, sent: c.sent });
     promptVersion = out.promptVersion;
     const checks = score(c, out.analysis);
     results.push({ id: c.id, seconds: (Date.now() - t0) / 1000, modelVersion: out.modelVersion, checks, analysis: out.analysis });
@@ -130,3 +130,4 @@ mkdirSync("evals/results", { recursive: true });
 const file = `evals/results/${new Date().toISOString().replace(/[:.]/g, "-")}-${(process.env.AI_MODEL ?? "").replace(/[^\w.-]+/g, "_")}.json`;
 writeFileSync(file, JSON.stringify({ promptVersion, provider: process.env.AI_PROVIDER, model: process.env.AI_MODEL, results }, null, 2));
 console.log(`saved ${file}`);
+process.exit(0); // the database pool (ai_call logging) would keep the process open

@@ -243,4 +243,18 @@ export function upgradeAnalysis(raw: unknown): MessageAnalysis {
  * "Other" alone isn't enough: thanks after a show, with photos, is still work.
  */
 export const notWork = (a: Pick<MessageAnalysis, "intent" | "dates" | "money" | "paymentTerms" | "details" | "asks" | "flags">) =>
-  a.intent === "other" && !a.dates.length && !a.money.amount && !a.paymentTerms && !a.details.length && !a.asks.length && !a.flags.length;
+  a.intent === "other" && !a.dates.length && !a.money.amount && !a.paymentTerms && !Object.keys(a.details).length && !a.asks.length && !a.flags.length;
+
+/**
+ * The person's own reply that can't change its project (decision 0013): no
+ * dates, fee, or details, and not a cancellation, contract, or payment. A bare
+ * acceptance changes something only while the project is still being
+ * negotiated (it asks whether they signed). It's filed under its thread's
+ * project without a review.
+ */
+export const proposesNothing = (a: Pick<MessageAnalysis, "intent" | "dates" | "money" | "details">, { negotiating }: { negotiating: boolean }) =>
+  !a.dates.length &&
+  !a.money.amount &&
+  !Object.keys(a.details).length &&
+  !["cancellation", "contract", "payment"].includes(a.intent) &&
+  !(a.intent === "confirmation" && negotiating);

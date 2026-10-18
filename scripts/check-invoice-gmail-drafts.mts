@@ -132,7 +132,7 @@ const fake=createServer(async(req,res)=>{
 });
 await new Promise<void>((resolve,reject)=>{fake.once("error",reject);fake.listen(54500,"127.0.0.1",resolve);});
 const nextLog=createWriteStream("/private/tmp/invoice-gmail-next.log");
-const next=spawn(process.execPath,["node_modules/next/dist/bin/next","dev","--hostname","127.0.0.1","--port","3002"],{env:{...process.env},stdio:["ignore","pipe","pipe"]});
+const next=spawn(process.execPath,["node_modules/next/dist/bin/next","dev",...(process.env.INVOICE_QA_WEBPACK === "1" ? ["--webpack"] : []),"--hostname","127.0.0.1","--port","3002"],{env:{...process.env},stdio:["ignore","pipe","pipe"]});
 next.stdout.pipe(nextLog);next.stderr.pipe(nextLog);
 let runner:Awaited<ReturnType<typeof run>>|undefined;
 const wait=async(check:()=>Promise<boolean>,label:string)=>{for(let i=0;i<120;i++){if(await check())return;await new Promise(r=>setTimeout(r,250));}throw new Error(`Timeout: ${label}`);};
@@ -391,9 +391,61 @@ try {
   for(let i=6;i<27;i++)ok((await post("/api/invoices",{...input,paymentId:payments[i].id})).status===200,"Additional draft saved");
   const list=await (await request("/api/invoices",cookies[0])).json();ok(list.items.length===20 && !!list.nextCursor,"Invoice list remains paginated");
   const review=await (await request("/api/invoices?ready=1",cookies[0])).json();ok(!review.items.some((x:{id:string})=>x.id===id),"Sent paid invoice absent from review queue");
+  // Taiwan requests use the same receivable and Gmail flow, never formal tax issuance.
+  const twPaymentId = randomUUID();
+  await db.insert(s.payment).values({id:twPaymentId,talentId:artist.talentId,projectId:artist.projectId,
+    label:"Synthetic Taiwan service",direction:"in",amount:55000,currency:"TWD",taxRate:5,
+    taxIncluded:true,recordedOn:today,dueOn:later,invoiceOn:today});
+  const allReminderIds = async () => {
+    const ids: string[] = [];let cursor="";
+    for(let page=0;page<10;page++) {
+      const feed=await (await request(`/api/reminders${cursor?`?after=${encodeURIComponent(cursor)}`:""}`,cookies[0])).json();
+      ids.push(...feed.items.map((x:{id:string})=>x.id));
+      if(!feed.hasMore)return ids;
+      cursor=feed.nextCursor;
+    }
+    throw new Error("Unexpected reminder pagination");
+  };
+  ok((await allReminderIds()).some(id=>id.startsWith(`billing:${twPaymentId}:`)),"Unprepared TWD request appears in daily reminders");
+  const twInput = {...input,paymentId:twPaymentId,documentKind:"tw_payment_request",documentLanguage:"zh-TW"};
+  ok((await post("/api/invoices",{...twInput,documentKind:"tw_uniform_invoice"})).data.error==="invalid","Formal Taiwan issuance cannot be forged through the billing API");
+  ok((await post("/api/invoices",{...twInput,documentKind:"commercial_invoice"})).data.error==="invalid","TWD is limited to payment requests in this release");
+  ok((await post("/api/invoices",{...twInput,taxReview,paymentBasis:{amount:55000,taxRate:5,taxIncluded:true}})).data.error==="invalid","Taiwan request cannot apply the US tax calculator");
+  ok((await post("/api/invoices",twInput,cookies[1])).status!==200,"Foreign owner cannot prepare Taiwan request");
+  const twCreated = await post("/api/invoices",twInput);
+  ok(twCreated.status===200,"Taiwan request saves against existing TWD receivable");
+  const twId=twCreated.data.id;
+  ok((await allReminderIds()).some(id=>id.startsWith(`invoice:${twId}:`)),"Saved TWD request appears for review");
+  let twSaved=await row(twId);
+  ok(twSaved.number.startsWith("PR-") && twSaved.snapshot.documentKind==="tw_payment_request","PostgreSQL persists document type and internal PR reference");
+  ok(twSaved.snapshot.currency==="TWD" && twSaved.snapshot.total===55000 && twSaved.snapshot.tax===2619.05,"TWD inclusive amounts preserve the receivable");
+  const twList=await (await request("/api/invoices",cookies[0])).json();
+  ok(twList.items.some((x:{id:string;currency:string;documentKind:string})=>x.id===twId&&x.currency==="TWD"&&x.documentKind==="tw_payment_request"),"List carries document kind and currency");
+  const {renderInvoicePdf}=await import("../lib/invoices/pdf");
+  const detail=await (await request(`/api/invoices/${twId}`,cookies[0])).json();
+  for(const language of ["en","zh-TW"] as const) {
+    const bytes=await renderInvoicePdf({...detail,snapshot:{...detail.snapshot,documentLanguage:language}},false);
+    await writeFile(`/private/tmp/taiwan-request-${language}.pdf`,bytes);
+    ok((await PDFDocument.load(bytes)).getTitle()?.includes(language==="en"?"Taiwan payment request":"台灣請款文件"),"PDF title describes a payment request in either language");
+  }
+  ok((await op(twId,"createDraft")).status===200,"Taiwan request can create a fake Gmail draft");
+  await status(twId,"gmail_draft");twSaved=await row(twId);
+  const twMock=messages.get(twSaved.gmail_message_id)!;
+  const twPart=twMock.raw.split(/Content-Type: application\/pdf[^\r\n]*\r?\n/i)[1];
+  const twAttachment=Buffer.from(twPart.split(/\r?\n\r?\n/)[1].split(/\r?\n--/)[0].replace(/\s/g,""),"base64");
+  const twDownload=await request(`/api/invoices/${twId}/pdf`,cookies[0]);
+  ok(createHash("sha256").update(Buffer.from(await twDownload.arrayBuffer())).digest("hex")===createHash("sha256").update(twAttachment).digest("hex"),"Frozen Taiwan PDF equals the attached document");
+  ok(twSaved.snapshot.documentKind==="tw_payment_request" && twSaved.sent_at===null,"Gmail draft never implies a sent or officially issued invoice");
+  ok((await op(twId,"createDraft")).status!==200,"Taiwan request duplicate Gmail creation is blocked");
+  drafts.delete(twSaved.gmail_draft_id);twMock.labels=["SENT"];
+  await op(twId,"syncDraft");await status(twId,"sent");
+  ok((await row(twId)).snapshot.documentKind==="tw_payment_request","Simulated sent message does not convert document to formal invoice");
+  ok((await post(`/api/invoices/${twId}`,{op:"settle",confirmed:true,revision:1,settledOn:today})).status===200,"TWD request settles the original receivable");
+  ok(!(await allReminderIds()).some(id=>id.startsWith(`invoice:${twId}:`)||id.startsWith(`billing:${twPaymentId}:`)),"Settled Taiwan request has no reminder across all pages");
+  ok((await row(twId)).snapshot.documentKind==="tw_payment_request","Paid request retains its non-tax document type");
   ok(sendCalls===0,"No Gmail send calls");ok(updates===0,"No Gmail update/delete calls");
   const inbox=await (await fetch(`http://127.0.0.1:54324/api/v1/search?query=${encodeURIComponent(`to:${input.recipient}`)}`)).json();ok(!inbox.messages?.length,"No SMTP email was sent");
-  await writeFile('/private/tmp/invoice-gmail-ui.json',JSON.stringify({people,cookies,invoiceId:sid,taxInvoiceId,catalogueInvoiceId,base}),{mode:0o600});
+  await writeFile('/private/tmp/invoice-gmail-ui.json',JSON.stringify({people,cookies,invoiceId:sid,taxInvoiceId,catalogueInvoiceId,twInvoiceId:twId,twPaymentId,base}),{mode:0o600});
   console.log(JSON.stringify({checks,creates,sendCalls,updates,pdf:"Valid PDF, stored bytes match attachment",scope:"owner only",finance:"no duplicate rows",ui:process.env.INVOICE_QA_HOLD==="1"}));
   if(process.env.INVOICE_QA_HOLD==="1")await new Promise<void>(resolve=>{process.once("SIGTERM",resolve);process.once("SIGINT",resolve);});
 

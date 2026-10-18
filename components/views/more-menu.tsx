@@ -30,7 +30,16 @@ export function MoreMenu({
     return () => document.removeEventListener("pointerdown", outside);
   }, [open]);
   return (
-    <div className="more-menu" ref={root} onKeyDown={(e) => e.key === "Escape" && setOpen(false)}>
+    <div className="more-menu" ref={root} onKeyDown={(e) => {
+      if(!open)return;
+      if(e.key==="Escape"){e.preventDefault();setOpen(false);root.current?.querySelector<HTMLButtonElement>(":scope > button")?.focus();return;}
+      if(!["ArrowDown","ArrowUp","Home","End"].includes(e.key))return;
+      const items=Array.from(root.current?.querySelectorAll<HTMLElement>("[role=menuitem]:not(:disabled)")??[]);
+      if(!items.length)return;
+      e.preventDefault();const index=items.indexOf(document.activeElement as HTMLElement);
+      const next=e.key==="Home"?0:e.key==="End"?items.length-1:(index+(e.key==="ArrowDown"?1:-1)+items.length)%items.length;
+      items[next].focus();
+    }}>
       <button className={className} aria-label={button ? undefined : label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
         {button ?? <Ellipsis size={18} aria-hidden="true" />}
       </button>

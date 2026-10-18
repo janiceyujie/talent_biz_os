@@ -73,7 +73,8 @@ export async function reanalyzeMessage(id: string): Promise<string | null> {
     const rows = await tx
       .update(message)
       .set({ status: "pending", failure: null })
-      .where(and(eq(message.id, id), eq(message.talentId, talent.id), inArray(message.status, ["analyzed", "error"])))
+      // A payment notice is never analyzed: it has only its fields (decision 0013).
+      .where(and(eq(message.id, id), eq(message.talentId, talent.id), inArray(message.status, ["analyzed", "error"]), eq(message.kind, "message")))
       .returning({ id: message.id });
     if (rows.length) await queue.enqueue("message.analyze", { messageId: id, locale }, { tx, jobKey: analyzeJobKey(id), queueName: analysisQueue(talent.id) });
     return rows.length > 0;

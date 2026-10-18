@@ -1,10 +1,14 @@
 import "server-only";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { contact, mailDecision, mailSenderRule } from "@/lib/db/schema";
 import type { RuleContext } from "./rules";
 
-/** What the rules know about this talent and mailbox: their sender rules, contacts, and threads already decided as work. */
+/**
+ * What the rules know about this talent and mailbox: their sender rules,
+ * contacts, and threads already decided as work. A bank notice's thread isn't
+ * one: a bank's notices often share a thread, and each must take the restricted path.
+ */
 export async function ruleContext(talentId: string, connectionId: string): Promise<RuleContext & { workThreads: Set<string> }> {
   const [senderRules, contacts, threads] = await Promise.all([
     db
@@ -22,7 +26,13 @@ export async function ruleContext(talentId: string, connectionId: string): Promi
     db
       .selectDistinct({ thread: mailDecision.providerThreadId })
       .from(mailDecision)
-      .where(and(eq(mailDecision.connectionId, connectionId), eq(mailDecision.outcome, "work"))),
+      .where(
+        and(
+          eq(mailDecision.connectionId, connectionId),
+          eq(mailDecision.outcome, "work"),
+          or(isNull(mailDecision.kind), ne(mailDecision.kind, "bank_notice")),
+        ),
+      ),
   ]);
   return {
     senderRules,

@@ -64,3 +64,6 @@
 
 .manager-workspace .manager-read-content:not([hidden]) { display:grid; gap:24px; min-width:0; }
 @media(max-width:768px) { .manager-workspace .manager-read-content:not([hidden]) { gap:16px; } }
+
+.manager-capacity { color:var(--muted); font-size:13px; margin:12px 0; }
+.manager-artists { max-height:240px; overflow:auto; }

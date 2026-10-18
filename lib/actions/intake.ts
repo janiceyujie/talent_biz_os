@@ -5,20 +5,21 @@
 // as it is now; the browser only says which items are ticked and how their
 // values were edited. Nothing the message proposes is applied unticked.
 
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { requestCalendarSync } from "@/lib/calendar/google/sync";
 import { requireTalent } from "@/lib/auth";
+import { inboxDetail } from "@/lib/data/inbox";
 import { getAppData } from "@/lib/data";
 import { organizationNamed, setClient } from "@/lib/data/organizations";
 import { getProject } from "@/lib/data/projects";
 import { db } from "@/lib/db";
-import { auditLog, calendarEvent, contact, contract, message, messageAnalysis, payment, person as personTable, project, todo } from "@/lib/db/schema";
+import { auditLog, calendarEvent, contact, contract, message, messageAnalysis, payment, person as personTable, project, projectContact, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
-import { filedMessages, keptFields, proposeChanges, withField, type Change, type ChangeRecord, type IntakeContext } from "@/lib/domain/intake";
+import { initialEdit, intakeContext, keptFields, proposeChanges, withField, type Change, type ChangeRecord, type IntakeContext } from "@/lib/domain/intake";
 import { isSigned } from "@/lib/domain/phases";
 import { appendReceipt, paymentBalance } from "@/lib/domain/payment-receipts";
 import { projectType, projectTypeKeys } from "@/lib/project-types";
@@ -42,6 +43,7 @@ const edits = {
   todo: z.object({ dueDate: day }),
   toConfirm: z.object({ items: z.array(text(300)).max(10) }),
   contractVersion: z.object({}),
+  contact: z.object({ label: z.string().trim().max(100) }),
 } satisfies Record<Change["kind"], z.ZodType>;
 
 const applyInput = z.object({
@@ -59,19 +61,56 @@ const receivedOn = (receivedAt: Date, timeZone: string) => dateInZone(timeZone, 
 
 /** Apply the ticked items of a message's proposal to a project, and file the message there. */
 export async function applyMessage(raw: ApplyInput): Promise<string | null> {
-  const { person, talent } = await requireTalent();
   const fail = await errorText();
   const parsed = applyInput.safeParse(raw);
   if (!parsed.success) return fail("invalid");
-  const input = parsed.data;
+  const failure = await apply(parsed.data);
+  if (!failure) refresh();
+  return failure === "skipped" ? null : failure;
+}
 
+/**
+ * File all, for messages waiting in one email thread (decision 0013): each is
+ * filed under the project, oldest first, with the items its review would
+ * have ticked. One that asks a question (did they sign?) is left for review.
+ * Returns an error, or how many were left.
+ */
+export async function fileThread(raw: { messageIds: string[]; projectId: string }): Promise<{ error: string } | { left: number }> {
+  const fail = await errorText();
+  const parsed = z.object({ messageIds: z.array(z.uuid()).min(1).max(50), projectId: z.uuid() }).safeParse(raw);
+  if (!parsed.success) return { error: fail("invalid") };
+  const {talent} = await requireTalent();
+  const order = await db.select({id:message.id,connectionId:message.connectionId,threadId:message.providerThreadId}).from(message)
+    .where(and(eq(message.talentId,talent.id),inArray(message.id,[...new Set(parsed.data.messageIds)]),eq(message.kind,"message"),eq(message.status,"analyzed")))
+    .orderBy(message.receivedAt,message.id);
+  if (!order.length || !order[0].connectionId || !order[0].threadId || order.some(m=>m.connectionId!==order[0].connectionId || m.threadId!==order[0].threadId)) return {error:fail("invalid")};
+  let left = parsed.data.messageIds.length - order.length;
+  for (const m of order) {
+    const failure = await apply({ messageId: m.id, projectId: parsed.data.projectId, items: {}, stage: null }, { defaults: true });
+    if (failure === "skipped") left++;
+    else if (failure) {
+      refresh();
+      return { error: failure };
+    }
+  }
+  refresh();
+  return { left };
+}
+
+/**
+ * Applying one message. With `defaults`, the items its review starts with
+ * ticked, as proposed; "skipped" when it asks a question only the person can answer.
+ */
+async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {}): Promise<string | null | "skipped"> {
+  const { person, talent } = await requireTalent();
+  const fail = await errorText();
   const data = await getAppData();
   // The layout's summary lacks the details a proposal compares against: load this one in full.
   const target = await getProject(talent.id, input.projectId, data.talent.name);
   if (!target) return fail("projectNotFound");
   if (target.archived) return fail("projectArchived");
   const [row] = await db
-    .select({ receivedAt: message.receivedAt, status: message.status, analysis: messageAnalysis.analysis })
+    .select({ receivedAt: message.receivedAt, status: message.status, threadId: message.providerThreadId, analysis: messageAnalysis.analysis })
     .from(message)
     .innerJoin(messageAnalysis, eq(messageAnalysis.messageId, message.id))
     .where(and(eq(message.id, input.messageId), eq(message.talentId, talent.id)))
@@ -80,17 +119,14 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
   if (!row || row.status !== "analyzed") return fail("messageNotFound");
 
   const timeZone = data.talent.timeZone;
-  const ctx: IntakeContext = {
-    projects: data.projects,
-    contacts: data.contacts,
-    payments: data.payments,
-    calendar: data.calendar,
-    receivedOn: receivedOn(row.receivedAt, timeZone),
-    replyWithinDays: data.person.replyWithinDays,
-    filed: filedMessages(data.inbox, input.messageId),
-    contracts: data.contracts,
-  };
+  const listed = await inboxDetail(talent.id, input.messageId);
+  if (!listed) return fail("messageNotFound");
+  const ctx: IntakeContext = { ...intakeContext(data, listed), receivedOn: receivedOn(row.receivedAt, timeZone) };
   const { changes, question } = proposeChanges(upgradeAnalysis(row.analysis), target, ctx);
+  if (defaults) {
+    if (question) return "skipped";
+    input = { ...input, items: Object.fromEntries(changes.filter((c) => c.ticked).map((c) => [c.id, initialEdit(c)])) };
+  }
 
   // The stage: a ticked stage item, or the answer to the question (one of its two choices).
   let finalStage: Stage = target.stage;
@@ -187,7 +223,7 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
           await tx
             .update(payment)
             .set({
-              ...appendReceipt(p, { id: input.messageId, date: c.settledOn, cash: c.amount, reason: "unpaid" }),
+              ...appendReceipt(p, { id: input.messageId, date: c.settledOn, cash: c.amount, reason: "unpaid", recordedAt: new Date().toISOString(), recordedBy: person.personId }),
               invoiceRef: p.invoiceRef || c.invoiceRef || null,
             })
             .where(eq(payment.id, p.id));
@@ -218,7 +254,20 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
           await tx.update(payment).set({ notes }).where(eq(payment.id, c.paymentId));
           break;
         }
-        case "todo":
+        case "todo": {
+          // One reply to-do per thread: an open one for an earlier message in it moves to this one.
+          if (c.purpose === "reply" && row.threadId) {
+            const earlier = tx
+              .select({ id: message.id })
+              .from(message)
+              .where(and(eq(message.talentId, talent.id), eq(message.providerThreadId, row.threadId), ne(message.id, input.messageId)));
+            const [moved] = await tx
+              .update(todo)
+              .set({ messageId: input.messageId, dueDate: c.dueDate })
+              .where(and(eq(todo.talentId, talent.id), eq(todo.projectId, target.id), eq(todo.type, "reply"), eq(todo.status, "open"), inArray(todo.messageId, earlier)))
+              .returning({ id: todo.id });
+            if (moved) break;
+          }
           await tx.insert(todo).values({
             talentId: talent.id,
             projectId: target.id,
@@ -229,6 +278,7 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
             timeZone,
           });
           break;
+        }
         case "contractVersion": {
           // The latest version must still be the one this compared against; a newer one means re-check.
           const [latest] = await tx
@@ -251,6 +301,24 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
             diff: c.diff,
             signedAt: c.status === "signed" ? new Date() : null,
           });
+          break;
+        }
+        case "contact": {
+          let contactId = c.contactId;
+          if (contactId) {
+            const [own] = await tx.select({ id: contact.id }).from(contact).where(and(eq(contact.id, contactId), eq(contact.talentId, talent.id)));
+            if (!own) return fail("proposalChanged");
+          } else {
+            const [created] = await tx
+              .insert(contact)
+              .values({ talentId: talent.id, role: "counterparty", name: c.name.slice(0, 200), email: c.email })
+              .returning({ id: contact.id });
+            contactId = created.id;
+          }
+          await tx
+            .insert(projectContact)
+            .values({ talentId: talent.id, projectId: target.id, contactId, label: c.label || null })
+            .onConflictDoNothing();
           break;
         }
         case "toConfirm": {
@@ -297,7 +365,6 @@ export async function applyMessage(raw: ApplyInput): Promise<string | null> {
   });
   // Applying can add or move calendar events (dates on a signed project).
   if (!failure) await requestCalendarSync(talent.id);
-  if (!failure) refresh();
   return failure;
 }
 

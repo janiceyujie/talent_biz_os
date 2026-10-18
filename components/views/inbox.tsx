@@ -13,8 +13,8 @@ import { useAppData } from "@/components/app/app-data";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { MoreMenu } from "./more-menu";
 import { ANALYSIS_POLL_MS, PasteDialog } from "@/components/app/paste-dialog";
-import { FileText, TriangleAlert } from "lucide-react";
-import { markNotWork, markSureWork } from "@/lib/actions/mail";
+import { FileText, TriangleAlert, Mail } from "lucide-react";
+import { markNotWork, markSureWork, reopenReplies } from "@/lib/actions/mail";
 import { dismissMessage, reanalyzeMessage } from "@/lib/actions/messages";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
@@ -25,6 +25,7 @@ import { previewIntakeItems, previewIntakeTab, type PreviewIntakeTab } from "@/l
 import type { InboxMessage, InboxSummary } from "@/lib/types";
 import { GmailMail, GmailSync, IntakeTabs, type IntakeTab } from "./gmail-intake";
 import { MessageReview } from "./message-review";
+import { NoticeDetail, NoticeRowLine } from "./payment-notice";
 import { UploadDialog } from "./upload-dialog";
 
 // The review queue: messages the person sent in, each with the model's
@@ -42,6 +43,8 @@ function InboxWorkspace() {
   const t = useTranslations("inbox");
   const tGmail = useTranslations("gmail");
   const tDemo = useTranslations("intakeDemo");
+  const tNotice = useTranslations("paymentNotice");
+  const money = useMoney();
   const router = useRouter();
   const params = useSearchParams();
   const format = useFormatter();
@@ -106,10 +109,11 @@ function InboxWorkspace() {
       >
         <small>
           {data.preview && tab !== "messages" ? <em className="message-status">{tGmail(tab === "waiting" ? "tabWaiting" : "tabSkipped")}</em> : <StatusChip status={m.status} />}
+          {m.notice && <em className="message-status status-payment">{tNotice("chip")}</em>}{m.sent && <em className="message-status status-sent">{t("yourReply")}</em>}
           {m.flagged && <em className="message-status status-flagged">{t("flagChip")}</em>} {t(`channel.${m.channel}`)}
         </small>
-        <strong>{m.title || (m.fileCount ? t("filesCount", { count: m.fileCount }) : t("untitled"))}</strong>
-        <span className="mail-snippet">{m.snippet}</span>
+        <strong>{m.notice ? `${money(m.notice.amount, m.notice.currency)}${m.notice.payer ? ` · ${m.notice.payer}` : ""}` : m.title || (m.fileCount ? t("filesCount", { count: m.fileCount }) : t("untitled"))}</strong>
+        <span className="mail-snippet">{m.notice ? <NoticeRowLine notice={m.notice}/> : m.snippet}</span>
         <span className="mail-summary-meta">
           <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
           {m.status === "confirmed" && m.projectId && <span>{t("filedChip")}</span>}
@@ -132,31 +136,26 @@ function InboxWorkspace() {
           <div>
             <h2>{t("title")} <InfoHint label={t("title")} notes={[t("intro"),t("usageRemaining",data.aiUsage)]} /></h2>
           </div>
-          {data.gmail.connection && !data.preview ? <GmailSync onNotice={setNotice} /> : <Link className="text-button" href="/settings">{tGmail("title")}</Link>}
+
         </div>
 
         {data.aiUsage.remaining===0&&<p className="notice error" role="status">{t("usageExhausted",{limit:data.aiUsage.limit})}</p>}
-        <div className="row-actions">
-          <button className="primary" disabled={data.preview} onClick={() => setPasting(true)}>
-            {t("paste")}
-          </button>
-          <button className="secondary" disabled={data.preview} onClick={() => setUploading(true)}>
-            {t("upload")}
-          </button>
-        </div>
         {notice && (
           <p className="notice" role="status">
             {notice}
           </p>
         )}
       </section>
+      <div className="intake-navigation">
       <IntakeTabs tab={tab} onTab={next => { setTab(next); setActive(""); setNotice(null); }} previewCounts={data.preview ? previewCounts : undefined} />
+      <div className="intake-mail-source" data-preview-safe="true">
+        <span className="intake-mail-source-label"><Mail size={18} aria-hidden="true"/>{t("gmailSource")} <InfoHint label={t("gmailSource")} notes={[tDemo("connectHint")]}/></span>
+        {data.gmail.connection && !data.preview ? <GmailSync onNotice={setNotice}/> : <Link className="secondary compact" href="/settings#gmail">{tDemo("connect")}</Link>}
+      </div>
+      </div>
       {data.preview && <div className="intake-demo-toolbar" data-preview-safe="true">
         <span>{tDemo("label")} <InfoHint label={tDemo("label")} notes={[tDemo("hint")]} /></span>
         <button className="text-button" onClick={() => { setPreviewOverrides({}); setActive(""); setTab("messages"); setNotice(tDemo("resetDone")); }}>{tDemo("reset")}</button>
-      </div>}
-      {!data.preview && !data.gmail.connection && <div className="notice intake-connect-notice" role="note">
-        <span>{tDemo("connectHint")}</span><Link className="secondary" href="/settings">{tDemo("connect")}</Link>
       </div>}
       {!data.preview && tab !== "messages" ? (data.gmail.connection ? <GmailMail key={tab} view={tab} onNotice={setNotice} /> :
         <section id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${tab}`} className="surface padded section-gap empty">
@@ -196,7 +195,7 @@ function InboxWorkspace() {
       </InboxReaderLayout>
       </div>
       )}
-      {pasting && !data.preview && (
+      {pasting && (
         <PasteDialog
           onClose={() => setPasting(false)}
           onSubmitted={(id, duplicate) => {
@@ -207,7 +206,7 @@ function InboxWorkspace() {
           }}
         />
       )}
-      {uploading && !data.preview && (
+      {uploading && (
         <UploadDialog
           onClose={() => setUploading(false)}
           onSubmitted={(id, duplicate) => {
@@ -268,6 +267,8 @@ function MessageDetail({ message, previewActions }: { message: InboxMessage; pre
       ? `https://mail.google.com/mail/?${new URLSearchParams({ authuser: data.gmail.connection.accountEmail })}#all/${message.gmail.gmailId}`
       : null;
 
+  if (message.notice) return <NoticeDetail message={message} notice={message.notice} headingRef={undefined} gmailUrl={gmailUrl} />;
+
   // The journey, top to bottom (docs/design/intake-to-project.md, screen 1): who and what (triage);
   // what they want and on what terms (understand); the original, a glance away; then the one decision,
   // where it's filed, with one primary button. Rare actions wait in the ⋯ menu.
@@ -280,11 +281,18 @@ function MessageDetail({ message, previewActions }: { message: InboxMessage; pre
         </h2>
         <StatusChip status={message.status} />
         <p className="review-meta">
-          {message.gmail?.sender && (
+          {message.gmail?.sent ? (
             <>
-              <span title={message.gmail.sender}>{senderName(message.gmail.sender)}</span>
+              <span title={message.gmail.recipients}>{t("sentTo", { to: (message.gmail.recipients ?? "").split(",").map(senderName).join(", ") })}</span>
               {" · "}
             </>
+          ) : (
+            message.gmail?.sender && (
+              <>
+                <span title={message.gmail.sender}>{senderName(message.gmail.sender)}</span>
+                {" · "}
+              </>
+            )
           )}
           {t(`channel.${message.channel}`)}
           {" · "}
@@ -304,6 +312,14 @@ function MessageDetail({ message, previewActions }: { message: InboxMessage; pre
       </header>
 
       {analyzed && <Flags analysis={a} />}
+      {!!message.completedTodos?.length && (
+        <p className="done-line" role="status">
+          <span>{t("repliesDone", { titles: message.completedTodos!.map((x) => x.title).join("、") })}</span>
+          <button className="link-button" disabled={pending} onClick={() => run(() => reopenReplies(message.id))}>
+            {t("undo")}
+          </button>
+        </p>
+      )}
       {message.gmail?.unsure && (
         <div className="notice gmail-unsure" role="note">
           <p>{tGmail("unsureNotice")}</p>
@@ -338,7 +354,7 @@ function MessageDetail({ message, previewActions }: { message: InboxMessage; pre
           <p className="review-text">{a.summary}</p>
         </section>
       )}
-      {analyzed && <Asks analysis={a} />}
+      {analyzed && !message.gmail?.sent && <Asks analysis={a} />}
       {analyzed && <Terms analysis={a} />}
       <Original message={message} />
 
@@ -531,7 +547,7 @@ function Original({ message }: { message: InboxMessage }) {
   return (
     <section className="review-section review-original">
       <header>
-        <h3>{t("original")}</h3>
+        <h3>{message.gmail?.sent ? t("yourReply") : t("original")}</h3>
         {message.body.length > PREVIEW_CHARS && (
           <button className="link-button" aria-expanded={all} onClick={() => setAll(!all)}>
             {all ? t("review.showLess") : t("review.showAll")}

@@ -1,8 +1,8 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { file, mailConnection, mailDecision, message, person } from "@/lib/db/schema";
+import { file, mailConnection, mailDecision, message, person, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { queue, type EnqueueOptions } from "@/lib/queue";
 import { analysisQueue, analyzeJobKey, fetchJobKey, fetchQueue } from "@/lib/queue/jobs";
@@ -13,9 +13,10 @@ import { stripQuoted } from "../clean";
 import { gmailProvider } from "../gmail";
 import { chooseAttachments, FETCH_LIMITS } from "../attachments";
 import type { AttachmentRef } from "../gmail/parts";
+import { bringNotice, pathFor } from "./notice";
 
 // mail.fetch (docs/design/gmail-ingestion.md, Jobs): bring one email decided
-// as work, or Not sure, into Intake. Its text (quoted history stripped) becomes
+// as work, or Not sure, into Intake (a bank or payment-app notice: ./notice.ts). Its text (quoted history stripped) becomes
 // a message, its PDFs and images become files, and the analysis is queued, all
 // in one transaction. Safe to run twice: the message's dedup key is the
 // mailbox and the Gmail id.
@@ -50,6 +51,10 @@ export async function fetchDecision(decisionId: string) {
   let mail, read;
   try {
     mail = gmailProvider(await accessToken(c));
+    // A bank or payment-app notice takes the restricted path: fields only, never the body or files.
+    const path = await pathFor(d, c, mail);
+    if (path === "wait") return;
+    if (path === "notice") return await bringNotice(d, c, mail, gmailDedupKey(c.id, d.providerMessageId));
     read = await mail.getMessage(d.providerMessageId);
   } catch (e) {
     if (e instanceof MailAccessLost) return markReconnectNeeded(c.id);
@@ -76,6 +81,8 @@ export async function fetchDecision(decisionId: string) {
       stored.push({ id, key, a, size: bytes.length });
     }
 
+    // The person's own reply, in a thread already work (decision 0013): kept and analyzed as theirs.
+    const sent = read.labels.includes("SENT");
     const brought = await db.transaction(async (tx) => {
       const currentConnection = await lockMailboxOwner(tx, c.id);
       if (!currentConnection || currentConnection.connectedBy !== c.connectedBy) return null;
@@ -90,6 +97,8 @@ export async function fetchDecision(decisionId: string) {
           externalRef: read.id,
           connectionId: c.id,
           providerThreadId: read.threadId,
+          direction: sent ? "sent" : "received",
+          recipients: sent ? read.to || null : null,
           headerMessageId: read.headerMessageId || null,
           inReplyTo: read.inReplyTo || null,
           references: read.references || null,
@@ -119,6 +128,25 @@ export async function fetchDecision(decisionId: string) {
           })),
         );
       await tx.update(mailDecision).set({ messageId: created.id, importStatus: "imported", importFailure: null }).where(eq(mailDecision.id, d.id));
+      // Replying answers what came before it in the thread: its reply to-dos are done (Undo on the reply reopens them).
+      if (sent) {
+        const earlier = tx
+          .select({ id: message.id })
+          .from(message)
+          .where(
+            and(
+              eq(message.talentId, c.talentId),
+              eq(message.connectionId, c.id),
+              eq(message.providerThreadId, read.threadId),
+              eq(message.direction, "received"),
+              lt(message.receivedAt, read.receivedAt),
+            ),
+          );
+        await tx
+          .update(todo)
+          .set({ status: "done", completedAt: new Date(), completedByMessageId: created.id })
+          .where(and(eq(todo.talentId, c.talentId), eq(todo.type, "reply"), eq(todo.status, "open"), inArray(todo.messageId, earlier)));
+      }
       await queue.enqueue(
         "message.analyze",
         { messageId: created.id, locale: toLocale(row.locale) },

@@ -8,7 +8,7 @@ import { InfoHint } from "@/components/app/info-hint";
 import { usePreviewAction } from "@/components/app/preview-action";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { calendarRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
 import { TravelSummary } from "@/components/app/travel-summary";
@@ -26,7 +26,7 @@ const weekdays = (locale: string) =>
 
 // Calendar events and to-dos in one month view. Each item shows in its own
 // local date and time zone; cross-zone items aren't converted to one timeline.
-export function CalendarView({ initialDay = "", hideAdd = false, readOnly=false }: { initialDay?: string; hideAdd?: boolean; readOnly?:boolean }) {
+export function CalendarView({ initialDay = "", hideAdd = false, readOnly=false,onVisibleDateChange }: { initialDay?: string; hideAdd?: boolean; readOnly?:boolean;onVisibleDateChange?:(date:string)=>void }) {
   const archiveCalendarItem = usePreviewAction(archiveCalendarItemRemote);
   const setTodoDone = usePreviewAction(setTodoDoneRemote);
   const data = useAppData();
@@ -37,6 +37,7 @@ export function CalendarView({ initialDay = "", hideAdd = false, readOnly=false 
   const today = data.previewDate ?? dateInZone(data.talent.timeZone);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [month, setMonth] = useState((initialDay || today).slice(0, 7));
+  useEffect(()=>onVisibleDateChange?.(`${month}-01`),[month,onVisibleDateChange]);
   const [day, setDay] = useState(initialDay);
   const [showDone, setShowDone] = useState(false);
   const [archived, setArchived] = useState(false);

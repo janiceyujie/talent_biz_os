@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { billingDocumentKinds, isBillingCurrency } from "./document";
 import { invoiceTaxInput, paymentTaxBasisInput } from "./tax";
 import { quote } from "../domain/money";
 import type { InvoiceSnapshot, InvoiceStatus } from "./types";
@@ -9,6 +10,7 @@ export const invoiceInput = z
   .object({
     id: z.uuid().optional(),
     revision: z.number().int().positive().optional(),
+    documentKind: z.enum(billingDocumentKinds).optional(),
     documentLanguage: z.enum(["en", "zh-TW"]).default("en"),
     paymentId: z.uuid(),
     issueOn: z.iso.date(),
@@ -41,15 +43,15 @@ export function invoiceAmounts(p: {
   currency: string;
 }) {
   if (
-    p.currency !== "USD" ||
+    !isBillingCurrency(p.currency) ||
     !Number.isFinite(p.amount) ||
     p.amount <= 0 ||
     p.amount > 9999999999.99
   )
     throw new Error("payment");
-  const q = quote(p.amount, p.taxRate, p.taxIncluded, "USD");
+  const q = quote(p.amount, p.taxRate, p.taxIncluded, p.currency);
   return {
-    currency: "USD" as const,
+    currency: p.currency,
     subtotal: q.net,
     tax: q.tax,
     total: q.total,

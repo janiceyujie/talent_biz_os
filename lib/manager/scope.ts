@@ -1,11 +1,14 @@
-export const MAX_MANAGED_ARTISTS = 3;
+import {DEFAULT_MANAGED_ARTISTS, validArtistLimit} from "./limits";
+export const MAX_MANAGED_ARTISTS = DEFAULT_MANAGED_ARTISTS;
 export type ArtistAccess = {id:string;name:string;timeZone:string;role:string;status:string};
 export class ManagerScopeError extends Error { constructor(public code:"forbidden"|"limit"|"invalid"|"plan") { super(code); } }
 export const managedArtists = (rows:ArtistAccess[]) => rows.filter(row=>row.status==="active" && (row.role==="manager" || row.role==="agency_admin"));
 /** A client filter is never proof of permission. Empty selection stays empty. */
 export function selectManagedArtists(rows:ArtistAccess[], requested?:string[],limit=MAX_MANAGED_ARTISTS) {
   const permitted=managedArtists(rows);
-  const ids=requested ?? permitted.map(row=>row.id);
+  if(!validArtistLimit(limit)) throw new ManagerScopeError("plan");
+  if(requested && (requested.length>100 || requested.some(id=>typeof id!=="string" || !id || id.length>100))) throw new ManagerScopeError("invalid");
+  const ids=[...new Set(requested ?? permitted.map(row=>row.id))];
   if(permitted.length>limit||ids.length>limit) throw new ManagerScopeError("limit");
   if(ids.some(id=>!permitted.some(row=>row.id===id))) throw new ManagerScopeError("forbidden");
   return permitted.filter(row=>ids.includes(row.id));

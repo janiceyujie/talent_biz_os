@@ -58,3 +58,13 @@ describe("grant experiment isolation",()=>{
     assert.equal(grantsLocalEnabled({...env,DATABASE_URL:"invalid"}),false);
   });
 });
+
+test("escaped and literal grant titles resolve to the same normalized identity",()=>{
+ const source=(title:string)=>`newsSlide arrowOut<time>2026/10/18</time><p>${title}</p><a href="Normal.jsp?id=1">More</a><!-- /news -->`;
+ const plain=parseMoc(source("116(Reading) & Culture"))[0];
+ for(const title of ["116&#40;Reading&#41; &amp; Culture","116&amp;#40;Reading&amp;#41; &amp;amp; Culture","116&#x28;Reading&#x29; &amp; Culture"]){
+  const parsed=parseMoc(source(title))[0];assert.equal(parsed.title,plain.title);assert.equal(parsed.externalId,plain.externalId);
+ }
+ const us=parseGrantsGov({errorcode:0,data:{hitCount:1,oppHits:[{id:1,title:"Arts &amp; Culture",agency:"Agency &#40;US&#41;",oppStatus:"posted"}]}});
+ assert.equal(us.rows[0].title,"Arts & Culture");assert.equal(us.rows[0].agency,"Agency (US)");
+});

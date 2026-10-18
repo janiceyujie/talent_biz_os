@@ -33,6 +33,7 @@ export type PlanItem = {
   /** Shown when the item can't sit on the timeline as stated (another zone, multi-day). */
   note: string;
   amount: number | null; // payment due dates
+  currency?: string;
   /** From one of the person's own Google calendars (decision 0009, phase 2): read-only, never on a project. */
   external: { calendar: string; color: string | null } | null;
 };
@@ -238,6 +239,7 @@ export function planItems(data: Pick<AppData, "calendar" | "payments" | "project
       done: false,
       note: "",
       amount: paymentRemaining(pay) * (pay.direction === "out" ? -1 : 1),
+      currency:pay.currency,
       external: null,
     });
   }

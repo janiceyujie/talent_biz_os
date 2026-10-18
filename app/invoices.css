@@ -1,3 +1,5 @@
+.invoice-document-notice { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .625rem .75rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-alt); font-size: .875rem; overflow-wrap: anywhere; }
+
 .invoice-panel {
   min-width: 0;
   overflow: hidden;
@@ -181,10 +183,13 @@
 .invoice-notice a {
   margin-left: auto;
 }
-.deal-cards > .invoice-panel {
+.deal-cards > .invoice-document-notice { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .625rem .75rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-alt); font-size: .875rem; overflow-wrap: anywhere; }
+
+.invoice-panel {
   grid-column: 1/-1;
 }
 @media (max-width: 600px) {
+  .invoice-paper-head { flex-direction: column; gap: .5rem; }
   .invoice-fields {
     grid-template-columns: 1fr;
   }

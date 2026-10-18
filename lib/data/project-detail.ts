@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { db } from "@/lib/db";
-import { auditLog, grantApplication, grantOpportunity, message, messageAnalysis, project, projectContact, projectOrganization } from "@/lib/db/schema";
+import { auditLog, grantApplication, grantOpportunity, message, messageAnalysis, project, projectContact, projectOrganization, todo } from "@/lib/db/schema";
 import type { ChangeRecord } from "@/lib/domain/intake";
 import type { ProjectDetail, Stage } from "@/lib/types";
 
@@ -41,14 +41,22 @@ export async function getProjectDetail(talentId: string, projectId: string): Pro
     .orderBy(desc(projectOrganization.isPrimary), asc(projectOrganization.createdAt));
 
   const messages = await db
-    .select({ id: message.id, receivedAt: message.receivedAt, bodyText: message.bodyText, status: message.status })
+    .select({
+      id: message.id,
+      receivedAt: message.receivedAt,
+      bodyText: message.bodyText,
+      status: message.status,
+      direction: message.direction,
+      sender: message.sender,
+      notice: message.notice,
+    })
     .from(message)
     .where(and(eq(message.talentId, talentId), eq(message.projectId, projectId)))
     .orderBy(asc(message.receivedAt));
   const confirmed = messages.filter((m) => m.status === "confirmed").reverse(); // newest first
   const ids = confirmed.map((m) => m.id);
 
-  const [analyses, appliedRows] = ids.length
+  const [analyses, appliedRows, completedRows] = ids.length
     ? await Promise.all([
         db
           .select({ messageId: messageAnalysis.messageId, analysis: messageAnalysis.analysis })
@@ -60,8 +68,12 @@ export async function getProjectDetail(talentId: string, projectId: string): Pro
           .from(auditLog)
           .where(and(eq(auditLog.talentId, talentId), eq(auditLog.action, "message.applied"), eq(auditLog.targetType, "message"), inArray(auditLog.targetId, ids)))
           .orderBy(desc(auditLog.createdAt)),
+        db
+          .select({ by: todo.completedByMessageId, title: todo.title })
+          .from(todo)
+          .where(and(eq(todo.talentId, talentId), eq(todo.status, "done"), inArray(todo.completedByMessageId, ids))),
       ])
-    : [[], []];
+    : [[], [], []];
   // Analyses are versioned and an applied message may be re-applied: the newest of each wins.
   const latestAnalysis = new Map<string, (typeof analyses)[number]>();
   for (const a of analyses) if (!latestAnalysis.has(a.messageId)) latestAnalysis.set(a.messageId, a);
@@ -90,6 +102,10 @@ export async function getProjectDetail(talentId: string, projectId: string): Pro
         left: records(applied?.left),
         stage: applied?.stage ?? null,
         recorded: !!applied,
+        sent: m.direction === "sent",
+        from: m.direction === "sent" ? "" : (m.sender?.match(/^\s*"?([^"<]+?)"?\s*</)?.[1] ?? m.sender ?? ""),
+        completedTodos: completedRows.filter((r) => r.by === m.id).map((r) => r.title),
+        notice: m.notice,
       };
     }),
   };

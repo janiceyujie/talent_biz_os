@@ -8,6 +8,8 @@ import { useAppData } from "@/components/app/app-data";
 import { dateInZone } from "@/lib/domain/dates";
 import { invoiceState, invoiceErrorKey, validInvoiceReceiptDate } from "@/lib/invoices/domain";
 import type { InvoiceDetail } from "@/lib/invoices/types";
+import { billingDocumentKind } from "@/lib/invoices/document";
+import { InvoiceDocumentNotice } from "./document-notice";
 import { invoiceRequest } from "./request";
 export function InvoiceReview({
   row,
@@ -34,7 +36,8 @@ export function InvoiceReview({
   const money = (n: number) =>
     new Intl.NumberFormat(undefined, {
       style: "currency",
-      currency: "USD",
+      currency: s.currency,
+      currencyDisplay: "code",
     }).format(n);
   const action = async (op: string) => {
     setBusy(true);
@@ -78,10 +81,11 @@ export function InvoiceReview({
       }}
     >
       <div className="invoice-review">
+        <InvoiceDocumentNotice kind={billingDocumentKind(s)} />
         <div className="invoice-paper">
           <div className="invoice-paper-head">
             <strong>{s.sellerName}</strong>
-            <span>{t("title")}</span>
+            <span>{t(`documentKinds.${billingDocumentKind(s)}`)}</span>
           </div>
           <div className="invoice-fields">
             <div>

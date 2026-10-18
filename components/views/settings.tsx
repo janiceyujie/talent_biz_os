@@ -71,7 +71,7 @@ export function SettingsView() {
       <SettingsGroup title={t("groupServices")}>
         <GoogleCalendarSettings onNotice={setToast} />
         <CalendarFeedSettings />
-        <GmailSettings onNotice={setToast} />
+        <div id="gmail"><GmailSettings onNotice={setToast} /></div>
       </SettingsGroup>
 
       <CreatorPlatformSettings />

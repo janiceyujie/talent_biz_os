@@ -2664,6 +2664,14 @@ a.disabled {
   background: #fde3e1;
   color: #a2332b;
 }
+.message-status.status-sent {
+  background: #e9e7fb;
+  color: #3f3a8a;
+}
+.message-status.status-payment {
+  background: #e3ece6;
+  color: #2c5c50;
+}
 .notice.analyzing::before {
   content: "";
   display: inline-block;
@@ -3295,6 +3303,64 @@ a.disabled {
 }
 .review-quiet a {
   color: var(--muted);
+}
+/* An email thread (components/views/message-review.tsx, inbox.tsx): File all, and the reply to-dos a reply completed */
+.thread-batch {
+  margin-top: 10px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  border: 1px dashed #9db9a8;
+  border-radius: 10px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.done-line {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-radius: 10px;
+  background: #f3f6f4;
+  font-size: 13px;
+}
+.project-timeline .who {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.project-timeline .who.me {
+  color: #3f3a8a;
+}
+/* A payment notice's card (components/views/payment-notice.tsx): the decision row below the targets */
+.review-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.review-actions .review-quiet {
+  margin: 0;
+}
+.review-actions .row-actions {
+  margin: 0;
+}
+.muted-line {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.match-note {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 .inbox-reader .message-review {
   padding-top: 16px;

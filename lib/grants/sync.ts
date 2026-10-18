@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { grantOpportunity, grantSource } from "@/lib/db/schema";
 import { grantsLocalEnabled } from "./config";
-import { listingHash, parseGrantsGov, parseMoc } from "./domain";
+import { grantPlainText, listingHash, parseGrantsGov, parseMoc } from "./domain";
 import { grantSources, type GrantListing, type GrantSource } from "./types";
 
 async function request(url: string, body?: object) {
@@ -42,7 +42,11 @@ export async function refreshGrantSources(): Promise<{source:GrantSource;ok:bool
       const now=new Date();
       try {
         const listings=await readSource(source);
-        for (const listing of listings) {
+        const previous=source==="moc"?await tx.select({externalId:grantOpportunity.externalId,title:grantOpportunity.title}).from(grantOpportunity).where(eq(grantOpportunity.source,source)):[];
+        for (const incoming of listings) {
+          const matches=previous.filter(row=>grantPlainText(row.title)===incoming.title);
+          const legacy=matches.find(row=>row.externalId===incoming.externalId) ?? (matches.length===1?matches[0]:undefined);
+          const listing=legacy?{...incoming,externalId:legacy.externalId}:incoming;
           const contentHash=listingHash(listing);
           await tx.insert(grantOpportunity).values({...listing,contentHash,checkedAt:now,changedAt:now})
             .onConflictDoUpdate({target:[grantOpportunity.source,grantOpportunity.externalId],set:{...listing,contentHash,checkedAt:now,changedAt:sql`case when ${grantOpportunity.contentHash} <> ${contentHash} then ${now.toISOString()}::timestamptz else ${grantOpportunity.changedAt} end`}});

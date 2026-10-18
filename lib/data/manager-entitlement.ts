@@ -4,6 +4,7 @@ import {db} from "@/lib/db";
 import {managerEntitlement} from "@/lib/db/schema";
 import {managerCapability,type ManagerCapability} from "@/lib/manager/entitlement";
 import {managerLocalEnabled} from "@/lib/manager/config";
+import {SUPPORTED_MANAGED_ARTISTS} from "@/lib/manager/limits";
 import {ManagerScopeError} from "@/lib/manager/scope";
 export async function getManagerCapability(personId:string):Promise<ManagerCapability> {
   if(!managerLocalEnabled())return {enabled:false,artistLimit:0};
@@ -16,4 +17,4 @@ export async function requireManagerCapability(personId:string) {
   return capability;
 }
 /** Use this in the read query as well as checking the request's entitlement. */
-export const managerPlanAccess=(personId:string)=>sql`exists (select 1 from ${managerEntitlement} me where me.person_id=${personId} and me.plan='manager' and me.active=true and me.artist_limit>0 and (me.expires_at is null or me.expires_at>now()))`;
+export const managerPlanAccess=(personId:string)=>sql`exists (select 1 from ${managerEntitlement} me where me.person_id=${personId} and me.plan='manager' and me.active=true and me.artist_limit between 1 and ${SUPPORTED_MANAGED_ARTISTS} and (me.expires_at is null or me.expires_at>now()))`;

@@ -1,6 +1,6 @@
 import "server-only";
 import {requireManagerCapability,managerPlanAccess} from "./manager-entitlement";
-import {and,asc,desc,eq,getTableColumns,inArray} from "drizzle-orm";
+import {and,asc,desc,eq,getTableColumns,inArray,isNull,sql} from "drizzle-orm";
 import {db} from "@/lib/db";
 import {calendarEvent,membership,payment,project,todo} from "@/lib/db/schema";
 import {getManagerRoster} from "./manager";
@@ -10,21 +10,32 @@ import {ManagerScopeError,selectManagedArtists} from "@/lib/manager/scope";
 import type {PortfolioWorkspace} from "@/lib/manager/workspace-types";
 import {calendarKinds,type CalendarKind,type Payment,type TravelDetails} from "@/lib/types";
 import {isProjectType} from "@/lib/project-types";
+import {type WorkspaceQuery} from "@/lib/manager/workspace-query";
+import {dateInZone} from "@/lib/domain/dates";
 const hhmm=(value:string|null)=>value?.slice(0,5)||"";
 /** Read-only data for the existing pages; identity always comes from the authenticated session. */
-export async function getManagerWorkspace(personId:string,requested?:string[],projectId?:string):Promise<PortfolioWorkspace> {
+export async function getManagerWorkspace(personId:string,requested?:string[],projectId?:string,query:WorkspaceQuery={view:"all"}):Promise<PortfolioWorkspace> {
   if(!managerLocalEnabled())throw new ManagerScopeError("forbidden");
   const capability=await requireManagerCapability(personId);
   const artists=await getManagerRoster(personId),selected=selectManagedArtists(artists,requested,capability.artistLimit),ids=selected.map(row=>row.id);
   const base={artists,selectedIds:ids,limited:false};
   if(!ids.length)return {...base,calendar:[],payments:[],projects:[]};
   const access=and(managerPlanAccess(personId),eq(membership.personId,personId),eq(membership.status,"active"),inArray(membership.role,["manager","agency_admin"]));
-  const [events,tasks,payments,projects]=await Promise.all([
-    db.select(getTableColumns(calendarEvent)).from(calendarEvent).innerJoin(membership,and(eq(membership.talentId,calendarEvent.talentId),access)).where(and(inArray(calendarEvent.talentId,ids),eq(calendarEvent.status,"confirmed"),projectId?eq(calendarEvent.projectId,projectId):undefined)).orderBy(asc(calendarEvent.startDate),asc(calendarEvent.id)).limit(1001),
-    db.select(getTableColumns(todo)).from(todo).innerJoin(membership,and(eq(membership.talentId,todo.talentId),access)).where(and(inArray(todo.talentId,ids),projectId?eq(todo.projectId,projectId):undefined)).orderBy(asc(todo.dueDate),asc(todo.id)).limit(1001),
-    db.select({...getTableColumns(payment),projectType:project.type}).from(payment).innerJoin(membership,and(eq(membership.talentId,payment.talentId),access)).leftJoin(project,and(eq(project.id,payment.projectId),eq(project.talentId,payment.talentId))).where(and(inArray(payment.talentId,ids),projectId?eq(payment.projectId,projectId):undefined)).orderBy(desc(payment.recordedOn),asc(payment.id)).limit(2001),
-    db.select(getTableColumns(project)).from(project).innerJoin(membership,and(eq(membership.talentId,project.talentId),access)).where(and(inArray(project.talentId,ids),projectId?eq(project.id,projectId):undefined)).orderBy(desc(project.updatedAt),asc(project.id)).limit(1001),
+  const calendarOnly=query.view==="calendar",financeOnly=query.view==="finance";
+  const reminders=query.view==="reminders",today=query.view==="today";
+  const end=query.end??dateInZone("UTC",today?32:9);
+  // Open old tasks and unpaid balances remain eligible; finished historical rows do not.
+  const eventRange=calendarOnly?sql`${calendarEvent.startDate}<=${end} and coalesce(${calendarEvent.endDate},${calendarEvent.startDate})>=${query.start}`:(reminders||today)?and(isNull(calendarEvent.archivedAt),sql`${calendarEvent.startDate}<=${end}`):undefined;
+  const taskRange=calendarOnly?sql`${todo.dueDate} between ${query.start} and ${end}`:(reminders||today)?and(eq(todo.status,"open"),sql`${todo.dueDate}<=${end}`):undefined;
+  const paymentRange=calendarOnly?sql`${payment.dueOn} between ${query.start} and ${end}`:reminders?sql`${payment.dueOn}<=${end}`:financeOnly&&query.start&&query.end?sql`(${payment.recordedOn} between ${query.start} and ${query.end} or ${payment.settledOn} between ${query.start} and ${query.end} or exists(select 1 from jsonb_array_elements(${payment.receipts}) r where r->>'date' between ${query.start} and ${query.end}))`:undefined;
+  const [events,tasks,payments]=await Promise.all([
+    financeOnly?Promise.resolve([]):db.select(getTableColumns(calendarEvent)).from(calendarEvent).innerJoin(membership,and(eq(membership.talentId,calendarEvent.talentId),access)).where(and(inArray(calendarEvent.talentId,ids),eq(calendarEvent.status,"confirmed"),eventRange,projectId?eq(calendarEvent.projectId,projectId):undefined)).orderBy(asc(calendarEvent.startDate),asc(calendarEvent.id)).limit(1001),
+    financeOnly?Promise.resolve([]):db.select(getTableColumns(todo)).from(todo).innerJoin(membership,and(eq(membership.talentId,todo.talentId),access)).where(and(inArray(todo.talentId,ids),taskRange,projectId?eq(todo.projectId,projectId):undefined)).orderBy(asc(todo.dueDate),asc(todo.id)).limit(1001),
+    db.select({...getTableColumns(payment),projectType:project.type}).from(payment).innerJoin(membership,and(eq(membership.talentId,payment.talentId),access)).leftJoin(project,and(eq(project.id,payment.projectId),eq(project.talentId,payment.talentId))).where(and(inArray(payment.talentId,ids),paymentRange,query.currency?eq(payment.currency,query.currency):undefined,(reminders||today)?and(isNull(payment.voidedAt),sql`${payment.status}<>'cancelled'`):undefined,projectId?eq(payment.projectId,projectId):undefined)).orderBy(desc(payment.recordedOn),asc(payment.id)).limit(2001),
   ]);
+  // Finance also needs signed projects without a receivable yet; other views only need referenced metadata.
+  const projectIds=[...new Set([...events,...tasks,...payments].flatMap(row=>row.projectId?[row.projectId]:[]))];
+  const projects=query.view==="all"||financeOnly||projectIds.length?await db.select(getTableColumns(project)).from(project).innerJoin(membership,and(eq(membership.talentId,project.talentId),access)).where(and(inArray(project.talentId,ids),query.view==="all"||financeOnly?(projectId?eq(project.id,projectId):undefined):inArray(project.id,projectIds),financeOnly&&query.currency?eq(project.quoteCurrency,query.currency):undefined)).limit(1001):[];
   const currentCapability=await requireManagerCapability(personId);
   selectManagedArtists(await getManagerRoster(personId),ids,currentCapability.artistLimit);
   // Never present partial collections as complete financial totals.

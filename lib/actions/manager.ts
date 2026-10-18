@@ -14,7 +14,7 @@ export async function getManagerInvitations() {
   await guard();const person=await requirePerson();
   if(!(await getManagerCapability(person.personId)).enabled)return [];
   return db.select({id:membership.id,name:talent.name}).from(membership).innerJoin(talent,eq(talent.id,membership.talentId))
-    .where(and(eq(membership.personId,person.personId),eq(membership.role,"manager"),eq(membership.status,"invited"))).orderBy(asc(membership.createdAt)).limit(20);
+    .where(and(eq(membership.personId,person.personId),eq(membership.role,"manager"),eq(membership.status,"invited"))).orderBy(asc(membership.createdAt)).limit(100);
 }
 export async function getWorkspaceManagers() {
   await guard();const {talent:current}=await requireTalent();if(current.role!=="owner")return [];
@@ -30,6 +30,8 @@ export async function inviteManager(email:unknown):Promise<string|null> {
   if(target.id===person.personId)return t("selfInvite");
   if(!(await getManagerCapability(target.id)).enabled)return t("recipientPlan");
   const failure=await db.transaction(async tx=>{
+    // Serialize with acceptance/leave before reusing a membership row.
+    await tx.select({id:personTable.id}).from(personTable).where(eq(personTable.id,target.id)).for("update");
     // Serializes invitation, acceptance and revocation for this owner-held workspace.
     await tx.select({id:talent.id}).from(talent).where(eq(talent.id,current.id)).for("update");
     const [existing]=await tx.select().from(membership).where(and(eq(membership.talentId,current.id),eq(membership.personId,target.id)));

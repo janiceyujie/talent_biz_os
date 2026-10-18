@@ -17,8 +17,7 @@ import { InfoHint } from "./info-hint";
 export function DailyBriefing({ sessionKey, suppress, requestId, onShow, onOpen }: { sessionKey: string; suppress: boolean; requestId: number; onShow: () => void; onOpen: (href: string) => void }) {
   const data = useAppData(), t = useTranslations("briefing"), locale = useLocale();
   const { agenda, state, now, ready, failed, hasMore, reload, loadMore, loadingMore, portfolio, preview, scopeKey, talent } = useReminderFeed();
-  const [open, setOpen] = useState(false), [limit, setLimit] = useState(20);
-  const [activeVisit, setActiveVisit] = useState("");
+  const [openedVisit, setOpenedVisit] = useState<string | null>(null), [limit, setLimit] = useState(20);
   const launcher = useRef<HTMLButtonElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const savedScroll = useRef(0);
@@ -33,17 +32,12 @@ export function DailyBriefing({ sessionKey, suppress, requestId, onShow, onOpen 
   const key = `taloox.briefing:v2:${talent.id}:${data.person.email}:${scopeKey}`;
   const visit = `${sessionKey}:${dateInZone(talent.timeZone, 0, now)}`;
   const visitKey = `${key}:${visit}`;
+  const open = openedVisit === visitKey;
   const minimize = (restoreFocus = true) => {
     savedScroll.current = content.current?.closest("dialog")?.scrollTop ?? 0;
-    setOpen(false);
+    setOpenedVisit(null);
     if (restoreFocus) requestAnimationFrame(() => launcher.current?.focus({ preventScroll:true }));
   };
-  // UI continuity is per tab/login/scope; business and reminder state stay on the server.
-  useEffect(() => {
-    queueMicrotask(() => {
-      try { if (sessionStorage.getItem(key) === visit) setActiveVisit(visitKey); } catch {}
-    });
-  }, [key, visit, visitKey]);
   useEffect(() => {
     if (!open || suppress) return;
     const frame = requestAnimationFrame(() => {
@@ -92,7 +86,7 @@ export function DailyBriefing({ sessionKey, suppress, requestId, onShow, onOpen 
           notice.onclick = () => {
             window.focus(); notice.close(); native.current = null;
             for (const token of expired) { seen.current.add(token); try { sessionStorage.setItem(`${key}:${token}`, "1"); } catch {} }
-            setActiveVisit(visitKey); setOpen(true);
+            setOpenedVisit(visitKey);
           };
           // Mark only the system notification; the in-app dialog still appears on return.
         } catch { /* Unsupported browsers keep the in-app reminder available. */ }
@@ -107,8 +101,8 @@ export function DailyBriefing({ sessionKey, suppress, requestId, onShow, onOpen 
       for (const token of expired) { seen.current.add(token); try { sessionStorage.setItem(`${key}:${token}`, "1"); } catch {} }
       native.current?.close(); native.current = null;
       handledRequest.current = requestId;
-      setActiveVisit(visitKey); savedScroll.current = 0;
-      setLimit(20); onShow(); setOpen(true);
+      savedScroll.current = 0;
+      setLimit(20); onShow(); setOpenedVisit(visitKey);
     }, 900);
     return () => clearTimeout(timer);
   }, [ready, preview, suppress, open, visit, key, items, state, now, browserEnabled, t, onShow, requestId, interaction, visitKey, failed]);
@@ -123,15 +117,25 @@ export function DailyBriefing({ sessionKey, suppress, requestId, onShow, onOpen 
   if (suppress) return null;
   const count = ready && !failed ? `${items.length}${hasMore ? "+" : ""}` : "…";
   return <>
-    {activeVisit === visitKey && <button ref={launcher} type="button" data-preview-safe="true" className="briefing-launcher" hidden={open} aria-haspopup="dialog" aria-expanded={open} aria-label={t("resumeAgenda", { count })} onClick={() => { void reload(); onShow(); setOpen(true); }}>
+    <button ref={launcher} type="button" data-preview-safe="true" className="briefing-launcher" hidden={open} aria-haspopup="dialog" aria-expanded={open} aria-label={t("resumeAgenda", { count })} onClick={() => {
+      seen.current.add(`${key}:${visit}:welcome`);
+      try { sessionStorage.setItem(key, visit); } catch {}
+      for (const item of items.filter(n => snoozeReady(n.id, state, now))) {
+        const token=`${item.id}:${state[item.id].snoozedUntil}`;
+        seen.current.add(token); try { sessionStorage.setItem(`${key}:${token}`, "1"); } catch {}
+      }
+      handledRequest.current=requestId;
+      void reload(); onShow(); setOpenedVisit(visitKey);
+    }}>
       <CalendarDays size={19} aria-hidden="true"/><span>{t("title")}</span><span className="briefing-count" aria-hidden="true">{count}</span>
-    </button>}
+    </button>
     {open && <Modal title={t("title")} onClose={() => minimize()}>
     <div ref={content} className="daily-briefing" data-preview-safe="true">
       <p className="briefing-scope">{portfolio ? t("portfolioScope") : preview ? t("previewScope") : t("workspaceScope", { name: talent.name })}</p>
       <div className="briefing-heading"><span>{new Intl.DateTimeFormat(locale, { timeZone: talent.timeZone, weekday:"long", month:"long", day:"numeric" }).format(now)}</span><InfoHint label={t("title")} notes={[t("help"), t("browserHelp")]}/></div>
       {failed && <div role="alert">{t("error")} <button className="text-button" onClick={() => void reload()}>{t("retry")}</button></div>}
-      {!items.length && <p className="empty">{t("empty")}</p>}
+      {!ready && !failed && <p role="status" aria-busy="true">{t("loading")}</p>}
+      {ready && !failed && !items.length && <p className="empty">{t("empty")}</p>}
       <ul className="briefing-list">{items.slice(0, limit).map(n => {
         const copy = text(n);
         return <li key={n.id}>

@@ -4,7 +4,8 @@
 // and phone. Pure, no server-only imports.
 
 const blockTags = /<\/?(p|div|br|li|ul|ol|tr|table|h[1-6]|blockquote|section|article|header|footer)\b[^>]*>/gi;
-const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+import { decodeEntities } from "@/lib/text/entities";
+export { decodeEntities } from "@/lib/text/entities";
 
 /** HTML to readable text: blocks become line breaks, scripts and styles go, entities are decoded. */
 export function htmlToText(html: string): string {
@@ -23,14 +24,6 @@ export function htmlToText(html: string): string {
     .replace(/ *\n */g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
-}
-
-export function decodeEntities(text: string): string {
-  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, e: string) => {
-    if (e[0] !== "#") return named[e.toLowerCase()] ?? whole;
-    const code = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : Number(e.slice(1));
-    return Number.isFinite(code) && code > 0 && code < 0x110000 ? String.fromCodePoint(code) : whole;
-  });
 }
 
 // Where a reply's quoted history starts, in the forms mail apps write it.

@@ -1,11 +1,12 @@
 "use client";
 
 import {usePortfolio} from "./portfolio-provider";
-import { Plus } from "lucide-react";
+import { Plus, ClipboardPaste, FileUp, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import type { NavKey } from "./nav";
+import { MoreMenu } from "@/components/views/more-menu";
 import { PasteDialog } from "./paste-dialog";
 import { RecordEditor, type Editor } from "./record-editor";
 import { Toast } from "./toast";
@@ -37,9 +38,10 @@ export function PageHeader({ titleKey, subtitle, children }: { titleKey: NavKey;
           <div className="page-actions">
             {/* On Intake its own dialog opens (and selects the new message); elsewhere it opens here, without leaving the page. */}
             {titleKey === "inbox" ? (
-              <Link className="secondary" href="/inbox?paste=1">
-                {t("shell.importOffer")}
-              </Link>
+              <MoreMenu label={t("shell.importOffer")} className="secondary offer-import" button={<>{t("shell.importOffer")}<ChevronDown size={16} aria-hidden="true"/></>}>
+                <Link role="menuitem" href="/inbox?paste=1"><ClipboardPaste size={17} aria-hidden="true"/>{t("inbox.paste")}</Link>
+                <Link role="menuitem" href="/inbox?upload=1"><FileUp size={17} aria-hidden="true"/>{t("inbox.upload")}</Link>
+              </MoreMenu>
             ) : (
               <button className="secondary" onClick={() => setPasting(true)}>
                 {t("shell.importOffer")}

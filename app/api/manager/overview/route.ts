@@ -9,6 +9,6 @@ export async function GET(request:NextRequest) {
   if(!managerLocalEnabled())return response({error:"not_found"},404);
   const p=request.nextUrl.searchParams;
   const selected=p.has("artist")?(p.get("artist")==="none"?[]:p.getAll("artist")):undefined;
-  try{return response(await getManagerOverview(person.personId,selected,p.get("start")||"",p.get("end")||""));}
+  try{return response(await getManagerOverview(person.personId,selected,p.get("start")||"",p.get("end")||"",(p.get("view")||"all") as "all"|"calendar"|"messages"|"finance",p.get("after")||undefined));}
   catch(error){if(error instanceof ManagerScopeError)return response({error:error.code},error.code==="forbidden"||error.code==="plan"?403:400);throw error;}
 }

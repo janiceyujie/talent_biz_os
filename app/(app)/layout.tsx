@@ -1,5 +1,6 @@
 import "@/app/invoices.css";
 import "@/app/portfolio.css";
+import "@/app/glass.css";
 import {PortfolioProvider} from "@/components/app/portfolio-provider";
 import {getManagerCapability} from "@/lib/data/manager-entitlement";
 import {getManagerRoster} from "@/lib/data/manager";

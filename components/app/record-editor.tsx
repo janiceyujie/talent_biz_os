@@ -1,4 +1,5 @@
 "use client";
+import { isBillingCurrency } from "@/lib/invoices/document";
 
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -343,7 +344,7 @@ export function RecordEditor({
   const out = data.direction === "out";
 
   const canPrepareInvoice = !!onPrepareInvoice && kind === "payment" && !data.id && !!data.projectId &&
-    data.direction === "in" && data.status === "expected" && data.currency === "USD" && Number(data.amount) > 0 && !data.invoiceRef;
+    data.direction === "in" && data.status === "expected" && isBillingCurrency(data.currency) && Number(data.amount) > 0 && !data.invoiceRef;
 
   if (correction && originalPayment) return <ReceiptCorrection payment={originalPayment} receipt={correction.receipt} operation={correction.operation} today={today} onCancel={() => setCorrection(null)} onDone={onClose}/>;
 
@@ -579,7 +580,7 @@ export function RecordEditor({
                 {originalPayment && <PaymentReceiptHistory key={originalPayment.id} payment={originalPayment} timeZone={data$.talent.timeZone} preview={!!data$.preview} disabled={dirty || !!data$.preview || !!originalPayment.voided} onAmend={(receipt, operation) => setCorrection({receipt,operation})} />}
                 {dirty && <p className="muted">{t("receiptCorrection.saveFirst")}</p>}
               </details>}
-              {!out && data.currency === "USD" && field("invoiceOn", t("field.invoiceOn"), "date")}
+              {!out && isBillingCurrency(data.currency) && field("invoiceOn", t("field.invoiceOn"), "date")}
               <details className="form-details">
                 <summary>{t("section.other")}</summary>
                 {field("invoiceRef", t("field.invoiceRef"))}

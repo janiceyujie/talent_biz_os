@@ -1,6 +1,8 @@
+import type { BillingCurrency, BillingDocumentKind } from "./document";
 import type { InvoiceTaxReview } from "./tax";
 
 export type InvoiceSnapshot = {
+  documentKind?: BillingDocumentKind;
   taxReview?: InvoiceTaxReview;
   documentLanguage: "en" | "zh-TW";
   sellerName: string;
@@ -14,7 +16,7 @@ export type InvoiceSnapshot = {
   taxNote: string;
   subject: string;
   body: string;
-  currency: "USD";
+  currency: BillingCurrency;
   subtotal: number;
   tax: number;
   total: number;
@@ -22,6 +24,8 @@ export type InvoiceSnapshot = {
 export type InvoiceStatus =
   "scheduled" | "draft" | "sending" | "sent" | "delivery_unknown" | "cancelled" | "draft_queued" | "draft_creating" | "gmail_draft" | "draft_unknown" | "draft_missing";
 export type InvoiceSummary = {
+  currency?: BillingCurrency;
+  documentKind?: BillingDocumentKind;
   id: string;
   number: string;
   paymentId: string;

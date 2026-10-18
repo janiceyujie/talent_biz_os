@@ -890,7 +890,12 @@
       "showLess": "Show less",
       "more": "More actions"
     },
-    "detailUnavailable": "This message could not be loaded. It may have been removed or access may have changed."
+    "detailUnavailable": "This message could not be loaded. It may have been removed or access may have changed.",
+    "yourReply": "Your reply",
+    "sentTo": "You → {to}",
+    "repliesDone": "✓ Done: {titles}",
+    "undo": "Undo",
+    "gmailSource": "Gmail inbox source"
   },
   "intake": {
     "targetHeading": "File under a project",
@@ -901,7 +906,8 @@
       "detail": "Mentions {value}",
       "title": "Similar title",
       "payment": "An expected payment of {value}",
-      "earlier": "Has an earlier message from {value}"
+      "earlier": "Has an earlier message from {value}",
+      "thread": "Same email thread"
     },
     "newProject": "New project",
     "otherProject": "Another project",
@@ -921,7 +927,8 @@
       "todoAwaitContract": "Add to-do: wait for the contract",
       "todoSendInvoice": "Add to-do: send the invoice",
       "toConfirm": "Add to “to confirm”",
-      "contractVersion": "Add contract version v{version}"
+      "contractVersion": "Add contract version v{version}",
+      "contact": "Add to the project's people"
     },
     "expected": "Expected {amount}",
     "received": "Received",
@@ -981,7 +988,13 @@
       "taxIncluded": "Tax",
       "paymentTerms": "Payment terms",
       "keyTerms": "Key terms"
-    }
+    },
+    "contactLabel": "Role (optional)",
+    "contactExisting": "Already a contact, not on this project yet",
+    "contactNew": "New sender, not a contact yet",
+    "threadWaiting": "{count, plural, one {# more from this thread is waiting} other {# more from this thread are waiting}}",
+    "threadFileAll": "File all {count} here",
+    "threadLeft": "{count, plural, one {# needs your answer first: it's still in Messages} other {# need your answer first: they're still in Messages}}"
   },
   "timeline": {
     "heading": "Timeline",
@@ -1002,7 +1015,9 @@
     },
     "version": "v{version}",
     "changes": "{count, plural, one {# change} other {# changes}}",
-    "showChanges": "Show changes"
+    "showChanges": "Show changes",
+    "you": "You",
+    "repliesDone": "Done: {titles}"
   },
   "contacts": {
     "search": "Search contacts",
@@ -1438,7 +1453,8 @@
       "negotiation": "negotiation",
       "contract": "contract",
       "logistics": "logistics",
-      "payment": "payment notice",
+      "payment": "payment or invoice",
+      "bank_notice": "bank or payment-app notice",
       "press": "press request",
       "newsletter": "newsletter",
       "marketing": "marketing",
@@ -1463,6 +1479,43 @@
     "notWorkNeverFrom": "Also stop bringing in mail from {sender}",
     "draftAccess": "Also allow Taloox to create invoice drafts",
     "draftDisclosure": "Google bundles draft management and sending in one permission. Taloox only creates invoice drafts; it does not send, overwrite or delete them. Select the same Gmail account when reconnecting."
+  },
+  "paymentNotice": {
+    "chip": "Payment",
+    "title": "Received {amount}",
+    "rowMatch": "Matches: {payment}",
+    "rowNoMatch": "No matching payment",
+    "rowRecorded": "Recorded: {payment}",
+    "details": "Deposit details",
+    "detailsInfo": "Only these details are kept. The email's text and attachments aren't stored. If you don't act on it, it's deleted after 30 days.",
+    "amount": "Amount",
+    "payer": "From",
+    "date": "Date",
+    "account": "Account",
+    "last4": "ending {last4}",
+    "notGiven": "Not given",
+    "matchHeading": "Matching payment",
+    "noMatch": "No expected payment matches.",
+    "expected": "Expected {amount}",
+    "expectedDue": "Expected {amount} · {date}",
+    "otherPayment": "Another payment…",
+    "existingPayment": "Match an existing payment…",
+    "newPayment": "Add a payment to",
+    "pickPayment": "Choose a payment…",
+    "pickProject": "Choose a project…",
+    "noProjects": "No signed projects yet.",
+    "signedOnly": "Only signed projects are listed.",
+    "shortBy": "{amount} less, likely a transfer fee.",
+    "currencyOnly": "Only NT$ payments can be recorded for now.",
+    "drop": "Drop",
+    "markReceived": "Mark as received",
+    "recorded": "Recorded as received: {payment}",
+    "viewPayments": "View in Finance",
+    "newLabel": "Received",
+    "newLabelFrom": "Received from {payer}",
+    "paymentOption": "{project} · {label}",
+    "withheld": "Confirmed withholding (optional)",
+    "remainingAfter": "Still due after recording: {amount}. This balance stays in reminders."
   },
   "settings": {
     "name": "Artist or brand name",
@@ -1911,7 +1964,8 @@
     "receiptInvalid": "Check the amount. Record a positive cash or withholding amount only while a balance remains.",
     "receiptLocked": "Payments are already recorded. The original amount, currency, tax and direction cannot be changed.",
     "projectOutstanding": "This project still has unpaid amounts. Record payment or confirmed withholding before closing.",
-    "withholdingInvalid": "Enter the confirmed withholding amount. It must be positive and no greater than the difference between outstanding and cash received."
+    "withholdingInvalid": "Enter the confirmed withholding amount. It must be positive and no greater than the difference between outstanding and cash received.",
+    "noticeCurrency": "Only NT$ payments can be recorded for now."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",
@@ -2857,7 +2911,14 @@
     "plan": "This account needs an active manager plan.",
     "recipientPlan": "This account needs an active manager plan before it can receive a management invitation.",
     "reinvite": "Invite again",
-    "reinviteHint": "Email filled in. Send a new invitation; the manager must accept again before access is restored."
+    "reinviteHint": "Email filled in. Send a new invitation; the manager must accept again before access is restored.",
+    "capacity": "{count} / {limit} artists connected",
+    "clear": "Clear selection",
+    "searchArtists": "Search artists",
+    "noMatches": "No matching artists",
+    "capacityFull": "All artist slots are in use. Release a connection before accepting another invitation.",
+    "nextPage": "Next 20 messages",
+    "firstPage": "Back to newest"
   },
   "portfolio": {
     "filter": "Artists",
@@ -2870,7 +2931,7 @@
     "failed": "Could not load artist records. Please try again.",
     "access": "Access changed. Select your artists again or return to My workspace.",
     "retry": "Try again",
-    "limited": "This selection exceeds the local reporting limit. Select fewer artists; incomplete data will not be used for totals.",
+    "limited": "Too many records for this view. Select fewer artists, or use the manager workspace date filters and financial summaries. Incomplete totals are never shown.",
     "choose": "Select an artist to see their records.",
     "upcoming": "Upcoming schedule",
     "openCalendar": "Open Calendar",
@@ -2907,7 +2968,13 @@
     "limit": "The connected artist count exceeds this plan’s limit. Release a connection or change the plan.",
     "plan": "This account needs an active manager plan.",
     "readOnly": "Read-only artist view",
-    "checkingAccess": "Checking artist access…"
+    "checkingAccess": "Checking artist access…",
+    "capacity": "{count} / {limit} artists connected",
+    "clear": "Clear selection",
+    "searchArtists": "Search artists",
+    "noMatches": "No matching artists",
+    "capacityFull": "All artist slots are in use. Release a connection before accepting another invitation.",
+    "openManager": "Open manager workspace"
   },
   "portfolioProjects": {
     "back": "Back to projects",
@@ -2973,20 +3040,20 @@
     "review_required": "Review this email before importing. Payment notices must be handled separately."
   },
   "invoices": {
-    "filterLabel": "Invoice view",
-    "filterAll": "All invoices",
+    "filterLabel": "Billing documents",
+    "filterAll": "All documents",
     "filterReview": "Needs review",
-    "reviewEmpty": "No invoices need review.",
+    "reviewEmpty": "No billing documents need review.",
     "emailRecord": "Email details",
     "sentAt": "Sent",
     "receiptDateRange": "Choose a receipt date between {from} and {to}.",
-    "title": "Invoices",
-    "help": "Prepare a service invoice PDF and Gmail draft from an existing USD receivable, then review and send in Gmail. This does not issue Taiwan uniform invoices.",
-    "create": "Prepare invoice",
-    "empty": "No invoices yet.",
-    "choose": "Choose a USD receivable",
+    "title": "Invoices / payment requests",
+    "help": "Prepare a billing PDF and Gmail draft from a USD or TWD receivable. Review and send in Gmail. Taiwan payment requests are not uniform invoices; official e-invoice integration is not enabled.",
+    "create": "Prepare billing document",
+    "empty": "No billing documents yet.",
+    "choose": "Choose a USD or TWD receivable",
     "payment": "Receivable",
-    "noPayments": "No USD receivables are available for a new invoice. Review existing invoices, or add a new receivable in Finance.",
+    "noPayments": "No USD or TWD receivables are available. Review existing documents or add a receivable.",
     "sellerName": "Your business or legal name",
     "sellerAddress": "Your billing address",
     "sellerEmail": "Reply-to email",
@@ -3007,14 +3074,14 @@
     "save": "Save draft / schedule",
     "saving": "Saving…",
     "edit": "Edit draft",
-    "cancel": "Cancel invoice",
-    "cancelConfirm": "Cancel this invoice? The original receivable stays in Finance.",
+    "cancel": "Cancel billing draft",
+    "cancelConfirm": "Cancel this billing draft? The receivable will remain.",
     "view": "Review",
     "pdf": "Preview PDF",
     "send": "Confirm and send",
     "sendLocal": "Send to local test inbox",
     "sending": "Sending…",
-    "review": "Review invoice",
+    "review": "Review billing document",
     "confirm": "I have reviewed the recipient, amount and PDF attachment.",
     "from": "From",
     "replyTo": "Reply to",
@@ -3030,8 +3097,8 @@
     "settleConfirm": "I have received the outstanding balance shown above.",
     "settlementHelp": "This records the remaining balance only. To record a partial receipt or withholding, open the original entry in Finance.",
     "scheduledHelp": "Future invoices become ready on the issue date. Enable automatic Gmail drafts to prepare the email too. Nothing is sent automatically.",
-    "pendingNotice": "{count} invoices ready for review",
-    "openFinance": "Review invoices",
+    "pendingNotice": "{count} billing documents need review",
+    "openFinance": "View billing documents",
     "status": "Status",
     "issueLabel": "Issue date",
     "defaultSubject": "Invoice for {label}",
@@ -3065,7 +3132,7 @@
       "invalid": "Check the required fields, tax confirmation and dates.",
       "forbidden": "Only the workspace owner can manage invoices.",
       "notFound": "Invoice not found.",
-      "payment": "Choose an active, unpaid USD receivable.",
+      "payment": "Choose a valid outstanding USD or TWD receivable.",
       "pastDue": "Choose a payment deadline that is today or later.",
       "changed": "The invoice has changed. Refresh and review it again.",
       "duplicate": "This receivable already has an invoice. Open the existing invoice.",
@@ -3081,7 +3148,7 @@
       "gmailUnavailable": "Could not prepare or check the Gmail draft. Refresh and check the connection.",
       "draftUnknown": "Check Gmail first. The draft may already exist; no automatic retry will create another."
     },
-    "documentLanguage": "Invoice language",
+    "documentLanguage": "Document language",
     "languageEnglish": "English",
     "languageChinese": "Traditional Chinese",
     "pdfLabels": {
@@ -3096,7 +3163,9 @@
       "tax": "Tax",
       "total": "Amount due",
       "instructions": "PAYMENT INSTRUCTIONS",
-      "taxNote": "TAX TREATMENT"
+      "taxNote": "TAX TREATMENT",
+      "notUniformInvoice": "For payment collection only - Not a Taiwan uniform invoice",
+      "reference": "Document reference"
     },
     "emailSubjectEn": "Invoice for {label}",
     "emailBodyEn": "Hello,\n\nPlease find the attached invoice for {label}. Payment instructions and the due date are included.\n\nThank you.",
@@ -3139,7 +3208,7 @@
     "autoDraftHelp": "Uses the approved invoice details and connected Gmail account. Requires draft access. You review and send in Gmail; Taloox never sends it.",
     "autoDraftScheduled": "A Gmail draft with the PDF will be prepared on the issue date. You send it yourself in Gmail.",
     "localDraft": "Local simulation only. No real Gmail mailbox is changed and no email is sent.",
-    "draftConfirm": "Create a Gmail draft with these recipient details and the invoice PDF. I will review and send it in Gmail.",
+    "draftConfirm": "Add these recipient details and the billing PDF to Gmail drafts. I will review and send it in Gmail.",
     "creatingDraft": "Preparing draft…",
     "createGmailDraft": "Create Gmail draft",
     "draftDisabled": "Gmail draft creation is not enabled in this environment. Your invoice can still be saved and downloaded.",
@@ -3154,7 +3223,7 @@
     "syncDraft": "Check Gmail status",
     "draftSnapshotHelp": "This is the invoice and email snapshot prepared by Taloox. Changes made in Gmail stay in Gmail and are not overwritten. Sent status is confirmed only by a matching sent message, not delivery to the recipient.",
     "legacyDelivery": "This invoice used the previous delivery flow. Check its delivery record manually; automatic resend is disabled.",
-    "saveAndPrepare": "Save and prepare invoice",
+    "saveAndPrepare": "Save and prepare billing document",
     "taxSetup": {
       "title": "Tax calculation",
       "mode": "Tax setup",
@@ -3341,7 +3410,21 @@
         "localSource": "Official local tax source"
       }
     },
-    "withheld": "Confirmed withholding"
+    "withheld": "Confirmed withholding",
+    "documentKind": "Document type",
+    "documentKinds": {
+      "commercial_invoice": "Invoice",
+      "tw_payment_request": "Taiwan payment request"
+    },
+    "requestNotice": "Payment request · Not a Taiwan uniform invoice",
+    "commercialNotice": "Commercial invoice · Not a Taiwan uniform invoice",
+    "numberNotice": "PR / INV references track billing documents. They are not Taiwan government-assigned invoice numbers.",
+    "statusNotice": "Draft, sent and paid describe document delivery and collection only. They do not indicate official e-invoice issuance.",
+    "taiwanUnavailable": "Taiwan e-invoice integration is not enabled. Use your existing invoicing service if an official uniform invoice is required.",
+    "requestSubjectEn": "Payment request for {label}",
+    "requestSubjectZh": "{label}｜請款文件（非統一發票）",
+    "requestBodyEn": "Hello,\n\nPlease find the attached payment request for {label}. Payment instructions and the due date are included. This document is not a Taiwan uniform invoice. Any required official invoice must be issued separately.\n\nThank you.",
+    "requestBodyZh": "您好：\n\n附件為「{label}」的請款文件，付款方式與期限已列於附件。此文件不是統一發票；如需正式發票，須另行開立。\n\n謝謝。"
   },
   "briefing": {
     "title": "Today’s briefing",
@@ -3377,7 +3460,8 @@
     "workspaceScope": "My workspace · {name}",
     "portfolioScope": "Selected artists · schedules and payment reminders",
     "resumeAgenda": "Open today’s agenda · {count} items",
-    "minimize": "Minimize reminders"
+    "minimize": "Minimize reminders",
+    "loading": "Loading today’s reminders…"
   },
   "intakeDemo": {
     "hint": "Try sample classification here. Changes reset when you leave this page or reload. No Gmail or AI calls.",

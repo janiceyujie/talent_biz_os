@@ -5,6 +5,7 @@ import { PDFDocument, rgb, type PDFPage } from "pdf-lib";
 import { invoiceFontkit } from "./fontkit";
 import en from "@/messages/en.json";
 import zh from "@/messages/zh-TW.json";
+import { billingDocumentKind } from "./document";
 import type { InvoiceDetail } from "./types";
 
 let fontBytes: Promise<Buffer> | undefined;
@@ -17,7 +18,9 @@ export async function renderInvoicePdf(row: InvoiceDetail, draft = true) {
   );
   const font = await doc.embedFont(await fontBytes, { subset: true });
   const s = row.snapshot,
-    labels = (s.documentLanguage === "zh-TW" ? zh : en).invoices.pdfLabels;
+    catalogue = (s.documentLanguage === "zh-TW" ? zh : en).invoices,
+    labels = catalogue.pdfLabels,
+    documentTitle = catalogue.documentKinds[billingDocumentKind(s)];
   const supported = new Set(font.getCharacterSet());
   // Reject unsupported glyphs before delivery rather than silently printing empty boxes.
   for (const value of [
@@ -39,7 +42,7 @@ export async function renderInvoicePdf(row: InvoiceDetail, draft = true) {
       }
     }
   }
-  doc.setTitle(`${labels.title} ${row.number}`);
+  doc.setTitle(`${documentTitle} ${row.number}`);
   doc.setAuthor(s.sellerName);
   doc.setSubject(s.description.slice(0, 200));
   doc.setCreator("Taloox");
@@ -69,10 +72,11 @@ export async function renderInvoicePdf(row: InvoiceDetail, draft = true) {
   const newPage = () => {
     page = doc.addPage([612, 792]);
     y = 742;
-    text(labels.title, left, y, 24);
+    text(documentTitle, left, y, 22);
     text(row.number, 360, y, 12);
     if (draft) text(labels.draft, 360, y - 20, 10, muted);
-    y -= 44;
+    text(labels.notUniformInvoice, left, y - 24, 9, muted);
+    y -= 50;
     rule(y);
     y -= 22;
   };
@@ -120,7 +124,8 @@ export async function renderInvoicePdf(row: InvoiceDetail, draft = true) {
   const money = (n: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: s.currency,
+      currencyDisplay: "code",
     }).format(n);
   newPage();
   // Stack unusually long billing blocks so both columns remain within the printable page.
@@ -174,7 +179,7 @@ export async function renderInvoicePdf(row: InvoiceDetail, draft = true) {
       thickness: 0.7,
       color: line,
     });
-    p.drawText(`${row.number}  |  USD`, {
+    p.drawText(`${labels.reference}: ${row.number}  |  ${s.currency}`, {
       x: left,
       y: 28,
       size: 8,

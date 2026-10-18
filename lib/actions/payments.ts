@@ -1,4 +1,5 @@
 "use server";
+import { isBillingCurrency } from "@/lib/invoices/document";
 
 import { randomUUID } from "node:crypto";
 import { amendReceipt, appendReceipt, paymentBalance, receiptHistory, ReceiptError } from "@/lib/domain/payment-receipts";
@@ -92,7 +93,7 @@ export async function savePaymentWithId(data: Record<string, unknown>): Promise<
     taxIncluded: input.taxIncluded,
     recordedOn: input.recordedDate,
     dueOn: input.dueDate,
-    ...(Object.hasOwn(data, "invoiceOn") ? {invoiceOn: input.direction === "in" && input.currency === "USD" ? input.invoiceOn : null} : {}),
+    ...(Object.hasOwn(data, "invoiceOn") ? {invoiceOn: input.direction === "in" && isBillingCurrency(input.currency) ? input.invoiceOn : null} : {}),
     status: input.status,
     // Back to expected clears what was recorded as settled.
     settledOn: settled ? input.settledDate : null,

@@ -8,7 +8,7 @@ import { InfoHint } from "@/components/app/info-hint";
 import { usePreviewAction } from "@/components/app/preview-action";
 
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { CashScenario } from "./cash-scenario";
 import { FinanceInsights } from "./finance-insights";
@@ -97,7 +97,7 @@ function csvCell(v: unknown) {
   return `"${(/^[=+@\-\t\r]/.test(s) ? "'" : "") + s.replaceAll('"', '""')}"`;
 }
 
-export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
+export function FinanceView({readOnly=false,onFilterChange}:{readOnly?:boolean;onFilterChange?:(from:string,to:string,currency:string)=>void}={}) {
   const voidPayment = usePreviewAction(voidPaymentRemote);
   const data = useAppData();
   const tPortfolio=useTranslations("portfolio");
@@ -112,6 +112,7 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
   const [rate, setRate] = useState(5);
   const [included, setIncluded] = useState(false);
   const [currency, setCurrency] = useState<(typeof supportedCurrencies)[number]>("TWD");
+  useEffect(()=>onFilterChange?.(from,to,currency),[from,to,currency,onFilterChange]);
   const [showVoided, setShowVoided] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);

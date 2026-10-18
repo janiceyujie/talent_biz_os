@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import {ChevronDown,Users,X} from "lucide-react";
-import {useId} from "react";
+import {useId,useState} from "react";
 import {usePathname} from "next/navigation";
 import {useTranslations} from "next-intl";
 import {usePortfolio} from "./portfolio-provider";
@@ -9,10 +9,12 @@ import {InfoHint} from "./info-hint";
 import {portfolioPages} from "@/lib/manager/selection";
 export function PortfolioSwitcher() {
   const scope=usePortfolio(),path=usePathname(),id=useId(),t=useTranslations("portfolio");
+  const [search,setSearch]=useState("");
   if(!scope?.capability.enabled||!portfolioPages.includes(path))return null;
   const active=scope.ids!==null,all=active&&scope.ids?.length===scope.artists.length;
   const picked=scope.artists.filter(artist=>scope.ids?.includes(artist.id));
-  const summary=active?(all&&picked.length?t("all"):picked.length?t("selection",{name:picked[0].name,count:picked.length-1}):t("none")):t("own");
+  const summary=active?(picked.length===1?picked[0].name:all&&picked.length?t("all"):picked.length?t("selection",{name:picked[0].name,count:picked.length-1}):t("none")):t("own");
+  const matches=scope.artists.filter(artist=>artist.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   return <div className="portfolio-switcher">
     <button type="button" className={`portfolio-switcher-trigger ${active?"is-active":""}`} popoverTarget={id} aria-label={t("scopeLabel",{scope:summary})} title={summary}><Users size={18} aria-hidden="true"/><span>{summary}</span><ChevronDown size={14} aria-hidden="true"/></button>
     <div popover="auto" id={id} className="portfolio-popover" role="dialog" aria-label={t("filter")}>
@@ -20,8 +22,12 @@ export function PortfolioSwitcher() {
       <div className="portfolio-popover-body">
         <div className="portfolio-mode-row"><label htmlFor={`${id}-mode`}>{t("mode")}</label><InfoHint label={t("mode")} notes={[t("modeHint"),t("readOnlyHint")]}/><button id={`${id}-mode`} type="button" className="portfolio-mode-toggle" role="switch" aria-checked={active} aria-label={t("mode")} disabled={!scope.ready} onClick={()=>active?scope.setIds(null):scope.enable()}><span/></button></div>
         {scope.artists.length>scope.capability.artistLimit&&<p className="notice error" role="alert">{t("limit")}</p>}
-        {active&&<div className="portfolio-picker"><button type="button" className="secondary compact" aria-pressed={all&&picked.length>0} disabled={!scope.ready||scope.artists.length>scope.capability.artistLimit} onClick={()=>scope.setIds(scope.artists.map(row=>row.id))}>{t("all")}</button>
-          {scope.artists.map(artist=><label key={artist.id} title={artist.name}><input type="checkbox" checked={scope.ids?.includes(artist.id)||false} onChange={()=>scope.setIds(scope.ids?.includes(artist.id)?scope.ids.filter(value=>value!==artist.id):[...(scope.ids||[]),artist.id])}/><span>{artist.name}</span></label>)}
+        {active&&<div className="portfolio-picker">
+          <div className="portfolio-picker-tools"><span role="status">{t("capacity",{count:scope.artists.length,limit:scope.capability.artistLimit})}</span><button className="text-button" type="button" disabled={!scope.ready||!picked.length} onClick={()=>scope.setIds([])}>{t("clear")}</button></div>
+          {scope.artists.length>3&&<input type="search" aria-label={t("searchArtists")} placeholder={t("searchArtists")} value={search} onChange={event=>setSearch(event.target.value)}/>}
+          <button type="button" className="secondary compact" aria-pressed={all&&picked.length>0} disabled={!scope.ready||scope.artists.length>scope.capability.artistLimit} onClick={()=>scope.setIds(scope.artists.map(row=>row.id))}>{t("all")}</button>
+          {matches.map(artist=><label key={artist.id} title={artist.name}><input type="checkbox" disabled={!scope.ready||scope.artists.length>scope.capability.artistLimit} checked={scope.ids?.includes(artist.id)||false} onChange={()=>scope.setIds(scope.ids?.includes(artist.id)?scope.ids.filter(value=>value!==artist.id):[...(scope.ids||[]),artist.id])}/><span>{artist.name}</span></label>)}
+          {scope.artists.length>0&&!matches.length&&<p role="status" className="muted">{t("noMatches")}</p>}
           {!scope.artists.length&&<p className="muted">{t("noConnections")}</p>}
         </div>}
         <footer><Link className="text-button" href="/manager">{t("manageConnections")}</Link><InfoHint label={t("filter")} notes={[t("hint"),t("contextHint")]}/></footer>

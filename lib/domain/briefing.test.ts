@@ -57,3 +57,12 @@ test("completed and archived todos stay out even with expired snoozes; reopening
  }
  assert.equal(briefingItems(withState(rows,state,now),state,now,"UTC").length,1);
 });
+
+test("Sunday and local midnight use the manager display zone, without hiding the next day",()=>{
+ const event={...base,id:"event:midnight",kind:"calendar" as const,source:"event" as const,calendarKind:"meeting" as const,marker:null,location:"",date:"2026-10-19",time:"11:30",timeZone:"Asia/Taipei",dueAt:Date.parse("2026-10-19T03:30:00Z")};
+ const sunday=new Date("2026-10-19T03:00:00Z"),monday=new Date("2026-10-19T04:01:00Z");
+ assert.equal(briefingItems(withState([event],{},sunday),{},sunday,"America/New_York").length,1);
+ assert.equal(briefingItems(withState([event],{},monday),{},monday,"America/New_York").length,0);
+ const next={...event,dueAt:Date.parse("2026-10-19T15:00:00Z")};
+ assert.equal(briefingItems(withState([next],{},monday),{},monday,"America/New_York").length,1);
+});

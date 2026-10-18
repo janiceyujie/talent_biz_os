@@ -195,12 +195,14 @@ export function InvoicePanel({ projectId, requestedPaymentId, onDismiss }: { pro
                   <span>
                     <strong>{item.number}</strong>
                     <span>{item.buyerName}</span>
+                    <small>{t(`documentKinds.${item.documentKind || "commercial_invoice"}`)}</small>
                   </span>
                   <span>
                     <b>
                       {new Intl.NumberFormat(undefined, {
                         style: "currency",
-                        currency: "USD",
+                        currency: item.currency || "USD",
+                        currencyDisplay: "code",
                       }).format(item.total)}
                     </b>
                     <span

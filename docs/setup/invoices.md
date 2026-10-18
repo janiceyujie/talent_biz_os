@@ -1,10 +1,10 @@
 # Invoice preparation and Gmail drafts
 
-This local implementation prepares USD service invoices from existing receivables and creates drafts in the owner's connected Gmail. The owner reviews and sends in Gmail. There is no invoice send endpoint, SMTP delivery, automatic sending, or model call. This does not implement Taiwan government e-invoices, determine sales-tax liability, charge payment methods, or issue credit notes.
+This local implementation prepares USD commercial invoices and USD/TWD Taiwan payment requests from existing receivables and creates drafts in the owner's connected Gmail. The owner reviews and sends in Gmail. There is no invoice send endpoint, SMTP delivery, automatic sending, or model call. This does not implement Taiwan government e-invoices, determine sales-tax liability, charge payment methods, or issue credit notes.
 
 ## User flow
 
-1. Create a USD receivable in Finance or use a payment on a signed project. Open Invoices and choose Prepare invoice.
+1. Create a USD or TWD receivable in Finance or use a payment on a signed project. Open Invoices and choose Prepare invoice.
 2. Choose an explicitly linked company/contact or another saved partner. Apply its billing name, address and email. Missing fields clear previous values; replacing entered details requires confirmation. Existing invoice snapshots remain independent of partner changes.
 3. Confirm issuer details, recipient, payment instructions, language, dates and tax treatment. Save/apply billing defaults explicitly; defaults exclude customer details, tax and email text. Optional partner writeback is separate (below).
 4. Save a local draft or schedule its preparation. Optionally enable automatic Gmail draft creation on the issue date; this requires enabled integration and the owner's compose grant at save time. Saving this option is explicit approval for that invoice revision and account. Without opt-in, the worker only prepares the local draft.
@@ -49,7 +49,7 @@ SMTP settings still serve unrelated authentication/system mail. A Taloox invoice
 
 ## Project-to-invoice continuation
 
-For a new positive USD receivable in a project, **Save and prepare invoice** saves the receivable once and opens the invoice editor inside the same project. The existing Save action remains available. The invoice editor selects the saved payment and carries forward its amount, due date and project buyer details; missing billing details can be completed before PDF review. New project payments and generated deposit/balance plans inherit the project currency.
+For a new positive USD or TWD receivable in a project, **Save and prepare invoice** saves the receivable once and opens the invoice editor inside the same project. The existing Save action remains available. The invoice editor selects the saved payment and carries forward its amount, due date and project buyer details; missing billing details can be completed before PDF review. New project payments and generated deposit/balance plans inherit the project currency.
 
 Saving the invoice consumes the continuation request, including across data refreshes. Draft creation and status refresh keep the review dialog open with the updated result. Closing returns to the project payments tab. Creating a Gmail draft does not mark a payment as received or the invoice as sent. Gmail delivery still requires the user to review and send in Gmail.
 
@@ -73,7 +73,7 @@ npm run build
 
 The Gmail script starts an isolated local app on port 3002 and a fake Gmail/token server on 54500. It exercises scope/owner/CSRF restrictions, confirmation, concurrency, PDF MIME/storage equality, normalized metadata, expired grants, Finance locks, user-edited/missing/sent drafts, ambiguous-response recovery, opted-in scheduling, pagination and zero send calls. It deletes its synthetic identities, rows, jobs and objects. The legacy invoice suite covers partner import/writeback, defaults, PDF rendering and receipts using explicitly synthetic sent-history rows, with no delivery.
 
-The PDF generator remains unchanged: embedded OFL Noto Sans TC subsets, English/Traditional Chinese labels and private downloads. See `assets/fonts/README.md`. Browser QA covers both UI languages, disabled confirmation, creation feedback and 390px layout. Real mailbox writes, mail sending, Git push and deployment are excluded.
+The PDF generator uses: embedded OFL Noto Sans TC subsets, English/Traditional Chinese labels and private downloads. See `assets/fonts/README.md`. Browser QA covers both UI languages, disabled confirmation, creation feedback and 390px layout. Real mailbox writes, mail sending, Git push and deployment are excluded.
 
 Sources: [Gmail draft creation](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.drafts/create), [Gmail draft metadata](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.drafts/get), [OAuth scopes](https://developers.google.com/workspace/gmail/api/auth/scopes).
 

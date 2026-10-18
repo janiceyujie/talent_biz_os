@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { InfoHint } from "@/components/app/info-hint";
 import { useAppData } from "@/components/app/app-data";
 import { useAssistantConversation } from "@/components/app/assistant-provider";
-import { RoleAvatar } from "@/components/role/role-portrait";
+import { AssistantMascot } from "@/components/app/assistant-mascot";
 import { assistantSamples } from "@/lib/ai/assistant-samples";
 import { AssistantArchiveView } from "@/components/views/assistant-archive";
 
@@ -19,7 +19,7 @@ export function AssistantView({ compact = false }: { compact?: boolean }) {
   useEffect(()=>{end.current?.scrollIntoView({block:"nearest"});},[lines,pending]);
   useEffect(()=>{if(!pending&&!loadingHistory)field.current?.focus({preventScroll:true});},[pending,loadingHistory]);
   return <section data-preview-safe="true" className={`assistant-panel ${compact?"":"assistant-expanded"}`}>
-    {!compact&&<header><RoleAvatar role={data.person.role} appearance={data.person.appearance}/><div><span>{eyebrow("talentAssistant")}</span><small>{t("status")} <InfoHint label={t("privacyTitle")} notes={[t("privacy")]} /></small></div></header>}
+    {!compact&&<header><AssistantMascot size={48}/><div><span>{eyebrow("talentAssistant")}</span><small>{t("status")} <InfoHint label={t("privacyTitle")} notes={[t("privacy")]} /></small></div></header>}
     <details className="assistant-options-disclosure" open={compact?undefined:true}>
       <summary>{t("options")} · {sample?t("sample"):t("workspace")}</summary>
     <div className="assistant-controls">
@@ -35,7 +35,7 @@ export function AssistantView({ compact = false }: { compact?: boolean }) {
     <div className="message-list" role="log" aria-label={t("conversation")} aria-live="polite" aria-busy={pending}>
       {!lines.length&&<p className="message">{t("intro")}</p>}
       {lines.map((line,i)=><div key={i} className={`message ${line.role=== "user"?"user":""}`} role="group" aria-label={line.role==="user"?t("you"):eyebrow("talentAssistant")}><p className="assistant-reply">{line.content}</p>{line.failed&&<small className="assistant-error">{t("failed")}</small>}{line.mode==="local"&&<small className="message-mode">{t("localUsage")}</small>}{line.usage&&line.mode!=="local"&&<small className="message-mode">{t("usage",{input:line.usage.inputTokens,output:line.usage.outputTokens,total:line.usage.inputTokens+line.usage.outputTokens,reasoning:line.usage.reasoningTokens,cost:(line.cost??0).toFixed(6)})}</small>}</div>)}
-      {pending&&<div className="message assistant-pending" role="status"><p>{t("working")}<span className="assistant-typing" aria-hidden="true"><span/><span/><span/></span></p></div>}<div ref={end}/>
+      {pending&&<div className="message assistant-pending" role="status"><AssistantMascot thinking size={40}/><p>{t("working")}<span className="assistant-typing" aria-hidden="true"><span/><span/><span/></span></p></div>}<div ref={end}/>
     </div>
     {error&&<p role="alert" className="assistant-error">{errors(error as "unexpected")} <button type="button" className="text-button" disabled={pending} onClick={()=>{const last=lines.at(-1);if(last?.failed)void send(last.content);}}>{t("retry")}</button></p>}
     <div className="quick-prompts">{[t("prompt.today"),t("prompt.tomorrow"),t("prompt.unpaid"),t("prompt.payable")].map(p=><button type="button" key={p} disabled={pending||loadingHistory} onClick={()=>{void send(p,false);}}>{p}</button>)}</div>

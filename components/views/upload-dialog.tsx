@@ -77,6 +77,7 @@ export function UploadDialog({ onClose, onSubmitted }: { onClose: () => void; on
 
   return (
     <Modal title={t("uploadTitle")} onClose={() => !pending && onClose()}>
+      {preview && <p className="notice">{tPreview("readOnly")}</p>}
       <div className="editor-form">
         <label
           className={`upload-drop ${dragging ? "dragging" : ""}`}

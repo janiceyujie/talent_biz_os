@@ -26,7 +26,9 @@ export type ReadMessage = {
   id: string;
   threadId: string;
   receivedAt: Date;
+  labels: string[]; // Gmail's label ids; SENT for the person's own mail
   from: Address;
+  to: string; // the To header as written: whom the person's own mail went to
   subject: string;
   headerMessageId: string;
   inReplyTo: string;
@@ -71,7 +73,9 @@ export function readMessage(raw: GmailFullMessage): ReadMessage {
     id: raw.id,
     threadId: raw.threadId,
     receivedAt: new Date(Number(raw.internalDate ?? 0)),
+    labels: raw.labelIds ?? [],
     from: parseAddress(header(raw.payload, "From")),
+    to: header(raw.payload, "To"),
     subject: header(raw.payload, "Subject"),
     headerMessageId: header(raw.payload, "Message-ID"),
     inReplyTo: header(raw.payload, "In-Reply-To"),

@@ -43,6 +43,8 @@ function useDescribe(project: ProjectSummary) {
         return `${t("change.toConfirm")}：${c.items.join("、")}`;
       case "contractVersion":
         return t("change.contractVersion", { version: c.version }) + (c.status === "signed" ? ` · ${t("contractSigned")}` : "");
+      case "contact":
+        return `${t("change.contact")} ${c.name}`;
     }
   };
 }
@@ -50,7 +52,9 @@ function useDescribe(project: ProjectSummary) {
 /** The project's messages, newest first, as fetched with its detail (components/app/project-detail.ts). */
 export function ProjectTimeline({ project, entries }: { project: ProjectSummary; entries: TimelineEntry[] }) {
   const t = useTranslations("timeline");
+  const tNotice = useTranslations("paymentNotice");
   const format = useFormatter();
+  const money = useMoney();
   const describe = useDescribe(project);
 
   return (
@@ -69,11 +73,13 @@ export function ProjectTimeline({ project, entries }: { project: ProjectSummary;
               <details>
                 <summary>
                   <time dateTime={e.receivedAt}>{format.dateTime(new Date(e.receivedAt), { dateStyle: "medium" })}</time>
-                  <strong>{e.title}</strong>
+                  {(e.sent || e.from) && <span className={e.sent ? "who me" : "who"}>{e.sent ? t("you") : e.from}</span>}
+                  <strong>{e.notice ? tNotice("title", { amount: money(e.notice.amount, e.notice.currency) }) : e.title}</strong>
                   {applied.length > 0 && <span className="tag">{t("changes", { count: applied.length })}</span>}
                 </summary>
                 {e.summary && <p className="muted">{e.summary}</p>}
                 {e.created && <p className="timeline-applied">{t("created")}</p>}
+                {e.completedTodos.length > 0 && <p className="muted">{t("repliesDone", { titles: e.completedTodos.join("、") })}</p>}
                 {applied.length > 0 && (
                   <div className="timeline-applied">
                     {t("applied")}

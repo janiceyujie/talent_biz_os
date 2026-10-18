@@ -32,7 +32,7 @@ type Edge = "move" | "start" | "end";
 const onDay = (item: PlanItem, day: string) => item.date === day || (!!item.start && !!segment(item, day));
 
 /** `initialDay` opens the month filtered to that day (reminder links); `initialDate` opens that day's schedule. */
-export function PlannerView({ initialDay = "", initialDate = "", readOnly=false }: { initialDay?: string; initialDate?: string; readOnly?:boolean }) {
+export function PlannerView({ initialDay = "", initialDate = "", readOnly=false,onVisibleDateChange }: { initialDay?: string; initialDate?: string; readOnly?:boolean;onVisibleDateChange?:(date:string)=>void }) {
   const deleteCalendarItem = usePreviewAction(deleteCalendarItemRemote);
   const saveCalendarItem = usePreviewAction(saveCalendarItemRemote);
   const data = useAppData();
@@ -43,6 +43,7 @@ export function PlannerView({ initialDay = "", initialDate = "", readOnly=false 
   const today = data.previewDate || dateInZone(data.talent.timeZone);
   const [view, setView] = useState<View>(initialDay ? "month" : initialDate ? "day" : "week");
   const [date, setDate] = useState(initialDay || initialDate || today);
+  useEffect(()=>{if(view!=="month")onVisibleDateChange?.(date);},[date,view,onVisibleDateChange]);
   // The item being edited; `dropped` when it came from a drag, so the dialog only asks to confirm.
   const [editing, setEditing] = useState<(PlanItem & { dropped?: boolean }) | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -146,7 +147,7 @@ export function PlannerView({ initialDay = "", initialDate = "", readOnly=false 
         </button>}
       </PageHeader>
       {view === "month" ? (
-        <CalendarView initialDay={initialDay||date} hideAdd readOnly={readOnly} />
+        <CalendarView initialDay={initialDay||date} hideAdd readOnly={readOnly} onVisibleDateChange={onVisibleDateChange} />
       ) : (
         <>
           <TimeGrid
@@ -560,7 +561,7 @@ export function EventCard({
         </span>
         {!compact && item.project && <span>{item.project}</span>}
         {!compact && item.client && <span className="planner-event-meta">{item.client}</span>}
-        {item.amount !== null && <span className="planner-event-meta">{money(Math.abs(item.amount))}</span>}
+        {item.amount !== null && <span className="planner-event-meta">{money(Math.abs(item.amount),item.currency)}</span>}
         {clash && <span className="planner-conflict">{t("conflict")}</span>}
         {item.note && <span className="planner-event-meta">{t("stated", { when: item.note })}</span>}
       </button>

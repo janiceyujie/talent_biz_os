@@ -226,6 +226,9 @@ export type InboxMessage = {
   // An email brought in from the connected mailbox (decision 0013); null otherwise.
   gmail: {
     gmailId: string;
+    threadId: string;
+    sent: boolean; // the person's own reply
+    recipients: string; // whom their reply went to, as the To line states it
     sender: string; // "Name <address>": the email's claim (decision 0007)
     subject: string;
     unsure: boolean; // "Not sure this is work"
@@ -233,6 +236,8 @@ export type InboxMessage = {
   } | null;
   // A bank or payment-app notice (decision 0013): only these fields, no body or analysis; null otherwise.
   notice: NoticeFields | null;
+  // Reply to-dos this message, the person's own reply, marked done (Undo reopens them).
+  completedTodos: { id: string; title: string }[];
 };
 
 /** What only a project's own screen shows, loaded when it's opened (lib/data/project-detail.ts). */
@@ -264,6 +269,14 @@ export type TimelineEntry = {
   stage: { from: Stage; to: Stage } | null;
   /** Filed before applying was recorded: nothing to show beyond the message. */
   recorded: boolean;
+  /** The person's own reply in an email thread, rather than the other side's message. */
+  sent: boolean;
+  /** Who wrote it: the email's sender name; "" for the person's own reply or a pasted message. */
+  from: string;
+  /** Reply to-dos this reply marked done. */
+  completedTodos: string[];
+  /** A payment notice's fields (decision 0013): it has no title or body of its own. */
+  notice: NoticeFields | null;
 };
 
 export type ExternalEvent = {

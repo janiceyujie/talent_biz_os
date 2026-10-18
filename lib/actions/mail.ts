@@ -6,7 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { mailConnection, mailDecision, mailSenderRule, message, payment, talent as talentTable } from "@/lib/db/schema";
+import { mailConnection, mailDecision, mailSenderRule, message, payment, talent as talentTable, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
 import { supportedCurrencies } from "@/lib/domain/money";
 import { queueFetch } from "@/lib/mail/jobs/fetch";
@@ -269,6 +269,19 @@ export async function recordNoticePayment(messageId: string, target: { paymentId
       throw e;
     });
   if (done) return fail(done);
+  refresh();
+  return null;
+}
+
+/** Undo, on the person's own reply: the reply to-dos it marked done are open again. */
+export async function reopenReplies(messageId: string): Promise<string | null> {
+  const { talent } = await requireTalent();
+  const fail = await errorText();
+  if (!z.uuid().safeParse(messageId).success) return fail("invalid");
+  await db
+    .update(todo)
+    .set({ status: "open", completedAt: null, completedByMessageId: null })
+    .where(and(eq(todo.talentId, talent.id), eq(todo.completedByMessageId, messageId), eq(todo.status, "done")));
   refresh();
   return null;
 }

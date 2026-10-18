@@ -144,6 +144,11 @@ export const getAppData = cache(async (): Promise<AppData> => {
 
 
 
+  // Reply to-dos each of the person's own replies marked done, for its Undo.
+  const completedBy = new Map<string, { id: string; title: string }[]>();
+  for (const t of todoRows)
+    if (t.completedByMessageId && t.status === "done")
+      completedBy.set(t.completedByMessageId, [...(completedBy.get(t.completedByMessageId) ?? []), { id: t.id, title: t.title }]);
   // Latest analysis per message (analyses are versioned; the newest wins).
   const analysisRows = messageRows.length
     ? await db
@@ -375,6 +380,9 @@ export const getAppData = cache(async (): Promise<AppData> => {
           m.channel === "gmail" && m.externalRef
             ? {
                 gmailId: m.externalRef,
+                threadId: m.providerThreadId ?? "",
+                sent: m.direction === "sent",
+                recipients: m.recipients ?? "",
                 sender: m.sender ?? "",
                 subject: m.subject ?? "",
                 unsure: m.relevance === "unsure",
@@ -382,6 +390,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
               }
             : null,
         notice: m.kind === "payment_notice" ? m.notice : null,
+        completedTodos: completedBy.get(m.id) ?? [],
       };
     }),
   };

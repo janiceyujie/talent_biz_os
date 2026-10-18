@@ -113,6 +113,10 @@ const ctx = (over: Partial<IntakeContext> = {}): IntakeContext => ({
   replyWithinDays: 2,
   filed: [],
   contracts: [],
+  projectPeople: [],
+  thread: { projectId: null, replied: false, newer: false },
+  sent: false,
+  sender: null,
   ...over,
 });
 
@@ -431,4 +435,43 @@ test("parseAmount", () => {
   assert.equal(parseAmount("１９，９５０元"), 19950);
   assert.equal(parseAmount("訂金 9,000、尾款 21,000"), null);
   assert.equal(parseAmount(""), null);
+});
+
+describe("email threads (decision 0013)", () => {
+  test("the thread's project is the top suggestion, whatever else matches", () => {
+    const other = project({ id: "p2", title: "Lumora 春季合作", counterparty: "Lumora", counterpartyId: null });
+    const [top] = suggestTargets(analysis(), ctx({ projects: [project(), other], thread: { projectId: "p2", replied: false, newer: false } }));
+    assert.equal(top.projectId, "p2");
+    assert.equal(top.reasons[0].kind, "thread");
+  });
+  test("a sender not on the project is proposed: linked when already a contact, created otherwise", () => {
+    const sender = { name: "Lin Mei", email: "lin@blueroom.example" };
+    const created = one(proposeChanges(analysis(), project(), ctx({ sender })).changes, "contact");
+    assert.deepEqual([created.contactId, created.name, created.ticked], [null, "Lin Mei", true]);
+    const lin = contact({ id: "c2", name: "林美", email: "LIN@blueroom.example" });
+    assert.equal(one(proposeChanges(analysis(), project(), ctx({ sender, contacts: [contact(), lin] })).changes, "contact").contactId, "c2");
+  });
+  test("someone already on the project isn't proposed", () => {
+    const sender = { name: "Maya", email: "maya@blueroom.example" };
+    assert.deepEqual(byKind(proposeChanges(analysis(), project(), ctx({ sender })).changes, "contact"), []);
+    const lin = contact({ id: "c2", email: "lin@blueroom.example" });
+    const people = [{ projectId: "p1", contactId: "c2" }];
+    assert.deepEqual(byKind(proposeChanges(analysis(), project(), ctx({ sender: { name: "", email: "lin@blueroom.example" }, contacts: [contact(), lin], projectPeople: people })).changes, "contact"), []);
+  });
+  test("no reply to-do once the person has replied, or when the other side wrote again", () => {
+    const todos = (replied: boolean, newer = false) => byKind(proposeChanges(analysis(), project(), ctx({ thread: { projectId: "p1", replied, newer } })).changes, "todo");
+    assert.equal(todos(false).length, 1);
+    assert.equal(todos(true).length, 0);
+    assert.equal(todos(false, true).length, 0, "the newer message gets it");
+  });
+  test("the person's own quote is ticked; theirs isn't", () => {
+    const quote = analysis({ intent: "negotiation", money: { amount: 60000, currency: "TWD", taxIncluded: true, asStated: "NT$60,000" } });
+    assert.equal(one(proposeChanges(quote, project(), ctx()).changes, "fee").ticked, false);
+    assert.equal(one(proposeChanges(quote, project(), ctx({ sent: true })).changes, "fee").ticked, true);
+  });
+  test("the person's own reply adds no reply to-do, questions, or contact", () => {
+    const a = analysis({ missing: ["交通"] });
+    const { changes } = proposeChanges(a, project(), ctx({ sent: true, sender: { name: "x", email: "x@example.com" } }));
+    assert.deepEqual([...byKind(changes, "todo"), ...byKind(changes, "toConfirm"), ...byKind(changes, "contact")], []);
+  });
 });

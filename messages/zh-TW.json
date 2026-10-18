@@ -751,7 +751,11 @@
       "showAll": "展開全文",
       "showLess": "收合",
       "more": "更多動作"
-    }
+    },
+    "yourReply": "你的回覆",
+    "sentTo": "你 → {to}",
+    "repliesDone": "✓ 已完成：{titles}",
+    "undo": "復原"
   },
   "intake": {
     "targetHeading": "歸入合作案",
@@ -762,7 +766,8 @@
       "detail": "提到 {value}",
       "title": "名稱相近",
       "payment": "有一筆待收 {value}",
-      "earlier": "這個合作案已有 {value} 的訊息"
+      "earlier": "這個合作案已有 {value} 的訊息",
+      "thread": "同一封信件串"
     },
     "newProject": "新合作案",
     "otherProject": "其他合作案",
@@ -782,7 +787,8 @@
       "todoAwaitContract": "新增待辦：等合約寄來",
       "todoSendInvoice": "新增待辦：開發票給對方",
       "toConfirm": "加入「需向對方確認」",
-      "contractVersion": "新增合約版本 v{version}"
+      "contractVersion": "新增合約版本 v{version}",
+      "contact": "加入合作案聯絡人"
     },
     "expected": "待收 {amount}",
     "received": "已收",
@@ -842,7 +848,13 @@
       "taxIncluded": "稅",
       "paymentTerms": "付款條件",
       "keyTerms": "主要條款"
-    }
+    },
+    "contactLabel": "角色（選填）",
+    "contactExisting": "已是聯絡人，還不在這個合作案",
+    "contactNew": "新的寄件者，還不是聯絡人",
+    "threadWaiting": "這個信件串還有 {count} 封等待中",
+    "threadFileAll": "全部 {count} 封歸入此案",
+    "threadLeft": "有 {count} 封需要你先回答，仍在訊息中"
   },
   "timeline": {
     "heading": "時間軸",
@@ -863,7 +875,9 @@
     },
     "version": "v{version}",
     "changes": "{count} 項變更",
-    "showChanges": "查看變更"
+    "showChanges": "查看變更",
+    "you": "你",
+    "repliesDone": "已完成：{titles}"
   },
   "contacts": {
     "search": "搜尋聯絡人",

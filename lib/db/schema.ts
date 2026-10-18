@@ -515,6 +515,7 @@ export const message = pgTable(
     direction: text({ enum: messageDirections }).notNull().default("received"),
     relevance: text({ enum: messageRelevance }),
     sender: text(), // "Name <address>", as the email states it (a claim, decision 0007)
+    recipients: text(), // the To line of the person's own sent mail, as written
     subject: text(),
     skippedAttachments: jsonb().$type<SkippedAttachment[]>(),
     receivedAt: timestamp({ withTimezone: true }).notNull(),
@@ -688,6 +689,8 @@ export const todo = pgTable(
     projectId: uuid().references(() => project.id, { onDelete: "cascade" }),
     paymentId: uuid().references(() => payment.id, { onDelete: "set null" }),
     messageId: uuid().references(() => message.id, { onDelete: "set null" }), // the message a reply to-do is about
+    // The person's own sent reply that marked this reply to-do done (Undo reopens it).
+    completedByMessageId: uuid().references((): AnyPgColumn => message.id, { onDelete: "set null" }),
     type: text({ enum: todoTypes }).notNull().default("custom"),
     title: text().notNull(),
     dueDate: date(),

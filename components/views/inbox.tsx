@@ -9,7 +9,7 @@ import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { MoreMenu } from "./more-menu";
 import { ANALYSIS_POLL_MS, PasteDialog } from "@/components/app/paste-dialog";
 import { FileText, TriangleAlert } from "lucide-react";
-import { markNotWork, markSureWork } from "@/lib/actions/mail";
+import { markNotWork, markSureWork, reopenReplies } from "@/lib/actions/mail";
 import { dismissMessage, reanalyzeMessage } from "@/lib/actions/messages";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
@@ -137,7 +137,8 @@ export function InboxView() {
                   <small>
                     <StatusChip status={m.status} />
                     {!!m.analysis?.flags.length && <em className="message-status status-flagged">{t("flagChip")}</em>}
-                    {m.notice && <em className="message-status status-payment">{tNotice("chip")}</em>} {t(`channel.${m.channel}`)}
+                    {m.notice && <em className="message-status status-payment">{tNotice("chip")}</em>}
+                    {m.gmail?.sent && <em className="message-status status-sent">{t("yourReply")}</em>} {t(`channel.${m.channel}`)}
                   </small>
                   {m.notice ? (
                     <>
@@ -259,11 +260,18 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
         </h2>
         <StatusChip status={message.status} />
         <p className="review-meta">
-          {message.gmail?.sender && (
+          {message.gmail?.sent ? (
             <>
-              <span title={message.gmail.sender}>{senderName(message.gmail.sender)}</span>
+              <span title={message.gmail.recipients}>{t("sentTo", { to: message.gmail.recipients.split(",").map(senderName).join(", ") })}</span>
               {" · "}
             </>
+          ) : (
+            message.gmail?.sender && (
+              <>
+                <span title={message.gmail.sender}>{senderName(message.gmail.sender)}</span>
+                {" · "}
+              </>
+            )
           )}
           {t(`channel.${message.channel}`)}
           {" · "}
@@ -283,6 +291,14 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
       </header>
 
       {analyzed && <Flags analysis={a} />}
+      {message.completedTodos.length > 0 && (
+        <p className="done-line" role="status">
+          <span>{t("repliesDone", { titles: message.completedTodos.map((x) => x.title).join("、") })}</span>
+          <button className="link-button" disabled={pending} onClick={() => run(() => reopenReplies(message.id))}>
+            {t("undo")}
+          </button>
+        </p>
+      )}
       {message.gmail?.unsure && (
         <div className="notice gmail-unsure" role="note">
           <p>{tGmail("unsureNotice")}</p>
@@ -317,7 +333,7 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
           <p className="review-text">{a.summary}</p>
         </section>
       )}
-      {analyzed && <Asks analysis={a} />}
+      {analyzed && !message.gmail?.sent && <Asks analysis={a} />}
       {analyzed && <Terms analysis={a} />}
       <Original message={message} />
 
@@ -509,7 +525,7 @@ function Original({ message }: { message: InboxMessage }) {
   return (
     <section className="review-section review-original">
       <header>
-        <h3>{t("original")}</h3>
+        <h3>{message.gmail?.sent ? t("yourReply") : t("original")}</h3>
         {message.body.length > PREVIEW_CHARS && (
           <button className="link-button" aria-expanded={all} onClick={() => setAll(!all)}>
             {all ? t("review.showLess") : t("review.showAll")}

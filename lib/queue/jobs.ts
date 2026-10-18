@@ -18,6 +18,8 @@ export const jobs = {
   /** Revoke a mailbox's token at Google and delete the connection (lib/mail/jobs/disconnect.ts). */
   // keep: "filed" keeps email filed under a project; "none" removes everything brought in.
   "mail.disconnect": z.strictObject({ connectionId: z.uuid(), keep: z.enum(["filed", "none"]).default("none") }),
+  /** Push a talent's events to one Google Calendar connection (lib/calendar/google/sync.ts); `attempt` counts tries after a failure. */
+  "calendar.sync": z.strictObject({ connectionId: z.uuid(), attempt: z.number().int().min(0).max(1000).default(0) }),
   // Scheduled by the worker (worker/schedule.ts); the scheduler adds its own `_cron` details, ignored here.
   /** A sync for every connected mailbox: the poll, and push's safety net (lib/mail/jobs/reconcile.ts). */
   "mail.reconcile": z.object({}),
@@ -46,6 +48,8 @@ export const jobAttempts: Record<JobName, number> = {
   "mail.fetch": 5,
   // Google unreachable: a few more tries, then the row is deleted anyway.
   "mail.disconnect": 5,
+  // Its own retries follow the launch checklist's schedule (runCalendarSync); only a crash retries here.
+  "calendar.sync": 3,
   // The next run comes on schedule anyway.
   "mail.reconcile": 1,
   "mail.cleanup": 3,
@@ -81,3 +85,9 @@ export const analysisQueue = (talentId: string) => `analyze:${talentId}`;
 
 /** One queue per mailbox: its jobs run one at a time, in order (docs/design/gmail-ingestion.md, Jobs). */
 export const mailQueue = (connectionId: string) => `mail:${connectionId}`;
+
+/** The key that makes a second calendar sync replace a waiting one: a burst of changes syncs once. */
+export const calendarSyncKey = (connectionId: string) => `calendar.sync:${connectionId}`;
+
+/** One Google Calendar connection's syncs, one at a time. */
+export const calendarSyncQueue = (connectionId: string) => `calendar:${connectionId}`;

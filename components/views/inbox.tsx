@@ -6,11 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type RefObject } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
+import { InfoHint } from "@/components/app/info-hint";
 import { MoreMenu } from "./more-menu";
 import { ANALYSIS_POLL_MS, PasteDialog } from "@/components/app/paste-dialog";
 import { FileText, TriangleAlert } from "lucide-react";
 import { markNotWork, markSureWork, reopenReplies } from "@/lib/actions/mail";
-import { dismissMessage, reanalyzeMessage } from "@/lib/actions/messages";
+import { dismissMessage, openFromHistory, reanalyzeMessage } from "@/lib/actions/messages";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { detailFieldKeys, type AssumptionTopic } from "@/lib/ai/analysis";
@@ -43,7 +44,10 @@ export function InboxView() {
   const [showDismissed, setShowDismissed] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [tab, setTab] = useState<IntakeTab>("messages");
-  const visible = data.inbox.filter((m) => showDismissed || m.status !== "dismissed");
+  // From your history: kept apart, collapsed, and analyzed only when opened (decision 0013).
+  const history = data.inbox.filter((m) => m.status === "history");
+  const visible = data.inbox.filter((m) => m.status !== "history" && (showDismissed || m.status !== "dismissed"));
+  const [, startOpening] = useTransition();
   const message = data.inbox.find((m) => m.id === active) ?? visible[0];
   const analyzing = data.inbox.some((m) => m.status === "pending");
   const listHeading = useRef<HTMLHeadingElement>(null);
@@ -163,6 +167,27 @@ export function InboxView() {
                 </button>
               </div>
             ))}
+            {history.length > 0 && (
+              <details className="history-group">
+                <summary>
+                  <strong>{t("historyGroup")}</strong> <span className="muted">{t("historyCount", { count: history.length })}</span> <InfoHint notes={[t("historyInfo")]} />
+                </summary>
+                {history.map((m) => (
+                  <button
+                    key={m.id}
+                    className={`history-row ${message?.id === m.id ? "active" : ""}`}
+                    onClick={() => {
+                      setActive(m.id);
+                      startOpening(async () => setNotice(await openFromHistory(m.id)));
+                    }}
+                  >
+                    <span>{m.gmail?.sent ? t("yourReply") : senderName(m.gmail?.sender ?? "")}</span>
+                    <strong>{fallbackTitle(m, t)}</strong>
+                    <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
+                  </button>
+                ))}
+              </details>
+            )}
           </section>
           <section className="surface padded inbox-reader" aria-label={t("readerLabel")}>
             {message ? (
@@ -581,7 +606,9 @@ function Flags({ analysis: a }: { analysis: Analysis }) {
                     actual: day(weekday.actual),
                     stated: day(weekday.stated),
                   })
-                : f.note || labels.flag(f.kind)}
+                : f.kind === "unverified_sender" && a.flags.some((x) => x.kind === "payment_details")
+                  ? t("unverifiedSenderPayment")
+                  : f.note || labels.flag(f.kind)}
               {f.asStated && !weekday && <span className="stated"> 「{f.asStated}」</span>}
             </span>
           </li>

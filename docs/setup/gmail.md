@@ -20,7 +20,7 @@ In the project you made for sign-in:
    ```
    `openssl rand -base64 32` prints 32 random bytes (a 256-bit key) as text that fits in `.env.local`; run it once for each and paste the output. `MAIL_KEY_DEV` is the local master key that wraps each mailbox's data key. Keep it out of Git: with it and a copy of the database, the stored tokens can be decrypted. Changing it makes stored tokens unreadable, so connected mailboxes need reconnecting. The app refuses to use it unless `APP_ENV=development`; other environments use Cloud KMS (deploy-render).
 
-Restart `npm run dev` and `npm run worker`. Then Settings → Connected services → Gmail → Connect: pick the history choice, then the Google account. Google shows the "Google hasn't verified this app" screen while testing; **Advanced → Go to … (unsafe)** is expected for test users. Make sure the box for reading your email is ticked.
+Restart `npm run dev` (it runs the worker too). Then Settings → Connected services → Gmail → Connect: pick the history choice, then the Google account. Google shows the "Google hasn't verified this app" screen while testing; **Advanced → Go to … (unsafe)** is expected for test users. Make sure the box for reading your email is ticked.
 
 `WORKER_SECRET` lets the web service ask the worker for sender and subject: Intake's Waiting and Filtered out read them live from Gmail, and only the worker can decrypt the token. The worker listens on `127.0.0.1:3001` (`WORKER_HTTP_PORT` to change it, and `WORKER_URL` to match).
 

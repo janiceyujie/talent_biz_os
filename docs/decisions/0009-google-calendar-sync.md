@@ -93,3 +93,7 @@ Each phase ships on its own; the next starts when the last is in use.
 - `lib/calendar/google/import-plan.ts` (pure: a Google event as wall time plus zone; all-day ends on the last day covered) and `import.ts` (the windowed re-read, one per calendar at a time). A calendar removed from their Google list, or no longer readable, stops being shown.
 - 設定 → 連結的服務 → Google 日曆 → 管理 → 在這裡顯示 asks for the two read permissions (with offline access) only when pressed, then lists their calendars (not our own) to tick.
 - On the calendar, Google events are read-only: not draggable, no delete, open in Google when clicked, coloured by their Google calendar, and part of clash checks. The month view lists them on their own dates (an all-day event on each day it covers).
+
+## Implementation notes (2026-10-19)
+
+- **The push runs as a job** (`calendar.sync`, `runCalendarSync` in `lib/calendar/google/sync.ts`), no longer in `after()`: a change queues one per connection, keyed so a burst of changes syncs once, on the connection's own queue. A failure that may pass (the network, Google down, or its "slow down") is tried again after 1 minute, 5 minutes, 30 minutes, 2 hours, then every 6 hours until it succeeds; lost access waits for the person to reconnect, and a request Google rejects waits for the next change or Sync now. Sync now still runs in the request, to show the result. The calendar's name and the feed's labels come from `lib/i18n/translator.ts`, which works without a request.

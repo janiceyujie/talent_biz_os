@@ -1,0 +1,2 @@
+ALTER TABLE "message" DROP CONSTRAINT "message_status_check";--> statement-breakpoint
+ALTER TABLE "message" ADD CONSTRAINT "message_status_check" CHECK ("message"."status" in ('pending', 'analyzed', 'confirmed', 'dismissed', 'error', 'history'));

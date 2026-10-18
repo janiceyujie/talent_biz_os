@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray, isNull, lt } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, max } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { file, mailConnection, mailDecision, message, person, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
@@ -12,6 +12,7 @@ import { stripQuoted } from "../clean";
 import { gmailProvider } from "../gmail";
 import { chooseAttachments, FETCH_LIMITS } from "../attachments";
 import type { AttachmentRef } from "../gmail/parts";
+import { senderCheck } from "../sender-auth";
 import { bringNotice, pathFor } from "./notice";
 
 // mail.fetch (docs/design/gmail-ingestion.md, Jobs): bring one email decided
@@ -81,6 +82,7 @@ export async function fetchDecision(decisionId: string) {
 
     // The person's own reply, in a thread already work (decision 0013): kept and analyzed as theirs.
     const sent = read.labels.includes("SENT");
+    const history = await fromHistory(d, c);
     const brought = await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(message)
@@ -93,6 +95,7 @@ export async function fetchDecision(decisionId: string) {
           providerThreadId: read.threadId,
           direction: sent ? "sent" : "received",
           recipients: sent ? read.to || null : null,
+          senderCheck: sent ? null : senderCheck(read.authResults),
           headerMessageId: read.headerMessageId || null,
           inReplyTo: read.inReplyTo || null,
           references: read.references || null,
@@ -103,6 +106,7 @@ export async function fetchDecision(decisionId: string) {
           receivedAt: read.receivedAt,
           bodyText: stripQuoted(read.text),
           dedupKey: gmailDedupKey(c.id, read.id),
+          ...(history ? { status: "history" as const } : {}),
         })
         .onConflictDoNothing({ target: [message.talentId, message.dedupKey] })
         .returning({ id: message.id });
@@ -141,11 +145,13 @@ export async function fetchDecision(decisionId: string) {
           .set({ status: "done", completedAt: new Date(), completedByMessageId: created.id })
           .where(and(eq(todo.talentId, c.talentId), eq(todo.type, "reply"), eq(todo.status, "open"), inArray(todo.messageId, earlier)));
       }
-      await queue.enqueue(
-        "message.analyze",
-        { messageId: created.id, locale: toLocale(row.locale) },
-        { tx, queueName: analysisQueue(c.talentId), jobKey: analyzeJobKey(created.id) },
-      );
+      // From your history: analyzed only when the person opens it (openFromHistory).
+      if (!history)
+        await queue.enqueue(
+          "message.analyze",
+          { messageId: created.id, locale: toLocale(row.locale) },
+          { tx, queueName: analysisQueue(c.talentId), jobKey: analyzeJobKey(created.id) },
+        );
       return created.id;
     });
     if (!brought) {
@@ -163,4 +169,22 @@ export async function fetchDecision(decisionId: string) {
     console.error("mail.fetch failed", d.id, (e as Error)?.name, (e as { status?: number })?.status ?? "");
     throw e;
   }
+}
+
+/** A thread with nothing newer than this is history, when the first read of the past brought it in. */
+const QUIET_DAYS = 14;
+
+/**
+ * From your history (decision 0013): an email the connect-time read of the
+ * last 30 days decided on (not one the person brought in), in a thread whose
+ * latest email is over 14 days old. It's kept for reference and analyzed when
+ * opened, rather than arriving as new work.
+ */
+async function fromHistory(d: typeof mailDecision.$inferSelect, c: typeof mailConnection.$inferSelect) {
+  if (d.decidedBy === "person" || !c.historyDoneAt || d.createdAt > c.historyDoneAt) return false;
+  const [latest] = await db
+    .select({ at: max(mailDecision.receivedAt) })
+    .from(mailDecision)
+    .where(and(eq(mailDecision.connectionId, c.id), eq(mailDecision.providerThreadId, d.providerThreadId)));
+  return !!latest?.at && latest.at.getTime() < Date.now() - QUIET_DAYS * 24 * 60 * 60 * 1000;
 }

@@ -218,7 +218,7 @@ export type InboxMessage = {
   channel: "paste" | "upload" | "gmail" | "gmail_addon" | "forwarded_email";
   body: string;
   receivedAt: string; // ISO instant
-  status: "pending" | "analyzed" | "confirmed" | "dismissed" | "error";
+  status: "pending" | "analyzed" | "confirmed" | "dismissed" | "error" | "history"; // history: kept for reference, analyzed when opened
   failure: string | null;
   projectId: string | null;
   analysis: (MessageAnalysis & { modelVersion: string; promptVersion: string }) | null;

@@ -246,7 +246,8 @@
       "payment_details": "Asks for a payment or gives new payment details — a common fraud pattern. Confirm with the sender using contact details you already have.",
       "inconsistency": "Something in the message doesn’t add up.",
       "hidden_text": "Contained invisible characters, which can hide instructions; they were removed before analysis.",
-      "other": "Something here looks off — take a closer look."
+      "other": "Something here looks off — take a closer look.",
+      "unverified_sender": "Gmail couldn't verify that this came from the sender's domain: the address may be forged."
     }
   },
   "today": {
@@ -648,7 +649,8 @@
       "analyzed": "To review",
       "confirmed": "Filed",
       "dismissed": "Dismissed",
-      "error": "Failed"
+      "error": "Failed",
+      "history": "From your history"
     },
     "channel": {
       "paste": "Pasted",
@@ -755,7 +757,11 @@
     "yourReply": "Your reply",
     "sentTo": "You → {to}",
     "repliesDone": "✓ Done: {titles}",
-    "undo": "Undo"
+    "undo": "Undo",
+    "historyGroup": "From your history",
+    "historyInfo": "Older threads from the last 30 days, nothing new in them for two weeks. They're kept for reference; opening one analyzes it.",
+    "historyCount": "{count, plural, one {# email} other {# emails}}",
+    "unverifiedSenderPayment": "Gmail couldn't verify the sender, and this asks about payment or bank details: a common fraud. Don't pay or reply with details; confirm with them using contact details you already have."
   },
   "intake": {
     "targetHeading": "File under a project",
@@ -1295,7 +1301,10 @@
     "viewPayments": "View in Finance",
     "newLabel": "Received",
     "newLabelFrom": "Received from {payer}",
-    "paymentOption": "{project} · {label}"
+    "paymentOption": "{project} · {label}",
+    "dropTitle": "Drop this notice?",
+    "dropBody": "Its details are deleted and it leaves Intake. The email stays in Gmail.",
+    "dropNeverFrom": "Also stop bringing in notices from {sender}"
   },
   "settings": {
     "name": "Artist or brand name",

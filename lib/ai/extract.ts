@@ -2,7 +2,7 @@ import "server-only";
 import type { Locale } from "@/lib/i18n/config";
 import { modelOutput, modelOutputForFiles, normalize, type MessageAnalysis } from "./analysis";
 import { generateObject, ModelError, modelFor, type CallTrace, type ModelRole } from "./model";
-import { messagePrompt, PROMPT_VERSION, SENT_PROMPT_VERSION, systemPrompt } from "./prompts";
+import { messagePrompt, PROMPT_VERSION, SENT_PROMPT_VERSION, systemPrompt, type ThreadNote } from "./prompts";
 import { findInstructions, relativeWeekday, rollForwardYearless, stripInvisible, weekdayMismatches, type Flag } from "./safety";
 
 /** Over this many characters, a message goes to the large model. */
@@ -26,6 +26,7 @@ export async function extractMessage({
   fromMailbox = false,
   textIfFilesUnreadable = false,
   sent = false,
+  thread = [],
 }: {
   body: string;
   files?: { name: string; mimeType: string; data: Uint8Array }[]; // screenshots, photos, PDFs, in order
@@ -36,6 +37,7 @@ export async function extractMessage({
   fromMailbox?: boolean; // read from a connected mailbox: the mailbox model and the free-tier rule apply
   textIfFilesUnreadable?: boolean; // an email's files are extras: if the model can't read them, analyze its text alone
   sent?: boolean; // the person's own reply, read as their side of the deal (prompts.ts)
+  thread?: ThreadNote[]; // earlier messages in its email thread, as background (prompts.ts)
 }) {
   // Invisible characters can hide instructions a person can't see: remove them
   // before the model reads the text, and say so.
@@ -43,7 +45,7 @@ export async function extractMessage({
   const request = {
     fromMailbox,
     system: systemPrompt({ today, timeZone, outputLocale, sent }),
-    prompt: messagePrompt(visible.text, outputLocale, files),
+    prompt: messagePrompt(visible.text, outputLocale, files, thread),
     trace: { ...trace, promptVersion: sent ? SENT_PROMPT_VERSION : PROMPT_VERSION },
   };
   let transcriptWithheld = false;
@@ -60,7 +62,7 @@ export async function extractMessage({
       if (e instanceof ModelError && e.code === "unsupported_file" && textIfFilesUnreadable && visible.text.trim()) {
         // This model can't read these files (a local text-only model): the text alone, and say so.
         filesNotRead = true;
-        return generateObject({ ...asked, prompt: messagePrompt(visible.text, outputLocale, []), schema: modelOutput });
+        return generateObject({ ...asked, prompt: messagePrompt(visible.text, outputLocale, [], thread), schema: modelOutput });
       }
       if (!(e instanceof ModelError && e.code === "recitation")) throw e;
       transcriptWithheld = true;

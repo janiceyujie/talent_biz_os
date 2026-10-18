@@ -84,6 +84,28 @@ export async function reanalyzeMessage(id: string): Promise<string | null> {
   return null;
 }
 
+/** Opening an email from your history (decision 0013): it's analyzed now, like a new one. */
+export async function openFromHistory(id: string): Promise<string | null> {
+  const { person, talent } = await requireTalent();
+  const fail = await errorText();
+  if (!z.uuid().safeParse(id).success) return fail("invalid");
+  const allowed = await canAnalyze(talent.id, id);
+  if (!allowed.ok) return fail(allowed.reason === "daily" ? "aiDailyLimit" : "aiMessageLimit");
+  const locale = toLocale(person.locale);
+  const found = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(message)
+      .set({ status: "pending", failure: null })
+      .where(and(eq(message.id, id), eq(message.talentId, talent.id), eq(message.status, "history")))
+      .returning({ id: message.id });
+    if (rows.length) await queue.enqueue("message.analyze", { messageId: id, locale }, { tx, jobKey: analyzeJobKey(id), queueName: analysisQueue(talent.id) });
+    return rows.length > 0;
+  });
+  if (!found) return null; // opened already (a second click, another tab)
+  refresh();
+  return null;
+}
+
 /** Set a message aside (Dismiss), or bring it back. */
 export async function dismissMessage(id: string, dismissed: boolean): Promise<string | null> {
   const { talent } = await requireTalent();

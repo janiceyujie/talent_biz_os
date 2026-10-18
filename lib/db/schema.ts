@@ -488,7 +488,8 @@ export const messageDirections = ["received", "sent"] as const;
 export const messageRelevance = ["sure", "unsure"] as const;
 /** A Gmail attachment that wasn't fetched (not a PDF or image, or too big): listed, so the person knows it's there. */
 export type SkippedAttachment = { filename: string; mimeType: string; sizeBytes: number };
-export const messageStatuses = ["pending", "analyzed", "confirmed", "dismissed", "error"] as const;
+// `history`: from the first 30-day read, in a thread quiet for 14 days: kept for reference, analyzed only when opened.
+export const messageStatuses = ["pending", "analyzed", "confirmed", "dismissed", "error", "history"] as const;
 // `payment_notice`: a bank or payment-app notice on the restricted path (decision 0013): only its
 // fields are kept, in `notice`; never a body or files, and it's never analyzed.
 export const messageKinds = ["message", "payment_notice"] as const;

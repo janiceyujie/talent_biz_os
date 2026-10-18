@@ -648,7 +648,8 @@
       "analyzed": "待確認",
       "confirmed": "已建檔",
       "dismissed": "已略過",
-      "error": "分析失敗"
+      "error": "分析失敗",
+      "history": "過往信件"
     },
     "channel": {
       "paste": "貼上",
@@ -755,7 +756,10 @@
     "yourReply": "你的回覆",
     "sentTo": "你 → {to}",
     "repliesDone": "✓ 已完成：{titles}",
-    "undo": "復原"
+    "undo": "復原",
+    "historyGroup": "過往信件",
+    "historyInfo": "過去 30 天內、兩週沒有新進度的信件串，留著備查；打開時才會分析。",
+    "historyCount": "{count} 封"
   },
   "intake": {
     "targetHeading": "歸入合作案",

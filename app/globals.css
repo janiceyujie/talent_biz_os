@@ -3307,6 +3307,45 @@ a.disabled {
 .project-timeline .who.me {
   color: #3f3a8a;
 }
+/* From your history (components/views/inbox.tsx): older threads, collapsed below the list */
+.history-group {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.history-group > summary {
+  cursor: pointer;
+  font-size: 14px;
+}
+.history-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(80px, 0.35fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  text-align: left;
+  font-size: var(--text-meta);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.history-row > span,
+.history-row > time {
+  color: var(--muted);
+}
+.history-row > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.history-row.active > strong {
+  text-decoration: underline;
+  text-decoration-color: var(--orange);
+}
 /* A payment notice's card (components/views/payment-notice.tsx): the decision row below the targets */
 .review-actions {
   display: flex;

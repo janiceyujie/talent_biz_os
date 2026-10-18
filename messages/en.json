@@ -648,7 +648,8 @@
       "analyzed": "To review",
       "confirmed": "Filed",
       "dismissed": "Dismissed",
-      "error": "Failed"
+      "error": "Failed",
+      "history": "From your history"
     },
     "channel": {
       "paste": "Pasted",
@@ -755,7 +756,10 @@
     "yourReply": "Your reply",
     "sentTo": "You → {to}",
     "repliesDone": "✓ Done: {titles}",
-    "undo": "Undo"
+    "undo": "Undo",
+    "historyGroup": "From your history",
+    "historyInfo": "Older threads from the last 30 days, nothing new in them for two weeks. They're kept for reference; opening one analyzes it.",
+    "historyCount": "{count, plural, one {# email} other {# emails}}"
   },
   "intake": {
     "targetHeading": "File under a project",

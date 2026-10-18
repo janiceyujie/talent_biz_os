@@ -1301,7 +1301,10 @@
     "viewPayments": "到財務查看",
     "newLabel": "入帳",
     "newLabelFrom": "入帳：{payer}",
-    "paymentOption": "{project} · {label}"
+    "paymentOption": "{project} · {label}",
+    "dropTitle": "捨棄這則通知？",
+    "dropBody": "它的明細會刪除，並從進件分類移除；信件仍留在 Gmail。",
+    "dropNeverFrom": "之後不再收進「{sender}」的通知"
   },
   "settings": {
     "name": "藝名或品牌名稱",

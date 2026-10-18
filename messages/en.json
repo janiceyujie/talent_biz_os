@@ -1301,7 +1301,10 @@
     "viewPayments": "View in Finance",
     "newLabel": "Received",
     "newLabelFrom": "Received from {payer}",
-    "paymentOption": "{project} · {label}"
+    "paymentOption": "{project} · {label}",
+    "dropTitle": "Drop this notice?",
+    "dropBody": "Its details are deleted and it leaves Intake. The email stays in Gmail.",
+    "dropNeverFrom": "Also stop bringing in notices from {sender}"
   },
   "settings": {
     "name": "Artist or brand name",

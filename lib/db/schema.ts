@@ -947,3 +947,12 @@ export const mailSenderRule = pgTable(
     check("mail_sender_rule_verdict_check", oneOf(t.verdict, mailSenderVerdicts)),
   ],
 ).enableRLS();
+
+// Background worker -----------------------------------------------------------------
+
+// Each running worker's "still alive" (lib/queue/heartbeat.ts): a job locked by a
+// worker that stopped beating is released for another, instead of after Graphile's 4 hours.
+export const workerHeartbeat = pgTable("worker_heartbeat", {
+  workerId: text().primaryKey(), // Graphile's worker pool id, as it records on the jobs it locks
+  seenAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();

@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently --names web,worker --prefix-colors blue,green \"npm:dev:web\" \"npm:worker\"",
+    "dev:web": "next dev",
     "worker": "tsx --conditions=react-server worker/index.ts",
     "build": "next build",
     "start": "next start",
@@ -44,6 +45,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^10.0.6",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",

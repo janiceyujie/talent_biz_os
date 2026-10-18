@@ -15,6 +15,7 @@ import { AccountMenu } from "./account-menu";
 import { Companion } from "./companion";
 import { NotificationList, useNotifications } from "./notifications";
 import { ReminderProvider } from "./reminder-feed";
+import { DailyBriefing } from "./daily-briefing";
 import "@/app/briefing.css";
 import { PreviewBanner, useAppData } from "./app-data";
 import { Modal } from "./modal";
@@ -30,15 +31,17 @@ const rememberCollapsed = (collapsed: boolean) => {
   }
 };
 
-export function AppShell({ children }: { children: ReactNode; sessionKey: string }) {
+export function AppShell({ children, sessionKey }: { children: ReactNode; sessionKey: string }) {
   const data = useAppData();
-  return <AssistantProvider key={`${data.talent.id}:${data.person.email}:${Boolean(data.preview)}`}><ReminderProvider><ShellContent>{children}</ShellContent></ReminderProvider></AssistantProvider>;
+  return <AssistantProvider key={`${data.talent.id}:${data.person.email}:${Boolean(data.preview)}`}><ReminderProvider><ShellContent sessionKey={sessionKey}>{children}</ShellContent></ReminderProvider></AssistantProvider>;
 }
 
-function ShellContent({ children }: { children: ReactNode }) {
+function ShellContent({ children, sessionKey }: { children: ReactNode; sessionKey: string }) {
   const data = useAppData();
   const t = useTranslations("shell");
   const tNav = useTranslations("nav");
+  const tBriefing = useTranslations("briefing");
+  const [briefingRequest, setBriefingRequest] = useState(0);
   const portfolio=usePortfolio();
   const visibleNav = nav.filter(item => (item.key !== "grants" || data.grantsAvailable) && (item.key !== "manager" || data.managerAvailable));
   const pathname = usePathname();
@@ -257,10 +260,14 @@ function ShellContent({ children }: { children: ReactNode }) {
       </main>
       {showNotifications && (
         <Modal title={t("notifications", { count: unread.length })} onClose={() => setShowNotifications(false)}>
+          <button type="button" data-preview-safe="true" className="secondary" onClick={() => { setShowNotifications(false); setBriefingRequest(value => value + 1); }}>{tBriefing("title")}</button>
           <NotificationList open={open} />
         </Modal>
       )}
+      <div className="workspace-tools">
+      <DailyBriefing requestId={briefingRequest} sessionKey={sessionKey} onShow={() => setCompanionOpen(false)} onOpen={open} suppress={showNotifications || showSearch || mobile} />
       <AssistantDock hidden={mobile || showNotifications || showSearch} />
+      </div>
 
     </div>
   );

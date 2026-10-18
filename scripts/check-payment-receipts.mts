@@ -39,6 +39,7 @@ try {
   cookies.push(login.headers.getSetCookie().map(c=>c.split(";")[0]).join("; "));
  }
  await fetch(`${base}/finance`,{headers:{Cookie:cookies[0]}});
+ await fetch(`${base}/projects`,{headers:{Cookie:cookies[0]}});
  const input={projectId:actors[0].projectId,label:"Unpaid balance QA",direction:"in",installment:"regular",amount:55500,currency:"TWD",taxRate:5,taxIncluded:true,recordedDate:"2026-09-15",dueDate:today,status:"expected",settledDate:"",settledAmount:"",invoiceRef:"",notes:"Synthetic acceptance test"};
  const created=await action("savePaymentWithId",[input]);ok(created.id);
  const receipt={...input,id:created.id,status:"settled",settledDate:"2026-09-30",settledAmount:55000,receiptId:randomUUID(),receiptRevision:0,shortfallReason:"unpaid"};

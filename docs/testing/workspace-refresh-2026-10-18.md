@@ -31,3 +31,9 @@ The branch passes lint, type checking, 313 unit tests, 2,942 translation keys an
 Local HTTP acceptance on the integrated implementation covers 153 receipt checks (including withholding plus partial payments, correction/reversal, outstanding costs and re-closing), 125 invoice checks, 112 workspace/manager/grant checks, 40 inbox checks and 33 pagination checks. The fake Gmail suite passed 120 checks, created four synthetic drafts, and made zero send or overwrite calls. PDF attachment bytes match private storage. No customer email is sent. The standard Turbopack production build also passes with isolated dependencies. Test worktrees require their own dependency tree for the normal bundler: symlinked Next.js dependencies produced inconsistent request context during the isolated test run.
 
 The tax data importer and UI retain reference-only states as pending for invoice applicability. A reference row is not a reviewed service tax rule. See the tax setup documents for coverage limits and refresh work still required before production.
+
+## Final reminder validation
+
+The final branch passes lint, type checking, 313 unit tests, translation checks and the standard production build. On the final two-migration local database, the receipt suite passes 153 checks, daily reminders pass 65 checks, canonical Gmail fetch passes 9 checks, and the imported tax-reference catalogue passes 67 checks (19,219 reference rows; original rates and rules unchanged).
+
+Browser checks confirmed login agenda visibility, navigation to Finance, minimizing and reopening the agenda, and switching from preview to the actual workspace's own invoice and calendar reminders. No browser console errors were observed. Synthetic UI accounts were removed after verification.

@@ -3378,5 +3378,36 @@
     "portfolioScope": "已選藝人 · 行程與收付款提醒",
     "resumeAgenda": "開啟今日提醒 · {count} 項",
     "minimize": "收起提醒"
+  },
+  "intakeDemo": {
+    "hint": "可試操作範例分類；離開此頁或重新整理後重設，不會呼叫 Gmail 或 AI。",
+    "reset": "重設範例",
+    "resetDone": "已重設範例分類。",
+    "moved": "範例信件已移至「{tab}」。",
+    "connectHint": "連接 Gmail 後即可同步與分類信件；目前仍可貼上或上傳邀約。",
+    "connect": "連接 Gmail",
+    "connectEmpty": "請先到設定連接 Gmail，即可查看此分類的信件。",
+    "classifyWork": "模擬判定為工作信",
+    "restoreWork": "這是工作信",
+    "filterOut": "不是工作信",
+    "backToWaiting": "移回等待中",
+    "samples": {
+      "brand": {
+        "title": "【範例】保養品牌業配邀約",
+        "sender": "海港品牌工作室【範例】",
+        "body": "想邀請您參與十一月的保養品牌合作，預計製作一支業配影片及兩則限時動態。請提供檔期與報價，授權範圍及付款日期待雙方確認。"
+      },
+      "podcast": {
+        "title": "【範例】Podcast 來賓邀請",
+        "sender": "創作會客室【範例】",
+        "body": "想邀請您下個月到節目分享新作品，可以遠端錄音。請提供可配合的日期與出席費用，我們再一起確認錄製細節。"
+      },
+      "sale": {
+        "title": "【範例】攝影配件週末特賣",
+        "sender": "創作者器材商店【範例】",
+        "body": "本週相機包與燈具推出限時優惠。這是一封示範廣告電子報，沒有合作邀約，也不需要回覆。"
+      }
+    },
+    "label": "範例分類"
   }
 }

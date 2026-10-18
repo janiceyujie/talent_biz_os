@@ -8,7 +8,7 @@ import { PageLoader, useCursorPages } from "@/components/app/cursor-pages";
 import { useInboxDetail } from "@/components/app/inbox-detail";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { MoreMenu } from "./more-menu";
@@ -21,6 +21,7 @@ import { useLabels } from "@/lib/i18n/labels";
 import { detailFieldKeys, type AssumptionTopic } from "@/lib/ai/analysis";
 import { isFailureCode } from "@/lib/ai/errors";
 import { weekdayMismatchOf } from "@/lib/ai/safety";
+import { previewIntakeItems, previewIntakeTab, type PreviewIntakeTab } from "@/lib/domain/preview-intake";
 import type { InboxMessage, InboxSummary } from "@/lib/types";
 import { GmailMail, GmailSync, IntakeTabs, type IntakeTab } from "./gmail-intake";
 import { MessageReview } from "./message-review";
@@ -40,6 +41,7 @@ function InboxWorkspace() {
   const data = useAppData();
   const t = useTranslations("inbox");
   const tGmail = useTranslations("gmail");
+  const tDemo = useTranslations("intakeDemo");
   const router = useRouter();
   const params = useSearchParams();
   const format = useFormatter();
@@ -50,23 +52,31 @@ function InboxWorkspace() {
   const [showDismissed, setShowDismissed] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const pages = useCursorPages<InboxSummary>(`/api/inbox?dismissed=${showDismissed}`, data.talent.id, data.inboxOverview?.revision, !data.preview);
-  const preview = data.inbox.filter(m => showDismissed || m.status !== "dismissed");
+  const [previewOverrides, setPreviewOverrides] = useState<Record<string, PreviewIntakeTab>>({});
+  const demoItems = data.preview ? previewIntakeItems(data.inbox, tDemo) : [];
+  const preview = demoItems.filter(item => previewIntakeTab(item, previewOverrides) === tab).map(item => item.message)
+    .filter(m => showDismissed || m.status !== "dismissed");
+  const previewCounts = { messages: 0, waiting: 0, skipped: 0 };
+  for (const item of demoItems) {
+    const category = previewIntakeTab(item, previewOverrides);
+    if (category !== "messages" || ["analyzed", "error"].includes(item.message.status)) previewCounts[category]++;
+  }
+  const movePreview = (id: string, destination: PreviewIntakeTab) => {
+    if (!data.preview || !demoItems.some(item => item.message.id === id)) return;
+    setPreviewOverrides(current => ({ ...current, [id]: destination }));
+    setTab(destination);
+    setActive(id);
+    setNotice(tDemo("moved", { tab: tGmail(destination === "messages" ? "tabMessages" : destination === "waiting" ? "tabWaiting" : "tabSkipped") }));
+  };
   const visible: InboxSummary[] = data.preview ? preview.map(m => ({ ...m, title: m.analysis?.title || fallbackTitle(m, t),
     snippet: (m.analysis?.summary || m.body || m.files.map(f => f.filename).join(", ")).slice(0, 110), flagged: !!m.analysis?.flags.length, fileCount: m.files.length })) : pages.items;
   const selectedId = active;
   const detail = useInboxDetail(selectedId, data.talent.id, data.inboxOverview?.revision ?? "", !data.preview);
-  const message = data.preview ? data.inbox.find(m => m.id === selectedId) : detail.message;
+  const message = data.preview ? demoItems.find(item => item.message.id === selectedId)?.message : detail.message;
   const analyzing = data.inboxOverview ? data.inboxOverview.counts.pending > 0 : data.inbox.some(m => m.status === "pending");
   const tPage = useTranslations("pagination");
   const requestedId = params.get("message") ?? "";
   useEffect(() => { if (requestedId) queueMicrotask(() => {setActive(requestedId);setTab("messages");}); }, [requestedId]);
-  const backToList = () => {
-    setActive("");
-    if (params.has("message")) {
-      const next = new URLSearchParams(params.toString()); next.delete("message");
-      router.replace(`/inbox${next.size ? `?${next}` : ""}`, { scroll: false });
-    }
-  };
 
   // ?paste=1 / ?upload=1 (the header's Import offer here, Today's Upload an offer) open a dialog —
   // also when already on this page, where the address changes without a reload —
@@ -81,10 +91,39 @@ function InboxWorkspace() {
 
   // Analysis runs in the background; refresh until it lands.
   useEffect(() => {
-    if (!analyzing) return;
+    if (data.preview || !analyzing) return;
     const timer = setInterval(() => router.refresh(), ANALYSIS_POLL_MS);
     return () => clearInterval(timer);
-  }, [analyzing, router]);
+  }, [analyzing, data.preview, router]);
+
+  const renderCard = (m: InboxSummary) => (
+    <div className={`mail-item single ${selectedId === m.id ? "is-active" : ""}`} key={m.id}>
+      <button
+        data-preview-safe="true"
+        className={`mail-summary ${selectedId === m.id ? "active" : ""}`}
+        aria-pressed={selectedId === m.id}
+        onClick={() => setActive(m.id)}
+      >
+        <small>
+          {data.preview && tab !== "messages" ? <em className="message-status">{tGmail(tab === "waiting" ? "tabWaiting" : "tabSkipped")}</em> : <StatusChip status={m.status} />}
+          {m.flagged && <em className="message-status status-flagged">{t("flagChip")}</em>} {t(`channel.${m.channel}`)}
+        </small>
+        <strong>{m.title || (m.fileCount ? t("filesCount", { count: m.fileCount }) : t("untitled"))}</strong>
+        <span className="mail-snippet">{m.snippet}</span>
+        <span className="mail-summary-meta">
+          <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
+          {m.status === "confirmed" && m.projectId && <span>{t("filedChip")}</span>}
+        </span>
+      </button>
+    </div>
+  );
+  const selectedSummary = visible.find(m => m.id === selectedId) ?? (message ? {
+    ...message,
+    title: message.analysis?.title || fallbackTitle(message, t),
+    snippet: (message.analysis?.summary || message.body || message.files.map(f => f.filename).join(", ")).slice(0, 110),
+    flagged: !!message.analysis?.flags.length,
+    fileCount: message.files.length,
+  } : null);
 
   return (
     <div className="inbox-workspace">
@@ -111,52 +150,51 @@ function InboxWorkspace() {
           </p>
         )}
       </section>
-      {!data.preview && <IntakeTabs tab={data.gmail.connection ? tab : "messages"} onTab={setTab} />}
-      {data.gmail.connection && !data.preview && tab !== "messages" ? <GmailMail key={tab} view={tab} onNotice={setNotice} /> : (
-      <InboxReaderLayout reading={!!selectedId} title={message ? (message.analysis?.title || fallbackTitle(message, t)) : (visible.find(m => m.id === selectedId)?.title ?? tPage("loading"))} listLabel={t("listLabel")} onBack={backToList} list={<>
+      <IntakeTabs tab={tab} onTab={next => { setTab(next); setActive(""); setNotice(null); }} previewCounts={data.preview ? previewCounts : undefined} />
+      {data.preview && <div className="intake-demo-toolbar" data-preview-safe="true">
+        <span>{tDemo("label")} <InfoHint label={tDemo("label")} notes={[tDemo("hint")]} /></span>
+        <button className="text-button" onClick={() => { setPreviewOverrides({}); setActive(""); setTab("messages"); setNotice(tDemo("resetDone")); }}>{tDemo("reset")}</button>
+      </div>}
+      {!data.preview && !data.gmail.connection && <div className="notice intake-connect-notice" role="note">
+        <span>{tDemo("connectHint")}</span><Link className="secondary" href="/settings">{tDemo("connect")}</Link>
+      </div>}
+      {!data.preview && tab !== "messages" ? (data.gmail.connection ? <GmailMail key={tab} view={tab} onNotice={setNotice} /> :
+        <section id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${tab}`} className="surface padded section-gap empty">
+          <h2>{tGmail(tab === "waiting" ? "tabWaiting" : "tabSkipped")}</h2><p>{tDemo("connectEmpty")}</p>
+        </section>) : (
+      <div id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${tab}`}>
+
+      <InboxReaderLayout selectedId={selectedId} selectedCard={selectedSummary ? renderCard(selectedSummary) : <p role="status">{tPage("loading")}</p>} listLabel={t("listLabel")} list={<>
           <div className="inbox-list-heading">
             <h2>
-              {t("listHeading")}
+              {tab === "messages" ? t("listHeading") : tGmail(tab === "waiting" ? "tabWaiting" : "tabSkipped")}
             </h2>
             <span role="status">{!data.preview && pages.total === null ? tPage("loading") : t("listCount", { count: data.preview ? visible.length : (pages.total ?? 0) })}</span>
           </div>
-          <label className="check-line">
+          {tab === "messages" && <label className="check-line">
             <input data-preview-safe="true" type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} />
             {t("showDismissed")}
-          </label>
+          </label>}
           {!visible.length && (data.preview || (!pages.loading && !pages.failed)) && (
             <div className="empty">
-              <h3>{t("emptyTitle")}</h3>
-              <p>{t("emptyBody")}</p>
+              <h3>{tab === "messages" ? t("emptyTitle") : tGmail(tab === "waiting" ? "emptyWaiting" : "emptySkipped")}</h3>
+              {tab === "messages" && <p>{t("emptyBody")}</p>}
             </div>
           )}
-          {visible.map((m) => (
-            <div className={`mail-item single ${selectedId === m.id ? "is-active" : ""}`} key={m.id}>
-              <button
-                data-preview-safe="true"
-                className={`mail-summary ${selectedId === m.id ? "active" : ""}`}
-                aria-pressed={selectedId === m.id}
-                onClick={() => setActive(m.id)}
-              >
-                <small>
-                  <StatusChip status={m.status} />
-                  {m.flagged && <em className="message-status status-flagged">{t("flagChip")}</em>} {t(`channel.${m.channel}`)}
-                </small>
-                <strong>{m.title || (m.fileCount ? t("filesCount", { count: m.fileCount }) : t("untitled"))}</strong>
-                <span className="mail-snippet">{m.snippet}</span>
-                <span className="mail-summary-meta">
-                  <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
-                  {m.status === "confirmed" && m.projectId && <span>{t("filedChip")}</span>}
-                </span>
-              </button>
-            </div>
-          ))}
+          {visible.map(renderCard)}
           {!data.preview && <PageLoader page={pages} />}
         </>}>
-          {message ? <MessageDetail key={message.id} message={message} /> : (
-            detail.failed ? <div role="alert"><p>{t("detailUnavailable")}</p><button className="secondary" onClick={detail.retry}>{tPage("retry")}</button></div> : <p className="empty" role="status">{tPage("loading")}</p>
+          {message ? (data.preview && tab !== "messages" ? <>
+            <h2>{message.analysis?.title || fallbackTitle(message, t)}</h2>
+            <p className="review-meta">{message.analysis?.counterparty.name}</p>
+            <p className="prewrap">{message.body}</p>
+            <PreviewClassification tab={tab} onMove={destination => movePreview(message.id, destination)} />
+          </> : <MessageDetail key={message.id} message={message} previewActions={data.preview ?
+            <PreviewClassification tab="messages" onMove={destination => movePreview(message.id, destination)} /> : undefined} />) : (
+            !selectedId ? <p className="empty">{t("pick")}</p> : detail.failed ? <div role="alert"><p>{t("detailUnavailable")}</p><button className="secondary" onClick={detail.retry}>{tPage("retry")}</button></div> : <p className="empty" role="status">{tPage("loading")}</p>
           )}
       </InboxReaderLayout>
+      </div>
       )}
       {pasting && !data.preview && (
         <PasteDialog
@@ -184,6 +222,16 @@ function InboxWorkspace() {
   );
 }
 
+/** These actions only update isolated display state, never server actions. */
+function PreviewClassification({ tab, onMove }: { tab: IntakeTab; onMove: (tab: PreviewIntakeTab) => void }) {
+  const t = useTranslations("intakeDemo");
+  return <div className="row-actions section-gap" data-preview-safe="true">
+    {tab !== "messages" && <button className="primary" onClick={() => onMove("messages")}>{t(tab === "waiting" ? "classifyWork" : "restoreWork")}</button>}
+    {tab !== "skipped" && <button className="secondary" onClick={() => onMove("skipped")}>{t("filterOut")}</button>}
+    {tab !== "waiting" && <button className="text-button" onClick={() => onMove("waiting")}>{t("backToWaiting")}</button>}
+  </div>;
+}
+
 /** Why an analysis failed, in the person's language; older messages stored the provider's own words. */
 function failureText(failure: string | null, t: ReturnType<typeof useTranslations<"inbox">>) {
   return isFailureCode(failure) ? t(`failure.${failure}`) : (failure ?? "");
@@ -200,7 +248,7 @@ function StatusChip({ status }: { status: InboxMessage["status"] }) {
 }
 
 
-function MessageDetail({ message }: { message: InboxMessage }) {
+function MessageDetail({ message, previewActions }: { message: InboxMessage; previewActions?: ReactNode }) {
   const t = useTranslations("inbox");
   const labels = useLabels();
   const tGmail = useTranslations("gmail");
@@ -294,7 +342,7 @@ function MessageDetail({ message }: { message: InboxMessage }) {
       {analyzed && <Terms analysis={a} />}
       <Original message={message} />
 
-      {data.preview&&<p className="notice">{preview("readOnly")}</p>}
+      {data.preview && (previewActions ?? <p className="notice">{preview("readOnly")}</p>)}
       {!data.preview && message.status === "analyzed" && a && <MessageReview key={a.promptVersion + a.modelVersion} message={message} />}
       {message.status === "confirmed" && message.projectId && (
         <div className="row-actions section-gap">

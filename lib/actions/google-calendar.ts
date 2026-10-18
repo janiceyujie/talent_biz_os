@@ -3,14 +3,13 @@
 import { and, eq, ne, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { refresh } from "next/cache";
-import { after } from "next/server";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { authAccount, calendarConnection, calendarImportSource } from "@/lib/db/schema";
 import { googleCalendar, revokeGoogleToken } from "@/lib/calendar/google/api";
 import { importConnection } from "@/lib/calendar/google/import";
 import { CALENDAR_SCOPE, hasScopes, IMPORT_SCOPES } from "@/lib/calendar/google/scope";
-import { accessToken, syncConnection } from "@/lib/calendar/google/sync";
+import { accessToken, queueCalendarSync, syncConnection } from "@/lib/calendar/google/sync";
 import { errorText } from "./validation";
 
 // Connecting, syncing, and disconnecting Google Calendar (decision 0009).
@@ -41,7 +40,7 @@ export async function connectGoogleCalendar(): Promise<string | null> {
       set: { authAccountId: account.id, status: "connected", lastError: null, dirty: true },
     })
     .returning({ id: calendarConnection.id });
-  after(() => syncConnection(connection.id));
+  await queueCalendarSync(connection.id);
   refresh();
   return null;
 }

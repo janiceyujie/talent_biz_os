@@ -1,5 +1,6 @@
 import type { Task } from "graphile-worker";
 import { analyzeMessage, markAnalysisFailed } from "@/lib/ai/analyze-message";
+import { runCalendarSync } from "@/lib/calendar/google/sync";
 import { disconnectMailbox } from "@/lib/mail/jobs/disconnect";
 import { cleanup } from "@/lib/mail/jobs/cleanup";
 import { fetchDecision } from "@/lib/mail/jobs/fetch";
@@ -55,7 +56,11 @@ const tasks: Record<JobName, Task> = {
     const { connectionId, keep } = jobs["mail.disconnect"].parse(payload);
     await disconnectMailbox(connectionId, { lastAttempt: job.attempts >= job.max_attempts, keep });
   },
-  "mail.reconcile": async () => {
+  "calendar.sync": async (payload) => {
+    const { connectionId, attempt } = jobs["calendar.sync"].parse(payload);
+    await runCalendarSync(connectionId, attempt);
+  },
+    "mail.reconcile": async () => {
     await reconcile();
   },
   "mail.cleanup": async () => {

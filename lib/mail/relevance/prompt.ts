@@ -12,7 +12,8 @@ export const mailKinds = [
   "negotiation", // terms, fees, or dates being worked out
   "contract", // a contract, agreement, or e-signature
   "logistics", // schedules, call times, travel, riders, deliverables
-  "payment", // payment notices, invoices, remittances, bank or payment-app notifications
+  "payment", // a person or company writing about a payment: invoices, remittance advice, payment terms
+  "bank_notice", // an automated notice from a bank or payment app about money moving in the person's account
   "press", // press, interview, or podcast requests
   "newsletter", // newsletters, digests, open calls sent to a list
   "marketing", // sales and promotions
@@ -24,7 +25,7 @@ export const mailKinds = [
 export type MailKind = (typeof mailKinds)[number];
 
 /** Kinds that are the person's own work business: the score should be high for these. */
-export const workKinds: readonly MailKind[] = ["offer", "negotiation", "contract", "logistics", "payment", "press"];
+export const workKinds: readonly MailKind[] = ["offer", "negotiation", "contract", "logistics", "payment", "bank_notice", "press"];
 
 export const relevanceOutput = z.object({
   kind: z.enum(mailKinds),
@@ -44,7 +45,7 @@ const SYSTEM = `You sort the email of an independent creative professional — a
 
 Decide two things:
 - kind: what the email most likely is, one of: ${mailKinds.join(", ")}.
-  offer: an offer, inquiry, booking or collaboration request, or a question about availability or rates. negotiation: terms, fees, or dates being worked out. contract: a contract, agreement, or e-signature request. logistics: schedules, call times, travel, riders, deliverables for a job. payment: a payment notice, invoice, remittance, or a bank or payment-app notification. press: a press, interview, or podcast request. newsletter: a newsletter, digest, or open call sent to a list. marketing: sales and promotions. receipt: the person's own purchases and orders. personal: friends, family, fans. notification: accounts, security, social networks, apps.
+  offer: an offer, inquiry, booking or collaboration request, or a question about availability or rates. negotiation: terms, fees, or dates being worked out. contract: a contract, agreement, or e-signature request. logistics: schedules, call times, travel, riders, deliverables for a job. payment: a person or company writing about a payment, such as an invoice, remittance advice, or payment terms. bank_notice: an automated notice from a bank or payment app about money moving in the person's own account, in or out. press: a press, interview, or podcast request. newsletter: a newsletter, digest, or open call sent to a list. marketing: sales and promotions. receipt: the person's own purchases and orders. personal: friends, family, fans. notification: accounts, security, social networks, apps.
 - score: from 0 to 1, how likely it is that this email is about the person's own work business — offers, deals, contracts, logistics, payments to them, press — and needs their attention. Use the whole range:
   0.9 to 1: clearly their work, such as an offer, a booking, a negotiation, a contract, a schedule for a job, a payment to them, a press request.
   0.6 to 0.8: probably their work.
@@ -53,7 +54,7 @@ Decide two things:
 
 Guidance:
 - Missing real work costs far more than a second look at something that isn't: if an email could be work and you can't tell, use 0.3 to 0.5 rather than 0 to 0.1.
-- A bank or payment app saying money arrived in their account is a payment to them: work.
+- A bank or payment app saying money arrived in their account is a payment to them: kind bank_notice, and work. A notice of their own card spending or a transfer they sent is kind bank_notice too, but not work.
 - A platform or agency notifying them of a booking, an offer, a payment, or a contract to sign is work, even when sent automatically.
 - Sales, newsletters, social-network notifications, and the person's own purchases are not work, even when they mention words like "offer", "collab", or "deal".
 - A Gmail tab is a hint, not proof: real offers sometimes land in Promotions.

@@ -24,6 +24,7 @@ import {
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
 import { historyModes } from "../mail/history";
+import type { NoticeFields } from "../mail/payment-notice/fields";
 import { mailKinds } from "../mail/relevance/prompt";
 import { ruleIds } from "../mail/relevance/rules";
 import { contactRoles, stages as projectStages, transportModes, type ContractTerms, type ProjectDetails, type TermChange } from "../types"; // relative: drizzle-kit loads this file too
@@ -488,6 +489,9 @@ export const messageRelevance = ["sure", "unsure"] as const;
 /** A Gmail attachment that wasn't fetched (not a PDF or image, or too big): listed, so the person knows it's there. */
 export type SkippedAttachment = { filename: string; mimeType: string; sizeBytes: number };
 export const messageStatuses = ["pending", "analyzed", "confirmed", "dismissed", "error"] as const;
+// `payment_notice`: a bank or payment-app notice on the restricted path (decision 0013): only its
+// fields are kept, in `notice`; never a body or files, and it's never analyzed.
+export const messageKinds = ["message", "payment_notice"] as const;
 
 export const message = pgTable(
   "message",
@@ -499,6 +503,8 @@ export const message = pgTable(
     projectId: uuid().references(() => project.id, { onDelete: "set null" }), // null until confirmed
     submittedBy: uuid().references(() => person.id), // who sent it in; for Gmail, who connected the mailbox
     channel: text({ enum: messageChannels }).notNull(),
+    kind: text({ enum: messageKinds }).notNull().default("message"),
+    notice: jsonb().$type<NoticeFields>(), // a payment notice's fields; null for every other message
     externalRef: text(), // Gmail message id, when channel = gmail or gmail_addon
     // A connected mailbox's email (decision 0013). Kept, unlinked, if the mailbox is disconnected and filed mail kept.
     connectionId: uuid().references((): AnyPgColumn => mailConnection.id, { onDelete: "set null" }),
@@ -509,6 +515,7 @@ export const message = pgTable(
     direction: text({ enum: messageDirections }).notNull().default("received"),
     relevance: text({ enum: messageRelevance }),
     sender: text(), // "Name <address>", as the email states it (a claim, decision 0007)
+    recipients: text(), // the To line of the person's own sent mail, as written
     subject: text(),
     skippedAttachments: jsonb().$type<SkippedAttachment[]>(),
     receivedAt: timestamp({ withTimezone: true }).notNull(),
@@ -528,6 +535,9 @@ export const message = pgTable(
     check("message_direction_check", oneOf(t.direction, messageDirections)),
     check("message_relevance_check", oneOf(t.relevance, messageRelevance)),
     check("message_status_check", oneOf(t.status, messageStatuses)),
+    check("message_kind_check", oneOf(t.kind, messageKinds)),
+    // A payment notice keeps its fields only: the database refuses a body on one.
+    check("message_notice_check", sql`(${t.kind} = 'payment_notice') = (${t.notice} is not null) and (${t.kind} <> 'payment_notice' or ${t.bodyText} is null)`),
   ],
 ).enableRLS();
 
@@ -679,6 +689,8 @@ export const todo = pgTable(
     projectId: uuid().references(() => project.id, { onDelete: "cascade" }),
     paymentId: uuid().references(() => payment.id, { onDelete: "set null" }),
     messageId: uuid().references(() => message.id, { onDelete: "set null" }), // the message a reply to-do is about
+    // The person's own sent reply that marked this reply to-do done (Undo reopens it).
+    completedByMessageId: uuid().references((): AnyPgColumn => message.id, { onDelete: "set null" }),
     type: text({ enum: todoTypes }).notNull().default("custom"),
     title: text().notNull(),
     dueDate: date(),
@@ -874,8 +886,9 @@ export const mailConnection = pgTable(
 // analysis or the person said it isn't work, so its body and files were deleted.
 export const mailDecisionOutcomes = ["work", "skipped", "pending", "unsure", "not_work"] as const;
 // Who decided: a rule (lib/mail/relevance/rules.ts), the model, the person with
-// a sender rule, or `gone` when the email was deleted in Gmail before the model saw it.
-export const mailDecisionDeciders = [...ruleIds, "model", "analysis", "person", "gone"] as const;
+// a sender rule, `gone` when the email was deleted in Gmail before the model saw it, or
+// `expired` when a payment notice was left unhandled for 30 days.
+export const mailDecisionDeciders = [...ruleIds, "model", "analysis", "person", "gone", "expired"] as const;
 
 export const mailDecision = pgTable(
   "mail_decision",

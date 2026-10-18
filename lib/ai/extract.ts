@@ -2,7 +2,7 @@ import "server-only";
 import type { Locale } from "@/lib/i18n/config";
 import { modelOutput, modelOutputForFiles, normalize, type MessageAnalysis } from "./analysis";
 import { generateObject, ModelError, type CallTrace } from "./model";
-import { messagePrompt, PROMPT_VERSION, systemPrompt } from "./prompts";
+import { messagePrompt, PROMPT_VERSION, SENT_PROMPT_VERSION, systemPrompt } from "./prompts";
 import { findInstructions, relativeWeekday, rollForwardYearless, stripInvisible, weekdayMismatches, type Flag } from "./safety";
 
 /**
@@ -20,6 +20,7 @@ export async function extractMessage({
   trace,
   fromMailbox = false,
   textIfFilesUnreadable = false,
+  sent = false,
 }: {
   body: string;
   files?: { name: string; mimeType: string; data: Uint8Array }[]; // screenshots, photos, PDFs, in order
@@ -29,15 +30,16 @@ export async function extractMessage({
   trace: Omit<CallTrace, "promptVersion">; // what the call is for and whom (ai_call log)
   fromMailbox?: boolean; // read from a connected mailbox: the mailbox model and the free-tier rule apply
   textIfFilesUnreadable?: boolean; // an email's files are extras: if the model can't read them, analyze its text alone
+  sent?: boolean; // the person's own reply, read as their side of the deal (prompts.ts)
 }) {
   // Invisible characters can hide instructions a person can't see: remove them
   // before the model reads the text, and say so.
   const visible = stripInvisible(body);
   const request = {
     fromMailbox,
-    system: systemPrompt({ today, timeZone, outputLocale }),
+    system: systemPrompt({ today, timeZone, outputLocale, sent }),
     prompt: messagePrompt(visible.text, outputLocale, files),
-    trace: { ...trace, promptVersion: PROMPT_VERSION },
+    trace: { ...trace, promptVersion: sent ? SENT_PROMPT_VERSION : PROMPT_VERSION },
   };
   let transcriptWithheld = false;
   let filesNotRead = false;
@@ -78,7 +80,7 @@ export async function extractMessage({
     transcriptWithheld,
     filesNotRead,
   };
-  return { analysis: { ...analysis, flags: withChecks(analysis, visible) }, modelVersion, promptVersion: PROMPT_VERSION };
+  return { analysis: { ...analysis, flags: withChecks(analysis, visible) }, modelVersion, promptVersion: request.trace.promptVersion };
 }
 
 /**

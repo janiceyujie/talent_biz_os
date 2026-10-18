@@ -7,7 +7,7 @@ import { queue } from "@/lib/queue";
 import { relevanceJobKey, relevanceQueue } from "@/lib/queue/jobs";
 import { accessToken, MailAccessLost, markReconnectNeeded } from "../access";
 import { gmailProvider } from "../gmail";
-import { RULES_VERSION } from "../relevance/rules";
+import { isBulk, RULES_VERSION } from "../relevance/rules";
 import { scoreMail } from "../relevance/score";
 import { outcomeFor } from "../relevance/thresholds";
 import { queueFetch } from "./fetch";
@@ -66,6 +66,9 @@ export async function scoreDecision(decisionId: string) {
 
   // An email that tries to steer the check is never decided as work without a person: at most "Not sure".
   const scoredOutcome = outcomeFor(scored.score);
+  // A payment email sent by a machine is treated as a bank or payment-app notice: the restricted
+  // path (./notice.ts) keeps less, so when unsure, it's the safe side. A person's own email stays payment.
+  const kind = scored.kind === "payment" && isBulk(mail) ? "bank_notice" : scored.kind;
   const outcome = scored.steered && scoredOutcome === "work" ? "unsure" : scoredOutcome;
   await db.transaction(async (tx) => {
     const [updated] = await tx
@@ -74,7 +77,7 @@ export async function scoreDecision(decisionId: string) {
         outcome,
         decidedBy: "model",
         score: Math.round(scored.score * 1000) / 1000,
-        kind: scored.kind,
+        kind,
         classifierVersion: `${RULES_VERSION}+${scored.promptVersion}+${scored.modelVersion}`,
       })
       .where(and(eq(mailDecision.id, d.id), eq(mailDecision.outcome, "pending")))
@@ -82,7 +85,8 @@ export async function scoreDecision(decisionId: string) {
     if (!updated) return;
     if (outcome !== "skipped") await queueFetch(c.id, d.id, tx);
     // Thread memory: the rest of a work thread is work, without asking the model again.
-    if (outcome === "work") {
+    // Not a bank notice's: each of a bank's notices, often in one thread, takes the restricted path.
+    if (outcome === "work" && kind !== "bank_notice") {
       const joined = await tx
         .update(mailDecision)
         .set({ outcome: "work", decidedBy: "thread", classifierVersion: RULES_VERSION })

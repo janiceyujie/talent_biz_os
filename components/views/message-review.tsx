@@ -8,9 +8,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { InfoHint } from "@/components/app/info-hint";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
-import { applyMessage, createProjectFromMessage, type NewProjectInput } from "@/lib/actions/intake";
-import { dateInZone } from "@/lib/domain/dates";
-import { filedMessages, keptFields, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext, type TargetReason } from "@/lib/domain/intake";
+import { applyMessage, createProjectFromMessage, fileThread, type NewProjectInput } from "@/lib/actions/intake";
+import { initialEdit, intakeContext, keptFields, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext, type TargetReason } from "@/lib/domain/intake";
 import { projectTypes, type ProjectType } from "@/lib/project-types";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
@@ -19,46 +18,12 @@ import type { InboxMessage, Project, ProjectSummary, Stage, TermChange } from "@
 type Analysis = NonNullable<InboxMessage["analysis"]>;
 type Edit = Record<string, unknown>;
 
-/** The editable part of each item, in the shape the server's apply action takes. */
-function initialEdit(c: Change): Edit {
-  switch (c.kind) {
-    case "fee":
-    case "field":
-    case "contractNotes":
-      return { to: c.to };
-    case "date":
-      return { date: c.to.date, time: c.to.time };
-    case "settlePayment":
-      return { amount: c.amount, settledOn: c.settledOn };
-    case "newPayment":
-      return { amount: c.amount, date: c.date };
-    case "todo":
-      return { dueDate: c.dueDate };
-    case "toConfirm":
-      return { items: c.items };
-    default:
-      return {};
-  }
-}
-
 export function MessageReview({ message }: { message: InboxMessage }) {
   const data = useAppData();
   const t = useTranslations("intake");
   const tInbox = useTranslations("inbox");
   const a = message.analysis!;
-  const ctx = useMemo<IntakeContext>(
-    () => ({
-      projects: data.projects,
-      contacts: data.contacts,
-      payments: data.payments,
-      calendar: data.calendar,
-      receivedOn: dateInZone(data.talent.timeZone, 0, new Date(message.receivedAt)),
-      replyWithinDays: data.person.replyWithinDays,
-      filed: filedMessages(data.inbox, message.id),
-      contracts: data.contracts,
-    }),
-    [data, message.id, message.receivedAt],
-  );
+  const ctx = useMemo<IntakeContext>(() => intakeContext(data, message), [data, message]);
   const suggestions = useMemo(() => suggestTargets(a, ctx).slice(0, 3), [a, ctx]);
   const [target, setTarget] = useState<string>(suggestions[0]?.projectId ?? "new");
   const [other, setOther] = useState("");
@@ -104,9 +69,38 @@ export function MessageReview({ message }: { message: InboxMessage }) {
           </div>
         )}
       </div>
+      {target === ctx.thread.projectId && <ThreadBatch message={message} projectId={target} />}
       {target === "new" && <NewProject message={message} analysis={a} ctx={ctx} />}
       {chosen && <ChangesFor key={chosen.id} message={message} analysis={a} project={chosen} ctx={ctx} />}
     </section>
+  );
+}
+
+/** File all: the other messages waiting in this email thread go under the same project, with their ticked items. */
+function ThreadBatch({ message, projectId }: { message: InboxMessage; projectId: string }) {
+  const t = useTranslations("intake");
+  const data = useAppData();
+  const [pending, startTransition] = useTransition();
+  const [result, setResult] = useState<string | null>(null);
+  const waiting = data.inbox.filter((m) => m.id !== message.id && m.status === "analyzed" && !m.notice && m.gmail?.threadId === message.gmail?.threadId);
+  if (!waiting.length) return null;
+  const ids = [message.id, ...waiting.map((m) => m.id)];
+  return (
+    <div className="thread-batch">
+      <span>{result ?? t("threadWaiting", { count: waiting.length })}</span>
+      <button
+        className="secondary"
+        disabled={pending}
+        onClick={() =>
+          startTransition(async () => {
+            const r = await fileThread({ messageIds: ids, projectId });
+            setResult("error" in r ? r.error : r.left ? t("threadLeft", { count: r.left }) : null);
+          })
+        }
+      >
+        {t("threadFileAll", { count: ids.length })}
+      </button>
+    </div>
   );
 }
 
@@ -329,6 +323,16 @@ function ChangeRow({
         <>
           {c.status === "signed" && <strong>{t("contractSigned")}</strong>}
           <TermDiff diff={c.diff} against={c.against} same={c.same} type={project.type} />
+        </>
+      );
+      break;
+    case "contact":
+      label = t("change.contact");
+      body = (
+        <>
+          {c.name} · {c.email}{" "}
+          <input className="change-edit" aria-label={t("contactLabel")} placeholder={t("contactLabel")} value={String(edit.label ?? "")} onChange={(e) => onEdit({ label: e.target.value })} />
+          <span className="change-hint">{c.contactId ? t("contactExisting") : t("contactNew")}</span>
         </>
       );
       break;

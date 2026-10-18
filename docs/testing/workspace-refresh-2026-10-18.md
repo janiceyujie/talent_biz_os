@@ -2,13 +2,52 @@
 
 Base: origin/main at 5f03a9169b49871e862030447489eb0441c8fbed (Janice Gmail intake updates).
 
-Existing remote branches are retained as historical backups. Do not merge them again alongside these refreshed branches.
+The six superseded personal remote branches have been removed at Timothy's request. Their commit tips and a verified Git bundle remain backed up locally. Do not recreate or merge them alongside these refreshed branches.
 
 1. `user/timothy0324/workspace-foundation`, reviewed against `main`: the previously published workspace features, including delegated manager access, grants, editable document templates, assistant safeguards, finance tools, bounded list loading and mailbox compatibility. These share schema and workspace identity, so this is the shared base rather than duplicate patches on each subsequent branch.
 2. `user/timothy0324/invoice-settlement`, reviewed against the foundation branch: invoice preparation, PDF, Gmail drafts, tax references, partial receipts and withholding, correction history, project settlement and archive controls.
 3. `user/timothy0324/daily-reminder-experience`, reviewed against invoice-settlement: login agenda and a persistent minimized launcher for continuing today's work.
 
 Review in that order. These are dependent branches, not three independent changes against main. After squash-merging a parent, rebase the remaining delta onto the resulting main and rerun CI before merging the child. Do not merge the final cumulative branch and then merge its parents again.
+
+## Intake follow-up and branch coverage
+
+The intake update belongs to `workspace-foundation`: stable list/reader columns,
+Back keeps the open message and reading position, all three intake tabs remain
+visible, and isolated sample classification supports moving, restoring and
+resetting examples. Disconnected workspaces show a Gmail connection entry.
+Preview actions never call a mailbox, model or workspace mutation.
+
+This follow-up is merged into each dependent branch in order, without rewriting
+already published commits. The final reminder branch contains the complete local
+product; the foundation and invoice branches intentionally stop at their own
+feature scope. No branch is merged into main by this publication.
+
+The six removed branch tips were checked against the refreshed source trees:
+
+| Removed branch | Retained scope | Refreshed destination |
+| --- | --- | --- |
+| `workspace-setup` | Initial setup, already an ancestor of main | main and all three branches |
+| `contract-storage` | Document template storage, versions and downloads | workspace-foundation |
+| `workspace-experience` | Workspace navigation, calendar, editor and UI improvements | workspace-foundation |
+| `finance-cashflow` | Cash-flow planning and multi-currency finance | workspace-foundation |
+| `assistant-efficiency` | Local-answer routing, context and history efficiency | workspace-foundation |
+| `workspace-features` | Integrated manager access, grants, contracts, finance and paging | workspace-foundation |
+
+All paths changed by those old feature branches still exist in the final source
+except the superseded local migration files `0025_document_template.sql`,
+`0026_sad_thaddeus_ross.sql` and `0029_integrated_local_features.sql`. Their schema
+changes are represented by the refreshed migration chain described below; they
+must not be replayed alongside it. Gmail-related implementations were reconciled
+with Janice's newer main instead of retaining duplicate older code. This is a
+source and regression audit, not a claim of new end-to-end live-provider testing.
+
+The current local preview flow was browser-checked using synthetic data: waiting
+mail moves to Messages or Filtered out, restoration updates counts, empty states
+remain usable, reset restores the fixtures, and disconnected tabs show a
+connection prompt. The preceding local full suite passed 313 tests; foundation
+passes its 257 tests, type check, lint and translation checks. No production data
+or real mailbox is used.
 
 ## Integration choices
 

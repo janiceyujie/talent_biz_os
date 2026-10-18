@@ -2798,5 +2798,36 @@
     "unavailable": "This email is unavailable or access has changed.",
     "disabled": "Gmail review is not enabled in this environment.",
     "review_required": "Review this email before importing. Payment notices must be handled separately."
+  },
+  "intakeDemo": {
+    "hint": "Try sample classification here. Changes reset when you leave this page or reload. No Gmail or AI calls.",
+    "reset": "Reset samples",
+    "resetDone": "Sample categories reset.",
+    "moved": "Sample moved to {tab}.",
+    "connectHint": "Connect Gmail to sync and classify email. You can still paste or upload offers.",
+    "connect": "Connect Gmail",
+    "connectEmpty": "Connect Gmail in Settings to see email in this category.",
+    "classifyWork": "Simulate: work email",
+    "restoreWork": "This was work",
+    "filterOut": "Not work",
+    "backToWaiting": "Move back to Waiting",
+    "samples": {
+      "brand": {
+        "title": "[Sample] Skincare campaign invitation",
+        "sender": "Harbor Studio [Sample]",
+        "body": "We would like to discuss one sponsored video and two stories for our November campaign. Please share your availability and quote; usage rights and payment dates are still to be agreed."
+      },
+      "podcast": {
+        "title": "[Sample] Podcast guest invitation",
+        "sender": "Studio Talks [Sample]",
+        "body": "Would you join our podcast next month to discuss your latest release? We can record remotely. Please let us know your availability and appearance fee."
+      },
+      "sale": {
+        "title": "[Sample] Camera accessories weekend sale",
+        "sender": "Creator Shop [Sample]",
+        "body": "Our weekly promotion includes camera bags and lighting equipment. This is a sample advertisement, not a collaboration offer."
+      }
+    },
+    "label": "Sample classification"
   }
 }

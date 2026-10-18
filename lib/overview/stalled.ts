@@ -16,19 +16,21 @@ export function stalledDeals({
   today,
   timeZone,
   days = STALLED_DAYS,
+  latestActivity = {},
 }: {
   projects: ProjectSummary[];
   inbox: InboxMessage[];
   today: string;
   timeZone: string;
   days?: number;
+  latestActivity?: Record<string, string>;
 }): StalledDeal[] {
   const localDate = (iso: string) => dateInZone(timeZone, 0, new Date(iso));
   return projects
     .filter((p) => !p.archived && phaseOf(p.stage) === "negotiation")
     .map((project) => {
       const messages = inbox.filter((m) => m.projectId === project.id).map((m) => m.receivedAt);
-      const lastActivity = [project.updatedAt, ...messages].map(localDate).sort().at(-1)!;
+      const lastActivity = [project.updatedAt, ...(latestActivity[project.id] ? [latestActivity[project.id]] : []), ...messages].map(localDate).sort().at(-1)!;
       return { project, lastActivity, quietDays: daysBetween(lastActivity, today) };
     })
     .filter((d) => d.quietDays >= days)

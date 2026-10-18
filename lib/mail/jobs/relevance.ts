@@ -1,4 +1,5 @@
 import "server-only";
+import {mailboxOwnerActive,lockMailboxOwner} from "../owner";
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { ModelError } from "@/lib/ai/model";
 import { db } from "@/lib/db";
@@ -37,6 +38,7 @@ export async function scoreDecision(decisionId: string) {
     .where(eq(mailDecision.id, decisionId));
   if (!row || row.d.outcome !== "pending" || row.d.decidedBy) return; // decided since, or gone
   const { d, c } = row;
+  if(!await mailboxOwnerActive(c.id))return;
   if (c.status !== "connected" && c.status !== "error") return;
 
   let mail;
@@ -54,6 +56,7 @@ export async function scoreDecision(decisionId: string) {
     return;
   }
 
+  if (!await mailboxOwnerActive(c.id)) return;
   let scored;
   try {
     scored = await scoreMail(mail, { task: "relevance", talentId: c.talentId }, true);
@@ -68,6 +71,7 @@ export async function scoreDecision(decisionId: string) {
   const scoredOutcome = outcomeFor(scored.score);
   const outcome = scored.steered && scoredOutcome === "work" ? "unsure" : scoredOutcome;
   await db.transaction(async (tx) => {
+    if(!await lockMailboxOwner(tx,c.id))return;
     const [updated] = await tx
       .update(mailDecision)
       .set({

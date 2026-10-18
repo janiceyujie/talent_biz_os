@@ -1,4 +1,5 @@
 import "server-only";
+import {mailboxOwnerActive,lockMailboxOwner} from "../owner";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { mailConnection, mailDecision } from "@/lib/db/schema";
@@ -29,6 +30,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export async function syncMailbox(connectionId: string, { lastAttempt }: { lastAttempt: boolean }) {
   const [c] = await db.select().from(mailConnection).where(eq(mailConnection.id, connectionId));
   if (!c || c.status === "disconnecting" || c.status === "reconnect_needed") return;
+  if(!await mailboxOwnerActive(c.id))return;
   try {
     await sync(c);
   } catch (e) {
@@ -52,13 +54,15 @@ async function sync(c: Connection) {
   const ctx = await ruleContext(c.talentId, c.id);
 
   for (let i = 0; i < fresh.length; i += CHUNK) {
+    if (!await mailboxOwnerActive(c.id)) return;
     const read = await readMetadata(
       mail,
       fresh.slice(i, i + CHUNK).map((r) => r.id),
     );
     const decided = decideAll(read, ctx);
-    if (decided.length)
-      await db
+    if (decided.length) await db.transaction(async tx=>{
+      if(!await lockMailboxOwner(tx,c.id))return;
+      await tx
         .insert(mailDecision)
         .values(
           decided.map(({ mail: m, verdict }) => ({
@@ -73,11 +77,14 @@ async function sync(c: Connection) {
           })),
         )
         .onConflictDoNothing();
+    });
     for (const { mail: m, verdict } of decided) if (verdict.outcome === "work") ctx.workThreads.add(m.threadId);
   }
   await recheckPending(c, mail, ctx);
 
-  await db
+  const saved = await db.transaction(async (tx) => {
+    if (!await lockMailboxOwner(tx, c.id)) return false;
+    await tx
     .update(mailConnection)
     .set({
       historyId: cursor,
@@ -87,8 +94,10 @@ async function sync(c: Connection) {
       failure: null,
     })
     .where(and(eq(mailConnection.id, c.id), inArray(mailConnection.status, ["connected", "error"])));
-  // What's pending goes to the model, and what's work is brought in; anything left from before too
-  // (a model or Gmail that was down, the rules-only version).
+    return true;
+  });
+  if (!saved) return;
+  // Also anything still pending from before: a model that was down, or the rules-only version.
   await queueScoring(c.id);
   await queueFetching(c.id);
 }
@@ -121,12 +130,14 @@ async function recheckPending(c: Connection, mail: MailProvider, ctx: Awaited<Re
     .limit(MAX_MAIL);
   const rowFor = new Map(stale.map((r) => [r.gmailId, r.id]));
   for (let i = 0; i < stale.length; i += CHUNK) {
+    if (!await mailboxOwnerActive(c.id)) return;
     const read = await readMetadata(
       mail,
       stale.slice(i, i + CHUNK).map((r) => r.gmailId),
     );
     const decided = decideAll(read, ctx);
     await db.transaction(async (tx) => {
+      if(!await lockMailboxOwner(tx,c.id))return;
       for (const { mail: m, verdict } of decided)
         await tx
           .update(mailDecision)

@@ -8,7 +8,7 @@ export type ListSort = (typeof listSorts)[number];
 export type ListView = Phase | "all" | "archived";
 export const listViews = ["all", ...phases, "archived"] as const satisfies readonly ListView[];
 
-export const PAGE_SIZE = 50;
+export const PAGE_SIZE = 20;
 export const PAGE_MAX = 200; // a reload after a save asks for as many rows as were showing
 
 export type ProjectPage = {

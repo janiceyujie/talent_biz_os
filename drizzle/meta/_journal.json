@@ -211,6 +211,13 @@
       "when": 1791945746170,
       "tag": "0029_gmail_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792293425322,
+      "tag": "0030_workspace_foundation",
+      "breakpoints": true
     }
   ]
 }

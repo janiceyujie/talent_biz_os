@@ -50,7 +50,10 @@ async function call<T>(token: string, path: string): Promise<T> {
     } catch {
       throw new GmailError(0, "network");
     }
-    const json = (await res.json().catch(() => ({}))) as {
+    const reader=res.body?.getReader();
+    const chunks:Uint8Array[]=[]; let bytes=0;
+    if(reader) try { for(;;){ const part=await reader.read(); if(part.done)break; bytes+=part.value.length; if(bytes>2_000_000)throw new GmailError(0,"response_too_large"); chunks.push(part.value); } } finally {await reader.cancel().catch(()=>{});}
+    const json = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}") as {
       error?: { status?: string; errors?: { reason?: string }[] };
     } & T;
     if (res.ok) return json;

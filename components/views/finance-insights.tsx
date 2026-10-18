@@ -1,19 +1,22 @@
 "use client";
 
+import { InfoHint } from "@/components/app/info-hint";
 import { useLocale, useTranslations } from "next-intl";
 import { useAppData } from "@/components/app/app-data";
 import { financeInsights } from "@/lib/domain/insights";
 import { useMoney } from "@/lib/i18n/format";
+import type { Currency } from "@/lib/domain/money";
 
 /** Contract totals, six months of cash, and outstanding income by age. */
-export function FinanceInsights() {
+export function FinanceInsights({ currency }: { currency: Currency }) {
   const data = useAppData();
   const t = useTranslations("finance.insights");
   const money = useMoney();
   const locale = useLocale();
-  const report = financeInsights(data);
+  const now = data.previewDate ? new Date(`${data.previewDate}T04:00:00Z`) : new Date();
+  const report = financeInsights(data, now, currency);
   const max = Math.max(1, ...report.monthly.flatMap((m) => [m.received, m.paid]));
-  const asOf = new Intl.DateTimeFormat(locale, { timeZone: data.talent.timeZone, month: "numeric", day: "numeric" }).format(new Date());
+  const asOf = new Intl.DateTimeFormat(locale, { timeZone: data.talent.timeZone, month: "numeric", day: "numeric" }).format(now);
   return (
     <>
       <div className="finance-insights-grid">
@@ -32,10 +35,10 @@ export function FinanceInsights() {
                 <div
                   className="cash-bars"
                   role="img"
-                  aria-label={t("barLabel", { month: m.month, received: money(m.received), paid: money(m.paid) })}
+                  aria-label={t("barLabel", { month: m.month, received: money(m.received, currency), paid: money(m.paid, currency) })}
                 >
-                  <i title={money(m.received)} style={{ height: `${(m.received / max) * 100}%` }} />
-                  <i title={money(m.paid)} style={{ height: `${(m.paid / max) * 100}%` }} />
+                  <i title={money(m.received, currency)} style={{ height: `${(m.received / max) * 100}%` }} />
+                  <i title={money(m.paid, currency)} style={{ height: `${(m.paid / max) * 100}%` }} />
                 </div>
                 <span>{m.month.slice(2)}</span>
               </div>
@@ -55,8 +58,8 @@ export function FinanceInsights() {
                 {report.monthly.map((m) => (
                   <tr key={m.month}>
                     <td>{m.month}</td>
-                    <td>{money(m.received)}</td>
-                    <td>{money(m.paid)}</td>
+                    <td>{money(m.received, currency)}</td>
+                    <td>{money(m.paid, currency)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -65,7 +68,7 @@ export function FinanceInsights() {
         </section>
         <section className="surface padded aging-card">
           <div className="section-header">
-            <h2>{t("agingTitle")}</h2>
+            <h2>{t("agingTitle")} <InfoHint label={t("agingTitle")} notes={[t("agingNote")]} /></h2>
             <span className="muted">{t("asOf", { date: asOf })}</span>
           </div>
           <div className="aging-list">
@@ -75,24 +78,22 @@ export function FinanceInsights() {
                   <i className={`aging-dot dot-${i}`} />
                   {t(`aging.${a.bucket}`)}
                 </span>
-                <strong>{money(a.amount)}</strong>
+                <strong>{money(a.amount, currency)}</strong>
               </div>
             ))}
           </div>
-          <p className="muted">{t("agingNote")}</p>
         </section>
       </div>
       {/* Signed-contract totals ignore the date filter, so they follow the dated charts. */}
       <section className="surface contract-metrics">
         <div>
-          <small>{t("contracted")}</small>
-          <strong>{money(report.contracted)}</strong>
+          <small>{t("contracted")} <InfoHint label={t("contracted")} notes={[t("contractNote")]} /></small>
+          <strong>{money(report.contracted, currency)}</strong>
         </div>
         <div>
           <small>{t("unbilled")}</small>
-          <strong>{money(report.unbilled)}</strong>
+          <strong>{money(report.unbilled, currency)}</strong>
         </div>
-        <p>{t("contractNote")}</p>
         {report.unknownQuotes > 0 && <p>{t("unknownQuotes", { count: report.unknownQuotes })}</p>}
       </section>
     </>

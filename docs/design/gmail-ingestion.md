@@ -2,6 +2,10 @@
 
 **Status:** Agreed direction (2026-10-10). The decisions behind it: [0013](../decisions/0013-connected-gmail-mailbox.md) (what is read and kept), [0014](../decisions/0014-hosting-and-job-queue.md) (hosting and the queue), [0015](../decisions/0015-production-model-providers.md) (models), [0016](../decisions/0016-mailbox-tokens-and-key-management.md) (tokens). Diagrams (private; open them from the owner's account or share them from their pages): [Message Pipeline Map](https://claude.ai/artifact/Av5sq9yns69tX39BFfdiQg), the whole path from paste, upload, and Gmail to a confirmed change, by system; [Gmail Token Flow](https://claude.ai/artifact/2Moj4sPrnpJxh1Uc2r4kVg), how the token is issued, used, and refreshed.
 
+## Implementation checkpoint — 2026-10-13
+
+The full pipeline below remains the target design. The local, opt-in metadata sync and conservative relevance foundation is now implemented; see [decision 0021](../decisions/0021-local-mail-relevance-foundation.md) for exact behavior, tests, data fields and remaining work. Body/attachment import, the user-facing relevance review, real model adapters and Pub/Sub watch are not yet implemented. OAuth connection alone does not bring messages into Intake.
+
 ## The point
 
 Most of what happens after an email arrives already exists: analysis (`lib/ai/analyze-message.ts`), suggesting a project (`suggestTargets` in `lib/domain/intake.ts`), the per-intent proposals, and the review screen ([intake-to-project](intake-to-project.md)). This design adds what comes before: connecting a mailbox, noticing new mail, deciding what's work from metadata alone, and fetching only that. An email that passes becomes a `message` like a paste or an upload, and the person confirms everything it proposes.

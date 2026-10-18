@@ -2,6 +2,7 @@ import "server-only";
 import type { MailRef } from "../metadata";
 import type { MailProvider } from "../provider";
 import { gmailApi, GmailError } from "./api";
+import { plainText, MailProviderError, type MailContentProvider } from "../content";
 import { toMetadata } from "./parse";
 import { readMessage } from "./parts";
 
@@ -10,9 +11,11 @@ export { GmailError };
 const MAX_PAGES = 50; // 25,000 changes: far past a mailbox's busiest day
 
 /** The Gmail mailbox behind an access token. */
-export function gmailProvider(accessToken: string): MailProvider {
+export function gmailProvider(accessToken: string): MailProvider & MailContentProvider {
   const api = gmailApi(accessToken);
   return {
+    async metadata(id) { try {const raw=await api.metadata(id);if(raw.id!==id)throw new MailProviderError("invalid_response");return toMetadata(raw);}catch(e){if(e instanceof GmailError && e.status===404)return null;throw e;} },
+    async content(id) {const raw=await api.full(id);if(raw.id!==id)throw new MailProviderError("invalid_response");return {metadata:toMetadata(raw),text:plainText(raw.payload)};},
     currentCursor: async () => (await api.profile()).historyId,
 
     async listChanges(cursor) {

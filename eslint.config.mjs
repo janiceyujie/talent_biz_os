@@ -40,6 +40,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // The second dev server's build folder (NEXT_DIST_DIR, docs/setup/google-calendar.md).
     ".next-test/**",
+    ".next-*/**",
   ]),
 ]);
 

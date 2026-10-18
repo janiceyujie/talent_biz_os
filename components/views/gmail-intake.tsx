@@ -3,6 +3,7 @@
 // Intake's Gmail parts (decision 0013): Sync now, and the Waiting and Filtered
 // out lists. We store only ids and what was decided; the sender and subject
 // shown here are read live from Gmail, through the worker, as the list opens.
+import { InboxReaderLayout } from "@/components/app/inbox-reader-layout";
 import { RefreshCw } from "lucide-react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -25,6 +26,7 @@ export function GmailSync({ onNotice }: { onNotice: (text: string | null) => voi
   const now = useNow({ updateInterval: 30_000 });
   const [pending, startTransition] = useTransition();
   const c = gmail.connection;
+
   const syncing = !!c?.syncing;
 
   useEffect(() => {
@@ -68,12 +70,12 @@ export type IntakeTab = "messages" | GmailMailView;
 
 /** Messages · Waiting · Filtered out, shown once a mailbox is connected. */
 export function IntakeTabs({ tab, onTab }: { tab: IntakeTab; onTab: (tab: IntakeTab) => void }) {
-  const { gmail, inbox } = useAppData();
+  const { gmail, inbox, inboxOverview } = useAppData();
   const t = useTranslations("gmail");
   const counts = gmail.connection?.counts;
   if (!counts) return null;
   // Messages counts what's waiting for review, as the Intake badge in the menu does (app-shell).
-  const toReview = inbox.filter((m) => m.status === "analyzed" || m.status === "error").length;
+  const toReview = inboxOverview ? inboxOverview.counts.analyzed + inboxOverview.counts.error : inbox.filter((m) => m.status === "analyzed" || m.status === "error").length;
   // Every tab shows its count, 0 too: a missing number reads as "nothing here" when that isn't known.
   const tabs: [IntakeTab, string, number][] = [
     ["messages", t("tabMessages"), toReview],
@@ -104,25 +106,31 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
   const [active, setActive] = useState("");
   const [loading, setLoading] = useState(false);
   const c = gmail.connection;
+  const requestRef=useRef<AbortController|null>(null);
   // A finished sync or a moved email changes the counts: read the list again.
   const version = `${c?.lastSyncedAt}:${c?.syncing}:${c?.counts.waiting}:${c?.counts.skipped}`;
   const sorting = !!c?.syncing; // the lists show only what's sorted: wait for the last score
 
   // Only the latest request may fill the list: an older, slower one (a refresh racing it) is ignored.
-  const latest = useRef(0);
   const load = useCallback(
-    async (offset: number) => {
-      const request = ++latest.current;
+    async (offset: number, refreshPage = false) => {
+      requestRef.current?.abort();
+      const request=new AbortController();requestRef.current=request;
       setLoading(true);
       try {
-        const res = await fetch(`/api/mail/decisions?${new URLSearchParams({ view, offset: String(offset) })}`, { cache: "no-store" });
+        const res = await fetch(`/api/mail/decisions?${new URLSearchParams({ view, offset: String(offset) })}`, { cache: "no-store", signal:request.signal });
         const page = res.ok ? ((await res.json()) as GmailMailPage) : { items: [], more: false, error: "unavailable" as const };
-        if (request !== latest.current) return;
-        setItems((prev) => (offset ? [...(prev ?? []), ...page.items] : page.items));
-        setMore(page.more);
+        if(request.signal.aborted)return;
+        setItems((prev) => {
+          const rows = refreshPage && prev
+            ? [...prev.slice(0, offset), ...page.items, ...prev.slice(offset + 30)]
+            : offset ? [...(prev ?? []), ...page.items] : page.items;
+          return [...new Map(rows.map(item => [item.id, item])).values()];
+        });
+        if (!refreshPage) setMore(page.more);
         setError(page.error);
-      } finally {
-        if (request === latest.current) setLoading(false);
+      } catch { if(!request.signal.aborted)setError("unavailable"); } finally {
+        if(!request.signal.aborted)setLoading(false);
       }
     },
     [view],
@@ -130,10 +138,18 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
 
   useEffect(() => {
     if (sorting) return;
-    queueMicrotask(() => load(0));
+    queueMicrotask(() => {setItems(null);setActive("");void load(0);});
+    return ()=>requestRef.current?.abort();
   }, [load, version, sorting]);
 
-  const picked = items?.find((i) => i.id === active) ?? items?.[0];
+  const importingIndex = items?.findIndex(item => item.importStatus === "queued") ?? -1;
+  const importingPage = importingIndex < 0 ? -1 : Math.floor(importingIndex / 30) * 30;
+  useEffect(() => {
+    if (importingPage < 0) return;
+    const timer = setInterval(() => { void load(importingPage, true); }, 5000);
+    return () => clearInterval(timer);
+  }, [importingPage, load]);
+  const picked = items?.find((i) => i.id === active);
   const peekError = error === "reconnect" ? t("peekError.reconnect") : error === "gmail" || error === "unavailable" ? t("peekError.unavailable") : null;
 
   if (sorting)
@@ -146,8 +162,8 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
     );
 
   return (
-    <div className="inbox-layout section-gap" id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${view}`}>
-      <section className="surface padded inbox-messages" aria-label={view === "waiting" ? t("tabWaiting") : t("tabSkipped")}>
+    <div id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${view}`}>
+      <InboxReaderLayout reading={!!picked} title={picked?.subject || t("noSubject")} listLabel={view === "waiting" ? t("tabWaiting") : t("tabSkipped")} onBack={() => setActive("")} list={<>
         <p className="muted gmail-about">{view === "waiting" ? t("aboutWaiting") : t("aboutSkipped")}</p>
         {peekError && (
           <p className="notice error" role="alert">
@@ -186,14 +202,13 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
             {loading ? t("loading") : t("showMore")}
           </button>
         )}
-      </section>
-      <section className="surface padded inbox-reader" aria-label={tInbox("readerLabel")}>
+      </>}>
         {picked && c ? (
-          <GmailMailDetail key={picked.id} item={picked} view={view} accountEmail={c.accountEmail} loadFailed={!!error} onNotice={onNotice} />
+          <GmailMailDetail key={picked.id} item={picked} view={view} accountEmail={c.accountEmail} loadFailed={!!error} onNotice={text => { onNotice(text); void load(Math.floor((items?.findIndex(item => item.id === picked.id) ?? 0) / 30) * 30, true); }} />
         ) : (
           <p className="empty">{tInbox("pick")}</p>
         )}
-      </section>
+      </InboxReaderLayout>
     </div>
   );
 }
@@ -211,7 +226,8 @@ function GmailMailDetail({
   loadFailed: boolean; // the live read failed, so a missing subject doesn't mean the email is gone
   onNotice: (text: string | null) => void;
 }) {
-  const timeZone = useAppData().talent.timeZone;
+  const data=useAppData();
+  const timeZone = data.talent.timeZone;
   const t = useTranslations("gmail");
   const format = useFormatter();
   const [pending, startTransition] = useTransition();

@@ -1,4 +1,5 @@
 import "server-only";
+import { mailboxOwnerActive } from "./owner";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { mailConnection, mailDecision } from "@/lib/db/schema";
@@ -22,6 +23,7 @@ export async function peekMail(connectionId: string, ids: string[]): Promise<Pee
   const [c] = await db.select().from(mailConnection).where(eq(mailConnection.id, connectionId));
   if (!c || c.status === "disconnecting") return { error: "gone" };
   if (c.status === "reconnect_needed") return { error: "reconnect" };
+  if (!await mailboxOwnerActive(c.id)) return { error: "gone" };
   const known = ids.length
     ? await db
         .select({ id: mailDecision.providerMessageId })
@@ -33,6 +35,7 @@ export async function peekMail(connectionId: string, ids: string[]): Promise<Pee
       gmailProvider(await accessToken(c)),
       known.map((k) => k.id),
     );
+    if (!await mailboxOwnerActive(c.id)) return { error: "gone" };
     return {
       items: read.map((m) => ({ id: m.id, from: m.from, subject: m.subject })),
     };

@@ -1,12 +1,14 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { GoogleButton } from "@/components/google-button";
 import { FormMessage } from "@/components/form";
-import { isGoogleEnabled } from "@/lib/auth";
+import { getSession, isGoogleEnabled } from "@/lib/auth";
 import { googleErrorKey } from "@/lib/auth/google-errors";
 import { SignInForm } from "./sign-in-form";
 
 export default async function SignInPage({ searchParams }: PageProps<"/sign-in">) {
+  if (await getSession()) redirect("/");
   const t = await getTranslations("auth");
   const googleError = googleErrorKey((await searchParams).error);
   return (

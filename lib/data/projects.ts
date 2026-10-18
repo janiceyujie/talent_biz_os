@@ -1,7 +1,11 @@
 import "server-only";
+import { createHash } from "node:crypto";
+import { z } from "zod";
+import { decodePageCursor, encodePageCursor, InvalidCursor } from "./page-cursor";
+import {managerPlanAccess} from "./manager-entitlement";
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { project, projectContact, projectOrganization, todo } from "@/lib/db/schema";
+import { project, projectContact, projectOrganization, membership, todo } from "@/lib/db/schema";
 import { identifyingFields } from "@/lib/domain/intake";
 import { phaseOf } from "@/lib/domain/phases";
 import { listViews, PAGE_MAX, type ListSort, type ListView, type ProjectPage } from "@/lib/domain/project-list";
@@ -24,7 +28,7 @@ export function summaryOf(p: Row, nextAction: NextAction, artist: string, client
     type: isProjectType(p.type) ? p.type : "other",
     stage: p.stage,
     quotedAmount: p.quotedAmount,
-    currency: "TWD",
+    currency: p.quoteCurrency.trim() as Project["currency"],
     taxRate: p.taxRate,
     taxIncluded: p.taxIncluded,
     details: { fields, dates: p.details.dates ?? [] },
@@ -36,13 +40,13 @@ export function summaryOf(p: Row, nextAction: NextAction, artist: string, client
 
 // A project's client: its primary organisation. Written out in full for the same reason as below.
 const clientOf = () =>
-  sql<string | null>`(select po.organization_id from ${projectOrganization} po where po.project_id = "project"."id" and po.is_primary)`;
+  sql<string | null>`(select po.organization_id from ${projectOrganization} po where po.project_id = "project"."id" and po.talent_id = "project"."talent_id" and po.is_primary)`;
 
 // A project's next step: its earliest open to-do, undated ones last (as lib/data/index.ts).
 // The outer column is written out in full: in a one-table query Drizzle leaves
 // columns unqualified, and a bare "id" here would mean the to-do's own.
 const nextTodo = (column: "id" | "title" | "due_date") =>
-  sql`(select ${sql.raw(`t.${column}`)} from ${todo} t where t.project_id = "project"."id" and t.status = 'open' order by t.due_date asc nulls last, t.created_at asc limit 1)`;
+  sql`(select ${sql.raw(`t.${column}`)} from ${todo} t where t.project_id = "project"."id" and t.talent_id = "project"."talent_id" and t.status = 'open' order by t.due_date asc nulls last, t.created_at asc limit 1)`;
 
 /** One project in full, for its own screen and for applying a message to it. Null when it isn't this talent's. */
 export async function getProject(talentId: string, id: string, artist: string): Promise<Project | null> {
@@ -74,14 +78,15 @@ const sortKeys: Record<ListSort, { key: SQL; dir: "asc" | "desc"; cast: string }
   title: { key: sql`${project.title}`, dir: "asc", cast: "text" },
 };
 
-const encodeCursor = (key: string, id: string) => Buffer.from(JSON.stringify([key, id])).toString("base64url");
-function decodeCursor(cursor: string): [string, string] | null {
-  try {
-    const value = JSON.parse(Buffer.from(cursor, "base64url").toString());
-    return Array.isArray(value) && value.length === 2 && value.every((v) => typeof v === "string") ? [value[0], value[1]] : null;
-  } catch {
-    return null;
-  }
+/** A cursor belongs to one owner/artist selection, filter set and ordering. */
+function projectCursor(cursor: string, sort: ListSort, context: string) {
+  const position = sort === "due" ? z.iso.date()
+    : sort === "updated" ? z.string().max(80).regex(/^\d{4}-\d{2}-\d{2} [0-9:.+\- ]+$/).refine(value => Number.isFinite(Date.parse(value)))
+    : sort === "amount" ? z.string().max(100).regex(/^-?\d+(\.\d+)?$/)
+    : z.string().max(2000);
+  const result = decodePageCursor(cursor, z.tuple([position, z.uuid(), z.string()]));
+  if (result && result[2] !== context) throw new InvalidCursor("Cursor filters changed");
+  return result;
 }
 
 const viewFilter = (view: ListView) =>
@@ -112,12 +117,17 @@ export async function listProjects(
   talentId: string,
   artist: string,
   params: { view: ListView; type: string; contact: string; q: string; sort: ListSort; cursor: string; limit: number },
+  scope?:{personId:string;ids:string[];artists:Record<string,string>},
 ): Promise<ProjectPage> {
   const { key, dir, cast } = sortKeys[params.sort];
-  const after = params.cursor ? decodeCursor(params.cursor) : null;
   const q = params.q.trim();
+  const context = createHash("sha256").update(JSON.stringify([
+    scope ? [scope.personId, [...scope.ids].sort()] : talentId,
+    params.view, params.type, params.contact, q, params.sort,
+  ])).digest("hex");
+  const after = projectCursor(params.cursor, params.sort, context);
   const filtered = and(
-    eq(project.talentId, talentId),
+    scope?and(inArray(project.talentId,scope.ids),managerPlanAccess(scope.personId),sql`exists (select 1 from ${membership} mm where mm.person_id=${scope.personId} and mm.talent_id=${project.talentId} and mm.status='active' and mm.role in ('manager','agency_admin'))`):eq(project.talentId, talentId),
     params.type !== "all" ? eq(project.type, params.type) : undefined,
     params.contact ? withContact(params.contact) : undefined,
     q ? or(ilike(project.title, likeText(q)), ilike(project.counterparty, likeText(q))) : undefined,
@@ -162,9 +172,9 @@ export async function listProjects(
   const last = shown.at(-1);
   return {
     items: shown.map((r) =>
-      summaryOf(r.project, r.nextId ? { id: r.nextId, title: r.nextTitle, dueDate: r.nextDue || null } : null, artist, r.clientId),
+      ({...summaryOf(r.project, r.nextId ? { id: r.nextId, title: r.nextTitle, dueDate: r.nextDue || null } : null, scope?scope.artists[r.project.talentId]:artist, r.clientId),...(scope?{artistId:r.project.talentId}:{})}),
     ),
-    nextCursor: rows.length > limit && last ? encodeCursor(last.sortKey, last.project.id) : null,
+    nextCursor: rows.length > limit && last ? encodePageCursor([last.sortKey, last.project.id, context]) : null,
     total: counts[params.view],
     counts,
   };

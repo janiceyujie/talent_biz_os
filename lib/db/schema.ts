@@ -23,6 +23,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
+import { supportedCurrencies } from "../domain/money";
 import { historyModes } from "../mail/history";
 import { mailKinds } from "../mail/relevance/prompt";
 import { ruleIds } from "../mail/relevance/rules";
@@ -264,7 +265,7 @@ export const project = pgTable(
   (t) => [
     index("project_talent_stage_idx").on(t.talentId, t.stage),
     check("project_stage_check", oneOf(t.stage, projectStages)),
-    check("project_quote_currency_check", sql`${t.quoteCurrency} = 'TWD'`), // MVP: TWD only
+    check("project_quote_currency_check", oneOf(t.quoteCurrency, supportedCurrencies)),
     check("project_tax_rate_check", sql`${t.taxRate} between 0 and 100`),
   ],
 ).enableRLS();
@@ -418,7 +419,7 @@ export const payment = pgTable(
     check("payment_direction_check", oneOf(t.direction, paymentDirections)),
     check("payment_installment_check", oneOf(t.installment, paymentInstallments)),
     check("payment_status_check", oneOf(t.status, paymentStatuses)),
-    check("payment_currency_check", sql`${t.currency} = 'TWD'`), // MVP: TWD only
+    check("payment_currency_check", oneOf(t.currency, supportedCurrencies)),
     check("payment_tax_rate_check", sql`${t.taxRate} between 0 and 100`),
     check("payment_amount_check", sql`${t.amount} >= 0 and (${t.settledAmount} is null or ${t.settledAmount} >= 0)`),
     check("payment_settled_check", sql`(${t.status} = 'settled') = (${t.settledOn} is not null)`),
@@ -521,6 +522,7 @@ export const message = pgTable(
   },
   (t) => [
     unique("message_talent_dedup_key").on(t.talentId, t.dedupKey),
+    index("message_talent_received_id_idx").on(t.talentId,t.receivedAt,t.id),
     index("message_talent_status_idx").on(t.talentId, t.status),
     index("message_project_idx").on(t.projectId),
     index("message_connection_thread_idx").on(t.connectionId, t.providerThreadId),
@@ -828,6 +830,42 @@ export const externalEvent = pgTable(
 // its own data key, which the master key wraps (decision 0016). The mailbox's
 // account never becomes a way to sign in. `disconnecting` waits for the worker
 // to revoke the token at Google and delete the row.
+export const documentTemplate = pgTable(
+  "document_template",
+  {
+    id: id(),
+    scenario: text().notNull(),
+    role: text().notNull(),
+    kind: text({ enum: ["contract", "quote"] }).notNull(),
+    locale: text({ enum: ["en", "zh-TW"] }).notNull(),
+    version: integer().notNull(),
+    title: text().notNull(),
+    intro: text().notNull(),
+    sections: jsonb().$type<string[][]>().notNull(),
+    body: text().notNull(),
+    storageKey: text().notNull(),
+    filename: text().notNull(),
+    sizeBytes: integer().notNull(),
+    contentHash: char({ length: 64 }).notNull(),
+    published: boolean().notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("document_template_version").on(t.scenario, t.kind, t.locale, t.version),
+    unique("document_template_content").on(t.scenario, t.kind, t.locale, t.contentHash),
+    uniqueIndex("document_template_published").on(t.scenario, t.kind, t.locale).where(sql`${t.published}`),
+    check("document_template_kind_check", oneOf(t.kind, ["contract", "quote"])),
+    check("document_template_locale_check", oneOf(t.locale, ["en", "zh-TW"])),
+    check("document_template_version_check", sql`${t.version} > 0`),
+    check("document_template_size_check", sql`${t.sizeBytes} > 0`),
+  ],
+).enableRLS();
+
+// A connected mailbox (decision 0013): one per talent for now, any Google
+// account the person picks. Only the refresh token is stored, encrypted with
+// its own data key, which the master key wraps (decision 0016). The mailbox's
+// account never becomes a way to sign in. `disconnecting` waits for the worker
+// to revoke the token at Google and delete the row.
 export const mailConnectionStatuses = ["connected", "reconnect_needed", "error", "disconnecting"] as const;
 
 export const mailConnection = pgTable(
@@ -895,12 +933,16 @@ export const mailDecision = pgTable(
     score: numeric({ precision: 4, scale: 3, mode: "number" }), // the model's, 0 to 1
     kind: text({ enum: mailKinds }), // what the model says it looks like: our label, nothing from the email
     classifierVersion: text().notNull(), // the rules version, and the model step's prompt and model when it decided
-    messageId: uuid().references(() => message.id, { onDelete: "set null" }), // the message it became, once brought in
+    messageId: uuid().references(() => message.id, { onDelete: "set null" }),
+    importStatus: text({enum:["idle","queued","imported","error"]}).notNull().default("idle"),
+    importFailure: text(),
+    requestedBy: uuid().references(()=>person.id,{onDelete:"set null"}), // the message it became, once brought in
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     unique("mail_decision_connection_message").on(t.connectionId, t.providerMessageId), // never decided twice
+    check("mail_decision_import_status_check",oneOf(t.importStatus,["idle","queued","imported","error"])),
     index("mail_decision_connection_outcome_idx").on(t.connectionId, t.outcome, t.receivedAt),
     index("mail_decision_connection_thread_idx").on(t.connectionId, t.providerThreadId),
     check("mail_decision_outcome_check", oneOf(t.outcome, mailDecisionOutcomes)),
@@ -934,3 +976,47 @@ export const mailSenderRule = pgTable(
     check("mail_sender_rule_verdict_check", oneOf(t.verdict, mailSenderVerdicts)),
   ],
 ).enableRLS();
+
+export const grantSource = pgTable("grant_source", {
+  id: text().primaryKey(), checkedAt: timestamp({withTimezone:true}),
+  attemptedAt: timestamp({withTimezone:true}), failure: text(),
+}).enableRLS();
+export const grantOpportunity = pgTable("grant_opportunity", {
+  id: id(), source: text().notNull().references(() => grantSource.id), externalId: text().notNull(),
+  region: text({enum:["TW","US"]}).notNull(), title: text().notNull(), agency: text().notNull(), url: text().notNull(),
+  opensOn: date(), closesOn: date(), sourceStatus: text({enum:["posted","forecasted","unknown"]}).notNull(),
+  summary: text().notNull().default(""), contentHash: text().notNull(),
+  checkedAt: createdAt(), changedAt: createdAt(), createdAt: createdAt(),
+}, t => [unique("grant_opportunity_source_external").on(t.source,t.externalId), index("grant_opportunity_region_close_idx").on(t.region,t.closesOn), check("grant_opportunity_region_check",oneOf(t.region,["TW","US"])), check("grant_opportunity_status_check",oneOf(t.sourceStatus,["posted","forecasted","unknown"]))]).enableRLS();
+export const grantApplication = pgTable("grant_application", {
+  id:id(), talentId:uuid().notNull().references(() => talent.id,{onDelete:"cascade"}),
+  opportunityId:uuid().notNull().references(() => grantOpportunity.id),
+  projectId:uuid().references(() => project.id,{onDelete:"set null"}),
+  stage:text({enum:["preparing","submitted","awarded","not_selected","closed"]}).notNull().default("preparing"),
+  notes:text().notNull().default(""), createdAt:createdAt(), updatedAt:updatedAt(),
+}, t => [unique("grant_application_talent_opportunity").on(t.talentId,t.opportunityId), index("grant_application_talent_idx").on(t.talentId),check("grant_application_stage_check",oneOf(t.stage,["preparing","submitted","awarded","not_selected","closed"]))]).enableRLS();
+export const grantTask = pgTable("grant_task", {
+  id:id(), applicationId:uuid().notNull().references(() => grantApplication.id,{onDelete:"cascade"}),
+  todoId:uuid().notNull().references(() => todo.id,{onDelete:"cascade"}),
+  kind:text({enum:["eligibility","proposal","budget","submission","agreement","receipts","report","settlement","custom"]}).notNull(), createdAt:createdAt(),
+}, t => [unique("grant_task_todo_unique").on(t.todoId),index("grant_task_application_idx").on(t.applicationId),check("grant_task_kind_check",oneOf(t.kind,["eligibility","proposal","budget","submission","agreement","receipts","report","settlement","custom"]))]).enableRLS();
+export const grantWatch = pgTable("grant_watch", {
+  id:id(), talentId:uuid().notNull().references(() => talent.id,{onDelete:"cascade"}),
+  personId:uuid().notNull().references(() => person.id,{onDelete:"cascade"}), enabled:boolean().notNull().default(true),
+  regions:jsonb().$type<("TW"|"US")[]>().notNull().default(["TW","US"]), seenAt:createdAt(), updatedAt:updatedAt(),
+}, t => [unique("grant_watch_person_talent").on(t.personId,t.talentId)]).enableRLS();
+
+// Server-managed plan capabilities, separate from identity and user preferences.
+export const managerEntitlement = pgTable("manager_entitlement", {
+  personId:uuid().primaryKey().references(()=>person.id,{onDelete:"cascade"}),
+  plan:text({enum:["basic","pro","manager"]}).notNull().default("basic"),
+  artistLimit:integer().notNull().default(0),
+  active:boolean().notNull().default(false),
+  source:text({enum:["local_trial","subscription"]}).notNull().default("local_trial"),
+  expiresAt:timestamp({withTimezone:true}),
+  createdAt:createdAt(),updatedAt:updatedAt(),
+},t=>[
+  check("manager_entitlement_plan_check",oneOf(t.plan,["basic","pro","manager"])),
+  check("manager_entitlement_source_check",oneOf(t.source,["local_trial","subscription"])),
+  check("manager_entitlement_limit_check",sql`${t.artistLimit} between 0 and 100`),
+]).enableRLS();

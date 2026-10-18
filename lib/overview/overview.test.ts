@@ -128,13 +128,18 @@ describe("outstandingMoney", () => {
       [
         payment({ amount: 9000, status: "expected", dueDate: "2026-10-01", settledDate: null }),
         payment({ amount: 1000, status: "expected", dueDate: "2026-10-12", settledDate: null }),
-        payment({ amount: 21000, status: "expected", dueDate: "2026-11-05", settledDate: null }),
+        payment({ amount: 21000, currency: "HKD", status: "expected", dueDate: "2026-11-05", settledDate: null }),
         payment({ amount: 500, status: "expected", direction: "out", dueDate: "2026-10-08", settledDate: null }),
         payment({ amount: 4000, status: "settled" }),
         payment({ amount: 800, status: "expected", voided: true, dueDate: "2026-10-01", settledDate: null }),
       ],
       TODAY,
     );
-    assert.deepEqual(got, { overdue: 9000, thisWeek: 1000, toReceive: 31000, toPay: 500 });
+    assert.deepEqual(got, {
+      overdue: [{ currency: "TWD", amount: 9000 }],
+      thisWeek: [{ currency: "TWD", amount: 1000 }],
+      toReceive: [{ currency: "TWD", amount: 10000 }, { currency: "HKD", amount: 21000 }],
+      toPay: [{ currency: "TWD", amount: 500 }],
+    });
   });
 });

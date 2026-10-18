@@ -8,6 +8,7 @@ import { queue, type EnqueueOptions } from "@/lib/queue";
 import { analysisQueue, analyzeJobKey, fetchJobKey, fetchQueue } from "@/lib/queue/jobs";
 import { removeObjects, writeBytes } from "@/lib/storage";
 import { accessToken, MailAccessLost, markReconnectNeeded } from "../access";
+import { mailboxOwnerActive, lockMailboxOwner } from "../owner";
 import { stripQuoted } from "../clean";
 import { gmailProvider } from "../gmail";
 import { chooseAttachments, FETCH_LIMITS } from "../attachments";
@@ -43,6 +44,7 @@ export async function fetchDecision(decisionId: string) {
     .where(eq(mailDecision.id, decisionId));
   if (!row || row.d.messageId || (row.d.outcome !== "work" && row.d.outcome !== "unsure")) return; // in already, or no longer wanted
   const { d, c } = row;
+  if (!await mailboxOwnerActive(c.id)) return;
   if (c.status !== "connected" && c.status !== "error") return;
 
   let mail, read;
@@ -75,6 +77,10 @@ export async function fetchDecision(decisionId: string) {
     }
 
     const brought = await db.transaction(async (tx) => {
+      const currentConnection = await lockMailboxOwner(tx, c.id);
+      if (!currentConnection || currentConnection.connectedBy !== c.connectedBy) return null;
+      const [current] = await tx.select().from(mailDecision).where(and(eq(mailDecision.id, d.id), eq(mailDecision.connectionId, c.id))).for("update");
+      if (!current || current.messageId || !["work", "unsure"].includes(current.outcome)) return null;
       const [created] = await tx
         .insert(message)
         .values({
@@ -87,7 +93,7 @@ export async function fetchDecision(decisionId: string) {
           headerMessageId: read.headerMessageId || null,
           inReplyTo: read.inReplyTo || null,
           references: read.references || null,
-          relevance: d.outcome === "unsure" ? "unsure" : "sure",
+          relevance: current.outcome === "unsure" ? "unsure" : "sure",
           sender: read.from.name ? `${read.from.name} <${read.from.address}>` : read.from.address || null,
           subject: read.subject || null,
           skippedAttachments: skipped.length ? skipped : null,
@@ -112,7 +118,7 @@ export async function fetchDecision(decisionId: string) {
             sizeBytes: f.size,
           })),
         );
-      await tx.update(mailDecision).set({ messageId: created.id }).where(eq(mailDecision.id, d.id));
+      await tx.update(mailDecision).set({ messageId: created.id, importStatus: "imported", importFailure: null }).where(eq(mailDecision.id, d.id));
       await queue.enqueue(
         "message.analyze",
         { messageId: created.id, locale: toLocale(row.locale) },
@@ -127,7 +133,7 @@ export async function fetchDecision(decisionId: string) {
         .select({ id: message.id })
         .from(message)
         .where(and(eq(message.talentId, c.talentId), eq(message.dedupKey, gmailDedupKey(c.id, read.id))));
-      if (existing) await db.update(mailDecision).set({ messageId: existing.id }).where(eq(mailDecision.id, d.id));
+      if (existing) await db.update(mailDecision).set({ messageId: existing.id, importStatus: "imported", importFailure: null }).where(and(eq(mailDecision.id, d.id), isNull(mailDecision.messageId), inArray(mailDecision.outcome, ["work", "unsure"])));
     }
   } catch (e) {
     await removeObjects(stored.map((f) => f.key)).catch(() => undefined);

@@ -6,7 +6,9 @@ import { z } from "zod";
 import { canonicalZone, isTimeZone } from "@/lib/time-zones";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { auditLog, calendarEvent, todo } from "@/lib/db/schema";
+import { auditLog, calendarEvent, grantApplication, grantTask, todo } from "@/lib/db/schema";
+import { grantsLocalEnabled } from "@/lib/grants/config";
+import { getTranslations } from "next-intl/server";
 import { exactInstant } from "@/lib/domain/dates";
 import { calendarKinds, transportModes, type CalendarKind } from "@/lib/types";
 import { requestCalendarSync } from "@/lib/calendar/google/sync";
@@ -114,6 +116,14 @@ export async function saveCalendarItem(data: Record<string, unknown>): Promise<s
       .from(table)
       .where(and(eq(table.id, input.id), eq(table.talentId, talent.id)));
     currentLink = row?.projectId ?? null;
+  }
+  if (target === "todo" && input.id && grantsLocalEnabled()) {
+    const [grant]=await db.select({projectId:grantApplication.projectId}).from(grantTask)
+      .innerJoin(grantApplication,and(eq(grantApplication.id,grantTask.applicationId),eq(grantApplication.talentId,talent.id)))
+      .where(eq(grantTask.todoId,input.id));
+    if(grant && (input.projectId!==grant.projectId || input.kind!=="todo")) {
+      const t=await getTranslations("grants"); return t("editLinkInGrant");
+    }
   }
   const linkError = await checkProjectLink(talent.id, input.projectId, currentLink);
   if (linkError) return fail(linkError);

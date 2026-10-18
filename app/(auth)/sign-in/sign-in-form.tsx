@@ -32,7 +32,7 @@ export function SignInForm() {
   }
 
   return (
-    <form onSubmit={onSubmit}>
+    <form method="post" onSubmit={onSubmit}>
       <Field label={t("email")} name="email" type="email" autoComplete="email" required />
       <Field label={t("password")} name="password" type="password" autoComplete="current-password" required />
       {error && <FormMessage tone="error">{error}</FormMessage>}

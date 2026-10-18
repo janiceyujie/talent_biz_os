@@ -1,5 +1,6 @@
 "use client";
 
+import {usePortfolio} from "./portfolio-provider";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -15,6 +16,8 @@ const withActions: NavKey[] = ["today", "inbox"];
 /** Page title (matches the nav label) and an optional line beside it, plus new-offer actions on Today and Intake, or a page's own controls. */
 export function PageHeader({ titleKey, subtitle, children }: { titleKey: NavKey; subtitle?: ReactNode; children?: ReactNode }) {
   const t = useTranslations();
+  const portfolio=usePortfolio();
+  const artistView=titleKey==="today"&&portfolio?.ids!==null&&portfolio?.ready;
   const [editor, setEditor] = useState<Editor | null>(null);
   const [pasting, setPasting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -30,7 +33,7 @@ export function PageHeader({ titleKey, subtitle, children }: { titleKey: NavKey;
         ) : (
           <h1>{t(`nav.${titleKey}`)}</h1>
         )}
-        {withActions.includes(titleKey) && (
+        {withActions.includes(titleKey) && !artistView && (
           <div className="page-actions">
             {/* On Intake its own dialog opens (and selects the new message); elsewhere it opens here, without leaving the page. */}
             {titleKey === "inbox" ? (

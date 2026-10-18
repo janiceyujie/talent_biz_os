@@ -1,5 +1,8 @@
 "use client";
 
+import { PageLoader } from "@/components/app/cursor-pages";
+import { useFilePages } from "@/components/app/file-pages";
+import Link from "next/link";
 import { ArrowRight, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -35,12 +38,14 @@ export function ProjectOverview({
   people,
   organizations,
   offerText,
+  grantApplications = [],
   edit,
 }: {
   project: Project;
   people: ProjectDetail["people"];
   organizations: ProjectDetail["organizations"];
   offerText: string;
+  grantApplications?: ProjectDetail["grantApplications"];
   edit: (e: Editor) => void;
 }) {
   const data = useAppData();
@@ -94,7 +99,8 @@ export function ProjectOverview({
       !(next && c.source === "todo" && c.id === next.id),
   );
   const drafts = data.drafts.filter((d) => d.projectId === project.id && !d.archived);
-  const files = data.files.filter((f) => f.projectId === project.id && !f.archived);
+  const filePage = useFilePages(project.id);
+  const files = filePage.items;
 
   const cards: Record<Card, ReactNode> = {
     partners: <ProjectPeople key="partners" project={project} people={people} organizations={organizations} />,
@@ -200,9 +206,10 @@ export function ProjectOverview({
       </DealCard>
     ),
 
-    related: items.length + drafts.length + files.length > 0 && (
+    related: (filePage.loading || filePage.failed || items.length + drafts.length + files.length + grantApplications.length > 0) && (
       <DealCard key="related" title={tWorkflow("related")}>
         <ul className="deal-records">
+          {grantApplications.map((grant) => <li key={grant.id}><Link className="deal-record" href={`/grants?application=${grant.id}`}><span>{grant.title}</span><ArrowRight size={16} aria-hidden="true" /></Link></li>)}
           {items.map((c) => (
             <li key={c.id}>
               <button className="deal-record" onClick={() => edit({ kind: "calendar", item: calendarRecord(c) })}>
@@ -221,10 +228,11 @@ export function ProjectOverview({
           ))}
           {files.map((f) => (
             <li key={f.id} className="deal-record">
-              <span>{tWorkflow("fileItem", { name: f.filename })}</span>
+              <a href={`/api/files/${f.id}`} download={f.filename}>{tWorkflow("fileItem", { name: f.filename })}</a>
             </li>
           ))}
         </ul>
+        <PageLoader page={filePage} />
       </DealCard>
     ),
   };

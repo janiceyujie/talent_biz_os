@@ -1,5 +1,9 @@
 "use client";
 
+import {PortfolioProjectDetail} from "./portfolio-project-detail";
+import {portfolioLink} from "@/lib/manager/selection";
+import { usePreviewAction } from "@/components/app/preview-action";
+
 import { Archive, ArrowDownUp, ArrowLeft, Funnel, Plus, UserRound, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12,7 +16,7 @@ import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { useProjectPages } from "@/components/app/project-pages";
 import { useFitToWindow } from "@/components/app/use-fit-to-window";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
-import { archiveProject, setProjectStage } from "@/lib/actions/projects";
+import { archiveProject as archiveProjectRemote, setProjectStage as setProjectStageRemote } from "@/lib/actions/projects";
 import { useMoney } from "@/lib/i18n/format";
 import { mainStages, phaseOf, phases, type Phase } from "@/lib/domain/phases";
 import { listSorts, type ListSort, type ListView } from "@/lib/domain/project-list";
@@ -61,12 +65,12 @@ type Notice = { message: string; action?: { label: string; onClick: () => void }
  * `?archived=1`, `?type=`, `?q=`, and `?sort=` the rest. Read from the live address, not the page's props:
  * the address changes in place (history.replaceState), so props cached for Back would be stale.
  */
-export function ProjectsView() {
+export function ProjectsView({readOnly=false}:{readOnly?:boolean}={}) {
   const address = useSearchParams();
   const [initial] = useState(() => ({
     selectedId: address.get("id") ?? "",
     phase: phases.find((p) => p === address.get("phase")),
-    scope: (address.get("archived") === "1" ? "archived" : address.get("phase") === "all" ? "all" : "phase") as Scope,
+    scope: (address.get("archived") === "1" ? "archived" : address.get("phase") === "all" || (readOnly&&!address.get("phase")) ? "all" : "phase") as Scope,
     type: projectTypes.find((pt) => pt.key === address.get("type"))?.key ?? "all",
     contact: (address.get("contact") ?? "").slice(0, 40),
     q: (address.get("q") ?? "").slice(0, 200),
@@ -125,16 +129,19 @@ export function ProjectsView() {
   });
   // A page at a time from the server (decision 0011). Archived is its own view, not a filter on a phase.
   const view: ListView = scope === "phase" ? phase : scope;
-  const listId = `${view}|${type}|${contact}|${search.trim()}|${sort}`;
+  const artistScope=JSON.stringify(data.portfolio?.artists.map(artist=>artist.id).sort()||null);
+  const listId = `${artistScope}|${view}|${type}|${contact}|${search.trim()}|${sort}`;
   const [arrival] = useState(() => (typeof window === "undefined" ? null : readPlace(listId)));
   const list = useProjectPages({ view, type, contact, q: search, sort }, data.projects, arrival?.rows ?? 0);
   const visible = list.items;
   // A linked project shows even before its page has loaded (the layout's summary has it).
   const linked = selected ? visible.find((p) => p.id === selected) ?? data.projects.find((p) => p.id === selected && p.archived === archived) : undefined;
   const active = linked ?? visible[0];
+  const priorArtistScope=useRef(artistScope);
+  useEffect(()=>{if(priorArtistScope.current!==artistScope){priorArtistScope.current=artistScope;queueMicrotask(()=>{setSelected("");setDetailOpen(false);});}},[artistScope]);
   const quoteText = (p: ProjectSummary) => {
     const total = projectQuoteTotal(p);
-    return total === null ? t("quoteNotSet") : money(total);
+    return total === null ? t("quoteNotSet") : money(total,p.currency);
   };
   // Near the end of the list, the next page: watched in the list's own scroll area on wide screens, the page on narrow ones.
   const panel = useRef<HTMLElement>(null);
@@ -179,9 +186,9 @@ export function ProjectsView() {
     if (search.trim()) params.set("q", search.trim());
     if (sort !== "due") params.set("sort", sort);
     if (selected) params.set("id", selected);
-    const next = `${window.location.pathname}?${params}`;
+    const next = portfolioLink(`${window.location.pathname}?${params}`,data.portfolio?.artists.map(artist=>artist.id)||null);
     if (next !== window.location.pathname + window.location.search) window.history.replaceState(null, "", next);
-  }, [archived, scope, phase, type, contact, search, sort, selected]);
+  }, [archived, scope, phase, type, contact, search, sort, selected,artistScope]); // eslint-disable-line react-hooks/exhaustive-deps -- serialized portfolio ids preserve scope
 
   // The scroll area: the list panel on wide screens, the page on narrow ones.
   const scroller = () => (window.matchMedia(NARROW).matches ? document.scrollingElement : panel.current);
@@ -237,10 +244,10 @@ export function ProjectsView() {
     <div className={`deals-workspace ${detailOpen && active ? "is-detail-open" : ""}`}>
       {/* Creating is the page's own action, beside the title as on Today and Intake; the controls below only shape the list. */}
       <PageHeader titleKey="projects">
-        <button className="primary" onClick={() => setEditor({ kind: "project" })}>
+        {!readOnly&&<button className="primary" onClick={() => setEditor({ kind: "project" })}>
           <Plus size={16} aria-hidden="true" />
           {t("newProject")}
-        </button>
+        </button>}
       </PageHeader>
       <section className="deal-controls">
         <div className="deal-phase-row">
@@ -353,6 +360,7 @@ export function ProjectsView() {
                       }
                     }}
                   >
+                    {readOnly&&<span className="portfolio-record-artist">{p.artist}</span>}
                     <span className="deal-list-line">
                       <strong className="deal-list-title">{p.title}</strong>
                       <span className="deal-list-amount">{quoteText(p)}</span>
@@ -387,7 +395,7 @@ export function ProjectsView() {
           {!visible.length && !list.loading && !list.failed && <p className="empty">{t(archived ? "archivedEmpty" : search.trim() ? "noMatches" : "empty")}</p>}
         </section>
         {active && (
-          <ProjectDetail
+          readOnly?<PortfolioProjectDetail key={active.id} project={active} onBack={backToList}/>:<ProjectDetail
             key={active.id}
             project={active}
             edit={setEditor}
@@ -404,7 +412,7 @@ export function ProjectsView() {
         )}
       </div>
       {notice && <Toast key={notice.message} message={notice.message} action={notice.action} onClose={() => setNotice(null)} />}
-      {editor && (
+      {!readOnly&&editor && (
         <RecordEditor
           editor={editor}
           onClose={() => setEditor(null)}
@@ -440,6 +448,8 @@ function ProjectDetail({
   const t = useTranslations("projects");
   const tWorkflow = useTranslations("workflow");
   const labels = useLabels();
+  const archiveProject = usePreviewAction(archiveProjectRemote);
+  const setProjectStage = usePreviewAction(setProjectStageRemote);
   const [tab, setTab] = useState<Tab>("overview");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -630,7 +640,7 @@ function ProjectDetail({
         <div className="deal-tab-panel" role="tabpanel" id={`deal-panel-${tab}`} aria-labelledby={`deal-tab-${tab}`}>
           {failed && (tab === "overview" || tab === "timeline") && <p className="notice error">{t("detailFailed")}</p>}
           {(tab === "overview" || tab === "money") && !full && !failed && <p className="muted">{t("loading")}</p>}
-          {tab === "overview" && full && <ProjectOverview project={full} people={detail!.people} organizations={detail!.organizations} offerText={detail!.offerText} edit={edit} />}
+          {tab === "overview" && full && <ProjectOverview project={full} people={detail!.people} organizations={detail!.organizations} offerText={detail!.offerText} grantApplications={detail!.grantApplications} edit={edit} />}
           {tab === "timeline" && (
             <DealCard title={t("tab.timeline")}>
               {loading ? <p className="muted">{t("loading")}</p> : <ProjectTimeline project={project} entries={detail?.timeline ?? []} />}

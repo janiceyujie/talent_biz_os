@@ -1,16 +1,20 @@
 "use client";
 
-import { Bell, Menu, PanelLeftClose, PanelLeftOpen, Search, X } from "lucide-react";
+import { Bell, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { COLLAPSE_SHORTCUT, PRODUCT_MONOGRAM, PRODUCT_NAME, PRODUCT_TAGLINE, SEARCH_SHORTCUT } from "@/lib/brand";
-import { useLabels } from "@/lib/i18n/labels";
+import { COLLAPSE_SHORTCUT, PRODUCT_MONOGRAM, PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/brand";
+import {PortfolioSwitcher} from "./portfolio-switcher";
+import {usePortfolio} from "./portfolio-provider";
+import { AssistantProvider } from "./assistant-provider";
+import { AssistantDock } from "./assistant-dock";
+import { WorkspaceSearch } from "./workspace-search";
 import { AccountMenu } from "./account-menu";
 import { Companion } from "./companion";
 import { NotificationList, ReminderToast, useNotifications } from "./notifications";
-import { useAppData } from "./app-data";
+import { PreviewBanner, useAppData } from "./app-data";
 import { Modal } from "./modal";
 import { isActive, nav } from "./nav";
 
@@ -26,17 +30,23 @@ const rememberCollapsed = (collapsed: boolean) => {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const data = useAppData();
+  return <AssistantProvider key={`${data.talent.id}:${data.person.email}:${Boolean(data.preview)}`}><ShellContent>{children}</ShellContent></AssistantProvider>;
+}
+
+function ShellContent({ children }: { children: ReactNode }) {
+  const data = useAppData();
   const t = useTranslations("shell");
   const tNav = useTranslations("nav");
-  const labels = useLabels();
+  const portfolio=usePortfolio();
+  const visibleNav = nav.filter(item => (item.key !== "grants" || data.grantsAvailable) && (item.key !== "manager" || data.managerAvailable));
   const pathname = usePathname();
+  const portfolioActive=portfolio?.ids!==null&&portfolio?.ready&&["/","/calendar","/finance","/projects"].includes(pathname);
   const router = useRouter();
   const [mobile, setMobile] = useState(false);
   const [narrow, setNarrow] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [companionOpen, setCompanionOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const sidebar = useRef<HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [tip, setTip] = useState<{ label: string; top: number } | null>(null);
@@ -108,10 +118,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setShowSearch(true);
-      }
       if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
         e.preventDefault();
         setCollapsed((c) => {
@@ -126,24 +132,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const { unread } = useNotifications();
   // Messages waiting for the person: analyzed and not yet filed or dismissed.
-  const toReview = data.inbox.filter((m) => m.status === "analyzed" || m.status === "error").length;
-  const results = [
-    ...data.projects
-      .filter((p) => !p.archived)
-      .map((p) => ({ id: p.id, label: p.title, detail: t("resultProject", { counterparty: p.counterparty }), href: `/projects?id=${p.id}` })),
-    ...data.contacts
-      .filter((c) => !c.archived)
-      .map((c) => ({ id: c.id, label: c.name, detail: `${labels.contactRole(c.role)} · ${c.company}`, href: "/contacts" })),
-    ...data.calendar
-      .filter((c) => !c.archived)
-      .map((c) => ({ id: c.id, label: c.title, detail: t("resultCalendar", { date: c.date }), href: `/calendar?day=${c.date}` })),
-    ...data.templates
-      .filter((tpl) => !tpl.archived)
-      .map((tpl) => ({ id: tpl.id, label: tpl.title, detail: t("resultTemplate"), href: "/drafts" })),
-  ]
-    .filter((r) => `${r.label} ${r.detail}`.toLowerCase().includes(query.toLowerCase()))
-    .slice(0, 30);
-
+  const toReview = data.inboxOverview ? data.inboxOverview.counts.analyzed + data.inboxOverview.counts.error : data.inbox.filter((m) => m.status === "analyzed" || m.status === "error").length;
   const open = (href: string) => {
     setShowSearch(false);
     setShowNotifications(false);
@@ -162,27 +151,29 @@ export function AppShell({ children }: { children: ReactNode }) {
         aria-label={tNav("menuLabel")}
       >
         <div className="brand">
-          <span>{PRODUCT_MONOGRAM}</span>
-          <div>
-            <strong>{PRODUCT_NAME}</strong>
-            <small>{PRODUCT_TAGLINE}</small>
-          </div>
-          <button className="close-nav" aria-label={tNav("closeMenu")} onClick={() => setMobile(false)}>
+          <Link className="brand-home" href={portfolio?.href("/")||"/"} aria-label={`${PRODUCT_NAME} · ${tNav("home")}`} onClick={() => setMobile(false)}>
+            <span>{PRODUCT_MONOGRAM}</span>
+            <div>
+              <strong>{PRODUCT_NAME}</strong>
+              <small>{PRODUCT_TAGLINE}</small>
+            </div>
+          </Link>
+          <button data-preview-safe="true" className="close-nav" aria-label={tNav("closeMenu")} onClick={() => setMobile(false)}>
             <X size={20} />
           </button>
         </div>
         <nav>
           <small>{tNav("groupWork")}</small>
-          {nav.map((item, i) => {
+          {visibleNav.map((item, i) => {
             const Icon = item.icon;
             const active = isActive(pathname, item.href);
             return (
               <div key={item.href}>
-                {item.group === "manage" && nav[i - 1]?.group === "work" && (
+                {item.group === "manage" && visibleNav[i - 1]?.group === "work" && (
                   <small className="nav-group-label">{tNav("groupManage")}</small>
                 )}
                 <Link
-                  href={item.href}
+                  href={portfolio?.href(item.href)||item.href}
                   className={active ? "active" : ""}
                   aria-current={active ? "page" : undefined}
                   // Collapsed, the label shows as a tooltip beside the icon (the sidebar scrolls, so it's drawn outside it).
@@ -208,7 +199,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
       {mobile && (
-        <button
+        <button data-preview-safe="true"
           className="nav-backdrop"
           tabIndex={-1}
           aria-hidden="true"
@@ -218,7 +209,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
       <main className="app-main" inert={narrow && mobile}>
         <header className="topbar">
-          <button
+          <button data-preview-safe="true"
             className="menu-button"
             aria-label={tNav("openMenu")}
             aria-expanded={mobile}
@@ -229,7 +220,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
           <div className="topbar-start">
             {/* Wide screens: collapse the sidebar to its icons for more room (calendar, dashboard). Phones use the menu button above. */}
-            <button
+            <button data-preview-safe="true"
               className="collapse-nav"
               aria-label={tNav(collapsed ? "expandMenu" : "collapseMenu")}
               title={`${tNav(collapsed ? "expandMenu" : "collapseMenu")} (${COLLAPSE_SHORTCUT})`}
@@ -239,11 +230,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               {collapsed ? <PanelLeftOpen size={19} aria-hidden="true" /> : <PanelLeftClose size={19} aria-hidden="true" />}
             </button>
-            <button className="global-search" onClick={() => setShowSearch(true)}>
-              <Search size={17} />
-              <span>{t("searchPlaceholder")}</span>
-              <kbd>{SEARCH_SHORTCUT}</kbd>
-            </button>
+            <WorkspaceSearch key={`${data.talent.id}:${data.person.email}:${Boolean(data.preview)}`} open={showSearch} onOpenChange={setShowSearch} />
           </div>
           <Companion
             key={data.person.role}
@@ -252,7 +239,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             blocked={mobile || showNotifications || showSearch}
           />
           <div className="top-actions">
-            <button
+            <PortfolioSwitcher/>
+            <button data-preview-safe="true"
               aria-label={t("notifications", { count: unread.length })}
               onClick={() => setShowNotifications(true)}
             >
@@ -262,34 +250,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             <AccountMenu />
           </div>
         </header>
-        <div className="page-content">{children}</div>
+        {!portfolioActive&&<PreviewBanner />}
+        <div className="page-content" key={data.preview?"preview":"workspace"}>{children}</div>
       </main>
       {showNotifications && (
         <Modal title={t("notifications", { count: unread.length })} onClose={() => setShowNotifications(false)}>
           <NotificationList open={open} />
         </Modal>
       )}
-      <ReminderToast onOpen={() => setShowNotifications(true)} suppress={showNotifications || showSearch || companionOpen} />
-      {showSearch && (
-        <Modal title={t("searchTitle")} onClose={() => setShowSearch(false)}>
-          <input
-            autoFocus
-            aria-label={t("searchTitle")}
-            placeholder={t("searchInput")}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <div className="search-results">
-            {results.map((r) => (
-              <button key={r.id} onClick={() => open(r.href)}>
-                <strong>{r.label}</strong>
-                <small>{r.detail}</small>
-              </button>
-            ))}
-            {!results.length && <p className="empty">{t("noResults")}</p>}
-          </div>
-        </Modal>
-      )}
+      <AssistantDock hidden={mobile || showNotifications} />
+      <ReminderToast onOpen={() => setShowNotifications(true)} suppress={portfolioActive || showNotifications || showSearch || companionOpen || pathname.startsWith("/grants") || pathname === "/manager" || pathname.startsWith("/manager/")} />
+
     </div>
   );
 }

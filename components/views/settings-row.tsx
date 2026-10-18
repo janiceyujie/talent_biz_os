@@ -7,12 +7,13 @@ import { InfoHint } from "@/components/app/info-hint";
 // an optional one-line description, or longer help behind ⓘ) on the left and
 // its control on the right. Rows stack on narrow screens.
 
-export function SettingsGroup({ title, hint, children }: { title: string; hint?: string[]; children: ReactNode }) {
+export function SettingsGroup({ title, hint, children, collapsible = false }: { title: string; hint?: string[]; children: ReactNode; collapsible?: boolean }) {
+  if (collapsible) return <details className="settings-group settings-disclosure"><summary>{title}{hint && <InfoHint label={title} notes={hint} />}</summary><div className="surface settings-list">{children}</div></details>;
   return (
     <section className="settings-group">
       <h2>
         {title}
-        {hint && <InfoHint notes={hint} />}
+        {hint && <InfoHint label={title} notes={hint} />}
       </h2>
       <div className="surface settings-list">{children}</div>
     </section>
@@ -48,7 +49,7 @@ export function SettingsRow({
       <div className="settings-row-label">
         <span className="settings-row-title">
           {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : label}
-          {hint && <InfoHint notes={hint} bulleted={hintBulleted} />}
+          {hint && <InfoHint label={label} notes={hint} bulleted={hintBulleted} />}
         </span>
         {description && <small>{description}</small>}
         {error && (

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { dateInZone } from "@/lib/domain/dates";
@@ -11,22 +12,25 @@ import { savePayment } from "@/lib/actions/payments";
 import { saveProject } from "@/lib/actions/projects";
 import { saveTemplate } from "@/lib/actions/templates";
 import { localeNames, locales, toLocale } from "@/lib/i18n/config";
-import { placeholderKeys, placeholderName, toDisplay } from "@/lib/templates/placeholders";
+import { placeholderKeys, placeholderName, toDisplay, toStored } from "@/lib/templates/placeholders";
 import { isSigned } from "@/lib/domain/phases";
+import { supportedCurrencies } from "@/lib/domain/money";
 import { placeSuggestions } from "@/lib/calendar/places";
 import {
   calendarKinds,
   contactRoles,
   stages,
   transportModes,
+  type ReplyTemplate,
   type CalendarItem,
   type Project,
   type Stage,
   type TransportMode,
 } from "@/lib/types";
-import { useAppData } from "./app-data";
+import { useAppData, usePreviewTemplates } from "./app-data";
 import { ContactPicker, type NewContact } from "./contact-picker";
 import { OrganizationPicker } from "./organization-picker";
+import { DateTimeInput } from "./date-time-input";
 import { TimeZonePicker } from "./time-zone-picker";
 import { Modal } from "./modal";
 
@@ -86,7 +90,10 @@ export function RecordEditor({
   onSaved?: (data: RecordData) => void;
 }) {
   const data$ = useAppData();
+  const localTemplates = usePreviewTemplates();
+  const tPreview = useTranslations("preview");
   const t = useTranslations("editor");
+  const tFinance = useTranslations("finance");
   const tProjects = useTranslations("projects");
   const tTone = useTranslations("tone");
   const labels = useLabels();
@@ -205,6 +212,7 @@ export function RecordEditor({
       ...d,
       [key]: value,
       ...(key === "status" ? { settledDate: value === "settled" ? d.settledDate || today : "" } : {}),
+      ...(key === "projectId" && value ? { currency: data$.projects.find((p) => p.id === String(value))?.currency ?? d.currency } : {}),
       // An arrival or check-out usually happens in the same zone; start from it.
       ...(key === "endDate" && value ? { endTimeZone: d.endTimeZone || d.timeZone } : {}),
       // A trip's arrival or a stay's check-out isn't another kind's end time: drop it on switching.
@@ -213,13 +221,16 @@ export function RecordEditor({
         : {}),
     }));
 
-  function field(key: string, label: string, type = "text", required = false, options?: Option[], list?: string) {
+  function field(key: string, label: string, type = "text", required = false, options?: Option[], list?: string, disabled = false) {
+    if (type === "date" || type === "time") {
+      return <DateTimeInput key={key} kind={type} label={label} value={String(data[key] ?? "")} onChange={value => change(key,value)} today={today} required={required} disabled={disabled} field={key}/>;
+    }
     return (
       <label key={key}>
         {label}
         {required ? " *" : ""}
         {options ? (
-          <select aria-label={label} data-field={key} value={String(data[key])} onChange={(e) => change(key, e.target.value)}>
+          <select aria-label={label} data-field={key} value={String(data[key])} disabled={disabled} onChange={(e) => change(key, e.target.value)}>
             {options.map(([value, text]) => (
               <option key={value} value={value}>
                 {text}
@@ -244,7 +255,7 @@ export function RecordEditor({
             data-field={key}
             type={type}
             required={required}
-            step={type === "number" ? "0.01" : undefined}
+            step={type === "number" ? (key === "amount" || key === "quotedAmount" || key === "settledAmount") && data.currency === "JPY" ? "1" : "0.01" : undefined}
             min={type === "number" ? 0 : undefined}
             max={key === "taxRate" ? 100 : undefined}
             maxLength={200}
@@ -269,20 +280,23 @@ export function RecordEditor({
         ...data$.projects
           .filter((p) => (!p.archived && isSigned(p.stage)) || p.id === data.projectId)
           .map((p) => [p.id, p.title] as const),
-      ])}
-      <small className="muted">{t("signedOnly")}</small>
+      ], undefined, Boolean(kind === "calendar" && data.grantApplicationId))}
+      {kind === "calendar" && data.grantApplicationId ? <Link className="text-button" href={`/grants?application=${data.grantApplicationId}`}>{t("grantSource")}</Link> : <small className="muted">{t("signedOnly")}</small>}
     </div>
   );
 
+  const currencyOptions = supportedCurrencies.map((currency) => [currency, `${currency} · ${tFinance(`currencyNames.${currency}`)}`] as const);
+  const projectCurrencyLocked = kind === "project" && Boolean(data.id) && data$.payments.some((p) => p.projectId === data.id);
   const pricing = (amountKey: string, amountRequired = true, legend = t("section.amount"), amountLabel = t("field.amount")) => (
     <fieldset className="form-section">
       <legend>{legend}</legend>
       <div className="form-grid">
         {field(amountKey, amountLabel, "number", amountRequired)}
-        {field("currency", t("field.currency"), "text", true, [["TWD", "TWD"]])}
+        {field("currency", t("field.currency"), "text", true, currencyOptions, undefined, amountKey === "quotedAmount" && projectCurrencyLocked)}
         {field("taxRate", t("field.taxRate"), "number", true)}
         {field("taxIncluded", t("field.taxIncluded"), "checkbox")}
       </div>
+      {amountKey === "quotedAmount" && projectCurrencyLocked && <small className="muted">{t("projectCurrencyLocked")}</small>}
     </fieldset>
   );
   // Income is collected, a cost is paid: the payment form's words follow the direction.
@@ -296,6 +310,13 @@ export function RecordEditor({
         onSubmit={async (e) => {
           e.preventDefault();
           if (!onSave) return;
+          if (data$.preview) {
+            if (kind !== "template") { setError(tPreview("readOnly")); return; }
+            localTemplates.save({...data, id: String(data.id || crypto.randomUUID()), body: toStored(String(data.body)), archived: false} as ReplyTemplate);
+            onSaved?.(data);
+            onClose();
+            return;
+          }
           setPending(true);
           // A typed main contact who isn't a contact yet is added as one, with any details given.
           const typedContact = kind === "project" && !data.counterpartyId && String(data.contactName ?? "").trim();
@@ -543,6 +564,7 @@ export function RecordEditor({
             {error}
           </p>
         )}
+        {data$.preview && <p className="muted">{tPreview(kind === "template" ? "localTemplates" : "readOnly")}</p>}
         {!onSave && <p className="muted">{t("notWired")}</p>}
         {confirming ? (
           <footer className="modal-actions" role="alertdialog" aria-label={t("unsaved")}>
@@ -559,7 +581,7 @@ export function RecordEditor({
             <button type="button" className="secondary" disabled={pending} onClick={requestClose}>
               {t("cancel")}
             </button>
-            <button disabled={!onSave || pending} type="submit" className="primary">
+            <button disabled={!onSave || pending || (!!data$.preview && kind !== "template")} type="submit" className="primary">
               {pending ? t("saving") : t("save")}
             </button>
           </footer>

@@ -1,3 +1,5 @@
+import { processMailReview } from "@/lib/mail/jobs/review";
+import { refreshGrantSources } from "@/lib/grants/sync";
 import type { Task } from "graphile-worker";
 import { analyzeMessage, markAnalysisFailed } from "@/lib/ai/analyze-message";
 import { disconnectMailbox } from "@/lib/mail/jobs/disconnect";
@@ -10,6 +12,8 @@ import { jobs, type JobName } from "@/lib/queue/jobs";
 // a job can run again after a crash or a redeploy.
 
 export const taskList: Record<JobName, Task> = {
+  "mail.review": async payload => { const {decisionId,mode}=jobs["mail.review"].parse(payload); await processMailReview(decisionId,mode); },
+  "grants.refresh": async payload => { jobs["grants.refresh"].parse(payload); if((await refreshGrantSources()).some(r=>!r.ok))throw new Error("grant_source_refresh_failed"); },
   "message.analyze": async (payload, { job }) => {
     const { messageId, locale } = jobs["message.analyze"].parse(payload);
     try {

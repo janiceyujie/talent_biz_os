@@ -1,5 +1,7 @@
 # Janice integration, 2026-10-18
 
+Historical verification record. For the current branch order and migration numbers, see [the 2026-10-19 refresh](janice-integration-2026-10-19.md).
+
 Sensitive areas: database migration lineage, tenant-scoped inbox metadata, payment receipts, and Gmail ingestion. No production deploy, real email delivery, or paid model evaluation is part of this integration.
 
 ## Branch order

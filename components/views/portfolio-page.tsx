@@ -1,4 +1,5 @@
 "use client";
+import { ActionNotice } from "@/components/app/action-notice";
 import {ManagerReadBoundary} from "@/components/app/manager-read-boundary";
 import {type ReactNode} from "react";
 import {useTranslations} from "next-intl";
@@ -17,8 +18,8 @@ export function PortfolioPage({view,children,initialDay="",initialDate=""}:{view
   const data={...own,preview:false,previewDate:undefined,calendar:portfolio?.calendar||[],payments:portfolio?.payments||[],projects:portfolio?.projects||[],externalEvents:[],googleCalendar:{...own.googleCalendar,importing:[]},portfolio:{artists:portfolio?.artists.filter(artist=>portfolio.selectedIds.includes(artist.id))||[]}};
   return <ManagerReadBoundary ids={scope?.ids||[]}>
     {resource.loading&&<div className="portfolio-loading surface" role="status" aria-busy="true">{t("loading")}</div>}
-    {resource.error&&<div className="notice error" role="alert">{resource.error} <button className="secondary compact" onClick={resource.retry}>{t("retry")}</button></div>}
-    {portfolio?.limited&&<p className="notice" role="status">{t("limited")}</p>}
+    {resource.error&&<ActionNotice className="error" role="alert" actions={<button className="secondary compact" onClick={resource.retry}>{t("retry")}</button>}>{resource.error}</ActionNotice>}
+    {portfolio?.limited&&<ActionNotice role="status">{t("limited")}</ActionNotice>}
     {!resource.loading&&!resource.error&&!portfolio?.limited&&!scope?.ids?.length&&<p className="empty">{t("choose")}</p>}
     <div hidden={hidden} inert={hidden}><AppDataScope data={data}>
       {view==="today"?<PortfolioToday/>:view==="finance"?<FinanceView readOnly/>:<PlannerView initialDay={initialDay} initialDate={initialDate} readOnly/>}

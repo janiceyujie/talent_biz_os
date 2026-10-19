@@ -46,4 +46,10 @@ describe("job payloads", () => {
     assert.equal(analyzeJobKey(id), analyzeJobKey(id));
     assert.notEqual(analyzeJobKey(id), analyzeJobKey("9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"));
   });
+
+  test("scheduled jobs take what the scheduler adds", () => {
+    const cron = { _cron: { ts: "2026-10-18T00:00:00Z", backfilled: false } };
+    assert.equal(jobs["mail.reconcile"].safeParse(cron).success, true);
+    assert.equal(jobs["mail.cleanup"].safeParse(cron).success, true);
+  });
 });

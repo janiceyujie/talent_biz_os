@@ -29,6 +29,7 @@ export type ReadMessage = {
   labels: string[]; // Gmail's label ids; SENT for the person's own mail
   from: Address;
   to: string; // the To header as written: whom the person's own mail went to
+  authResults: string[]; // every Authentication-Results header, top first: Gmail's own is the topmost
   subject: string;
   headerMessageId: string;
   inReplyTo: string;
@@ -76,6 +77,7 @@ export function readMessage(raw: GmailFullMessage): ReadMessage {
     labels: raw.labelIds ?? [],
     from: parseAddress(header(raw.payload, "From")),
     to: header(raw.payload, "To"),
+    authResults: (raw.payload?.headers ?? []).filter((h) => h.name.toLowerCase() === "authentication-results").map((h) => h.value),
     subject: header(raw.payload, "Subject"),
     headerMessageId: header(raw.payload, "Message-ID"),
     inReplyTo: header(raw.payload, "In-Reply-To"),

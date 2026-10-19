@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently --names web,worker --prefix-colors blue,green \"npm:dev:web\" \"npm:worker\"",
+    "dev:web": "next dev",
     "worker": "tsx --conditions=react-server worker/index.ts",
     "build": "next build",
     "start": "next start",
@@ -23,6 +24,7 @@
     "db:seed-manager": "tsx --conditions=react-server scripts/seed-manager-trial.mts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
     "@aws-sdk/client-s3": "^3.1146.0",
     "@aws-sdk/s3-request-presigner": "^3.1146.0",
     "better-auth": "^1.7.7",
@@ -32,6 +34,7 @@
     "next": "16.3.8",
     "next-intl": "^4.14.9",
     "nodemailer": "^10.0.13",
+    "openai": "^7.38.0",
     "pg": "^8.23.1",
     "postgres": "^3.4.9",
     "react": "19.2.8",
@@ -46,6 +49,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^10.0.6",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",

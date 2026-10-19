@@ -1,5 +1,6 @@
 "use client";
 
+import { ActionNotice } from "@/components/app/action-notice";
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -52,7 +53,7 @@ export function ManagerReadBoundary({ ids, children }: { ids: string[]; children
   return <>
     <div className="portfolio-read-only-label"><LockKeyhole size={14} aria-hidden="true"/><span>{t("readOnly")}</span><InfoHint label={t("readOnly")} notes={[t("readOnlyHint")]}/></div>
     {checking && <p role="status" aria-busy="true">{t("checkingAccess")}</p>}
-    {current?.error && <div className="notice error" role="alert">{t(current.error)} <button className="secondary compact" onClick={() => { setState(undefined); setAttempt(value => value + 1); router.refresh(); }}>{t("retry")}</button></div>}
+    {current?.error && <ActionNotice className="error" role="alert" actions={<button className="secondary compact" onClick={() => { setState(undefined); setAttempt(value => value + 1); router.refresh(); }}>{t("retry")}</button>}>{t(current.error)}</ActionNotice>}
     {!current?.error && <div className="manager-read-content" hidden={checking} inert={checking}>{children}</div>}
   </>;
 }

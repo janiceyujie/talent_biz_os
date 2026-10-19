@@ -1,4 +1,5 @@
 "use client";
+import { ActionNotice } from "@/components/app/action-notice";
 import { ExternalLink, Plus, RefreshCw, Bell, CalendarDays, X } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -181,5 +182,5 @@ export function GrantNotice({count}:{count:number}) {
   const [pending,startTransition]=useTransition();
   const [error,setError]=useState<string|null>(null);
   if(!count)return null;
-  return <aside className="grant-notice"><Bell size={18} aria-hidden="true"/><Link href="/grants">{t("newNotices",{count})}</Link><button className="text-button" disabled={pending} onClick={()=>startTransition(async()=>{try{setError(await markGrantsSeen());}catch{setError(t("failed"));}})}>{t("markSeen")}</button>{error&&<span role="alert">{error}</span>}</aside>;
+  return <ActionNotice icon={<Bell size={18}/>} actions={<button className="text-button" disabled={pending} onClick={()=>startTransition(async()=>{try{setError(await markGrantsSeen());}catch{setError(t("failed"));}})}>{t("markSeen")}</button>} detail={error&&<span role="alert">{error}</span>}><Link href="/grants">{t("newNotices",{count})}</Link></ActionNotice>;
 }

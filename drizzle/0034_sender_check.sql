@@ -1,0 +1,2 @@
+ALTER TABLE "message" ADD COLUMN "sender_check" text;--> statement-breakpoint
+ALTER TABLE "message" ADD CONSTRAINT "message_sender_check_check" CHECK ("message"."sender_check" in ('verified', 'failed', 'unknown'));

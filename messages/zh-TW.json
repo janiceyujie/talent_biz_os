@@ -254,7 +254,8 @@
       "payment_details": "要求付款或提供新的匯款／付款資訊，常見於詐騙。請用你原本就有的聯絡方式向對方確認。",
       "inconsistency": "內容前後不一致。",
       "hidden_text": "含有看不見的字元，可能藏有指示，分析前已移除。",
-      "other": "這則訊息有可疑之處，請多留意。"
+      "other": "這則訊息有可疑之處，請多留意。",
+      "unverified_sender": "Gmail 無法驗證這封信來自寄件者的網域：寄件地址可能是偽造的。"
     }
   },
   "today": {
@@ -718,7 +719,8 @@
       "analyzed": "待確認",
       "confirmed": "已建檔",
       "dismissed": "已略過",
-      "error": "分析失敗"
+      "error": "分析失敗",
+      "history": "過往信件"
     },
     "channel": {
       "paste": "貼上",
@@ -826,7 +828,12 @@
     "yourReply": "你的回覆",
     "sentTo": "你 → {to}",
     "repliesDone": "✓ 已完成：{titles}",
-    "undo": "復原"
+    "undo": "復原",
+    "historyGroup": "過往信件",
+    "historyInfo": "過去 30 天內、兩週沒有新進度的信件串，留著備查；打開時才會分析。",
+    "historyCount": "{count} 封",
+    "unverifiedSenderPayment": "Gmail 無法驗證寄件者，而這封信提到付款或匯款資料：這是常見的詐騙手法。請先別付款或回覆資料，用你原本就有的聯絡方式向對方確認。",
+    "requestFailed": "暫時無法確認操作結果。請稍後重試，或返回訊息列表。"
   },
   "intake": {
     "targetHeading": "歸入合作案",
@@ -1310,11 +1317,11 @@
       "googleError": "Google 回傳錯誤，請稍後再試。"
     },
     "connectSummary": "唯讀權限，只收進工作信。",
-    "syncNow": "立即同步",
-    "syncing": "同步中…",
-    "syncedAt": "{time}同步",
-    "neverSynced": "尚未同步",
-    "syncFailed": "上次同步失敗",
+    "syncNow": "立即檢查",
+    "syncing": "檢查中…",
+    "syncedAt": "{time}檢查過",
+    "neverSynced": "尚未檢查",
+    "syncFailed": "上次檢查失敗",
     "lastSynced": "上次同步",
     "never": "從未",
     "tabsLabel": "顯示內容",
@@ -1406,7 +1413,9 @@
     "keepNoneHint": "包括已歸入合作案的信",
     "notWorkTitle": "不是工作信？",
     "notWorkBody": "這封信會移出進件分類，內文與附件會刪除。它仍會列在「已過濾」，可按「這是工作信」收回。",
-    "notWorkNeverFrom": "也不再收 {sender} 的信"
+    "notWorkNeverFrom": "也不再收 {sender} 的信",
+    "autoInfo": "新信件會自動收進來。想馬上看到（例如正在等的回覆），可以按立即檢查。",
+    "sortingCount": "整理中 {count} 封"
   },
   "paymentNotice": {
     "chip": "收款",
@@ -1441,7 +1450,10 @@
     "viewPayments": "到財務查看",
     "newLabel": "入帳",
     "newLabelFrom": "入帳：{payer}",
-    "paymentOption": "{project} · {label}"
+    "paymentOption": "{project} · {label}",
+    "dropTitle": "捨棄這則通知？",
+    "dropBody": "它的明細會刪除，並從進件分類移除；信件仍留在 Gmail。",
+    "dropNeverFrom": "之後不再收進「{sender}」的通知"
   },
   "settings": {
     "name": "藝名或品牌名稱",

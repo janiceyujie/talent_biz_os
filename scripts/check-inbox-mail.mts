@@ -56,6 +56,19 @@ try{
  ok(await inboxDetail(own,foreign.id)===null,"Foreign detail inaccessible");
  ok((await inboxDetail(own,ids[0]))?.filed?.length===1,"Existing project matching context preserved");
  const stats=await inboxOverview(own);ok(stats.counts.error===203&&stats.counts.analyzed===1&&stats.counts.confirmed===1,"Exact status counts");ok(!!stats.latestActivity[project],"Project activity includes all messages");
+ // History stays separately paged and cannot reuse an active-list cursor.
+ const historyIds=ids.slice(3,28);
+ await q`update message set status='history' where id=any(${historyIds}::uuid[])`;
+ const historyPage=await listInbox(own,inboxListParams.parse({history:"true"}));
+ ok(historyPage.items.length===20&&historyPage.total===25&&!!historyPage.nextCursor,"History first page is bounded");
+ const historyNext=await listInbox(own,inboxListParams.parse({history:"true",cursor:historyPage.nextCursor}));
+ ok(historyNext.items.length===5&&!historyNext.nextCursor,"History continuation contains the remaining rows");
+ ok(new Set([...historyPage.items,...historyNext.items].map(m=>m.id)).size===25,"History pagination has no duplicates");
+ ok((await listInbox(own,inboxListParams.parse({}))).total===180,"History is excluded from the active list");
+ ok((await inboxOverview(own)).counts.history===25,"History counter matches the separate list");
+ ok((await listInbox(other,inboxListParams.parse({history:"true"}))).total===0,"History is workspace scoped");
+ await assert.rejects(()=>listInbox(own,inboxListParams.parse({history:"true",cursor})));checks++;
+ await q`update message set status='error' where id=any(${historyIds}::uuid[])`;
  for(const params of [{cursor:"broken"},{cursor,dismissed:"true"}]){await assert.rejects(()=>listInbox(own,inboxListParams.parse(params)));checks++;}
  await assert.rejects(()=>listInbox(other,inboxListParams.parse({cursor})));checks++;
  await db.update(s.message).set({status:"dismissed"}).where(eq(s.message.id,ids[2]));

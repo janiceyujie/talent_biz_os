@@ -293,6 +293,63 @@ The current limits:
 - Changes made in Google show here only while someone has the Calendar screen open.
 - An event edited or deleted in Google, on our dedicated calendar, is put back by the next push.
 
+### A push, step by step
+
+Connecting asks Google for one narrow permission, `calendar.app.created`: create calendars, and manage events only on calendars this app created. We can't see or change anything else in the account. Reading the person's own calendars (phase 2) asks for two read-only permissions separately, only when they turn it on.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant W as Web
+  participant Q as Job queue
+  participant K as Worker: calendar.sync
+  participant BA as Better Auth<br/>(auth_account)
+  participant OT as Google OAuth<br/>oauth2.googleapis.com
+  participant GC as Calendar API v3<br/>www.googleapis.com/calendar/v3
+  participant DB as Postgres
+
+  W->>DB: event saved, archived, or deleted, and connections marked dirty
+  W->>Q: calendar.sync per connection (job key: a burst syncs once)
+  Q->>K: run (one per connection: advisory lock)
+  K->>BA: an access token for this person
+  opt about to expire
+    BA->>OT: refresh token → new access token (1 hour)
+  end
+  BA-->>K: access token (401 here: needs reconnect)
+  K->>GC: GET /calendars/{id}: our calendar still there?
+  opt missing, or the first sync
+    K->>GC: POST /calendars: create "<talent>"
+  end
+  K->>DB: our confirmed events vs calendar_event_sync
+  K->>GC: POST /events (new), PUT /events/{id} (changed), DELETE /events/{id} (removed)
+  K->>DB: record each mapping, clear dirty, set last synced
+```
+
+How we talk to Google: plain HTTPS to its REST API (`lib/calendar/google/api.ts`), no SDK, each call with `Authorization: Bearer <access token>` and a 15-second timeout. Better Auth keeps the refresh token encrypted (`BETTER_AUTH_SECRET`) and refreshes the access token when it's about to expire.
+
+| Call | What for | Phase |
+|---|---|---|
+| `POST /calendars` | create our dedicated calendar | 1 |
+| `GET /calendars/{id}` | check it still exists, on every push | 1 |
+| `POST /calendars/{id}/events` | add an event | 1 |
+| `PUT /calendars/{id}/events/{eventId}` | replace a changed event (recreated with `POST` if deleted in Google) | 1 |
+| `DELETE /calendars/{id}/events/{eventId}` | remove an event deleted, archived, or unconfirmed here | 1 |
+| `DELETE /calendars/{id}` | remove our calendar on disconnect, when the person chooses to | 1 |
+| `GET /users/me/calendarList` | list the person's calendars to choose from | 2 |
+| `GET /calendars/{id}/events?singleEvents=true&timeMin…&timeMax…` | read a chosen calendar's events in the window, repeating events expanded, up to 20 pages of 2,500 | 2 |
+| `POST oauth2.googleapis.com/revoke` | withdraw our access on disconnect, when no other workspace's connection uses that Google account | — |
+
+What Google's answer means: 401 is lost access (the connection asks to reconnect); 404 or 410 is a calendar or event gone in Google (recreated); 429, 5xx, or no answer is temporary (retried on the schedule above); anything else waits for the next change or Sync now. Each Google event carries our event's id as a private property, so it can always be traced back. In tests, `GOOGLE_CALENDAR_API_URL` points at a fake Google.
+
+### Why it isn't two-way yet
+
+Two separate gaps; only one of them is about a public address.
+
+| What | Today | What it waits for |
+|---|---|---|
+| The person's own Google calendars shown here (Google → ours, read-only) | Works, by polling while the Calendar screen is open | A public HTTPS address (after deploy) only lets Google tell us about changes instead of us asking. |
+| Edits made in Google to our events coming back (true two-way) | Not built: the next push puts our version back | A product decision, not the network: what an edit in Google means for project data, asked before changing it. Phase 3, only if people turn out to edit project events in Google ([decision 0009](decisions/0009-google-calendar-sync.md)). |
+
 ### Later, once deployed
 
 ```mermaid

@@ -110,7 +110,7 @@ function InboxWorkspace() {
         data-preview-safe="true"
         className={`mail-summary ${selectedId === m.id ? "active" : ""}`}
         aria-pressed={selectedId === m.id}
-        onClick={() => { setActive(m.id); if (!data.preview && m.status === "history") startOpening(async () => setNotice(await openFromHistory(m.id))); }}
+        onClick={() => { setActive(m.id); if (!data.preview && m.status === "history") startOpening(async () => { try { setNotice(await openFromHistory(m.id)); } catch { setNotice(t("requestFailed")); } }); }}
       >
         <small>
           {data.preview && tab !== "messages" ? <em className="message-status">{tGmail(tab === "waiting" ? "tabWaiting" : "tabSkipped")}</em> : <StatusChip status={m.status} />}

@@ -1,4 +1,5 @@
 "use client";
+import { ActionNotice } from "@/components/app/action-notice";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -285,10 +286,8 @@ export function InvoiceNotice() {
     };
   }, [data.preview, data.talent.id]);
   return !data.preview && count ? (
-    <div className="notice invoice-notice">
-      <FileText size={18} />
-      <span>{t("pendingNotice", { count })}</span>
-      <Link href="/finance?invoiceView=review#invoices">{t("openFinance")}</Link>
-    </div>
+    <ActionNotice icon={<FileText size={18}/>} actions={<Link className="text-button" href="/finance?invoiceView=review#invoices">{t("openFinance")}</Link>}>
+      {t("pendingNotice", { count })}
+    </ActionNotice>
   ) : null;
 }

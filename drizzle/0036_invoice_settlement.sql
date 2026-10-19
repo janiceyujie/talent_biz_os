@@ -134,7 +134,9 @@ CREATE TABLE "tax_source" (
 ALTER TABLE "payment" ALTER COLUMN "tax_rate" SET DATA TYPE numeric(7, 4);--> statement-breakpoint
 ALTER TABLE "project" ALTER COLUMN "tax_rate" SET DATA TYPE numeric(7, 4);--> statement-breakpoint
 ALTER TABLE "contact" ADD COLUMN "billing_address" text;--> statement-breakpoint
+ALTER TABLE "contact" ADD COLUMN "billing_address_parts" jsonb;--> statement-breakpoint
 ALTER TABLE "organization" ADD COLUMN "billing_address" text;--> statement-breakpoint
+ALTER TABLE "organization" ADD COLUMN "billing_address_parts" jsonb;--> statement-breakpoint
 ALTER TABLE "organization" ADD COLUMN "billing_email" text;--> statement-breakpoint
 ALTER TABLE "payment" ADD COLUMN "invoice_on" date;--> statement-breakpoint
 ALTER TABLE "payment" ADD COLUMN "receipts" jsonb DEFAULT '[]'::jsonb NOT NULL;--> statement-breakpoint

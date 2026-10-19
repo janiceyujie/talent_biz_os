@@ -1,5 +1,6 @@
 "use client";
 
+import { ActionNotice } from "@/components/app/action-notice";
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { getPaymentReceiptActors } from "@/lib/actions/payment-history";
@@ -31,7 +32,7 @@ export function PaymentReceiptHistory({payment, timeZone, disabled, preview, onA
   const amount = (value: number) => money(value, payment.currency);
   const delta = (value: number) => value === 0 ? t("unchanged") : t(value > 0 ? "increase" : "decrease", {amount:amount(Math.abs(value))});
   return <>
-    {failed && <p role="status" className="receipt-audit-note">{t("loadFailed")} <button type="button" className="text-button" onClick={() => {setFailed(false);setRetry(n => n + 1);}}>{t("retry")}</button></p>}
+    {failed && <ActionNotice role="status" actions={<button type="button" className="text-button" onClick={() => {setFailed(false);setRetry(n => n + 1);}}>{t("retry")}</button>}>{t("loadFailed")}</ActionNotice>}
     <ol className="receipt-audit-list">{entries.map(({row, previous, successor, active, cashDelta, withheldDelta}) => {
       const actor = !row.recordedBy ? t("actorUnknown") : actors?.[row.recordedBy] || (preview ? t("actorUnknown") : failed ? t("actorUnavailable") : actors ? t("actorUnavailable") : t("loading"));
       const timestamp = row.recordedAt && Number.isFinite(Date.parse(row.recordedAt)) ? row.recordedAt : null;

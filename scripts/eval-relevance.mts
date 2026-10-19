@@ -4,6 +4,8 @@
 // costly miss (decision 0013).
 //
 //   npm run eval:relevance                                 # the relevance provider and model from .env.local
+//   npm run eval:relevance -- --provider anthropic         # a paid provider, its model per role
+//   npm run eval:relevance -- --max-calls 50 --max-cost 1  # the run's budget (default 200 calls, $2)
 //   npm run eval:relevance -- --provider gemini
 //   npm run eval:relevance -- --provider ollama --model qwen3:8b
 //   npm run eval:relevance -- --only zh                    # cases whose id contains "zh"
@@ -18,12 +20,17 @@ const arg = (name: string) => {
   const i = process.argv.indexOf(`--${name}`);
   return i > 0 ? process.argv[i + 1] : undefined;
 };
-if (arg("provider")) process.env.AI_MAILBOX_PROVIDER = arg("provider");
+// --provider alone uses that provider's own model for the role, not the one .env.local sets.
+if (arg("provider")) {
+  process.env.AI_MAILBOX_PROVIDER = arg("provider");
+  delete process.env.AI_MAILBOX_MODEL;
+}
 if (arg("model")) process.env.AI_MAILBOX_MODEL = arg("model");
 const only = arg("only");
 const pause = Number(arg("pause") ?? (process.env.AI_MAILBOX_PROVIDER === "gemini" ? 4000 : 0)); // free tiers limit requests a minute
 
 const { scoreMail } = await import("../lib/mail/relevance/score");
+const { evalBudget, evalSpend, spendLine } = await import("../lib/ai/spend");
 const { modelFor } = await import("../lib/ai/model");
 const { parseAddress } = await import("../lib/mail/metadata");
 const { outcomeFor, thresholds } = await import("../lib/mail/relevance/thresholds");
@@ -35,7 +42,16 @@ const { provider, models } = modelFor("relevance");
 const selected = cases.filter((c) => !only || c.id.includes(only));
 const results: { id: string; work: boolean; score: number | null; kind: string | null; expectedKind?: string; steered?: boolean; error?: string }[] = [];
 
+const budget = evalBudget(arg);
+const runStarted = new Date();
+let stopped = "";
 for (const [i, c] of selected.entries()) {
+  // The budget (lib/ai/spend.ts): stop once this run reaches its calls or estimated cost.
+  const spent = await evalSpend(runStarted);
+  if (spent.calls >= budget.maxCalls || spent.cost >= budget.maxCost) {
+    stopped = `stopped at the budget (${budget.maxCalls} calls, $${budget.maxCost.toFixed(2)}): ${selected.length - results.length} cases not run`;
+    break;
+  }
   if (i && pause) await new Promise((r) => setTimeout(r, pause));
   try {
     const out = await scoreMail(
@@ -54,7 +70,7 @@ for (const [i, c] of selected.entries()) {
   const wrong = r.score !== null && ((c.work && outcome === "skipped") || (!c.work && outcome === "work"));
   const kindMiss = r.kind && c.kind && r.kind !== c.kind ? ` (expected ${c.kind})` : "";
   console.log(
-    `${wrong ? "✗" : outcome === "unsure" ? "~" : "✓"} ${c.id.padEnd(22)} ${c.work ? "work" : "not "}  ${r.score?.toFixed(2) ?? "  - "}  ${outcome.padEnd(7)} ${r.kind ?? r.error}${kindMiss}${r.steered ? "  [steering: capped]" : ""}`,
+    `${r.error ? "!" : wrong ? "✗" : outcome === "unsure" ? "~" : "✓"} ${c.id.padEnd(22)} ${c.work ? "work" : "not "}  ${r.score?.toFixed(2) ?? "  - "}  ${outcome.padEnd(7)} ${r.kind ?? r.error}${kindMiss}${r.steered ? "  [steering: capped]" : ""}`,
   );
 }
 
@@ -89,6 +105,8 @@ for (const low of [0.1, 0.2, 0.3, 0.4]) {
 
 mkdirSync("evals/results", { recursive: true });
 const file = `evals/results/${new Date().toISOString().replace(/[:.]/g, "-")}-relevance-${models.join("_").replace(/[^\w.-]+/g, "_")}.json`;
-writeFileSync(file, JSON.stringify({ promptVersion: RELEVANCE_PROMPT_VERSION, provider, models, thresholds: t, results }, null, 2));
-console.log(`\nsaved ${file}`);
+const spend = await evalSpend(runStarted);
+console.log(`\n${spendLine(spend)}${stopped ? `\n${stopped}` : ""}`);
+writeFileSync(file, JSON.stringify({ promptVersion: RELEVANCE_PROMPT_VERSION, provider, models, thresholds: t, spend, stopped, results }, null, 2));
+console.log(`saved ${file}`);
 process.exit(0);

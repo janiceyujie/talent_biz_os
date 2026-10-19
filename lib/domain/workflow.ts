@@ -25,8 +25,9 @@ export const projectQuoteTotal = (p: Pick<Project, "quotedAmount" | "taxRate" | 
  * from both pending balances and cash received.
  */
 export function projectSettlement(data: AppData, project: ProjectSummary) {
-  const rows = data.payments.filter((p) => p.projectId === project.id && p.currency === project.currency && !p.voided && p.status !== "cancelled");
-  const income = rows.filter((p) => p.direction === "in");
+  const rows = data.payments.filter((p) => p.projectId === project.id && !p.voided && p.status !== "cancelled");
+  // Compare income with the quote in its own currency; costs retain their original currency.
+  const income = rows.filter((p) => p.direction === "in" && p.currency === project.currency);
   const units = (n: number) => minorUnits(n, project.currency);
   const factor = minorUnitFactor(project.currency);
   const sum = (list: Payment[], value: (p: Payment) => number) => list.reduce((n, p) => n + units(value(p)), 0);

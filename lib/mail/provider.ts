@@ -2,8 +2,7 @@ import type { ReadMessage } from "./gmail/parts";
 import type { MailMetadata, MailRef } from "./metadata";
 
 // A mailbox, whoever hosts it (docs/design/gmail-ingestion.md, Modules). Gmail
-// is the only one: lib/mail/gmail. Push notices (watch) join this when the
-// branch that uses them arrives.
+// is the only one: lib/mail/gmail.
 
 export interface MailProvider {
   /** Where the change list is now: the cursor a first sync starts from. */
@@ -18,4 +17,8 @@ export interface MailProvider {
   getMessage(id: string): Promise<ReadMessage | null>;
   /** One attachment's bytes. */
   getAttachment(messageId: string, attachmentId: string): Promise<Uint8Array>;
+  /** Push: change notices go to this Pub/Sub topic until the returned time; renewed before then. */
+  watch(topic: string): Promise<{ expiresAt: Date }>;
+  /** Stop the push notices. */
+  stopWatch(): Promise<void>;
 }

@@ -11,6 +11,7 @@ import { LIST_PAGE_SIZE, type CursorPage } from "@/lib/domain/cursor-page";
 import { decodePageCursor, encodePageCursor, InvalidCursor } from "./page-cursor";
 
 export const inboxListParams = z.object({
+  history: z.enum(["true", "false"]).default("false"),
   dismissed: z.enum(["true", "false"]).default("false"), cursor: z.string().max(2000).default(""),
 });
 const latest = (field: string) => sql<string>`(select a.analysis ->> ${field} from message_analysis a
@@ -26,10 +27,10 @@ const summaryFields = {
   fileCount: sql<number>`(select count(*)::int from file f where f.message_id = ${message.id} and f.talent_id = ${message.talentId})`,
 };
 export async function listInbox(talentId: string, params: z.infer<typeof inboxListParams>): Promise<CursorPage<InboxSummary>> {
-  const key = createHash("sha256").update(JSON.stringify([talentId, params.dismissed])).digest("hex");
+  const key = createHash("sha256").update(JSON.stringify([talentId, params.dismissed, params.history])).digest("hex");
   const cursor = decodePageCursor(params.cursor, z.tuple([z.string().max(80).regex(/^\d{4}-\d{2}-\d{2} [0-9:.+\- ]+$/).refine(v => Number.isFinite(Date.parse(v))), z.uuid(), z.string()]));
   if (cursor && cursor[2] !== key) throw new InvalidCursor("Cursor filters changed");
-  const filters = and(eq(message.talentId, talentId), params.dismissed === "true" ? undefined : ne(message.status, "dismissed"));
+  const filters = and(eq(message.talentId, talentId), params.history === "true" ? eq(message.status, "history") : ne(message.status, "history"), params.dismissed === "true" ? undefined : ne(message.status, "dismissed"));
   const [rows, [total]] = await Promise.all([
     db.select({ ...summaryFields, position: sql<string>`${message.receivedAt}::text` }).from(message)
       .where(and(filters, cursor ? sql`(${message.receivedAt}, ${message.id}) < (${cursor[0]}::timestamptz, ${cursor[1]}::uuid)` : undefined))
@@ -51,7 +52,7 @@ export async function inboxOverview(talentId: string) {
       .where(and(eq(message.talentId, talentId), sql`${message.projectId} is not null`)).groupBy(message.projectId),
     db.select({ value: sql<string>`coalesce(max(${message.updatedAt})::text, '') || ':' || count(*)::text` }).from(message).where(eq(message.talentId, talentId)),
   ]);
-  const statusCounts = { pending: 0, analyzed: 0, error: 0, confirmed: 0, dismissed: 0 };
+  const statusCounts = { pending: 0, analyzed: 0, error: 0, confirmed: 0, dismissed: 0, history: 0 };
   for (const row of counts) statusCounts[row.status] = row.count;
   return { counts: statusCounts, review: review.map(row => ({ ...row, receivedAt: row.receivedAt.toISOString() })),
     latestActivity: Object.fromEntries(activity.map(row => [row.projectId!, row.last])), revision: revision.value };

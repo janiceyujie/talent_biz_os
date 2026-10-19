@@ -122,7 +122,7 @@ export function ProjectWorkflowPanel({ project, edit, invoicePaymentId, onInvoic
           ].map(([label, value]) => (
             <div key={String(label)}>
               <dt>{label}</dt>
-              <dd>{typeof value === "number" ? money(value) : value}</dd>
+              <dd>{typeof value === "number" ? money(value, project.currency) : value}</dd>
             </div>
           ))}
         </dl>
@@ -218,7 +218,7 @@ export function ProjectWorkflowPanel({ project, edit, invoicePaymentId, onInvoic
             </label>
             {preview ? (
               <p>
-                {t("planPreview", { deposit: money(preview.deposit), balance: money(preview.balance), total: money(preview.total) })}
+                {t("planPreview", { deposit: money(preview.deposit, project.currency), balance: money(preview.balance, project.currency), total: money(preview.total, project.currency) })}
               </p>
             ) : (
               <p role="alert">{t("planInvalid")}</p>

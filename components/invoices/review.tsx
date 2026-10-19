@@ -1,4 +1,5 @@
 "use client";
+import { ActionNotice } from "@/components/app/action-notice";
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Modal } from "@/components/app/modal";
@@ -160,15 +161,14 @@ export function InvoiceReview({
                 {busy ? t("creatingDraft") : t("createGmailDraft")}
               </button>
             </>}
-            {!row.gmail?.ready && <div className="notice">
-              <p>{t(row.gmail?.mode === "disabled" ? "draftDisabled" : "draftAuthorization")}</p>
-              <button className="text-button" onClick={()=>setAuthorize(!authorize)} aria-expanded={authorize}>{t("authorizeDrafts")}</button>
-              {authorize && <div><p>{t("composeDisclosure")}</p><a className="secondary" href="/api/mail/connect?drafts=1">{t("continueGoogle")}</a></div>}
-            </div>}
+            {!row.gmail?.ready && <ActionNotice actions={<button className="text-button" onClick={()=>setAuthorize(!authorize)} aria-expanded={authorize}>{t("authorizeDrafts")}</button>}
+              detail={authorize && <><p>{t("composeDisclosure")}</p><div className="notice-actions"><a className="secondary" href="/api/mail/connect?drafts=1">{t("continueGoogle")}</a></div></>}>
+              {t(row.gmail?.mode === "disabled" ? "draftDisabled" : "draftAuthorization")}
+            </ActionNotice>}
           </>
         )}
         {row.status === "scheduled" && <p>{t(row.autoGmailDraft ? "autoDraftScheduled" : "scheduledHelp")}</p>}
-        {["draft_queued","draft_creating"].includes(row.status) && <div role="status"><p>{t("draftWorking")}</p><button type="button" className="secondary" disabled={busy} onClick={refresh}>{t("refresh")}</button></div>}
+        {["draft_queued","draft_creating"].includes(row.status) && <ActionNotice role="status" actions={<button type="button" className="secondary" disabled={busy} onClick={refresh}>{t("refresh")}</button>}>{t("draftWorking")}</ActionNotice>}
         {["gmail_draft","draft_unknown","draft_missing"].includes(row.status) && <>
           <p className="notice">{t(row.status === "gmail_draft" ? "draftReady" : "draftUncertain")}</p>
           <div className="invoice-actions">
@@ -218,12 +218,9 @@ export function InvoiceReview({
           </>
         )}
         {error && (
-          <p className="notice error" role="alert">
-            {t(invoiceErrorKey(error))}{" "}
-            <button type="button" className="text-button" onClick={refresh}>
-              {t("refresh")}
-            </button>
-          </p>
+          <ActionNotice className="error" role="alert" actions={<button type="button" className="text-button" onClick={refresh}>{t("refresh")}</button>}>
+            {t(invoiceErrorKey(error))}
+          </ActionNotice>
         )}
         {editable && (
           <details className="invoice-details">

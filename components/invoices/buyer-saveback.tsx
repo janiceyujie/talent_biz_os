@@ -5,11 +5,12 @@ import { useTranslations } from "next-intl";
 import { InfoHint } from "@/components/app/info-hint";
 import { buyerBillingFields, type BuyerBillingRecord } from "@/lib/invoices/buyer-writeback";
 import type { InvoiceBuyer } from "@/lib/invoices/buyers";
+import type { PostalAddress } from "@/lib/invoices/address";
 import { invoiceRequest } from "./request";
 
 type Fields = {address: string; email: string};
-export function InvoiceBuyerSaveback({source, address, email, disabled, onBusy}: {
-  source: InvoiceBuyer; address: string; email: string; disabled: boolean; onBusy: (busy: boolean) => void;
+export function InvoiceBuyerSaveback({source, address, addressParts, email, disabled, onBusy}: {
+  source: InvoiceBuyer; address: string; addressParts?: PostalAddress; email: string; disabled: boolean; onBusy: (busy: boolean) => void;
 }) {
   const t = useTranslations("invoices"), router = useRouter();
   const target = {kind: source.kind, id: source.id.slice(source.id.indexOf(":") + 1)};
@@ -45,7 +46,7 @@ export function InvoiceBuyerSaveback({source, address, email, disabled, onBusy}:
       </label>) : <p>{t("saveBackNoChanges")}</p>}
       <div className="invoice-actions">
         {options.length > 0 && <button type="button" className="secondary" disabled={disabled || !Object.keys(patch).length} onClick={async () => {
-          const parsed = buyerBillingFields.safeParse(patch);
+          const parsed = buyerBillingFields.safeParse({...patch, ...(patch.address && addressParts && {addressParts})});
           if (!parsed.success) {setError(t("saveBackInvalid")); return;}
           onBusy(true); setError("");
           try {

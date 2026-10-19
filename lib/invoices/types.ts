@@ -1,3 +1,4 @@
+import type { PostalAddress } from "./address";
 import type { BillingCurrency, BillingDocumentKind } from "./document";
 import type { InvoiceTaxReview } from "./tax";
 
@@ -7,9 +8,11 @@ export type InvoiceSnapshot = {
   documentLanguage: "en" | "zh-TW";
   sellerName: string;
   sellerAddress: string;
+  sellerAddressParts?: PostalAddress;
   sellerEmail: string;
   buyerName: string;
   buyerAddress: string;
+  buyerAddressParts?: PostalAddress;
   recipient: string;
   description: string;
   paymentInstructions: string;
@@ -55,6 +58,7 @@ export type InvoiceDefaults = Pick<
   InvoiceSnapshot,
   | "sellerName"
   | "sellerAddress"
+  | "sellerAddressParts"
   | "sellerEmail"
   | "paymentInstructions"
 >;

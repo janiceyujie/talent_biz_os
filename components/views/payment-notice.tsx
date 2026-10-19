@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState, useTransition, type RefObject } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { InfoHint } from "@/components/app/info-hint";
 import { markNotWork, recordNoticePayment } from "@/lib/actions/mail";
 import { receiptHistory } from "@/lib/domain/payment-receipts";
@@ -78,6 +79,8 @@ export function NoticeDetail({
   const [withheld, setWithheld] = useState(0);
   const setChoice = (next: Choice) => { updateChoice(next); setWithheld(0); };
   const [error, setError] = useState<string | null>(null);
+  const [dropping, setDropping] = useState(false);
+  const [never, setNever] = useState(false); // also a "never" rule for the sender
 
   const amount = money(notice.amount, notice.currency);
   const twd = notice.currency === "TWD";
@@ -241,7 +244,7 @@ export function NoticeDetail({
               )}
             </div>
             <div className="row-actions">
-              <button className="secondary" disabled={pending} onClick={() => run(() => markNotWork(message.id))}>
+              <button className="secondary" disabled={pending} onClick={() => setDropping(true)}>
                 {t("drop")}
               </button>
               <button className="primary" disabled={pending || !twd || !target || !validWithheld} onClick={() => target && run(() => recordNoticePayment(message.id, "paymentId" in target ? {...target, withheld, revision:selectedPayment ? receiptHistory(selectedPayment).length : undefined} : target))}>
@@ -250,6 +253,28 @@ export function NoticeDetail({
             </div>
           </div>
         </section>
+      )}
+      {dropping && (
+        <ConfirmDialog
+          title={t("dropTitle")}
+          confirmLabel={t("drop")}
+          pending={pending}
+          onClose={() => setDropping(false)}
+          onConfirm={() =>
+            startTransition(async () => {
+              setError(await markNotWork(message.id, never));
+              setDropping(false);
+            })
+          }
+        >
+          <p>{t("dropBody")}</p>
+          {message.gmail?.sender && (
+            <label className="check-line">
+              <input type="checkbox" checked={never} onChange={(e) => setNever(e.target.checked)} />
+              {t("dropNeverFrom", { sender: senderName(message.gmail.sender) })}
+            </label>
+          )}
+        </ConfirmDialog>
       )}
     </>
   );

@@ -164,7 +164,7 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
       .returning({ id: message.id });
     if (!filed.length) return fail("messageNotFound");
     const [current] = await tx
-      .select({ details: project.details, stage: project.stage })
+      .select({ details: project.details, stage: project.stage, quoteCurrency: project.quoteCurrency })
       .from(project)
       .where(and(eq(project.id, target.id), eq(project.talentId, talent.id)))
       .for("update");
@@ -237,6 +237,7 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
             direction: "in",
             label: t(`payment.${c.label}`, { title: target.title }).slice(0, 200),
             amount: c.amount,
+            currency: current.quoteCurrency,
             taxIncluded: true,
             recordedOn: c.date,
             status: settled ? "settled" : "expected",

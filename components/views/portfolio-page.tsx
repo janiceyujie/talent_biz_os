@@ -1,4 +1,5 @@
 "use client";
+import { ActionNotice } from "@/components/app/action-notice";
 import Link from "next/link";
 import {ManagerReadBoundary} from "@/components/app/manager-read-boundary";
 import {useState,useCallback,type ReactNode} from "react";
@@ -28,8 +29,8 @@ export function PortfolioPage({view,children,initialDay="",initialDate=""}:{view
   const data={...own,talent:workspaceTalent,preview:false,previewDate:undefined,calendar:portfolio?.calendar||[],payments:portfolio?.payments||[],projects:portfolio?.projects||[],externalEvents:[],googleCalendar:{...own.googleCalendar,importing:[]},portfolio:{artists:portfolio?.artists.filter(artist=>portfolio.selectedIds.includes(artist.id))||[]}};
   return <ManagerReadBoundary ids={scope?.ids||[]}>
     {resource.loading&&<div className="portfolio-loading surface" role="status" aria-busy="true">{t("loading")}</div>}
-    {resource.error&&<div className="notice error" role="alert">{resource.error} <button className="secondary compact" onClick={resource.retry}>{t("retry")}</button></div>}
-    {portfolio?.limited&&<div className="notice" role="status">{t("limited")} <Link className="text-button" href={`/manager?view=finance&${new URLSearchParams((scope?.ids||[]).map(id=>["artist",id]))}`}>{t("openManager")}</Link></div>}
+    {resource.error&&<ActionNotice className="error" role="alert" actions={<button className="secondary compact" onClick={resource.retry}>{t("retry")}</button>}>{resource.error}</ActionNotice>}
+    {portfolio?.limited&&<ActionNotice role="status" actions={<Link className="text-button" href={`/manager?view=finance&${new URLSearchParams((scope?.ids||[]).map(id=>["artist",id]))}`}>{t("openManager")}</Link>}>{t("limited")}</ActionNotice>}
     {!resource.loading&&!resource.error&&!portfolio?.limited&&!scope?.ids?.length&&<p className="empty">{t("choose")}</p>}
     <div hidden={hidden} inert={hidden}><AppDataScope data={data}>
       {view==="today"?<PortfolioToday/>:view==="finance"?<FinanceView readOnly onFilterChange={onFinanceFilter}/>:<PlannerView initialDay={initialDay} initialDate={initialDate} readOnly onVisibleDateChange={onCalendarDate}/>}

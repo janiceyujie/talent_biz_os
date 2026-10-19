@@ -77,7 +77,7 @@ export async function savePaymentWithId(data: Record<string, unknown>): Promise<
       .where(and(eq(payment.id, id), eq(payment.talentId, current.id)));
     currentLink = row?.projectId ?? null;
   }
-  const linkError = await checkProjectLink(current.id, input.projectId, currentLink, input.currency);
+  const linkError = await checkProjectLink(current.id, input.projectId, currentLink, input.direction === "in" ? input.currency : undefined);
   if (linkError) return { error: await fail(linkError) };
   const settled = input.status === "settled";
   if (settled && input.settledDate! > (await today(current.id))) return { error: await fail("settledDateFuture") };
@@ -112,24 +112,35 @@ export async function savePaymentWithId(data: Record<string, unknown>): Promise<
   };
   let savedId = id;
   try {
-  if (!id) {
-    const [saved] = await db.insert(payment).values({ ...values, ...record(null), talentId: current.id }).returning({ id: payment.id });
-    savedId = saved.id;
-  } else {
-    const result = await db.transaction(async tx => {
-      const [previous] = await tx.select().from(payment).where(and(eq(payment.id, id), eq(payment.talentId, current.id))).for("update");
-      if (!previous || previous.voidedAt) return "paymentNotFound" as const;
-      if (receiptHistory(previous).length && (["amount", "currency", "taxRate", "taxIncluded", "direction"] as const).some(key => previous[key] !== values[key])) return "receiptLocked" as const;
-      const [issued] = await tx.select({ status: invoice.status }).from(invoice).where(and(eq(invoice.paymentId, id), eq(invoice.talentId, current.id), ne(invoice.status, "cancelled")));
-      if (issued && ["sending", "sent", "delivery_unknown", "draft_queued", "draft_creating", "gmail_draft", "draft_unknown", "draft_missing"].includes(issued.status)) {
-        const protectedFields = ["projectId", "direction", "amount", "currency", "taxRate", "taxIncluded", "invoiceRef", "dueOn"] as const;
-        if (protectedFields.some(key => previous[key] !== values[key]) || (issued.status === "sending" && previous.status !== values.status)) return "paymentInvoiceLocked" as const;
+  const result = await db.transaction(async tx => {
+    // Serialize linked inserts, moves and edits with project currency corrections.
+    const parentIds = [...new Set([currentLink, input.projectId].filter((v): v is string => !!v))].sort();
+    for (const parentId of parentIds) {
+      const [parent] = await tx.select().from(project).where(and(eq(project.id,parentId),eq(project.talentId,current.id))).for("update");
+      if (!parent) return "projectNotFound" as const;
+      if (parentId === input.projectId) {
+        if (input.direction === "in" && input.currency !== parent.quoteCurrency) return "paymentCurrencyMismatch" as const;
+        if (currentLink !== parentId && (parent.archivedAt || !isSigned(parent.stage))) return "projectNotSigned" as const;
       }
-      await tx.update(payment).set({ ...values, ...record(previous) }).where(and(eq(payment.id, id), eq(payment.talentId, current.id)));
+    }
+    if (!id) {
+      const [saved] = await tx.insert(payment).values({ ...values, ...record(null), talentId: current.id }).returning({ id: payment.id });
+      savedId = saved.id;
       return null;
-    });
-    if (result) return { error: await fail(result) };
-  }
+    }
+    const [previous] = await tx.select().from(payment).where(and(eq(payment.id, id), eq(payment.talentId, current.id))).for("update");
+    if (!previous || previous.voidedAt) return "paymentNotFound" as const;
+    if (previous.projectId !== currentLink) return "receiptChanged" as const;
+    if (receiptHistory(previous).length && (["amount", "currency", "taxRate", "taxIncluded", "direction"] as const).some(key => previous[key] !== values[key])) return "receiptLocked" as const;
+    const [issued] = await tx.select({ status: invoice.status }).from(invoice).where(and(eq(invoice.paymentId, id), eq(invoice.talentId, current.id), ne(invoice.status, "cancelled")));
+    if (issued && ["sending", "sent", "delivery_unknown", "draft_queued", "draft_creating", "gmail_draft", "draft_unknown", "draft_missing"].includes(issued.status)) {
+      const protectedFields = ["projectId", "direction", "amount", "currency", "taxRate", "taxIncluded", "invoiceRef", "dueOn"] as const;
+      if (protectedFields.some(key => previous[key] !== values[key]) || (issued.status === "sending" && previous.status !== values.status)) return "paymentInvoiceLocked" as const;
+    }
+    await tx.update(payment).set({ ...values, ...record(previous) }).where(and(eq(payment.id, id), eq(payment.talentId, current.id)));
+    return null;
+  });
+  if (result) return { error: await fail(result) };
   } catch (error) {
     if (error instanceof ReceiptError) return { error: await fail(error.code) };
     throw error;

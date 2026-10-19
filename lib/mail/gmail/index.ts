@@ -73,6 +73,15 @@ export function gmailProvider(accessToken: string): MailProvider & MailContentPr
       }
     },
 
+    async watch(topic) {
+      const res = await api.watch(topic);
+      return { expiresAt: new Date(Number(res.expiration)) };
+    },
+
+    async stopWatch() {
+      await api.stop();
+    },
+
     getAttachment: async (messageId, attachmentId) => Buffer.from((await api.attachment(messageId, attachmentId)).data, "base64url"),
   };
 }

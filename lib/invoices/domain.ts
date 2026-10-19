@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { postalAddressInput, formatPostalAddress } from "./address";
 import { billingDocumentKinds, isBillingCurrency } from "./document";
 import { invoiceTaxInput, paymentTaxBasisInput } from "./tax";
 import { quote } from "../domain/money";
@@ -17,9 +18,11 @@ export const invoiceInput = z
     dueOn: z.iso.date(),
     sellerName: header(150),
     sellerAddress: text(600),
+    sellerAddressParts: postalAddressInput.optional(),
     sellerEmail: z.email().max(254),
     buyerName: header(150),
     buyerAddress: text(600),
+    buyerAddressParts: postalAddressInput.optional(),
     recipient: z.email().max(254),
     description: text(1500),
     paymentInstructions: text(1200),
@@ -31,6 +34,7 @@ export const invoiceInput = z
     taxConfirmed: z.literal(true),
     autoGmailDraft: z.boolean().default(false),
   })
+  .refine(v => (!v.sellerAddressParts || formatPostalAddress(v.sellerAddressParts) === v.sellerAddress) && (!v.buyerAddressParts || formatPostalAddress(v.buyerAddressParts) === v.buyerAddress), {message:"address"})
   .refine((v) => v.dueOn >= v.issueOn, { message: "dates" })
   .refine((v) => !v.taxReview || !!v.paymentBasis, { message: "paymentBasis" });
 export type InvoiceInput = z.infer<typeof invoiceInput>;

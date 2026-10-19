@@ -1,7 +1,8 @@
+import { matchingAddress, type PostalAddress } from "./address";
 import type { Contact, Organization, ProjectSummary } from "@/lib/types";
 
 export type BuyerDetails = { buyerName: string; buyerAddress: string; recipient: string };
-export type InvoiceBuyer = BuyerDetails & { id: string; label: string; kind: "organization" | "contact"; recommended: boolean };
+export type InvoiceBuyer = BuyerDetails & { id: string; label: string; kind: "organization" | "contact"; recommended: boolean; buyerAddressParts?: PostalAddress };
 
 /** Only explicit links identify a project client. Names never establish identity. */
 export function invoiceBuyers(contacts: Contact[], organizations: Organization[], project?: Pick<ProjectSummary, "clientId" | "counterpartyId">): InvoiceBuyer[] {
@@ -10,6 +11,7 @@ export function invoiceBuyers(contacts: Contact[], organizations: Organization[]
     ...orgs.map((o): InvoiceBuyer => ({
       id: `organization:${o.id}`, kind: "organization", label: o.name,
       buyerName: o.name, buyerAddress: o.billingAddress || "", recipient: o.billingEmail || "",
+      buyerAddressParts: matchingAddress(o.billingAddress || "", o.billingAddressParts),
       recommended: project?.clientId === o.id,
     })),
     ...contacts.filter((c) => !c.archived).map((c): InvoiceBuyer => {
@@ -17,6 +19,7 @@ export function invoiceBuyers(contacts: Contact[], organizations: Organization[]
       return { id: `contact:${c.id}`, kind: "contact", label: [c.name, org?.name || c.company].filter(Boolean).join(" · "),
         buyerName: org?.name || c.company || c.name,
         buyerAddress: c.billingAddress || org?.billingAddress || "",
+        buyerAddressParts: c.billingAddress ? matchingAddress(c.billingAddress,c.billingAddressParts) : matchingAddress(org?.billingAddress || "",org?.billingAddressParts),
         recipient: c.email || org?.billingEmail || "",
         recommended: project?.counterpartyId === c.id,
       };

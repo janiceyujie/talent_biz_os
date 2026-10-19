@@ -39,3 +39,14 @@ test("foreign-currency insights and project settlement use whole yen without mix
   assert.equal(settlement.received, 1050);
   assert.equal(settlement.unbilled, 1050);
 });
+
+
+test("unpaid foreign costs remain in closing checks without changing quote currency totals", () => {
+  const project = { ...sample.projects[0], id: "test-project", currency: "TWD" as const, quotedAmount: 1000 };
+  const foreign = payment("USD", { direction: "out", amount: 100, taxRate: 0, status: "expected", settledAmount: null, receipts: [] });
+  const data = { ...sample, projects: [project], payments: [payment("TWD"), foreign, {...foreign,id:"void",voided:true}, {...foreign,id:"cancel",status:"cancelled" as const}] };
+  const settlement = projectSettlement(data, project);
+  assert.equal(settlement.received, 1050);
+  assert.equal(settlement.billed, 1050);
+  assert.deepEqual(settlement.unpaidCosts.map(row => row.id), ["USD"]);
+});

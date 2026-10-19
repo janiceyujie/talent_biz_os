@@ -106,12 +106,12 @@ export type Contact = {
   phone: string;
   notes: string;
   archived: boolean;
-  billingAddress?: string;
+  billingAddress?: string; billingAddressParts?: import("./invoices/address").PostalAddress;
   organizationId: string | null; // where they work (decision 0012); none for an independent
 };
 
 /** A company, organisation, band, or label the talent works with (decision 0012). */
-export type Organization = { id: string; name: string; notes: string; archived: boolean; billingAddress?: string; billingEmail?: string };
+export type Organization = { id: string; name: string; notes: string; archived: boolean; billingAddress?: string; billingAddressParts?: import("./invoices/address").PostalAddress; billingEmail?: string };
 
 // One calendar list over two tables: calendar_event (things that happen) and
 // todo (deadlines). `kind` decides which table a new item goes to.
@@ -234,7 +234,7 @@ export type InboxMessage = {
   channel: "paste" | "upload" | "gmail" | "gmail_addon" | "forwarded_email";
   body: string;
   receivedAt: string; // ISO instant
-  status: "pending" | "analyzed" | "confirmed" | "dismissed" | "error";
+  status: "pending" | "analyzed" | "confirmed" | "dismissed" | "error" | "history"; // history: kept for reference, analyzed when opened
   failure: string | null;
   projectId: string | null;
   analysis: (MessageAnalysis & { modelVersion: string; promptVersion: string }) | null;
@@ -367,7 +367,8 @@ export type AppData = {
       failure: string | null;
       historyMode: "30_days" | "new_only";
       lastSyncedAt: string | null;
-      syncing: boolean; // Sync now pressed and not finished, or emails still being scored
+      syncing: boolean; // Check now (or connecting) and that check not finished
+      sorting: number; // emails still being scored by the model
       connectedAt: string;
       updatedAt: string;
       counts: { waiting: number; skipped: number }; // Intake's Waiting and Filtered out

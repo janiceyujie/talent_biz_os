@@ -6,10 +6,11 @@ import { invoiceDefaultsInput } from "@/lib/invoices/defaults";
 import type { InvoiceDefaults } from "@/lib/invoices/types";
 import { invoiceRequest } from "./request";
 
-export function InvoiceDefaultsControls({ defaults, value, disabled, onApply, onBusy }: {
+export function InvoiceDefaultsControls({ defaults, value, disabled, addressValid = true, onApply, onBusy }: {
   defaults?: InvoiceDefaults;
   value: InvoiceDefaults;
   disabled: boolean;
+  addressValid?: boolean;
   onApply: (value: InvoiceDefaults) => void;
   onBusy: (busy: boolean) => void;
 }) {
@@ -31,14 +32,14 @@ export function InvoiceDefaultsControls({ defaults, value, disabled, onApply, on
         setNotice("");
         if (Object.keys(saved).some((key) => {
           const k = key as keyof InvoiceDefaults;
-          return value[k].trim() !== "" && value[k] !== saved[k];
+          return typeof value[k] === "string" && value[k].trim() !== "" && value[k] !== saved[k];
         })) setConfirm(true);
         else apply();
       }}>{t("applyDefaults")}</button>}
       <button type="button" className="text-button" disabled={disabled} onClick={async () => {
         setError(""); setNotice(""); setConfirm(false);
         const parsed = invoiceDefaultsInput.safeParse(value);
-        if (!parsed.success) { setError(t("defaultsIncomplete")); return; }
+        if (!addressValid || !parsed.success) { setError(t("defaultsIncomplete")); return; }
         onBusy(true);
         try {
           setSaved(await invoiceRequest<InvoiceDefaults>("/api/invoices/defaults", parsed.data));

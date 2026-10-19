@@ -17,7 +17,7 @@ const suffix=randomBytes(6).toString("hex");
 const people=Array.from({length:5},(_,i)=>({personId:randomUUID(),talentId:randomUUID(),projectId:randomUUID(),eventId:randomUUID(),name:i?`Flow Artist ${i}`:"Flow Manager",email:`workflow-${suffix}-${i}@example.invalid`,password:randomBytes(24).toString("base64url")}));
 const [manager,...artists]=people;
 const grantId=randomUUID();
-let checks=0;
+let checks=0, createdGrantSource=false;
 const cookies:string[]=[];
 const ok=(value:unknown,message:string)=>{assert.ok(value,message);checks++;};
 async function login(p:typeof manager){
@@ -92,7 +92,8 @@ try{
  ok((await get(`/api/manager/workspace?artist=${artist.talentId}`,mc)).status===403,"Disabled plan denied");
  await q`update manager_entitlement set active=true where person_id=${manager.personId}`;
  // Real server actions, followed by PostgreSQL readback of shared records.
- const [source]=await q`select id from grant_source limit 1`;assert.ok(source);
+ const added=await q`insert into grant_source(id) values ('moc') on conflict do nothing returning id`;createdGrantSource=added.length>0;
+ const source={id:"moc"};
  await q`insert into grant_opportunity(id,source,external_id,region,title,agency,url,opens_on,closes_on,source_status,content_hash) values (${grantId},${source.id},${suffix},'TW',${`Workflow acceptance ${suffix}`},'Fixture','https://example.invalid','2026-01-01','2026-11-30','posted',${suffix})`;
  ok(await action("saveGrant",[grantId,{date:"2026-10-21",time:"15:30",timeZone:"Asia/Taipei"}],ac)===null,"Grant saved with schedule");
  const [application]=await q`select id from grant_application where talent_id=${artist.talentId} and opportunity_id=${grantId}`;
@@ -125,6 +126,7 @@ try{
  for(const p of people)await q`delete from talent where id=${p.talentId}`;
  for(const p of people)await q`delete from person where id=${p.personId}`;
  await q`delete from grant_opportunity where id=${grantId}`;
+ if(createdGrantSource)await q`delete from grant_source where id='moc' and not exists(select 1 from grant_opportunity where source='moc')`;
  await q.end();
 }
 process.exit(0);

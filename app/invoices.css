@@ -174,15 +174,6 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.invoice-notice {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-.invoice-notice a {
-  margin-left: auto;
-}
 .deal-cards > .invoice-document-notice { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .625rem .75rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-alt); font-size: .875rem; overflow-wrap: anywhere; }
 
 .invoice-panel {
@@ -245,7 +236,6 @@
 .invoice-tax-catalogue { border-inline-start: 3px solid var(--accent, #2c6356); padding-inline-start: 1rem; }
 .invoice-tax-catalogue fieldset { display: grid; gap: .75rem; min-width: 0; }
 .invoice-tax-catalogue .notice { overflow-wrap: anywhere; }
-.invoice-tax-catalogue .notice .primary { margin-inline-start: .75rem; }
 
 .tax-reference-list { min-width: 0; margin-block: 1rem; }
 .tax-reference-row { border-bottom: 1px solid var(--border, #dbe5df); padding: .75rem 0; }
@@ -259,3 +249,11 @@
 .tax-reference-row dd { margin: 0; }
 .tax-reference-row :is(p, dd, a) { overflow-wrap: anywhere; }
 .tax-reference-row summary:focus-visible { outline: 2px solid var(--accent, #286052); outline-offset: 3px; border-radius: .25rem; }
+
+.invoice-address { min-width: 0; border: 0; padding: 0; margin: 0; display: grid; gap: 1rem; }
+.invoice-address legend { padding: 0; margin-bottom: 0.75rem; font-weight: 600; }
+.invoice-address input, .invoice-address select { min-width: 0; width: 100%; }
+
+.invoice-postal-field { display: flex; align-items: end; gap: 0.5rem; min-width: 0; }
+.invoice-postal-field > label { flex: 1; min-width: 0; }
+.invoice-postal-field > .info-hint { flex: 0 0 auto; margin-bottom: 0.75rem; }

@@ -1,10 +1,10 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
-import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
 import { calendarEvent, project } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
+import { translator } from "@/lib/i18n/translator";
 import type { IcsEvent } from "./ics";
 
 // The subscription link carries a random secret; only its SHA-256 is stored
@@ -18,7 +18,7 @@ export const feedUrl = (token: string) => `${appUrl()}/api/calendar/feed/${token
 
 /** Confirmed, non-archived events for one talent, ready for .ics output, described in `locale`. */
 export async function feedEvents(talentId: string, locale: unknown, eventId?: string): Promise<IcsEvent[]> {
-  const t = await getTranslations({ locale: toLocale(locale), namespace: "calendar" });
+  const t = await translator(toLocale(locale), "calendar"); // also in the worker, with no request
   const rows = await db
     .select({ event: calendarEvent, projectTitle: project.title })
     .from(calendarEvent)

@@ -121,7 +121,7 @@ In practice: about 1 s from Gmail to the worker, 20 to 30 s through sync, scorin
 - the cursor finds nothing new the second time;
 - `mail_decision` is unique per mailbox and Gmail message.
 
-**Without push** (no `PUBSUB_*` settings, as in a fresh development setup), `mail.reconcile` syncs every mailbox every 2 minutes instead. With push it still runs every 15 minutes as a safety net.
+**Without push** (no `PUBSUB_*` settings, allowed in development only), `mail.reconcile` syncs every mailbox every 2 minutes instead. In production, or with only some of the settings, the worker refuses to start (`lib/mail/push-mode.ts`); its first log line says which mode it runs in. With push, reconcile still runs every 15 minutes as a safety net.
 
 ## The job queue and the worker
 

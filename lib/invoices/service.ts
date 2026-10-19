@@ -1,4 +1,5 @@
 import "server-only";
+import { billingDocumentKind, defaultDocumentKind, isBillingCurrency } from "./document";
 import { randomUUID } from "node:crypto";
 import { appendReceipt, paymentBalance } from "@/lib/domain/payment-receipts";
 import { and, count, desc, eq, inArray, lt, ne, or, sql } from "drizzle-orm";
@@ -61,7 +62,7 @@ export async function invoiceReceivable(
   if (
     !p ||
     p.direction !== "in" ||
-    p.currency !== "USD" ||
+    !isBillingCurrency(p.currency) ||
     p.voidedAt ||
     paymentBalance(p).remaining <= 0
   )
@@ -94,6 +95,10 @@ export async function saveInvoice(
     await invoiceOwner(tx, talentId, personId);
     const p = await invoiceReceivable(tx, talentId, input.paymentId);
     const today = await day(tx, talentId);
+    const documentKind = input.documentKind ?? defaultDocumentKind(p.currency);
+    // This release keeps US tax review separate from Taiwan payment requests.
+    if ((p.currency === "TWD" && documentKind !== "tw_payment_request") ||
+      (input.taxReview && (documentKind !== "commercial_invoice" || p.currency !== "USD"))) fail("invalid");
     if (input.dueOn < today) fail("pastDue");
     if (input.paymentBasis && !sameTaxBasis(p, input.paymentBasis)) fail("amountChanged");
     const taxEvidence = input.taxReview?.catalogue ? await resolveCatalogueTax(input.taxReview.catalogue, tx) : undefined;
@@ -111,12 +116,15 @@ export async function saveInvoice(
         .where(and(eq(payment.id, p.id), eq(payment.talentId, talentId)));
     };
     const snapshot: InvoiceSnapshot = {
+      documentKind,
       documentLanguage: input.documentLanguage,
       sellerName: input.sellerName,
       sellerAddress: input.sellerAddress,
+      ...(input.sellerAddressParts && {sellerAddressParts: input.sellerAddressParts}),
       sellerEmail: input.sellerEmail,
       buyerName: input.buyerName,
       buyerAddress: input.buyerAddress,
+      ...(input.buyerAddressParts && {buyerAddressParts: input.buyerAddressParts}),
       recipient: input.recipient,
       description: input.description,
       paymentInstructions: input.paymentInstructions,
@@ -197,7 +205,7 @@ export async function saveInvoice(
         ...values,
         talentId,
         paymentId: p.id,
-        number: `INV-${String(seq.value).padStart(6, "0")}`,
+        number: `${documentKind === "tw_payment_request" ? "PR" : "INV"}-${String(seq.value).padStart(6, "0")}`,
       })
       .returning();
     if (input.autoGmailDraft && row.status === "draft") await queueInvoiceDraft(tx, row, personId);
@@ -323,6 +331,8 @@ function summary(
     paymentId: r.paymentId,
     projectId: r.projectId,
     buyerName: r.snapshot.buyerName,
+    currency: r.snapshot.currency,
+    documentKind: billingDocumentKind(r.snapshot),
     total: r.snapshot.total,
     issueOn: r.issueOn,
     dueOn: r.dueOn,

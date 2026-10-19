@@ -1,0 +1,2210 @@
+[
+  {
+    "id": "taipei_zhongzheng_dist",
+    "region": "taipei",
+    "name": "中正區",
+    "postalCode": "100"
+  },
+  {
+    "id": "taipei_datong_dist",
+    "region": "taipei",
+    "name": "大同區",
+    "postalCode": "103"
+  },
+  {
+    "id": "taipei_zhongshan_dist",
+    "region": "taipei",
+    "name": "中山區",
+    "postalCode": "104"
+  },
+  {
+    "id": "taipei_songshan_dist",
+    "region": "taipei",
+    "name": "松山區",
+    "postalCode": "105"
+  },
+  {
+    "id": "taipei_da_an_dist",
+    "region": "taipei",
+    "name": "大安區",
+    "postalCode": "106"
+  },
+  {
+    "id": "taipei_wanhua_dist",
+    "region": "taipei",
+    "name": "萬華區",
+    "postalCode": "108"
+  },
+  {
+    "id": "taipei_xinyi_dist",
+    "region": "taipei",
+    "name": "信義區",
+    "postalCode": "110"
+  },
+  {
+    "id": "taipei_shilin_dist",
+    "region": "taipei",
+    "name": "士林區",
+    "postalCode": "111"
+  },
+  {
+    "id": "taipei_beitou_dist",
+    "region": "taipei",
+    "name": "北投區",
+    "postalCode": "112"
+  },
+  {
+    "id": "taipei_neihu_dist",
+    "region": "taipei",
+    "name": "內湖區",
+    "postalCode": "114"
+  },
+  {
+    "id": "taipei_nangang_dist",
+    "region": "taipei",
+    "name": "南港區",
+    "postalCode": "115"
+  },
+  {
+    "id": "taipei_wenshan_dist",
+    "region": "taipei",
+    "name": "文山區",
+    "postalCode": "116"
+  },
+  {
+    "id": "keelung_ren_ai_dist",
+    "region": "keelung",
+    "name": "仁愛區",
+    "postalCode": "200"
+  },
+  {
+    "id": "keelung_xinyi_dist",
+    "region": "keelung",
+    "name": "信義區",
+    "postalCode": "201"
+  },
+  {
+    "id": "keelung_zhongzheng_dist",
+    "region": "keelung",
+    "name": "中正區",
+    "postalCode": "202"
+  },
+  {
+    "id": "keelung_zhongshan_dist",
+    "region": "keelung",
+    "name": "中山區",
+    "postalCode": "203"
+  },
+  {
+    "id": "keelung_anle_dist",
+    "region": "keelung",
+    "name": "安樂區",
+    "postalCode": "204"
+  },
+  {
+    "id": "keelung_nuannuan_dist",
+    "region": "keelung",
+    "name": "暖暖區",
+    "postalCode": "205"
+  },
+  {
+    "id": "keelung_qidu_dist",
+    "region": "keelung",
+    "name": "七堵區",
+    "postalCode": "206"
+  },
+  {
+    "id": "newTaipei_wanli_dist",
+    "region": "newTaipei",
+    "name": "萬里區",
+    "postalCode": "207"
+  },
+  {
+    "id": "newTaipei_jinshan_dist",
+    "region": "newTaipei",
+    "name": "金山區",
+    "postalCode": "208"
+  },
+  {
+    "id": "lienchiang_nangan_township",
+    "region": "lienchiang",
+    "name": "南竿鄉",
+    "postalCode": "209"
+  },
+  {
+    "id": "lienchiang_beigan_township",
+    "region": "lienchiang",
+    "name": "北竿鄉",
+    "postalCode": "210"
+  },
+  {
+    "id": "lienchiang_juguang_township",
+    "region": "lienchiang",
+    "name": "莒光鄉",
+    "postalCode": "211"
+  },
+  {
+    "id": "lienchiang_dongyin_township",
+    "region": "lienchiang",
+    "name": "東引鄉",
+    "postalCode": "212"
+  },
+  {
+    "id": "newTaipei_banqiao_dist",
+    "region": "newTaipei",
+    "name": "板橋區",
+    "postalCode": "220"
+  },
+  {
+    "id": "newTaipei_xizhi_dist",
+    "region": "newTaipei",
+    "name": "汐止區",
+    "postalCode": "221"
+  },
+  {
+    "id": "newTaipei_shenkeng_dist",
+    "region": "newTaipei",
+    "name": "深坑區",
+    "postalCode": "222"
+  },
+  {
+    "id": "newTaipei_shiding_dist",
+    "region": "newTaipei",
+    "name": "石碇區",
+    "postalCode": "223"
+  },
+  {
+    "id": "newTaipei_ruifang_dist",
+    "region": "newTaipei",
+    "name": "瑞芳區",
+    "postalCode": "224"
+  },
+  {
+    "id": "newTaipei_pingxi_dist",
+    "region": "newTaipei",
+    "name": "平溪區",
+    "postalCode": "226"
+  },
+  {
+    "id": "newTaipei_shuangxi_dist",
+    "region": "newTaipei",
+    "name": "雙溪區",
+    "postalCode": "227"
+  },
+  {
+    "id": "newTaipei_gongliao_dist",
+    "region": "newTaipei",
+    "name": "貢寮區",
+    "postalCode": "228"
+  },
+  {
+    "id": "newTaipei_xindian_dist",
+    "region": "newTaipei",
+    "name": "新店區",
+    "postalCode": "231"
+  },
+  {
+    "id": "newTaipei_pinglin_dist",
+    "region": "newTaipei",
+    "name": "坪林區",
+    "postalCode": "232"
+  },
+  {
+    "id": "newTaipei_wulai_dist",
+    "region": "newTaipei",
+    "name": "烏來區",
+    "postalCode": "233"
+  },
+  {
+    "id": "newTaipei_yonghe_dist",
+    "region": "newTaipei",
+    "name": "永和區",
+    "postalCode": "234"
+  },
+  {
+    "id": "newTaipei_zhonghe_dist",
+    "region": "newTaipei",
+    "name": "中和區",
+    "postalCode": "235"
+  },
+  {
+    "id": "newTaipei_tucheng_dist",
+    "region": "newTaipei",
+    "name": "土城區",
+    "postalCode": "236"
+  },
+  {
+    "id": "newTaipei_sanxia_dist",
+    "region": "newTaipei",
+    "name": "三峽區",
+    "postalCode": "237"
+  },
+  {
+    "id": "newTaipei_shulin_dist",
+    "region": "newTaipei",
+    "name": "樹林區",
+    "postalCode": "238"
+  },
+  {
+    "id": "newTaipei_yingge_dist",
+    "region": "newTaipei",
+    "name": "鶯歌區",
+    "postalCode": "239"
+  },
+  {
+    "id": "newTaipei_sanchong_dist",
+    "region": "newTaipei",
+    "name": "三重區",
+    "postalCode": "241"
+  },
+  {
+    "id": "newTaipei_xinzhuang_dist",
+    "region": "newTaipei",
+    "name": "新莊區",
+    "postalCode": "242"
+  },
+  {
+    "id": "newTaipei_taishan_dist",
+    "region": "newTaipei",
+    "name": "泰山區",
+    "postalCode": "243"
+  },
+  {
+    "id": "newTaipei_linkou_dist",
+    "region": "newTaipei",
+    "name": "林口區",
+    "postalCode": "244"
+  },
+  {
+    "id": "newTaipei_luzhou_dist",
+    "region": "newTaipei",
+    "name": "蘆洲區",
+    "postalCode": "247"
+  },
+  {
+    "id": "newTaipei_wugu_dist",
+    "region": "newTaipei",
+    "name": "五股區",
+    "postalCode": "248"
+  },
+  {
+    "id": "newTaipei_bali_dist",
+    "region": "newTaipei",
+    "name": "八里區",
+    "postalCode": "249"
+  },
+  {
+    "id": "newTaipei_tamsui_dist",
+    "region": "newTaipei",
+    "name": "淡水區",
+    "postalCode": "251"
+  },
+  {
+    "id": "newTaipei_sanzhi_dist",
+    "region": "newTaipei",
+    "name": "三芝區",
+    "postalCode": "252"
+  },
+  {
+    "id": "newTaipei_shimen_dist",
+    "region": "newTaipei",
+    "name": "石門區",
+    "postalCode": "253"
+  },
+  {
+    "id": "yilan_yilan_city",
+    "region": "yilan",
+    "name": "宜蘭市",
+    "postalCode": "260"
+  },
+  {
+    "id": "yilan_toucheng_township",
+    "region": "yilan",
+    "name": "頭城鎮",
+    "postalCode": "261"
+  },
+  {
+    "id": "yilan_jiaoxi_township",
+    "region": "yilan",
+    "name": "礁溪鄉",
+    "postalCode": "262"
+  },
+  {
+    "id": "yilan_zhuangwei_township",
+    "region": "yilan",
+    "name": "壯圍鄉",
+    "postalCode": "263"
+  },
+  {
+    "id": "yilan_yuanshan_township",
+    "region": "yilan",
+    "name": "員山鄉",
+    "postalCode": "264"
+  },
+  {
+    "id": "yilan_luodong_township",
+    "region": "yilan",
+    "name": "羅東鎮",
+    "postalCode": "265"
+  },
+  {
+    "id": "yilan_sanxing_township",
+    "region": "yilan",
+    "name": "三星鄉",
+    "postalCode": "266"
+  },
+  {
+    "id": "yilan_datong_township",
+    "region": "yilan",
+    "name": "大同鄉",
+    "postalCode": "267"
+  },
+  {
+    "id": "yilan_wujie_township",
+    "region": "yilan",
+    "name": "五結鄉",
+    "postalCode": "268"
+  },
+  {
+    "id": "yilan_dongshan_township",
+    "region": "yilan",
+    "name": "冬山鄉",
+    "postalCode": "269"
+  },
+  {
+    "id": "yilan_su_ao_township",
+    "region": "yilan",
+    "name": "蘇澳鎮",
+    "postalCode": "270"
+  },
+  {
+    "id": "yilan_nan_ao_township",
+    "region": "yilan",
+    "name": "南澳鄉",
+    "postalCode": "272"
+  },
+  {
+    "id": "hsinchuCity_north_dist",
+    "region": "hsinchuCity",
+    "name": "北區",
+    "postalCode": "300"
+  },
+  {
+    "id": "hsinchuCity_east_dist",
+    "region": "hsinchuCity",
+    "name": "東區",
+    "postalCode": "300"
+  },
+  {
+    "id": "hsinchuCity_xiangshan_dist",
+    "region": "hsinchuCity",
+    "name": "香山區",
+    "postalCode": "300"
+  },
+  {
+    "id": "hsinchuCounty_zhubei_city",
+    "region": "hsinchuCounty",
+    "name": "竹北市",
+    "postalCode": "302"
+  },
+  {
+    "id": "hsinchuCounty_hukou_township",
+    "region": "hsinchuCounty",
+    "name": "湖口鄉",
+    "postalCode": "303"
+  },
+  {
+    "id": "hsinchuCounty_xinfeng_township",
+    "region": "hsinchuCounty",
+    "name": "新豐鄉",
+    "postalCode": "304"
+  },
+  {
+    "id": "hsinchuCounty_xinpu_township",
+    "region": "hsinchuCounty",
+    "name": "新埔鎮",
+    "postalCode": "305"
+  },
+  {
+    "id": "hsinchuCounty_guanxi_township",
+    "region": "hsinchuCounty",
+    "name": "關西鎮",
+    "postalCode": "306"
+  },
+  {
+    "id": "hsinchuCounty_qionglin_township",
+    "region": "hsinchuCounty",
+    "name": "芎林鄉",
+    "postalCode": "307"
+  },
+  {
+    "id": "hsinchuCounty_baoshan_township",
+    "region": "hsinchuCounty",
+    "name": "寶山鄉",
+    "postalCode": "308"
+  },
+  {
+    "id": "hsinchuCounty_zhudong_township",
+    "region": "hsinchuCounty",
+    "name": "竹東鎮",
+    "postalCode": "310"
+  },
+  {
+    "id": "hsinchuCounty_wufeng_township",
+    "region": "hsinchuCounty",
+    "name": "五峰鄉",
+    "postalCode": "311"
+  },
+  {
+    "id": "hsinchuCounty_hengshan_township",
+    "region": "hsinchuCounty",
+    "name": "橫山鄉",
+    "postalCode": "312"
+  },
+  {
+    "id": "hsinchuCounty_jianshi_township",
+    "region": "hsinchuCounty",
+    "name": "尖石鄉",
+    "postalCode": "313"
+  },
+  {
+    "id": "hsinchuCounty_beipu_township",
+    "region": "hsinchuCounty",
+    "name": "北埔鄉",
+    "postalCode": "314"
+  },
+  {
+    "id": "hsinchuCounty_emei_township",
+    "region": "hsinchuCounty",
+    "name": "峨眉鄉",
+    "postalCode": "315"
+  },
+  {
+    "id": "taoyuan_zhongli_dist",
+    "region": "taoyuan",
+    "name": "中壢區",
+    "postalCode": "320"
+  },
+  {
+    "id": "taoyuan_pingzhen_dist",
+    "region": "taoyuan",
+    "name": "平鎮區",
+    "postalCode": "324"
+  },
+  {
+    "id": "taoyuan_longtan_dist",
+    "region": "taoyuan",
+    "name": "龍潭區",
+    "postalCode": "325"
+  },
+  {
+    "id": "taoyuan_yangmei_dist",
+    "region": "taoyuan",
+    "name": "楊梅區",
+    "postalCode": "326"
+  },
+  {
+    "id": "taoyuan_xinwu_dist",
+    "region": "taoyuan",
+    "name": "新屋區",
+    "postalCode": "327"
+  },
+  {
+    "id": "taoyuan_guanyin_dist",
+    "region": "taoyuan",
+    "name": "觀音區",
+    "postalCode": "328"
+  },
+  {
+    "id": "taoyuan_taoyuan_dist",
+    "region": "taoyuan",
+    "name": "桃園區",
+    "postalCode": "330"
+  },
+  {
+    "id": "taoyuan_guishan_dist",
+    "region": "taoyuan",
+    "name": "龜山區",
+    "postalCode": "333"
+  },
+  {
+    "id": "taoyuan_bade_dist",
+    "region": "taoyuan",
+    "name": "八德區",
+    "postalCode": "334"
+  },
+  {
+    "id": "taoyuan_daxi_dist",
+    "region": "taoyuan",
+    "name": "大溪區",
+    "postalCode": "335"
+  },
+  {
+    "id": "taoyuan_fuxing_dist",
+    "region": "taoyuan",
+    "name": "復興區",
+    "postalCode": "336"
+  },
+  {
+    "id": "taoyuan_dayuan_dist",
+    "region": "taoyuan",
+    "name": "大園區",
+    "postalCode": "337"
+  },
+  {
+    "id": "taoyuan_luzhu_dist",
+    "region": "taoyuan",
+    "name": "蘆竹區",
+    "postalCode": "338"
+  },
+  {
+    "id": "miaoli_zhunan_township",
+    "region": "miaoli",
+    "name": "竹南鎮",
+    "postalCode": "350"
+  },
+  {
+    "id": "miaoli_toufen_city",
+    "region": "miaoli",
+    "name": "頭份市",
+    "postalCode": "351"
+  },
+  {
+    "id": "miaoli_sanwan_township",
+    "region": "miaoli",
+    "name": "三灣鄉",
+    "postalCode": "352"
+  },
+  {
+    "id": "miaoli_nanzhuang_township",
+    "region": "miaoli",
+    "name": "南庄鄉",
+    "postalCode": "353"
+  },
+  {
+    "id": "miaoli_shitan_township",
+    "region": "miaoli",
+    "name": "獅潭鄉",
+    "postalCode": "354"
+  },
+  {
+    "id": "miaoli_houlong_township",
+    "region": "miaoli",
+    "name": "後龍鎮",
+    "postalCode": "356"
+  },
+  {
+    "id": "miaoli_tongxiao_township",
+    "region": "miaoli",
+    "name": "通霄鎮",
+    "postalCode": "357"
+  },
+  {
+    "id": "miaoli_yuanli_township",
+    "region": "miaoli",
+    "name": "苑裡鎮",
+    "postalCode": "358"
+  },
+  {
+    "id": "miaoli_miaoli_city",
+    "region": "miaoli",
+    "name": "苗栗市",
+    "postalCode": "360"
+  },
+  {
+    "id": "miaoli_zaoqiao_township",
+    "region": "miaoli",
+    "name": "造橋鄉",
+    "postalCode": "361"
+  },
+  {
+    "id": "miaoli_touwu_township",
+    "region": "miaoli",
+    "name": "頭屋鄉",
+    "postalCode": "362"
+  },
+  {
+    "id": "miaoli_gongguan_township",
+    "region": "miaoli",
+    "name": "公館鄉",
+    "postalCode": "363"
+  },
+  {
+    "id": "miaoli_dahu_township",
+    "region": "miaoli",
+    "name": "大湖鄉",
+    "postalCode": "364"
+  },
+  {
+    "id": "miaoli_tai_an_township",
+    "region": "miaoli",
+    "name": "泰安鄉",
+    "postalCode": "365"
+  },
+  {
+    "id": "miaoli_tongluo_township",
+    "region": "miaoli",
+    "name": "銅鑼鄉",
+    "postalCode": "366"
+  },
+  {
+    "id": "miaoli_sanyi_township",
+    "region": "miaoli",
+    "name": "三義鄉",
+    "postalCode": "367"
+  },
+  {
+    "id": "miaoli_xihu_township",
+    "region": "miaoli",
+    "name": "西湖鄉",
+    "postalCode": "368"
+  },
+  {
+    "id": "miaoli_zhuolan_township",
+    "region": "miaoli",
+    "name": "卓蘭鎮",
+    "postalCode": "369"
+  },
+  {
+    "id": "taichung_central_dist",
+    "region": "taichung",
+    "name": "中區",
+    "postalCode": "400"
+  },
+  {
+    "id": "taichung_east_dist",
+    "region": "taichung",
+    "name": "東區",
+    "postalCode": "401"
+  },
+  {
+    "id": "taichung_south_dist",
+    "region": "taichung",
+    "name": "南區",
+    "postalCode": "402"
+  },
+  {
+    "id": "taichung_west_dist",
+    "region": "taichung",
+    "name": "西區",
+    "postalCode": "403"
+  },
+  {
+    "id": "taichung_north_dist",
+    "region": "taichung",
+    "name": "北區",
+    "postalCode": "404"
+  },
+  {
+    "id": "taichung_beitun_dist",
+    "region": "taichung",
+    "name": "北屯區",
+    "postalCode": "406"
+  },
+  {
+    "id": "taichung_xitun_dist",
+    "region": "taichung",
+    "name": "西屯區",
+    "postalCode": "407"
+  },
+  {
+    "id": "taichung_nantun_dist",
+    "region": "taichung",
+    "name": "南屯區",
+    "postalCode": "408"
+  },
+  {
+    "id": "taichung_taiping_dist",
+    "region": "taichung",
+    "name": "太平區",
+    "postalCode": "411"
+  },
+  {
+    "id": "taichung_dali_dist",
+    "region": "taichung",
+    "name": "大里區",
+    "postalCode": "412"
+  },
+  {
+    "id": "taichung_wufeng_dist",
+    "region": "taichung",
+    "name": "霧峰區",
+    "postalCode": "413"
+  },
+  {
+    "id": "taichung_wuri_dist",
+    "region": "taichung",
+    "name": "烏日區",
+    "postalCode": "414"
+  },
+  {
+    "id": "taichung_fengyuan_dist",
+    "region": "taichung",
+    "name": "豐原區",
+    "postalCode": "420"
+  },
+  {
+    "id": "taichung_houli_dist",
+    "region": "taichung",
+    "name": "后里區",
+    "postalCode": "421"
+  },
+  {
+    "id": "taichung_shigang_dist",
+    "region": "taichung",
+    "name": "石岡區",
+    "postalCode": "422"
+  },
+  {
+    "id": "taichung_dongshi_dist",
+    "region": "taichung",
+    "name": "東勢區",
+    "postalCode": "423"
+  },
+  {
+    "id": "taichung_heping_dist",
+    "region": "taichung",
+    "name": "和平區",
+    "postalCode": "424"
+  },
+  {
+    "id": "taichung_xinshe_dist",
+    "region": "taichung",
+    "name": "新社區",
+    "postalCode": "426"
+  },
+  {
+    "id": "taichung_tanzi_dist",
+    "region": "taichung",
+    "name": "潭子區",
+    "postalCode": "427"
+  },
+  {
+    "id": "taichung_daya_dist",
+    "region": "taichung",
+    "name": "大雅區",
+    "postalCode": "428"
+  },
+  {
+    "id": "taichung_shengang_dist",
+    "region": "taichung",
+    "name": "神岡區",
+    "postalCode": "429"
+  },
+  {
+    "id": "taichung_dadu_dist",
+    "region": "taichung",
+    "name": "大肚區",
+    "postalCode": "432"
+  },
+  {
+    "id": "taichung_shalu_dist",
+    "region": "taichung",
+    "name": "沙鹿區",
+    "postalCode": "433"
+  },
+  {
+    "id": "taichung_longjing_dist",
+    "region": "taichung",
+    "name": "龍井區",
+    "postalCode": "434"
+  },
+  {
+    "id": "taichung_wuqi_dist",
+    "region": "taichung",
+    "name": "梧棲區",
+    "postalCode": "435"
+  },
+  {
+    "id": "taichung_qingshui_dist",
+    "region": "taichung",
+    "name": "清水區",
+    "postalCode": "436"
+  },
+  {
+    "id": "taichung_dajia_dist",
+    "region": "taichung",
+    "name": "大甲區",
+    "postalCode": "437"
+  },
+  {
+    "id": "taichung_waipu_dist",
+    "region": "taichung",
+    "name": "外埔區",
+    "postalCode": "438"
+  },
+  {
+    "id": "taichung_da_an_dist",
+    "region": "taichung",
+    "name": "大安區",
+    "postalCode": "439"
+  },
+  {
+    "id": "changhua_changhua_city",
+    "region": "changhua",
+    "name": "彰化市",
+    "postalCode": "500"
+  },
+  {
+    "id": "changhua_fenyuan_township",
+    "region": "changhua",
+    "name": "芬園鄉",
+    "postalCode": "502"
+  },
+  {
+    "id": "changhua_huatan_township",
+    "region": "changhua",
+    "name": "花壇鄉",
+    "postalCode": "503"
+  },
+  {
+    "id": "changhua_xiushui_township",
+    "region": "changhua",
+    "name": "秀水鄉",
+    "postalCode": "504"
+  },
+  {
+    "id": "changhua_lukang_township",
+    "region": "changhua",
+    "name": "鹿港鎮",
+    "postalCode": "505"
+  },
+  {
+    "id": "changhua_fuxing_township",
+    "region": "changhua",
+    "name": "福興鄉",
+    "postalCode": "506"
+  },
+  {
+    "id": "changhua_xianxi_township",
+    "region": "changhua",
+    "name": "線西鄉",
+    "postalCode": "507"
+  },
+  {
+    "id": "changhua_hemei_township",
+    "region": "changhua",
+    "name": "和美鎮",
+    "postalCode": "508"
+  },
+  {
+    "id": "changhua_shengang_township",
+    "region": "changhua",
+    "name": "伸港鄉",
+    "postalCode": "509"
+  },
+  {
+    "id": "changhua_yuanlin_city",
+    "region": "changhua",
+    "name": "員林市",
+    "postalCode": "510"
+  },
+  {
+    "id": "changhua_shetou_township",
+    "region": "changhua",
+    "name": "社頭鄉",
+    "postalCode": "511"
+  },
+  {
+    "id": "changhua_yongjing_township",
+    "region": "changhua",
+    "name": "永靖鄉",
+    "postalCode": "512"
+  },
+  {
+    "id": "changhua_puxin_township",
+    "region": "changhua",
+    "name": "埔心鄉",
+    "postalCode": "513"
+  },
+  {
+    "id": "changhua_xihu_township",
+    "region": "changhua",
+    "name": "溪湖鎮",
+    "postalCode": "514"
+  },
+  {
+    "id": "changhua_dacun_township",
+    "region": "changhua",
+    "name": "大村鄉",
+    "postalCode": "515"
+  },
+  {
+    "id": "changhua_puyan_township",
+    "region": "changhua",
+    "name": "埔鹽鄉",
+    "postalCode": "516"
+  },
+  {
+    "id": "changhua_tianzhong_township",
+    "region": "changhua",
+    "name": "田中鎮",
+    "postalCode": "520"
+  },
+  {
+    "id": "changhua_beidou_township",
+    "region": "changhua",
+    "name": "北斗鎮",
+    "postalCode": "521"
+  },
+  {
+    "id": "changhua_tianwei_township",
+    "region": "changhua",
+    "name": "田尾鄉",
+    "postalCode": "522"
+  },
+  {
+    "id": "changhua_pitou_township",
+    "region": "changhua",
+    "name": "埤頭鄉",
+    "postalCode": "523"
+  },
+  {
+    "id": "changhua_xizhou_township",
+    "region": "changhua",
+    "name": "溪州鄉",
+    "postalCode": "524"
+  },
+  {
+    "id": "changhua_zhutang_township",
+    "region": "changhua",
+    "name": "竹塘鄉",
+    "postalCode": "525"
+  },
+  {
+    "id": "changhua_erlin_township",
+    "region": "changhua",
+    "name": "二林鎮",
+    "postalCode": "526"
+  },
+  {
+    "id": "changhua_dacheng_township",
+    "region": "changhua",
+    "name": "大城鄉",
+    "postalCode": "527"
+  },
+  {
+    "id": "changhua_fangyuan_township",
+    "region": "changhua",
+    "name": "芳苑鄉",
+    "postalCode": "528"
+  },
+  {
+    "id": "changhua_ershui_township",
+    "region": "changhua",
+    "name": "二水鄉",
+    "postalCode": "530"
+  },
+  {
+    "id": "nantou_nantou_city",
+    "region": "nantou",
+    "name": "南投市",
+    "postalCode": "540"
+  },
+  {
+    "id": "nantou_zhongliao_township",
+    "region": "nantou",
+    "name": "中寮鄉",
+    "postalCode": "541"
+  },
+  {
+    "id": "nantou_caotun_township",
+    "region": "nantou",
+    "name": "草屯鎮",
+    "postalCode": "542"
+  },
+  {
+    "id": "nantou_guoxing_township",
+    "region": "nantou",
+    "name": "國姓鄉",
+    "postalCode": "544"
+  },
+  {
+    "id": "nantou_puli_township",
+    "region": "nantou",
+    "name": "埔里鎮",
+    "postalCode": "545"
+  },
+  {
+    "id": "nantou_ren_ai_township",
+    "region": "nantou",
+    "name": "仁愛鄉",
+    "postalCode": "546"
+  },
+  {
+    "id": "nantou_mingjian_township",
+    "region": "nantou",
+    "name": "名間鄉",
+    "postalCode": "551"
+  },
+  {
+    "id": "nantou_jiji_township",
+    "region": "nantou",
+    "name": "集集鎮",
+    "postalCode": "552"
+  },
+  {
+    "id": "nantou_shuili_township",
+    "region": "nantou",
+    "name": "水里鄉",
+    "postalCode": "553"
+  },
+  {
+    "id": "nantou_yuchi_township",
+    "region": "nantou",
+    "name": "魚池鄉",
+    "postalCode": "555"
+  },
+  {
+    "id": "nantou_xinyi_township",
+    "region": "nantou",
+    "name": "信義鄉",
+    "postalCode": "556"
+  },
+  {
+    "id": "nantou_zhushan_township",
+    "region": "nantou",
+    "name": "竹山鎮",
+    "postalCode": "557"
+  },
+  {
+    "id": "nantou_lugu_township",
+    "region": "nantou",
+    "name": "鹿谷鄉",
+    "postalCode": "558"
+  },
+  {
+    "id": "chiayiCity_west_dist",
+    "region": "chiayiCity",
+    "name": "西區",
+    "postalCode": "600"
+  },
+  {
+    "id": "chiayiCity_east_dist",
+    "region": "chiayiCity",
+    "name": "東區",
+    "postalCode": "600"
+  },
+  {
+    "id": "chiayiCounty_fanlu_township",
+    "region": "chiayiCounty",
+    "name": "番路鄉",
+    "postalCode": "602"
+  },
+  {
+    "id": "chiayiCounty_meishan_township",
+    "region": "chiayiCounty",
+    "name": "梅山鄉",
+    "postalCode": "603"
+  },
+  {
+    "id": "chiayiCounty_zhuqi_township",
+    "region": "chiayiCounty",
+    "name": "竹崎鄉",
+    "postalCode": "604"
+  },
+  {
+    "id": "chiayiCounty_alishan_township",
+    "region": "chiayiCounty",
+    "name": "阿里山鄉",
+    "postalCode": "605"
+  },
+  {
+    "id": "chiayiCounty_zhongpu_township",
+    "region": "chiayiCounty",
+    "name": "中埔鄉",
+    "postalCode": "606"
+  },
+  {
+    "id": "chiayiCounty_dapu_township",
+    "region": "chiayiCounty",
+    "name": "大埔鄉",
+    "postalCode": "607"
+  },
+  {
+    "id": "chiayiCounty_shuishang_township",
+    "region": "chiayiCounty",
+    "name": "水上鄉",
+    "postalCode": "608"
+  },
+  {
+    "id": "chiayiCounty_lucao_township",
+    "region": "chiayiCounty",
+    "name": "鹿草鄉",
+    "postalCode": "611"
+  },
+  {
+    "id": "chiayiCounty_taibao_city",
+    "region": "chiayiCounty",
+    "name": "太保市",
+    "postalCode": "612"
+  },
+  {
+    "id": "chiayiCounty_puzi_city",
+    "region": "chiayiCounty",
+    "name": "朴子市",
+    "postalCode": "613"
+  },
+  {
+    "id": "chiayiCounty_dongshi_township",
+    "region": "chiayiCounty",
+    "name": "東石鄉",
+    "postalCode": "614"
+  },
+  {
+    "id": "chiayiCounty_liujiao_township",
+    "region": "chiayiCounty",
+    "name": "六腳鄉",
+    "postalCode": "615"
+  },
+  {
+    "id": "chiayiCounty_xingang_township",
+    "region": "chiayiCounty",
+    "name": "新港鄉",
+    "postalCode": "616"
+  },
+  {
+    "id": "chiayiCounty_minxiong_township",
+    "region": "chiayiCounty",
+    "name": "民雄鄉",
+    "postalCode": "621"
+  },
+  {
+    "id": "chiayiCounty_dalin_township",
+    "region": "chiayiCounty",
+    "name": "大林鎮",
+    "postalCode": "622"
+  },
+  {
+    "id": "chiayiCounty_xikou_township",
+    "region": "chiayiCounty",
+    "name": "溪口鄉",
+    "postalCode": "623"
+  },
+  {
+    "id": "chiayiCounty_yizhu_township",
+    "region": "chiayiCounty",
+    "name": "義竹鄉",
+    "postalCode": "624"
+  },
+  {
+    "id": "chiayiCounty_budai_township",
+    "region": "chiayiCounty",
+    "name": "布袋鎮",
+    "postalCode": "625"
+  },
+  {
+    "id": "yunlin_dounan_township",
+    "region": "yunlin",
+    "name": "斗南鎮",
+    "postalCode": "630"
+  },
+  {
+    "id": "yunlin_dapi_township",
+    "region": "yunlin",
+    "name": "大埤鄉",
+    "postalCode": "631"
+  },
+  {
+    "id": "yunlin_huwei_township",
+    "region": "yunlin",
+    "name": "虎尾鎮",
+    "postalCode": "632"
+  },
+  {
+    "id": "yunlin_tuku_township",
+    "region": "yunlin",
+    "name": "土庫鎮",
+    "postalCode": "633"
+  },
+  {
+    "id": "yunlin_baozhong_township",
+    "region": "yunlin",
+    "name": "褒忠鄉",
+    "postalCode": "634"
+  },
+  {
+    "id": "yunlin_dongshi_township",
+    "region": "yunlin",
+    "name": "東勢鄉",
+    "postalCode": "635"
+  },
+  {
+    "id": "yunlin_taixi_township",
+    "region": "yunlin",
+    "name": "臺西鄉",
+    "postalCode": "636"
+  },
+  {
+    "id": "yunlin_lunbei_township",
+    "region": "yunlin",
+    "name": "崙背鄉",
+    "postalCode": "637"
+  },
+  {
+    "id": "yunlin_mailiao_township",
+    "region": "yunlin",
+    "name": "麥寮鄉",
+    "postalCode": "638"
+  },
+  {
+    "id": "yunlin_douliu_city",
+    "region": "yunlin",
+    "name": "斗六市",
+    "postalCode": "640"
+  },
+  {
+    "id": "yunlin_linnei_township",
+    "region": "yunlin",
+    "name": "林內鄉",
+    "postalCode": "643"
+  },
+  {
+    "id": "yunlin_gukeng_township",
+    "region": "yunlin",
+    "name": "古坑鄉",
+    "postalCode": "646"
+  },
+  {
+    "id": "yunlin_citong_township",
+    "region": "yunlin",
+    "name": "莿桐鄉",
+    "postalCode": "647"
+  },
+  {
+    "id": "yunlin_xiluo_township",
+    "region": "yunlin",
+    "name": "西螺鎮",
+    "postalCode": "648"
+  },
+  {
+    "id": "yunlin_erlun_township",
+    "region": "yunlin",
+    "name": "二崙鄉",
+    "postalCode": "649"
+  },
+  {
+    "id": "yunlin_beigang_township",
+    "region": "yunlin",
+    "name": "北港鎮",
+    "postalCode": "651"
+  },
+  {
+    "id": "yunlin_shuilin_township",
+    "region": "yunlin",
+    "name": "水林鄉",
+    "postalCode": "652"
+  },
+  {
+    "id": "yunlin_kouhu_township",
+    "region": "yunlin",
+    "name": "口湖鄉",
+    "postalCode": "653"
+  },
+  {
+    "id": "yunlin_sihu_township",
+    "region": "yunlin",
+    "name": "四湖鄉",
+    "postalCode": "654"
+  },
+  {
+    "id": "yunlin_yuanzhang_township",
+    "region": "yunlin",
+    "name": "元長鄉",
+    "postalCode": "655"
+  },
+  {
+    "id": "tainan_west_central_dist",
+    "region": "tainan",
+    "name": "中西區",
+    "postalCode": "700"
+  },
+  {
+    "id": "tainan_east_dist",
+    "region": "tainan",
+    "name": "東區",
+    "postalCode": "701"
+  },
+  {
+    "id": "tainan_south_dist",
+    "region": "tainan",
+    "name": "南區",
+    "postalCode": "702"
+  },
+  {
+    "id": "tainan_north_dist",
+    "region": "tainan",
+    "name": "北區",
+    "postalCode": "704"
+  },
+  {
+    "id": "tainan_anping_dist",
+    "region": "tainan",
+    "name": "安平區",
+    "postalCode": "708"
+  },
+  {
+    "id": "tainan_annan_dist",
+    "region": "tainan",
+    "name": "安南區",
+    "postalCode": "709"
+  },
+  {
+    "id": "tainan_yongkang_dist",
+    "region": "tainan",
+    "name": "永康區",
+    "postalCode": "710"
+  },
+  {
+    "id": "tainan_guiren_dist",
+    "region": "tainan",
+    "name": "歸仁區",
+    "postalCode": "711"
+  },
+  {
+    "id": "tainan_xinhua_dist",
+    "region": "tainan",
+    "name": "新化區",
+    "postalCode": "712"
+  },
+  {
+    "id": "tainan_zuozhen_dist",
+    "region": "tainan",
+    "name": "左鎮區",
+    "postalCode": "713"
+  },
+  {
+    "id": "tainan_yujing_dist",
+    "region": "tainan",
+    "name": "玉井區",
+    "postalCode": "714"
+  },
+  {
+    "id": "tainan_nanxi_dist",
+    "region": "tainan",
+    "name": "楠西區",
+    "postalCode": "715"
+  },
+  {
+    "id": "tainan_nanhua_dist",
+    "region": "tainan",
+    "name": "南化區",
+    "postalCode": "716"
+  },
+  {
+    "id": "tainan_rende_dist",
+    "region": "tainan",
+    "name": "仁德區",
+    "postalCode": "717"
+  },
+  {
+    "id": "tainan_guanmiao_dist",
+    "region": "tainan",
+    "name": "關廟區",
+    "postalCode": "718"
+  },
+  {
+    "id": "tainan_longqi_dist",
+    "region": "tainan",
+    "name": "龍崎區",
+    "postalCode": "719"
+  },
+  {
+    "id": "tainan_guantian_dist",
+    "region": "tainan",
+    "name": "官田區",
+    "postalCode": "720"
+  },
+  {
+    "id": "tainan_madou_dist",
+    "region": "tainan",
+    "name": "麻豆區",
+    "postalCode": "721"
+  },
+  {
+    "id": "tainan_jiali_dist",
+    "region": "tainan",
+    "name": "佳里區",
+    "postalCode": "722"
+  },
+  {
+    "id": "tainan_xigang_dist",
+    "region": "tainan",
+    "name": "西港區",
+    "postalCode": "723"
+  },
+  {
+    "id": "tainan_qigu_dist",
+    "region": "tainan",
+    "name": "七股區",
+    "postalCode": "724"
+  },
+  {
+    "id": "tainan_jiangjun_dist",
+    "region": "tainan",
+    "name": "將軍區",
+    "postalCode": "725"
+  },
+  {
+    "id": "tainan_xuejia_dist",
+    "region": "tainan",
+    "name": "學甲區",
+    "postalCode": "726"
+  },
+  {
+    "id": "tainan_beimen_dist",
+    "region": "tainan",
+    "name": "北門區",
+    "postalCode": "727"
+  },
+  {
+    "id": "tainan_xinying_dist",
+    "region": "tainan",
+    "name": "新營區",
+    "postalCode": "730"
+  },
+  {
+    "id": "tainan_houbi_dist",
+    "region": "tainan",
+    "name": "後壁區",
+    "postalCode": "731"
+  },
+  {
+    "id": "tainan_baihe_dist",
+    "region": "tainan",
+    "name": "白河區",
+    "postalCode": "732"
+  },
+  {
+    "id": "tainan_dongshan_dist",
+    "region": "tainan",
+    "name": "東山區",
+    "postalCode": "733"
+  },
+  {
+    "id": "tainan_liujia_dist",
+    "region": "tainan",
+    "name": "六甲區",
+    "postalCode": "734"
+  },
+  {
+    "id": "tainan_xiaying_dist",
+    "region": "tainan",
+    "name": "下營區",
+    "postalCode": "735"
+  },
+  {
+    "id": "tainan_liuying_dist",
+    "region": "tainan",
+    "name": "柳營區",
+    "postalCode": "736"
+  },
+  {
+    "id": "tainan_yanshui_dist",
+    "region": "tainan",
+    "name": "鹽水區",
+    "postalCode": "737"
+  },
+  {
+    "id": "tainan_shanhua_dist",
+    "region": "tainan",
+    "name": "善化區",
+    "postalCode": "741"
+  },
+  {
+    "id": "tainan_danei_dist",
+    "region": "tainan",
+    "name": "大內區",
+    "postalCode": "742"
+  },
+  {
+    "id": "tainan_shanshang_dist",
+    "region": "tainan",
+    "name": "山上區",
+    "postalCode": "743"
+  },
+  {
+    "id": "tainan_xinshi_dist",
+    "region": "tainan",
+    "name": "新市區",
+    "postalCode": "744"
+  },
+  {
+    "id": "tainan_anding_dist",
+    "region": "tainan",
+    "name": "安定區",
+    "postalCode": "745"
+  },
+  {
+    "id": "kaohsiung_xinxing_dist",
+    "region": "kaohsiung",
+    "name": "新興區",
+    "postalCode": "800"
+  },
+  {
+    "id": "kaohsiung_qianjin_dist",
+    "region": "kaohsiung",
+    "name": "前金區",
+    "postalCode": "801"
+  },
+  {
+    "id": "kaohsiung_lingya_dist",
+    "region": "kaohsiung",
+    "name": "苓雅區",
+    "postalCode": "802"
+  },
+  {
+    "id": "kaohsiung_yancheng_dist",
+    "region": "kaohsiung",
+    "name": "鹽埕區",
+    "postalCode": "803"
+  },
+  {
+    "id": "kaohsiung_gushan_dist",
+    "region": "kaohsiung",
+    "name": "鼓山區",
+    "postalCode": "804"
+  },
+  {
+    "id": "kaohsiung_qijin_dist",
+    "region": "kaohsiung",
+    "name": "旗津區",
+    "postalCode": "805"
+  },
+  {
+    "id": "kaohsiung_qianzhen_dist",
+    "region": "kaohsiung",
+    "name": "前鎮區",
+    "postalCode": "806"
+  },
+  {
+    "id": "kaohsiung_sanmin_dist",
+    "region": "kaohsiung",
+    "name": "三民區",
+    "postalCode": "807"
+  },
+  {
+    "id": "kaohsiung_nanzi_dist",
+    "region": "kaohsiung",
+    "name": "楠梓區",
+    "postalCode": "811"
+  },
+  {
+    "id": "kaohsiung_xiaogang_dist",
+    "region": "kaohsiung",
+    "name": "小港區",
+    "postalCode": "812"
+  },
+  {
+    "id": "kaohsiung_zuoying_dist",
+    "region": "kaohsiung",
+    "name": "左營區",
+    "postalCode": "813"
+  },
+  {
+    "id": "kaohsiung_renwu_dist",
+    "region": "kaohsiung",
+    "name": "仁武區",
+    "postalCode": "814"
+  },
+  {
+    "id": "kaohsiung_dashe_dist",
+    "region": "kaohsiung",
+    "name": "大社區",
+    "postalCode": "815"
+  },
+  {
+    "id": "kaohsiung_gangshan_dist",
+    "region": "kaohsiung",
+    "name": "岡山區",
+    "postalCode": "820"
+  },
+  {
+    "id": "kaohsiung_luzhu_dist",
+    "region": "kaohsiung",
+    "name": "路竹區",
+    "postalCode": "821"
+  },
+  {
+    "id": "kaohsiung_alian_dist",
+    "region": "kaohsiung",
+    "name": "阿蓮區",
+    "postalCode": "822"
+  },
+  {
+    "id": "kaohsiung_tianliao_dist",
+    "region": "kaohsiung",
+    "name": "田寮區",
+    "postalCode": "823"
+  },
+  {
+    "id": "kaohsiung_yanchao_dist",
+    "region": "kaohsiung",
+    "name": "燕巢區",
+    "postalCode": "824"
+  },
+  {
+    "id": "kaohsiung_qiaotou_dist",
+    "region": "kaohsiung",
+    "name": "橋頭區",
+    "postalCode": "825"
+  },
+  {
+    "id": "kaohsiung_ziguan_dist",
+    "region": "kaohsiung",
+    "name": "梓官區",
+    "postalCode": "826"
+  },
+  {
+    "id": "kaohsiung_mituo_dist",
+    "region": "kaohsiung",
+    "name": "彌陀區",
+    "postalCode": "827"
+  },
+  {
+    "id": "kaohsiung_yong_an_dist",
+    "region": "kaohsiung",
+    "name": "永安區",
+    "postalCode": "828"
+  },
+  {
+    "id": "kaohsiung_hunei_dist",
+    "region": "kaohsiung",
+    "name": "湖內區",
+    "postalCode": "829"
+  },
+  {
+    "id": "kaohsiung_fengshan_dist",
+    "region": "kaohsiung",
+    "name": "鳳山區",
+    "postalCode": "830"
+  },
+  {
+    "id": "kaohsiung_daliao_dist",
+    "region": "kaohsiung",
+    "name": "大寮區",
+    "postalCode": "831"
+  },
+  {
+    "id": "kaohsiung_linyuan_dist",
+    "region": "kaohsiung",
+    "name": "林園區",
+    "postalCode": "832"
+  },
+  {
+    "id": "kaohsiung_niaosong_dist",
+    "region": "kaohsiung",
+    "name": "鳥松區",
+    "postalCode": "833"
+  },
+  {
+    "id": "kaohsiung_dashu_dist",
+    "region": "kaohsiung",
+    "name": "大樹區",
+    "postalCode": "840"
+  },
+  {
+    "id": "kaohsiung_qishan_dist",
+    "region": "kaohsiung",
+    "name": "旗山區",
+    "postalCode": "842"
+  },
+  {
+    "id": "kaohsiung_meinong_dist",
+    "region": "kaohsiung",
+    "name": "美濃區",
+    "postalCode": "843"
+  },
+  {
+    "id": "kaohsiung_liugui_dist",
+    "region": "kaohsiung",
+    "name": "六龜區",
+    "postalCode": "844"
+  },
+  {
+    "id": "kaohsiung_neimen_dist",
+    "region": "kaohsiung",
+    "name": "內門區",
+    "postalCode": "845"
+  },
+  {
+    "id": "kaohsiung_shanlin_dist",
+    "region": "kaohsiung",
+    "name": "杉林區",
+    "postalCode": "846"
+  },
+  {
+    "id": "kaohsiung_jiaxian_dist",
+    "region": "kaohsiung",
+    "name": "甲仙區",
+    "postalCode": "847"
+  },
+  {
+    "id": "kaohsiung_taoyuan_dist",
+    "region": "kaohsiung",
+    "name": "桃源區",
+    "postalCode": "848"
+  },
+  {
+    "id": "kaohsiung_namaxia_dist",
+    "region": "kaohsiung",
+    "name": "那瑪夏區",
+    "postalCode": "849"
+  },
+  {
+    "id": "kaohsiung_maolin_dist",
+    "region": "kaohsiung",
+    "name": "茂林區",
+    "postalCode": "851"
+  },
+  {
+    "id": "kaohsiung_qieding_dist",
+    "region": "kaohsiung",
+    "name": "茄萣區",
+    "postalCode": "852"
+  },
+  {
+    "id": "penghu_magong_city",
+    "region": "penghu",
+    "name": "馬公市",
+    "postalCode": "880"
+  },
+  {
+    "id": "penghu_xiyu_township",
+    "region": "penghu",
+    "name": "西嶼鄉",
+    "postalCode": "881"
+  },
+  {
+    "id": "penghu_wang_an_township",
+    "region": "penghu",
+    "name": "望安鄉",
+    "postalCode": "882"
+  },
+  {
+    "id": "penghu_qimei_township",
+    "region": "penghu",
+    "name": "七美鄉",
+    "postalCode": "883"
+  },
+  {
+    "id": "penghu_baisha_township",
+    "region": "penghu",
+    "name": "白沙鄉",
+    "postalCode": "884"
+  },
+  {
+    "id": "penghu_huxi_township",
+    "region": "penghu",
+    "name": "湖西鄉",
+    "postalCode": "885"
+  },
+  {
+    "id": "kinmen_jinsha_township",
+    "region": "kinmen",
+    "name": "金沙鎮",
+    "postalCode": "890"
+  },
+  {
+    "id": "kinmen_jinhu_township",
+    "region": "kinmen",
+    "name": "金湖鎮",
+    "postalCode": "891"
+  },
+  {
+    "id": "kinmen_jinning_township",
+    "region": "kinmen",
+    "name": "金寧鄉",
+    "postalCode": "892"
+  },
+  {
+    "id": "kinmen_jincheng_township",
+    "region": "kinmen",
+    "name": "金城鎮",
+    "postalCode": "893"
+  },
+  {
+    "id": "kinmen_lieyu_township",
+    "region": "kinmen",
+    "name": "烈嶼鄉",
+    "postalCode": "894"
+  },
+  {
+    "id": "kinmen_wuqiu_township",
+    "region": "kinmen",
+    "name": "烏坵鄉",
+    "postalCode": "896"
+  },
+  {
+    "id": "pingtung_pingtung_city",
+    "region": "pingtung",
+    "name": "屏東市",
+    "postalCode": "900"
+  },
+  {
+    "id": "pingtung_sandimen_township",
+    "region": "pingtung",
+    "name": "三地門鄉",
+    "postalCode": "901"
+  },
+  {
+    "id": "pingtung_wutai_township",
+    "region": "pingtung",
+    "name": "霧臺鄉",
+    "postalCode": "902"
+  },
+  {
+    "id": "pingtung_majia_township",
+    "region": "pingtung",
+    "name": "瑪家鄉",
+    "postalCode": "903"
+  },
+  {
+    "id": "pingtung_jiuru_township",
+    "region": "pingtung",
+    "name": "九如鄉",
+    "postalCode": "904"
+  },
+  {
+    "id": "pingtung_ligang_township",
+    "region": "pingtung",
+    "name": "里港鄉",
+    "postalCode": "905"
+  },
+  {
+    "id": "pingtung_gaoshu_township",
+    "region": "pingtung",
+    "name": "高樹鄉",
+    "postalCode": "906"
+  },
+  {
+    "id": "pingtung_yanpu_township",
+    "region": "pingtung",
+    "name": "鹽埔鄉",
+    "postalCode": "907"
+  },
+  {
+    "id": "pingtung_changzhi_township",
+    "region": "pingtung",
+    "name": "長治鄉",
+    "postalCode": "908"
+  },
+  {
+    "id": "pingtung_linluo_township",
+    "region": "pingtung",
+    "name": "麟洛鄉",
+    "postalCode": "909"
+  },
+  {
+    "id": "pingtung_zhutian_township",
+    "region": "pingtung",
+    "name": "竹田鄉",
+    "postalCode": "911"
+  },
+  {
+    "id": "pingtung_neipu_township",
+    "region": "pingtung",
+    "name": "內埔鄉",
+    "postalCode": "912"
+  },
+  {
+    "id": "pingtung_wandan_township",
+    "region": "pingtung",
+    "name": "萬丹鄉",
+    "postalCode": "913"
+  },
+  {
+    "id": "pingtung_chaozhou_township",
+    "region": "pingtung",
+    "name": "潮州鎮",
+    "postalCode": "920"
+  },
+  {
+    "id": "pingtung_taiwu_township",
+    "region": "pingtung",
+    "name": "泰武鄉",
+    "postalCode": "921"
+  },
+  {
+    "id": "pingtung_laiyi_township",
+    "region": "pingtung",
+    "name": "來義鄉",
+    "postalCode": "922"
+  },
+  {
+    "id": "pingtung_wanluan_township",
+    "region": "pingtung",
+    "name": "萬巒鄉",
+    "postalCode": "923"
+  },
+  {
+    "id": "pingtung_kanding_township",
+    "region": "pingtung",
+    "name": "崁頂鄉",
+    "postalCode": "924"
+  },
+  {
+    "id": "pingtung_xinpi_township",
+    "region": "pingtung",
+    "name": "新埤鄉",
+    "postalCode": "925"
+  },
+  {
+    "id": "pingtung_nanzhou_township",
+    "region": "pingtung",
+    "name": "南州鄉",
+    "postalCode": "926"
+  },
+  {
+    "id": "pingtung_linbian_township",
+    "region": "pingtung",
+    "name": "林邊鄉",
+    "postalCode": "927"
+  },
+  {
+    "id": "pingtung_donggang_township",
+    "region": "pingtung",
+    "name": "東港鎮",
+    "postalCode": "928"
+  },
+  {
+    "id": "pingtung_liuqiu_township",
+    "region": "pingtung",
+    "name": "琉球鄉",
+    "postalCode": "929"
+  },
+  {
+    "id": "pingtung_jiadong_township",
+    "region": "pingtung",
+    "name": "佳冬鄉",
+    "postalCode": "931"
+  },
+  {
+    "id": "pingtung_xinyuan_township",
+    "region": "pingtung",
+    "name": "新園鄉",
+    "postalCode": "932"
+  },
+  {
+    "id": "pingtung_fangliao_township",
+    "region": "pingtung",
+    "name": "枋寮鄉",
+    "postalCode": "940"
+  },
+  {
+    "id": "pingtung_fangshan_township",
+    "region": "pingtung",
+    "name": "枋山鄉",
+    "postalCode": "941"
+  },
+  {
+    "id": "pingtung_chunri_township",
+    "region": "pingtung",
+    "name": "春日鄉",
+    "postalCode": "942"
+  },
+  {
+    "id": "pingtung_shizi_township",
+    "region": "pingtung",
+    "name": "獅子鄉",
+    "postalCode": "943"
+  },
+  {
+    "id": "pingtung_checheng_township",
+    "region": "pingtung",
+    "name": "車城鄉",
+    "postalCode": "944"
+  },
+  {
+    "id": "pingtung_mudan_township",
+    "region": "pingtung",
+    "name": "牡丹鄉",
+    "postalCode": "945"
+  },
+  {
+    "id": "pingtung_hengchun_township",
+    "region": "pingtung",
+    "name": "恆春鎮",
+    "postalCode": "946"
+  },
+  {
+    "id": "pingtung_manzhou_township",
+    "region": "pingtung",
+    "name": "滿州鄉",
+    "postalCode": "947"
+  },
+  {
+    "id": "taitung_taitung_city",
+    "region": "taitung",
+    "name": "臺東市",
+    "postalCode": "950"
+  },
+  {
+    "id": "taitung_ludao_township",
+    "region": "taitung",
+    "name": "綠島鄉",
+    "postalCode": "951"
+  },
+  {
+    "id": "taitung_lanyu_township",
+    "region": "taitung",
+    "name": "蘭嶼鄉",
+    "postalCode": "952"
+  },
+  {
+    "id": "taitung_yanping_township",
+    "region": "taitung",
+    "name": "延平鄉",
+    "postalCode": "953"
+  },
+  {
+    "id": "taitung_beinan_township",
+    "region": "taitung",
+    "name": "卑南鄉",
+    "postalCode": "954"
+  },
+  {
+    "id": "taitung_luye_township",
+    "region": "taitung",
+    "name": "鹿野鄉",
+    "postalCode": "955"
+  },
+  {
+    "id": "taitung_guanshan_township",
+    "region": "taitung",
+    "name": "關山鎮",
+    "postalCode": "956"
+  },
+  {
+    "id": "taitung_haiduan_township",
+    "region": "taitung",
+    "name": "海端鄉",
+    "postalCode": "957"
+  },
+  {
+    "id": "taitung_chishang_township",
+    "region": "taitung",
+    "name": "池上鄉",
+    "postalCode": "958"
+  },
+  {
+    "id": "taitung_donghe_township",
+    "region": "taitung",
+    "name": "東河鄉",
+    "postalCode": "959"
+  },
+  {
+    "id": "taitung_chenggong_township",
+    "region": "taitung",
+    "name": "成功鎮",
+    "postalCode": "961"
+  },
+  {
+    "id": "taitung_changbin_township",
+    "region": "taitung",
+    "name": "長濱鄉",
+    "postalCode": "962"
+  },
+  {
+    "id": "taitung_taimali_township",
+    "region": "taitung",
+    "name": "太麻里鄉",
+    "postalCode": "963"
+  },
+  {
+    "id": "taitung_jinfeng_township",
+    "region": "taitung",
+    "name": "金峰鄉",
+    "postalCode": "964"
+  },
+  {
+    "id": "taitung_dawu_township",
+    "region": "taitung",
+    "name": "大武鄉",
+    "postalCode": "965"
+  },
+  {
+    "id": "taitung_daren_township",
+    "region": "taitung",
+    "name": "達仁鄉",
+    "postalCode": "966"
+  },
+  {
+    "id": "hualien_hualien_city",
+    "region": "hualien",
+    "name": "花蓮市",
+    "postalCode": "970"
+  },
+  {
+    "id": "hualien_xincheng_township",
+    "region": "hualien",
+    "name": "新城鄉",
+    "postalCode": "971"
+  },
+  {
+    "id": "hualien_xiulin_township",
+    "region": "hualien",
+    "name": "秀林鄉",
+    "postalCode": "972"
+  },
+  {
+    "id": "hualien_ji_an_township",
+    "region": "hualien",
+    "name": "吉安鄉",
+    "postalCode": "973"
+  },
+  {
+    "id": "hualien_shoufeng_township",
+    "region": "hualien",
+    "name": "壽豐鄉",
+    "postalCode": "974"
+  },
+  {
+    "id": "hualien_fenglin_township",
+    "region": "hualien",
+    "name": "鳳林鎮",
+    "postalCode": "975"
+  },
+  {
+    "id": "hualien_guangfu_township",
+    "region": "hualien",
+    "name": "光復鄉",
+    "postalCode": "976"
+  },
+  {
+    "id": "hualien_fengbin_township",
+    "region": "hualien",
+    "name": "豐濱鄉",
+    "postalCode": "977"
+  },
+  {
+    "id": "hualien_ruisui_township",
+    "region": "hualien",
+    "name": "瑞穗鄉",
+    "postalCode": "978"
+  },
+  {
+    "id": "hualien_wanrong_township",
+    "region": "hualien",
+    "name": "萬榮鄉",
+    "postalCode": "979"
+  },
+  {
+    "id": "hualien_yuli_township",
+    "region": "hualien",
+    "name": "玉里鎮",
+    "postalCode": "981"
+  },
+  {
+    "id": "hualien_zhuoxi_township",
+    "region": "hualien",
+    "name": "卓溪鄉",
+    "postalCode": "982"
+  },
+  {
+    "id": "hualien_fuli_township",
+    "region": "hualien",
+    "name": "富里鄉",
+    "postalCode": "983"
+  }
+]

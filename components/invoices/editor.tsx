@@ -14,7 +14,11 @@ import { invoiceBuyers, type InvoiceBuyer } from "@/lib/invoices/buyers";
 import { InvoiceBuyerPicker } from "./buyer-picker";
 import { InvoiceDefaultsControls } from "./defaults-controls";
 import { InvoiceTaxControls, initialTaxDraft, taxDraftInput, taxPreview } from "./tax-controls";
+import { billingDocumentKind, defaultDocumentKind, isBillingCurrency, type BillingDocumentKind } from "@/lib/invoices/document";
+import { InvoiceDocumentNotice } from "./document-notice";
 import { invoiceRequest } from "./request";
+import { InvoiceAddressFields } from "./address-fields";
+import { emptyAddress, matchingAddress, postalAddressInput, type AddressDraft } from "@/lib/invoices/address";
 
 export function InvoiceEditor({
   existing,
@@ -39,7 +43,7 @@ export function InvoiceEditor({
   const payments = data.payments.filter(
     (p) =>
       (!availablePayments || availablePayments.includes(p.id)) &&
-      p.currency === "USD" &&
+      isBillingCurrency(p.currency) &&
       p.amount > 0 &&
       p.direction === "in" &&
       p.status === "expected" &&
@@ -55,11 +59,13 @@ export function InvoiceEditor({
   const project = data.projects.find((p) => p.id === first?.projectId);
   const language =
     existing?.snapshot.documentLanguage || "en";
-  const emailTemplate = (lang: "en" | "zh-TW", label: string) => ({
-    subject: t(lang === "en" ? "emailSubjectEn" : "emailSubjectZh", { label }),
-    body: t(lang === "en" ? "emailBodyEn" : "emailBodyZh", { label }),
+  const initialKind = existing ? billingDocumentKind(existing.snapshot) : defaultDocumentKind(first?.currency || "USD");
+  const emailTemplate = (lang: "en" | "zh-TW", label: string, kind: BillingDocumentKind = initialKind) => ({
+    subject: t(kind === "tw_payment_request" ? (lang === "en" ? "requestSubjectEn" : "requestSubjectZh") : (lang === "en" ? "emailSubjectEn" : "emailSubjectZh"), { label }),
+    body: t(kind === "tw_payment_request" ? (lang === "en" ? "requestBodyEn" : "requestBodyZh") : (lang === "en" ? "emailBodyEn" : "emailBodyZh"), { label }),
   });
   const [form, setFormState] = useState({
+    documentKind: initialKind,
     documentLanguage:
       existing?.snapshot.documentLanguage || "en",
     paymentId: existing?.paymentId || first?.id || "",
@@ -87,6 +93,8 @@ export function InvoiceEditor({
       existing?.snapshot.body ||
       emailTemplate(language, first?.label || "").body,
   });
+  const [sellerAddressParts, setSellerAddressParts] = useState<AddressDraft|null>(() => existing?.snapshot.sellerAddressParts || (existing?.snapshot.sellerAddress ? null : emptyAddress()));
+  const [buyerAddressParts, setBuyerAddressParts] = useState<AddressDraft|null>(() => existing?.snapshot.buyerAddressParts || (existing?.snapshot.buyerAddress ? null : emptyAddress()));
   const [autoGmailDraft, setAutoGmailDraft] = useState(existing?.autoGmailDraft ?? false);
   const [taxConfirmed, setTaxConfirmed] = useState(false),
     [busy, setBusy] = useState(false),
@@ -107,15 +115,16 @@ export function InvoiceEditor({
   const reviewedTax = usTax ? taxPreview(taxDraft) : undefined;
   const amounts = selected && (!usTax || reviewedTax) ? invoiceAmounts(reviewedTax
     ? { ...selected, taxRate: reviewedTax.rate, taxIncluded: reviewedTax.included } : selected) : undefined;
-  const money = (n: number) =>
+  const money = (n: number, currency = selected?.currency || "USD") =>
     new Intl.NumberFormat(undefined, {
       style: "currency",
-      currency: "USD",
+      currency,
+      currencyDisplay: "code",
     }).format(n);
   const field = (
     key: Exclude<
       keyof typeof form,
-      "paymentId" | "documentLanguage" | "issueOn" | "dueOn"
+      "paymentId" | "documentLanguage" | "documentKind" | "issueOn" | "dueOn"
     >,
     multi = false,
   ) => (
@@ -160,6 +169,7 @@ export function InvoiceEditor({
     setForm({
       ...form,
       paymentId: id,
+      documentKind: defaultDocumentKind(p.currency),
       taxNote: "",
       description: p.label,
       dueOn: p.dueDate || today,
@@ -167,11 +177,12 @@ export function InvoiceEditor({
         data.projects.find((pr) => pr.id === p.projectId)?.counterparty || "",
       buyerAddress: "",
       recipient: "",
-      subject: emailTemplate(form.documentLanguage, p.label).subject,
-      body: emailTemplate(form.documentLanguage, p.label).body,
+      subject: emailTemplate(form.documentLanguage, p.label, defaultDocumentKind(p.currency)).subject,
+      body: emailTemplate(form.documentLanguage, p.label, defaultDocumentKind(p.currency)).body,
     });
     setTaxConfirmed(false);
     setBuyerSource(null);
+    setBuyerAddressParts(emptyAddress());
     setUsTax(false);
     setTaxDraft(initialTaxDraft(undefined, p.taxIncluded));
   };
@@ -195,6 +206,8 @@ export function InvoiceEditor({
           try {
             const r = await invoiceRequest<{ id: string }>("/api/invoices", {
               ...form,
+              sellerAddressParts: sellerAddressParts || undefined,
+              buyerAddressParts: buyerAddressParts || undefined,
               id: existing?.id,
               revision: existing?.revision,
               taxConfirmed,
@@ -223,11 +236,28 @@ export function InvoiceEditor({
               >
                 {payments.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.label} · {money(invoiceAmounts(p).total)}
+                    {p.label} · {money(invoiceAmounts(p).total, p.currency)}
                   </option>
                 ))}
               </select>
             </label>
+            <label>
+              {t("documentKind")}
+              <select value={form.documentKind} disabled={busy} onChange={e => {
+                const next = e.target.value as BillingDocumentKind;
+                const before = emailTemplate(form.documentLanguage, selected?.label || "", form.documentKind);
+                const after = emailTemplate(form.documentLanguage, selected?.label || "", next);
+                setForm({...form, documentKind: next,
+                  subject: form.subject === before.subject ? after.subject : form.subject,
+                  body: form.body === before.body ? after.body : form.body});
+                setUsTax(false);
+                setTaxDraft(initialTaxDraft(undefined, selected?.taxIncluded));
+              }}>
+                {selected?.currency !== "TWD" && <option value="commercial_invoice">{t("documentKinds.commercial_invoice")}</option>}
+                <option value="tw_payment_request">{t("documentKinds.tw_payment_request")}</option>
+              </select>
+            </label>
+            <InvoiceDocumentNotice kind={form.documentKind} />
             <label>
               {t("documentLanguage")}
               <select
@@ -237,8 +267,9 @@ export function InvoiceEditor({
                     before = emailTemplate(
                       form.documentLanguage,
                       selected?.label || "",
+                      form.documentKind,
                     ),
-                    after = emailTemplate(next, selected?.label || "");
+                    after = emailTemplate(next, selected?.label || "", form.documentKind);
                   setForm({
                     ...form,
                     documentLanguage: next,
@@ -274,32 +305,33 @@ export function InvoiceEditor({
               buyers={invoiceBuyers(data.contacts, data.organizations, data.projects.find((p) => p.id === selected?.projectId))}
               value={{buyerName: form.buyerName, buyerAddress: form.buyerAddress, recipient: form.recipient}}
               disabled={busy}
-              onApply={(buyer, source) => {setForm((current) => ({...current, ...buyer})); setBuyerSource(source);}} />
+              onApply={(buyer, source) => {setForm((current) => ({...current, ...buyer})); setBuyerSource(source); setBuyerAddressParts(matchingAddress(buyer.buyerAddress, source.buyerAddressParts) || (buyer.buyerAddress ? null : emptyAddress()));}} />
             <div className="invoice-fields">
               {field("buyerName")}
               {field("recipient")}
             </div>
-            {field("buyerAddress", true)}
+            <InvoiceAddressFields label={t("buyerAddress")} section="buyer" text={form.buyerAddress} value={buyerAddressParts} disabled={busy} onChange={(text,parts)=>{setBuyerAddressParts(parts);setForm({...form,buyerAddress:text});}} />
             {buyerSource && <InvoiceBuyerSaveback key={buyerSource.id} source={buyerSource}
-              address={form.buyerAddress} email={form.recipient} disabled={busy} onBusy={setBusy} />}
+              address={form.buyerAddress} addressParts={buyerAddressParts ? postalAddressInput.safeParse(buyerAddressParts).data : undefined} email={form.recipient} disabled={busy || (!!buyerAddressParts && !postalAddressInput.safeParse(buyerAddressParts).success)} onBusy={setBusy} />}
             {field("description", true)}
             <details className="invoice-details" open={!existing}>
               <summary>{t("parties")}</summary>
               <InvoiceDefaultsControls
                 defaults={defaults}
-                value={{ sellerName: form.sellerName, sellerAddress: form.sellerAddress, sellerEmail: form.sellerEmail, paymentInstructions: form.paymentInstructions }}
+                addressValid={!sellerAddressParts || postalAddressInput.safeParse(sellerAddressParts).success}
+                value={{ sellerName: form.sellerName, sellerAddress: form.sellerAddress, sellerAddressParts: sellerAddressParts ? postalAddressInput.safeParse(sellerAddressParts).data : undefined, sellerEmail: form.sellerEmail, paymentInstructions: form.paymentInstructions }}
                 disabled={busy}
-                onApply={(value) => setForm((current) => ({ ...current, ...value }))}
+                onApply={(value) => {setForm((current) => ({ ...current, ...value }));setSellerAddressParts(value.sellerAddressParts || (value.sellerAddress ? null : emptyAddress()));}}
                 onBusy={setBusy}
               />
               <div className="invoice-fields">
                 {field("sellerName")}
                 {field("sellerEmail")}
               </div>
-              {field("sellerAddress", true)}
+              <InvoiceAddressFields label={t("sellerAddress")} section="seller" text={form.sellerAddress} value={sellerAddressParts} disabled={busy} onChange={(text,parts)=>{setSellerAddressParts(parts);setForm({...form,sellerAddress:text});}} />
               {field("paymentInstructions", true)}
             </details>
-            {selected && <InvoiceTaxControls saleOn={form.issueOn} enabled={usTax} value={taxDraft} disabled={busy}
+            {selected && form.documentKind === "commercial_invoice" && <InvoiceTaxControls saleOn={form.issueOn} enabled={usTax} value={taxDraft} disabled={busy}
               currentRate={selected.taxRate} currentIncluded={selected.taxIncluded}
               onEnabled={value => { setUsTax(value); setTaxConfirmed(false); }}
               onChange={value => { setTaxDraft(value); setTaxConfirmed(false); }} />}

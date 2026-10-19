@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, isNotNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, lt, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { file, message, messageAnalysis, project, talent } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
@@ -7,8 +7,10 @@ import { isSigned } from "@/lib/domain/phases";
 import { toLocale, type Locale } from "@/lib/i18n/config";
 import { dropBroughtIn } from "@/lib/mail/not-work";
 import { readBytes } from "@/lib/storage";
-import { notWork, proposesNothing } from "./analysis";
+import { notWork, proposesNothing, upgradeAnalysis, type MessageAnalysis } from "./analysis";
 import { extractMessage } from "./extract";
+import type { ThreadNote } from "./prompts";
+import { stripInvisible } from "./safety";
 import { canAnalyze } from "./usage";
 import { ModelError } from "./model";
 
@@ -32,6 +34,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
       threadId: message.providerThreadId,
       sender: message.sender,
       subject: message.subject,
+      senderCheck: message.senderCheck,
       receivedAt: message.receivedAt,
       timeZone: talent.timeZone,
     })
@@ -66,11 +69,14 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
       : sent
         ? `From: (the artist)\nTo: ${row.recipients ?? ""}\nSubject: ${row.subject ?? ""}\n\n`
         : `From: ${row.sender ?? ""}\nSubject: ${row.subject ?? ""}\n\n`;
+    const thread = gmail ? await threadNotes(messageId, row) : [];
     const { analysis, modelVersion, promptVersion } = await extractMessage({
       body: header + (row.body ?? ""),
       fromMailbox: gmail,
       textIfFilesUnreadable: gmail,
       sent,
+      thread,
+      senderFailed: row.senderCheck === "failed",
       files,
       today: dateInZone(row.timeZone, 0, row.receivedAt),
       timeZone: row.timeZone,
@@ -151,4 +157,59 @@ async function fileWithThread(
     .update(message)
     .set({ projectId: filed.projectId, status: "confirmed" })
     .where(and(eq(message.id, messageId), eq(message.status, "analyzed")));
+}
+
+const THREAD_NOTES = 5;
+const clip = (text: string, max: number) => stripInvisible(text).text.replace(/\s+/g, " ").trim().slice(0, max);
+
+/**
+ * The thread's earlier messages, oldest first, from their latest analyses
+ * (decision 0013): who, when, and what was extracted, never their text. The
+ * last few only; a message without an analysis is left out.
+ */
+async function threadNotes(
+  messageId: string,
+  row: { talentId: string; connectionId: string | null; threadId: string | null; receivedAt: Date; timeZone: string },
+): Promise<ThreadNote[]> {
+  if (!row.connectionId || !row.threadId) return [];
+  const earlier = await db
+    .select({ id: message.id, receivedAt: message.receivedAt, direction: message.direction, sender: message.sender })
+    .from(message)
+    .where(
+      and(
+        eq(message.talentId, row.talentId),
+        eq(message.connectionId, row.connectionId),
+        eq(message.providerThreadId, row.threadId),
+        eq(message.kind, "message"),
+        ne(message.id, messageId),
+        lt(message.receivedAt, row.receivedAt),
+      ),
+    )
+    .orderBy(desc(message.receivedAt))
+    .limit(THREAD_NOTES);
+  if (!earlier.length) return [];
+  const analyses = await db
+    .select({ messageId: messageAnalysis.messageId, analysis: messageAnalysis.analysis })
+    .from(messageAnalysis)
+    .where(inArray(messageAnalysis.messageId, earlier.map((m) => m.id)))
+    .orderBy(desc(messageAnalysis.createdAt));
+  const latest = new Map<string, MessageAnalysis>();
+  for (const a of analyses) if (!latest.has(a.messageId)) latest.set(a.messageId, upgradeAnalysis(a.analysis));
+  return earlier
+    .reverse()
+    .flatMap((m): ThreadNote[] => {
+      const a = latest.get(m.id);
+      if (!a) return [];
+      return [
+        {
+          date: dateInZone(row.timeZone, 0, m.receivedAt),
+          from: m.direction === "sent" ? "you" : "them",
+          name: m.direction === "sent" ? "" : clip(m.sender?.match(/^\s*"?([^"<]+?)"?\s*</)?.[1] ?? "", 60),
+          intent: a.intent,
+          fee: a.money.amount !== null ? `${a.money.amount} ${a.money.currency || "TWD"}` : "",
+          dates: a.dates.filter((d) => d.date).slice(0, 4).map((d) => clip([d.date, d.time, d.what].filter(Boolean).join(" "), 80)),
+          asks: a.asks.slice(0, 3).map((x) => clip(x, 80)),
+        },
+      ];
+    });
 }

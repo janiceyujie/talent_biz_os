@@ -2,6 +2,8 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { appEnv } from "@/lib/app-env";
@@ -11,21 +13,29 @@ import { LocalAIError } from "./local-budget";
 import type { ModelErrorCode } from "./errors";
 
 // The one place that talks to a language model. The pipeline asks for an
-// object matching a zod schema; which model answers is configuration:
+// object matching a zod schema; which model answers is configuration
+// (decision 0015):
 //
-//   AI_PROVIDER=gemini     Google's Gemini API; GEMINI_API_KEY, AI_MODEL — one model or a fallback
-//                          list tried in order when one is busy (e.g. gemini-3.5-flash-lite,gemini-3.1-flash-lite).
-//                          On the free tier Google may keep and use what's sent (AI_PROVIDER_KEEPS_DATA).
-//   AI_PROVIDER=ollama     a free local model through Ollama, offline
-//                          AI_MODEL (default qwen3:8b), OLLAMA_URL (default http://127.0.0.1:11434)
-//   AI_PROVIDER=anthropic  Claude — not wired yet; added when we test with it
+//   AI_PRIMARY=anthropic   Claude; ANTHROPIC_API_KEY. The production primary.
+//   AI_PRIMARY=openai      OpenAI; OPENAI_API_KEY.
+//   AI_BACKUP=openai       used only when the primary can't answer (unreachable, overloaded,
+//                          rate-limited after its own retries); never for a bad answer.
+//   Each call names a role, and each provider has a model per role (defaults below;
+//   AI_MODEL_<PROVIDER>_<ROLE> overrides one, e.g. AI_MODEL_ANTHROPIC_ANALYSIS).
 //
-// Each call names its role. Content from a connected mailbox (its relevance
-// check, and the analysis of what's brought in) can run on another provider in
-// development, AI_MAILBOX_PROVIDER and AI_MAILBOX_MODEL, e.g. a local model
-// while paste and upload use Gemini. Content from a connected mailbox never goes to a provider that
-// may keep it (AI_PROVIDER_KEEPS_DATA) unless AI_FREE_TIER_OK=1, which is
-// refused in production (docs/decisions/0015).
+//   For development and tests (AI_PROVIDER is read when AI_PRIMARY isn't set):
+//   gemini     Google's Gemini API; GEMINI_API_KEY, AI_MODEL: one model or a fallback list
+//              tried in order when one is busy. On the free tier Google may keep and use
+//              what's sent (AI_PROVIDER_KEEPS_DATA).
+//   ollama     a free local model through Ollama, offline; AI_MODEL (default qwen3:8b),
+//              OLLAMA_URL (default http://127.0.0.1:11434). The same model for every role.
+//
+// Content from a connected mailbox (its relevance check, and the analysis of
+// what's brought in) can run on another provider in development,
+// AI_MAILBOX_PROVIDER and AI_MAILBOX_MODEL, e.g. a local model while paste and
+// upload use Gemini. It never goes to a provider that may keep it
+// (AI_PROVIDER_KEEPS_DATA) unless AI_FREE_TIER_OK=1, which is refused in
+// production (docs/decisions/0015).
 //
 // Every call is logged in ai_call, and can be served from a recording
 // (AI_REPLAY) so tests don't spend quota. See docs/decisions/0006 and 0008.
@@ -42,7 +52,12 @@ export type CallTrace = {
   messageId?: string | null;
 };
 
-export type ModelRole = "analysis" | "relevance";
+/**
+ * What a call is for (decision 0015): relevance (score one email, the small
+ * model), analysis (a message, the mid-size model), analysis_complex
+ * (contracts, PDFs, long or unclear messages, the large model; lib/ai/extract.ts routes).
+ */
+export type ModelRole = "analysis" | "analysis_complex" | "relevance";
 
 export type StructuredRequest<T> = {
   role?: ModelRole; // default analysis
@@ -69,19 +84,43 @@ export class ModelError extends Error {
 
 const defaultModels: Record<string, string> = { gemini: "gemini-3.5-flash-lite,gemini-3.1-flash-lite", ollama: "qwen3:8b" };
 
-/**
- * Which provider and models answer a call: one model, or a list tried in
- * order when one is busy. The relevance check only ever reads mailbox content.
- */
-export function modelFor(role: ModelRole = "analysis", fromMailbox = role === "relevance") {
-  const own = fromMailbox || role === "relevance" ? process.env.AI_MAILBOX_PROVIDER : undefined;
-  const provider = own || process.env.AI_PROVIDER || "ollama";
-  const configured = own ? process.env.AI_MAILBOX_MODEL : process.env.AI_MODEL;
-  const models = (configured || defaultModels[provider] || "")
+/** The paid providers' model for each role (decision 0015); AI_MODEL_<PROVIDER>_<ROLE> overrides one. */
+const roleModels: Record<"anthropic" | "openai", Record<ModelRole, string>> = {
+  anthropic: { relevance: "claude-haiku-5-5", analysis: "claude-sonnet-5-5", analysis_complex: "claude-opus-5-5" },
+  openai: { relevance: "gpt-6-luna", analysis: "gpt-6.1-sol", analysis_complex: "gpt-6-astra" },
+};
+
+const list = (v: string | undefined) =>
+  (v ?? "")
     .split(",")
     .map((m) => m.trim())
     .filter(Boolean);
-  return { provider, models };
+
+/** One provider's models for a role: its own per role, or the one configured for every role. */
+function modelsOf(provider: string, role: ModelRole): string[] {
+  if (provider === "anthropic" || provider === "openai")
+    return list(process.env[`AI_MODEL_${provider.toUpperCase()}_${role.toUpperCase()}`] || roleModels[provider][role]);
+  return list(process.env.AI_MODEL || defaultModels[provider]);
+}
+
+/**
+ * Which provider and models answer a call (one model, or a list tried in
+ * order when one is busy), and the backup provider, if any. The relevance
+ * check only ever reads mailbox content.
+ */
+export function modelFor(role: ModelRole = "analysis", fromMailbox = role === "relevance") {
+  const own = fromMailbox || role === "relevance" ? process.env.AI_MAILBOX_PROVIDER : undefined;
+  if (own) {
+    const configured = list(process.env.AI_MAILBOX_MODEL);
+    return { provider: own, models: configured.length ? configured : modelsOf(own, role), backup: null };
+  }
+  const provider = process.env.AI_PRIMARY || process.env.AI_PROVIDER || "ollama";
+  const backupProvider = process.env.AI_BACKUP;
+  return {
+    provider,
+    models: modelsOf(provider, role),
+    backup: backupProvider && backupProvider !== provider ? { provider: backupProvider, models: modelsOf(backupProvider, role) } : null,
+  };
 }
 
 /** A provider that may keep and use what it's sent: Gemini's free tier, when AI_PROVIDER_KEEPS_DATA=1. */
@@ -95,9 +134,9 @@ export function freeTierOk() {
 }
 
 export async function generateObject<T>(request: StructuredRequest<T>): Promise<StructuredResult<T>> {
-  const { provider, models } = modelFor(request.role, request.fromMailbox);
+  const { provider, models, backup } = modelFor(request.role, request.fromMailbox);
   const started = Date.now();
-  const log = (entry: { model: string; status: "ok" | "error"; failureCode?: string; replayed?: boolean } & Partial<Usage>) =>
+  const log = (entry: { provider?: string; model: string; status: "ok" | "error"; failureCode?: string; replayed?: boolean } & Partial<Usage>) =>
     db
       .insert(aiCall)
       .values({
@@ -130,23 +169,42 @@ export async function generateObject<T>(request: StructuredRequest<T>): Promise<
       throw new ModelError("replay_missing", `No recording ${key} (AI_REPLAY=only); record it with AI_REPLAY=record`);
     }
   }
+  const attempt = async (p: string, m: string[]) => {
+    try {
+      const result = await callProvider(p, request, m);
+      await log({ provider: p, model: result.modelVersion, status: "ok", inputTokens: result.inputTokens, outputTokens: result.outputTokens });
+      return result;
+    } catch (e) {
+      await log({ provider: p, model: m.join(",") || p, status: "error", failureCode: e instanceof ModelError ? e.code : "unexpected" });
+      throw e;
+    }
+  };
+  let result: ProviderResult<T>;
   try {
-    const result =
-      provider === "openai"
-        ? await openai(request, models[0])
-        : provider === "gemini"
-        ? await gemini(request, models)
-        : provider === "ollama"
-          ? await ollama(request, models[0] ?? "qwen3:8b")
-          : (() => {
-              throw new ModelError("not_configured", `AI_PROVIDER "${provider}" isn't wired up yet`);
-            })();
-    await log({ model: result.modelVersion, status: "ok", inputTokens: result.inputTokens, outputTokens: result.outputTokens });
-    if (replay === "record") await writeRecording(key, result);
-    return { object: result.object, modelVersion: result.modelVersion };
+    result = await attempt(provider, models);
   } catch (e) {
-    await log({ model: models.join(",") || provider, status: "error", failureCode: e instanceof ModelError ? e.code : "unexpected" });
-    throw e;
+    // The backup only when the primary can't answer at all: a bad answer is a quality problem, not an outage.
+    const down = e instanceof ModelError && (e.code === "unreachable" || e.code === "busy" || e.code === "rate_limited");
+    if (!down || !backup || (request.fromMailbox && keepsData(backup.provider) && !freeTierOk())) throw e;
+    console.error("model: primary unavailable, using the backup", provider, (e as ModelError).code);
+    result = await attempt(backup.provider, backup.models);
+  }
+  if (replay === "record") await writeRecording(key, result);
+  return { object: result.object, modelVersion: result.modelVersion };
+}
+
+function callProvider<T>(provider: string, request: StructuredRequest<T>, models: string[]): Promise<ProviderResult<T>> {
+  switch (provider) {
+    case "anthropic":
+      return anthropic(request, models[0]);
+    case "openai":
+      return appEnv(process.env) === "production" ? openai(request, models[0]) : localOpenAI(request, models[0]);
+    case "gemini":
+      return gemini(request, models);
+    case "ollama":
+      return ollama(request, models[0] ?? "qwen3:8b");
+    default:
+      return Promise.reject(new ModelError("not_configured", `AI provider "${provider}" isn't wired up`));
   }
 }
 
@@ -218,34 +276,153 @@ async function ollama<T>({ system, prompt, schema, attachments = [] }: Structure
     throw new ModelError("unsupported_file", `The local model ${model} can't read images`);
   const images = attachments.map((a) => Buffer.from(a.data).toString("base64"));
   const url = (process.env.OLLAMA_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
-  let response: Response;
+  return oneAtATime(async () => {
+    let response: Response;
+    try {
+      response = await fetch(`${url}/api/chat`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          model,
+          stream: false,
+          think: false, // reasoning models: answer directly; the schema is the whole output
+          format: z.toJSONSchema(schema), // Ollama constrains generation to this schema
+          options: { temperature: 0 },
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: prompt, ...(images.length ? { images } : {}) },
+          ],
+        }),
+        signal: AbortSignal.timeout(180_000),
+      });
+    } catch (e) {
+      throw new ModelError("unreachable", `Couldn't reach Ollama at ${url} (${e instanceof Error ? e.message : e}). Is it running?`);
+    }
+    if (!response.ok) throw new ModelError("unreachable", `Ollama answered ${response.status}: ${(await response.text()).slice(0, 300)}`);
+    const body = (await response.json()) as { message?: { content?: string }; prompt_eval_count?: number; eval_count?: number };
+    return {
+      object: parseAgainst(schema, body.message?.content ?? ""),
+      modelVersion: `ollama:${model}`,
+      inputTokens: body.prompt_eval_count ?? null,
+      outputTokens: body.eval_count ?? null,
+    };
+  });
+}
+
+// A local model answers one request at a time and queues the rest; a request
+// waiting there would use up its own timeout behind the others. The worker's
+// jobs (scoring, payment notices, analyses) run side by side, so they take
+// turns here instead, and the timeout counts only the request being answered.
+let ollamaTurn: Promise<unknown> = Promise.resolve();
+function oneAtATime<T>(call: () => Promise<T>): Promise<T> {
+  const turn = ollamaTurn.then(call, call);
+  ollamaTurn = turn.catch(() => undefined);
+  return turn;
+}
+
+// ---------------------------------------------------------------------------
+// The paid providers (decision 0015), through their official SDKs. Each
+// constrains the answer to the schema; the answer is still checked against the
+// zod schema here, like every provider's.
+
+/** The schema as JSON Schema both structured-output modes accept: no numeric bounds, closed objects. */
+export function providerSchema(schema: z.ZodType): Record<string, unknown> {
+  const unsupported = new Set(["$schema", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf", "minLength", "maxLength", "maxItems"]);
+  const clean = (node: unknown): unknown => {
+    if (Array.isArray(node)) return node.map(clean);
+    if (!node || typeof node !== "object") return node;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(node)) if (!unsupported.has(k)) out[k] = k === "properties" ? Object.fromEntries(Object.entries(v as object).map(([p, d]) => [p, clean(d)])) : clean(v);
+    if (out.type === "object") out.additionalProperties = false;
+    return out;
+  };
+  return clean(z.toJSONSchema(schema)) as Record<string, unknown>;
+}
+
+/** Room for the answer and the model's thinking, which counts toward it. */
+const maxTokens = (role: ModelRole = "analysis") => (role === "relevance" ? 4_000 : role === "analysis" ? 16_000 : 32_000);
+
+/** What an SDK's failure means for us: an outage (the backup may answer), a bad request, or no key. */
+function sdkError(provider: string, e: unknown): ModelError {
+  const status = (e as { status?: number })?.status;
+  const name = (e as Error)?.name ?? "";
+  const detail = `${provider}: ${(e as Error)?.message?.slice(0, 300) ?? e}`;
+  if (/ConnectionError|ConnectionTimeoutError/.test(name) || status === undefined) return new ModelError("unreachable", detail);
+  if (status === 429) return new ModelError("rate_limited", detail);
+  if (status >= 500) return new ModelError("busy", detail); // 529 is Anthropic's "overloaded"
+  if (status === 401 || status === 403) return new ModelError("not_configured", detail);
+  if (status === 413) return new ModelError("too_long", detail);
+  return new ModelError("invalid_output", detail);
+}
+
+async function anthropic<T>({ system, prompt, schema, attachments = [], role }: StructuredRequest<T>, model: string): Promise<ProviderResult<T>> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new ModelError("not_configured", "ANTHROPIC_API_KEY isn't set");
+  const client = new Anthropic({ apiKey, timeout: 180_000, maxRetries: 2 });
+  // The prompt first (it names the files), then the files in order.
+  const content: Anthropic.ContentBlockParam[] = [
+    { type: "text", text: prompt },
+    ...attachments.map((a): Anthropic.ContentBlockParam => {
+      const data = Buffer.from(a.data).toString("base64");
+      return a.mimeType === "application/pdf"
+        ? { type: "document", source: { type: "base64", media_type: "application/pdf", data } }
+        : { type: "image", source: { type: "base64", media_type: a.mimeType as "image/png", data } };
+    }),
+  ];
+  let res: Anthropic.Message;
   try {
-    response = await fetch(`${url}/api/chat`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        think: false, // reasoning models: answer directly; the schema is the whole output
-        format: z.toJSONSchema(schema), // Ollama constrains generation to this schema
-        options: { temperature: 0 },
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt, ...(images.length ? { images } : {}) },
-        ],
-      }),
-      signal: AbortSignal.timeout(180_000),
+    res = await client.messages.create({
+      model,
+      max_tokens: maxTokens(role),
+      system,
+      messages: [{ role: "user", content }],
+      // Structured output, and a low effort except for the hard cases (decision 0015).
+      output_config: { format: { type: "json_schema", schema: providerSchema(schema) }, effort: role === "analysis_complex" ? "medium" : "low" },
     });
   } catch (e) {
-    throw new ModelError("unreachable", `Couldn't reach Ollama at ${url} (${e instanceof Error ? e.message : e}). Is it running?`);
+    throw sdkError("Anthropic", e);
   }
-  if (!response.ok) throw new ModelError("unreachable", `Ollama answered ${response.status}: ${(await response.text()).slice(0, 300)}`);
-  const body = (await response.json()) as { message?: { content?: string }; prompt_eval_count?: number; eval_count?: number };
+  if (res.stop_reason === "refusal") throw new ModelError("blocked", "Anthropic declined to answer");
+  if (res.stop_reason === "max_tokens") throw new ModelError("too_long", "Anthropic's answer ran out of room");
+  const text = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
   return {
-    object: parseAgainst(schema, body.message?.content ?? ""),
-    modelVersion: `ollama:${model}`,
-    inputTokens: body.prompt_eval_count ?? null,
-    outputTokens: body.eval_count ?? null,
+    object: parseAgainst(schema, text),
+    modelVersion: `anthropic:${res.model}`,
+    inputTokens: res.usage.input_tokens,
+    outputTokens: res.usage.output_tokens,
+  };
+}
+
+async function openai<T>({ system, prompt, schema, attachments = [], role }: StructuredRequest<T>, model: string): Promise<ProviderResult<T>> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new ModelError("not_configured", "OPENAI_API_KEY isn't set");
+  const client = new OpenAI({ apiKey, timeout: 180_000, maxRetries: 2 });
+  const files = attachments.map((a, i): OpenAI.Responses.ResponseInputContent => {
+    const url = `data:${a.mimeType};base64,${Buffer.from(a.data).toString("base64")}`;
+    return a.mimeType === "application/pdf" ? { type: "input_file", filename: `file-${i + 1}.pdf`, file_data: url } : { type: "input_image", image_url: url, detail: "auto" };
+  });
+  let res: OpenAI.Responses.Response;
+  try {
+    res = await client.responses.create({
+      model,
+      instructions: system,
+      input: [{ role: "user", content: [{ type: "input_text", text: prompt }, ...files] }],
+      max_output_tokens: maxTokens(role),
+      reasoning: { effort: role === "analysis_complex" ? "medium" : "low" },
+      text: { format: { type: "json_schema", name: "answer", schema: providerSchema(schema), strict: true } },
+    });
+  } catch (e) {
+    throw sdkError("OpenAI", e);
+  }
+  if (res.incomplete_details?.reason === "max_output_tokens") throw new ModelError("too_long", "OpenAI's answer ran out of room");
+  if (res.incomplete_details?.reason === "content_filter") throw new ModelError("blocked", "OpenAI's filters blocked the answer");
+  const refused = res.output.some((o) => o.type === "message" && o.content.some((c) => c.type === "refusal"));
+  if (refused) throw new ModelError("blocked", "OpenAI declined to answer");
+  return {
+    object: parseAgainst(schema, res.output_text),
+    modelVersion: `openai:${res.model}`,
+    inputTokens: res.usage?.input_tokens ?? null,
+    outputTokens: res.usage?.output_tokens ?? null,
   };
 }
 
@@ -336,7 +513,7 @@ function parseAgainst<T>(schema: z.ZodType<T>, text: string): T {
   return parsed.data;
 }
 
-async function openai<T>({system,prompt,schema,attachments=[]}: StructuredRequest<T>, model?:string): Promise<ProviderResult<T>> {
+async function localOpenAI<T>({system,prompt,schema,attachments=[]}: StructuredRequest<T>, model?:string): Promise<ProviderResult<T>> {
   // The paid local experiment covers text only. Do not silently omit files.
   if(attachments.length) throw new ModelError("unsupported_file", "OpenAI local evaluation supports text only");
   try {

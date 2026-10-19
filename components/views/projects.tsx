@@ -1,12 +1,13 @@
 "use client";
 
+import { ActionNotice } from "@/components/app/action-notice";
 import {PortfolioProjectDetail} from "./portfolio-project-detail";
 import {portfolioLink} from "@/lib/manager/selection";
 import { usePreviewAction } from "@/components/app/preview-action";
 
 import { Archive, ArrowDownUp, ArrowLeft, Funnel, Plus, UserRound, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRouter, useSearchParams } from "next/navigation";
+import { unstable_isUnrecognizedActionError, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { InfoHint } from "@/components/app/info-hint";
@@ -345,7 +346,7 @@ export function ProjectsView({readOnly=false}:{readOnly?:boolean}={}) {
         {/* A case folder: the list picks a project, the dossier is where work on it happens. */}
         <section ref={panel} className="surface deal-list-panel" aria-label={t("listLabel")} aria-busy={list.loading}>
           <div className="deal-list-header">
-            <span aria-live="polite">{list.total === null ? t("loading") : t("count", { count: list.total })}</span>
+            <span aria-live="polite">{list.total === null ? (list.failed ? "—" : t("loading")) : t("count", { count: list.total })}</span>
             <label className="deal-sort">
               <ArrowDownUp size={14} aria-hidden="true" />
               <span className="sr-only">{t("sort")}</span>
@@ -401,12 +402,9 @@ export function ProjectsView({readOnly=false}:{readOnly?:boolean}={}) {
             )}
           </ul>
           {list.failed && (
-            <p className="notice error" role="alert">
-              {t("listFailed")}{" "}
-              <button className="text-button" onClick={list.retry}>
-                {t("retry")}
-              </button>
-            </p>
+            <ActionNotice className="error" role="alert" actions={<button className="text-button" onClick={list.retry}>{t("retry")}</button>}>
+              {t("listFailed")}
+            </ActionNotice>
           )}
           {!visible.length && !list.loading && !list.failed && <p className="empty">{t(archived ? "archivedEmpty" : search.trim() ? "noMatches" : "empty")}</p>}
         </section>
@@ -492,6 +490,7 @@ function ProjectDetail({
   const setProjectStage = usePreviewAction(setProjectStageRemote);
   const [tab, setTab] = useState<Tab>("overview");
   const [requestedStage, setRequestedStage] = useState<Stage | null>(null);
+  const [stageNeedsReload, setStageNeedsReload] = useState(false);
   const nextStage = mainStages[mainStages.indexOf(project.stage) + 1];
   const requestStage = (stage: Stage) => {
     setError(null);
@@ -548,15 +547,22 @@ function ProjectDetail({
 
   const moveTo = (stage: Stage) =>
     startTransition(async () => {
+      if (stageNeedsReload) return;
+      setError(null);
+      let failure: string | null;
       try {
-        const failure = await setProjectStage(project.id, stage);
-        setError(failure);
-        if (!failure) {
-          setRequestedStage(null);
-          onMoved(stage);
-        }
-      } catch {
-        setError(t("stageChange.failed"));
+        failure = await setProjectStage(project.id, stage);
+      } catch (error) {
+        const outdated = unstable_isUnrecognizedActionError(error);
+        setStageNeedsReload(outdated);
+        setError(t(outdated ? "stageChange.outdated" : "stageChange.failed"));
+        return;
+      }
+      // A UI follow-up must not be reported as a failed database update.
+      setError(failure);
+      if (!failure) {
+        setRequestedStage(null);
+        onMoved(stage);
       }
     });
 
@@ -579,7 +585,8 @@ function ProjectDetail({
         full={full}
         target={requestedStage}
         pending={pending}
-        error={error}
+        error={stageNeedsReload ? t("stageChange.outdated") : error}
+        onReload={stageNeedsReload ? () => window.location.reload() : undefined}
         onTarget={requestStage}
         onClose={() => { if (!pending) { setRequestedStage(null); setError(null); } }}
         onConfirm={() => moveTo(requestedStage)}

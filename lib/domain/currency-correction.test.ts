@@ -1,0 +1,10 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { currencyCorrectionPreservesAmounts as safe } from "./currency-correction";
+const p = {amount:1000,taxRate:0,taxIncluded:true,currency:"TWD",status:"expected",settledAmount:400,receipts:[{id:"1",date:"2026-10-01",cash:400,withheld:100}]};
+test("currency typo preserves partial cash and withholding",()=>assert.equal(safe(p,"USD"),true));
+test("whole yen can preserve exact amounts",()=>assert.equal(safe(p,"JPY"),true));
+test("fractional receipts cannot be relabelled as yen",()=>assert.equal(safe({...p,receipts:[{...p.receipts[0],cash:400.5}]},"JPY"),false));
+test("tax rounding cannot silently change",()=>assert.equal(safe({...p,amount:101,taxRate:5,taxIncluded:false},"JPY"),false));
+test("legacy receipts preserve their totals",()=>assert.equal(safe({...p,status:"settled",receipts:[]},"USD"),true));
+test("withdrawn historical fractions also keep their precision",()=>assert.equal(safe({...p,receipts:[{...p.receipts[0],cash:0.5},{id:"2",replaces:"1",withdrawn:true,date:"2026-10-01",cash:0,withheld:0}]},"JPY"),false));

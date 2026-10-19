@@ -1,4 +1,5 @@
 "use client";
+import { ActionNotice } from "@/components/app/action-notice";
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Modal } from "@/components/app/modal";
@@ -8,6 +9,8 @@ import { useAppData } from "@/components/app/app-data";
 import { dateInZone } from "@/lib/domain/dates";
 import { invoiceState, invoiceErrorKey, validInvoiceReceiptDate } from "@/lib/invoices/domain";
 import type { InvoiceDetail } from "@/lib/invoices/types";
+import { billingDocumentKind } from "@/lib/invoices/document";
+import { InvoiceDocumentNotice } from "./document-notice";
 import { invoiceRequest } from "./request";
 export function InvoiceReview({
   row,
@@ -34,7 +37,8 @@ export function InvoiceReview({
   const money = (n: number) =>
     new Intl.NumberFormat(undefined, {
       style: "currency",
-      currency: "USD",
+      currency: s.currency,
+      currencyDisplay: "code",
     }).format(n);
   const action = async (op: string) => {
     setBusy(true);
@@ -78,10 +82,11 @@ export function InvoiceReview({
       }}
     >
       <div className="invoice-review">
+        <InvoiceDocumentNotice kind={billingDocumentKind(s)} />
         <div className="invoice-paper">
           <div className="invoice-paper-head">
             <strong>{s.sellerName}</strong>
-            <span>{t("title")}</span>
+            <span>{t(`documentKinds.${billingDocumentKind(s)}`)}</span>
           </div>
           <div className="invoice-fields">
             <div>
@@ -156,15 +161,14 @@ export function InvoiceReview({
                 {busy ? t("creatingDraft") : t("createGmailDraft")}
               </button>
             </>}
-            {!row.gmail?.ready && <div className="notice">
-              <p>{t(row.gmail?.mode === "disabled" ? "draftDisabled" : "draftAuthorization")}</p>
-              <button className="text-button" onClick={()=>setAuthorize(!authorize)} aria-expanded={authorize}>{t("authorizeDrafts")}</button>
-              {authorize && <div><p>{t("composeDisclosure")}</p><a className="secondary" href="/api/mail/connect?drafts=1">{t("continueGoogle")}</a></div>}
-            </div>}
+            {!row.gmail?.ready && <ActionNotice actions={<button className="text-button" onClick={()=>setAuthorize(!authorize)} aria-expanded={authorize}>{t("authorizeDrafts")}</button>}
+              detail={authorize && <><p>{t("composeDisclosure")}</p><div className="notice-actions"><a className="secondary" href="/api/mail/connect?drafts=1">{t("continueGoogle")}</a></div></>}>
+              {t(row.gmail?.mode === "disabled" ? "draftDisabled" : "draftAuthorization")}
+            </ActionNotice>}
           </>
         )}
         {row.status === "scheduled" && <p>{t(row.autoGmailDraft ? "autoDraftScheduled" : "scheduledHelp")}</p>}
-        {["draft_queued","draft_creating"].includes(row.status) && <div role="status"><p>{t("draftWorking")}</p><button type="button" className="secondary" disabled={busy} onClick={refresh}>{t("refresh")}</button></div>}
+        {["draft_queued","draft_creating"].includes(row.status) && <ActionNotice role="status" actions={<button type="button" className="secondary" disabled={busy} onClick={refresh}>{t("refresh")}</button>}>{t("draftWorking")}</ActionNotice>}
         {["gmail_draft","draft_unknown","draft_missing"].includes(row.status) && <>
           <p className="notice">{t(row.status === "gmail_draft" ? "draftReady" : "draftUncertain")}</p>
           <div className="invoice-actions">
@@ -214,12 +218,9 @@ export function InvoiceReview({
           </>
         )}
         {error && (
-          <p className="notice error" role="alert">
-            {t(invoiceErrorKey(error))}{" "}
-            <button type="button" className="text-button" onClick={refresh}>
-              {t("refresh")}
-            </button>
-          </p>
+          <ActionNotice className="error" role="alert" actions={<button type="button" className="text-button" onClick={refresh}>{t("refresh")}</button>}>
+            {t(invoiceErrorKey(error))}
+          </ActionNotice>
         )}
         {editable && (
           <details className="invoice-details">

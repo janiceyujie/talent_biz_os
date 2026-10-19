@@ -3,6 +3,8 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { mailConnection } from "@/lib/db/schema";
 import { KeyConfigError, keyProvider, seal } from "@/lib/keys";
+import { queue } from "@/lib/queue";
+import { mailQueue, syncJobKey } from "@/lib/queue/jobs";
 import type { HistoryMode } from "./history";
 import { authorizationUrl, exchangeCode, idTokenClaims, newState, oauthClient, OAuthError, pkce, revokeToken } from "./oauth";
 import { openState, sealState, STATE_TTL_SECONDS } from "./oauth-state";
@@ -95,7 +97,9 @@ export async function finishConnect(o: {
   if (existing && existing.accountSubject !== account.subject) return giveBack().then(() => "otherAccount");
 
   const token = toColumns(await seal(tokens.refresh_token, tokenAad(o.talentId, account.subject)));
-  await db
+  // The first sync starts now (the history chosen, when it's the last 30 days): no Sync now needed.
+  const requested = new Date();
+  const [saved] = await db
     .insert(mailConnection)
     .values({
       talentId: o.talentId,
@@ -104,12 +108,15 @@ export async function finishConnect(o: {
       accountSubject: account.subject,
       scopes: tokens.scope ?? "",
       historyMode: remembered.historyMode,
+      syncRequestedAt: requested,
       ...token,
     })
     .onConflictDoUpdate({
       target: [mailConnection.talentId, mailConnection.provider, mailConnection.accountSubject],
       // A reconnect keeps the history choice and the sync cursor.
-      set: { ...token, connectedBy: o.personId, accountEmail: account.email, scopes: tokens.scope ?? "", status: "connected", failure: null },
-    });
+      set: { ...token, connectedBy: o.personId, accountEmail: account.email, scopes: tokens.scope ?? "", status: "connected", failure: null, syncRequestedAt: requested },
+    })
+    .returning({ id: mailConnection.id });
+  await queue.enqueue("mail.sync", { connectionId: saved.id }, { queueName: mailQueue(saved.id), jobKey: syncJobKey(saved.id) });
   return remembered.drafts && !grantsDrafts(tokens.scope) ? "draftNotGranted" : "connected";
 }

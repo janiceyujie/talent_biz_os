@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       for (const field of ["address", "email"] as const) {
         if (input.patch[field] !== undefined && input.expected[field] !== current[field]) throw new InvoiceError("buyerChanged");
       }
-      const fields = {billingAddress: input.patch.address, updatedAt: new Date()};
+      const fields = {billingAddress: input.patch.address, ...(input.patch.address !== undefined && {billingAddressParts: input.patch.addressParts ?? null}), updatedAt: new Date()};
       if (input.kind === "organization") {
         await tx.update(organization).set({...fields, billingEmail: input.patch.email}).where(scope);
       } else {

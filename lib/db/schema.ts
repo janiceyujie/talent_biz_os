@@ -28,6 +28,7 @@ import { supportedCurrencies } from "../domain/money";
 import { historyModes } from "../mail/history";
 import type { NoticeFields } from "../mail/payment-notice/fields";
 import { mailKinds } from "../mail/relevance/prompt";
+import { senderChecks } from "../mail/sender-auth";
 import { ruleIds } from "../mail/relevance/rules";
 import { contactRoles, stages as projectStages, transportModes, type ContractTerms, type ProjectDetails, type TermChange } from "../types"; // relative: drizzle-kit loads this file too
 
@@ -187,6 +188,7 @@ export const organization = pgTable(
     name: text().notNull(),
     notes: text(),
     billingAddress: text(),
+    billingAddressParts: jsonb().$type<import("@/lib/invoices/address").PostalAddress>(),
     billingEmail: text(),
     archivedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
@@ -236,6 +238,7 @@ export const contact = pgTable(
     email: text(),
     phone: text(),
     billingAddress: text(),
+    billingAddressParts: jsonb().$type<import("@/lib/invoices/address").PostalAddress>(),
     notes: text(),
     archivedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
@@ -496,7 +499,8 @@ export const messageDirections = ["received", "sent"] as const;
 export const messageRelevance = ["sure", "unsure"] as const;
 /** A Gmail attachment that wasn't fetched (not a PDF or image, or too big): listed, so the person knows it's there. */
 export type SkippedAttachment = { filename: string; mimeType: string; sizeBytes: number };
-export const messageStatuses = ["pending", "analyzed", "confirmed", "dismissed", "error"] as const;
+// `history`: from the first 30-day read, in a thread quiet for 14 days: kept for reference, analyzed only when opened.
+export const messageStatuses = ["pending", "analyzed", "confirmed", "dismissed", "error", "history"] as const;
 // `payment_notice`: a bank or payment-app notice on the restricted path (decision 0013): only its
 // fields are kept, in `notice`; never a body or files, and it's never analyzed.
 export const messageKinds = ["message", "payment_notice"] as const;
@@ -524,6 +528,8 @@ export const message = pgTable(
     relevance: text({ enum: messageRelevance }),
     sender: text(), // "Name <address>", as the email states it (a claim, decision 0007)
     recipients: text(), // the To line of the person's own sent mail, as written
+    // Gmail's SPF/DKIM/DMARC verdict on an email's sender (lib/mail/sender-auth.ts); null when not from Gmail.
+    senderCheck: text({ enum: senderChecks }),
     subject: text(),
     skippedAttachments: jsonb().$type<SkippedAttachment[]>(),
     receivedAt: timestamp({ withTimezone: true }).notNull(),
@@ -545,6 +551,7 @@ export const message = pgTable(
     check("message_relevance_check", oneOf(t.relevance, messageRelevance)),
     check("message_status_check", oneOf(t.status, messageStatuses)),
     check("message_kind_check", oneOf(t.kind, messageKinds)),
+    check("message_sender_check_check", oneOf(t.senderCheck, senderChecks)),
     // A payment notice keeps its fields only: the database refuses a body on one.
     check("message_notice_check", sql`(${t.kind} = 'payment_notice') = (${t.notice} is not null) and (${t.kind} <> 'payment_notice' or ${t.bodyText} is null)`),
   ],
@@ -1130,3 +1137,11 @@ export const taxReference = pgTable("tax_reference", {
   check("tax_reference_evidence", sql`${t.sourceStatus} = 'pending' or (${t.sourceStatus} = 'retained' and ${t.sourceHash} is not null and ${t.sourceStorageKey} is not null)`),
   check("tax_reference_level", oneOf(t.level, ["state", "local", "combined", "localSummary"])),
   check("tax_reference_date_basis", oneOf(t.dateBasis, ["effective", "snapshot", "administrative", "unknown"]))]);
+// Background worker -----------------------------------------------------------------
+
+// Each running worker's "still alive" (lib/queue/heartbeat.ts): a job locked by a
+// worker that stopped beating is released for another, instead of after Graphile's 4 hours.
+export const workerHeartbeat = pgTable("worker_heartbeat", {
+  workerId: text().primaryKey(), // Graphile's worker pool id, as it records on the jobs it locks
+  seenAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();

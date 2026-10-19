@@ -30,7 +30,7 @@ test("invoice cents agree with the existing finance quote", () => {
       amount: 1,
       taxRate: 0,
       taxIncluded: false,
-      currency: "TWD",
+      currency: "EUR",
     }),
   );
   assert.throws(() =>
@@ -42,7 +42,7 @@ test("invoice cents agree with the existing finance quote", () => {
     }),
   );
 });
-test("only issued, unpaid invoices become overdue", () => {
+test("only sent, unpaid billing documents become overdue", () => {
   assert.equal(
     invoiceState("draft", false, "2026-01-01", "2026-10-01"),
     "draft",
@@ -75,6 +75,8 @@ test("dates, tax approval, and email headers must be valid", () => {
   assert.ok(invoiceInput.safeParse(input).success);
   for (const change of [
     { taxConfirmed: false },
+    { documentKind: "tw_uniform_invoice" },
+    { documentKind: "unknown" },
     { dueOn: "2026-09-01" },
     { recipient: "b@example.com\r\nBcc: x@example.com" },
     { subject: "Invoice\nBcc: x@example.com" },
@@ -91,4 +93,12 @@ test("receipt date must be a real day within the workspace issue-to-today range"
     assert.equal(validInvoiceReceiptDate(value, "2026-10-17", "2026-10-18"), false);
   assert.equal(validInvoiceReceiptDate("2026-10-17", "2026-10-17", "2026-10-18"), true);
   assert.equal(validInvoiceReceiptDate("2026-10-18", "2026-10-17", "2026-10-18"), true);
+});
+
+
+test("TWD payment requests preserve currency and inclusive totals without determining taxability", () => {
+  assert.deepEqual(invoiceAmounts({amount:55000,taxRate:5,taxIncluded:true,currency:"TWD"}),
+    {currency:"TWD",subtotal:52380.95,tax:2619.05,total:55000});
+  assert.deepEqual(invoiceAmounts({amount:55000,taxRate:5,taxIncluded:false,currency:"TWD"}),
+    {currency:"TWD",subtotal:55000,tax:2750,total:57750});
 });

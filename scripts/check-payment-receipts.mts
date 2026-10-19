@@ -6,7 +6,7 @@ import { readFile, writeFile } from "node:fs/promises";
 env.loadEnvConfig(process.cwd());
 assert.equal(process.env.APP_ENV,"development");
 const url=new URL(process.env.DATABASE_URL!);
-assert.equal(url.hostname,"127.0.0.1");assert.match(url.pathname,/^\/taloox_(integrated|refresh)_\d{8}$/);
+assert.equal(url.hostname,"127.0.0.1");assert.match(url.pathname,/^\/taloox_(integrated|refresh|merged)_\d{8}$/);
 assert.ok(["localhost","127.0.0.1"].includes(new URL(process.env.WORKFLOW_TEST_URL || "http://localhost:3000").hostname));
 const {default:postgres}=await import("postgres");
 const q=postgres(process.env.DATABASE_URL!);
@@ -39,7 +39,14 @@ try {
   cookies.push(login.headers.getSetCookie().map(c=>c.split(";")[0]).join("; "));
  }
  await fetch(`${base}/finance`,{headers:{Cookie:cookies[0]}});
+ await fetch(`${base}/projects`,{headers:{Cookie:cookies[0]}});
  const input={projectId:actors[0].projectId,label:"Unpaid balance QA",direction:"in",installment:"regular",amount:55500,currency:"TWD",taxRate:5,taxIncluded:true,recordedDate:"2026-09-15",dueDate:today,status:"expected",settledDate:"",settledAmount:"",invoiceRef:"",notes:"Synthetic acceptance test"};
+ // Linked amounts must never be silently relabelled in another currency.
+ ok((await action("savePaymentWithId",[{...input,currency:"USD"}])).error);
+ ok((await q`select id from payment where project_id=${actors[0].projectId}`).length===0);
+ const independent=await action("savePaymentWithId",[{...input,projectId:"",currency:"USD"}]);ok(independent.id);
+ ok((await q`select currency,project_id from payment where id=${independent.id}`)[0].currency==="USD");
+ await q`delete from payment where id=${independent.id}`;
  const created=await action("savePaymentWithId",[input]);ok(created.id);
  const receipt={...input,id:created.id,status:"settled",settledDate:"2026-09-30",settledAmount:55000,receiptId:randomUUID(),receiptRevision:0,shortfallReason:"unpaid"};
  ok((await action("savePaymentWithId",[{...receipt,shortfallReason:""}])).error);
@@ -71,6 +78,27 @@ try {
  ok((await action("savePaymentWithId",[{...mixedInput,id:mixed.id}])).id);
  ok((await action("savePaymentWithId",[{...mixedInput,id:mixed.id,withheldAmount:5500}])).error);
  p=await load(mixed.id);ok(p.receipts.length===1 && p.receipts[0].withheld===500);
+ // Stage changes must preserve open tasks, partial receipts and withholding.
+ const stageTodoId=randomUUID();
+ await q`insert into todo(id,talent_id,project_id,title,time_zone) values(${stageTodoId},${actors[0].talentId},${actors[0].projectId},'Stage transition QA','America/New_York')`;
+ const relatedRows=async()=>JSON.stringify({
+  payments:await q`select * from payment where project_id=${actors[0].projectId} order by id`,
+  todos:await q`select * from todo where project_id=${actors[0].projectId} order by id`,
+ });
+ const beforeStage=await relatedRows();
+ ok((await action("setProjectStage",[actors[0].projectId,"signed"]))===null);
+ ok((await action("setProjectStage",[actors[0].projectId,"in_progress"],cookies[1]))!==null);
+ ok((await q`select stage from project where id=${actors[0].projectId}`)[0].stage==="signed");
+ ok((await action("setProjectStage",[actors[0].projectId,"in_progress"]))===null);
+ ok((await q`select stage from project where id=${actors[0].projectId}`)[0].stage==="in_progress");
+ const stageHistory=await q`select * from audit_log where target_id=${actors[0].projectId} and details->>'from'='signed' and details->>'to'='in_progress'`;
+ ok(stageHistory.length===1 && stageHistory[0].actor_person_id===actors[0].personId);
+ ok((await action("setProjectStage",[actors[0].projectId,"in_progress"]))===null);
+ ok((await q`select * from audit_log where target_id=${actors[0].projectId} and details->>'from'='signed' and details->>'to'='in_progress'`).length===1);
+ ok(await relatedRows()===beforeStage);
+ const stagePage=await fetch(`${base}/api/projects?view=execution&limit=20`,{headers:{Cookie:cookies[0]}});
+ ok(stagePage.ok && (await stagePage.json()).items.some((p:{id:string;stage:string})=>p.id===actors[0].projectId&&p.stage==="in_progress"));
+ await q`delete from todo where id=${stageTodoId}`;
  const finalReceipt={...mixedInput,id:mixed.id,receiptId:randomUUID(),receiptRevision:1,settledAmount:5000,shortfallReason:"unpaid",withheldAmount:""};
  ok((await action("savePaymentWithId",[finalReceipt])).id);
  p=await load(mixed.id);ok(p.status==="settled" && Number(p.settled_amount)===55000 && p.receipts.length===2 && p.receipts[1].withheld===0 && p.receipts[0].withheld===500);
@@ -262,6 +290,26 @@ try {
  const bankNew=await makeNotice(200);ok((await action("recordNoticePayment",[bankNew,{projectId:actors[0].projectId}]))===null);
  const [newNotice]=await q`select notice from message where id=${bankNew}`;const newBank=await load(newNotice.notice.paymentId);ok(newBank.currency==="TWD"&&newBank.receipts.length===1&&newBank.receipts[0].recordedBy===actors[0].personId);
 
+ // A foreign cost stays linked, settles in its own currency, and blocks premature closure.
+ const fxProject=randomUUID();
+ await q`insert into project(id,talent_id,title,counterparty,type,stage,quote_currency,quoted_amount) values(${fxProject},${actors[0].talentId},'Foreign cost QA','Test Client','other','collecting_payment','TWD',1000)`;
+ const fxInput={...input,projectId:fxProject,direction:"out",currency:"USD",amount:100,taxRate:0,label:"USD lodging QA"};
+ ok((await action("savePaymentWithId",[fxInput],cookies[1])).error);
+ const fx=await action("savePaymentWithId",[fxInput]);ok(fx.id);
+ const fxBalance=async()=>{const row=await load(fx.id);return paymentBalance({amount:Number(row.amount),currency:row.currency,taxRate:Number(row.tax_rate),taxIncluded:row.tax_included,status:row.status,settledAmount:row.settled_amount===null?null:Number(row.settled_amount),receipts:row.receipts});};
+ const fxStored=await load(fx.id);ok(fxStored.project_id===fxProject && fxStored.currency==="USD" && Number(fxStored.amount)===100);
+ ok((await action("setProjectStage",[fxProject,"closed"]))!==null);
+ const fxReceipt={...fxInput,id:fx.id,status:"settled",settledDate:today,settledAmount:60,shortfallReason:"unpaid",receiptId:randomUUID(),receiptRevision:0};
+ ok((await action("savePaymentWithId",[fxReceipt])).id);
+ ok((await fxBalance()).remaining===40);
+ ok((await action("setProjectStage",[fxProject,"closed"]))!==null);
+ ok((await action("savePaymentWithId",[{...fxInput,id:fx.id,currency:"EUR"}])).error);
+ ok((await action("savePaymentWithId",[{...fxReceipt,settledAmount:40,receiptRevision:1,receiptId:randomUUID()}])).id);
+ ok((await fxBalance()).remaining===0);
+ ok((await action("setProjectStage",[fxProject,"closed"]))===null);
+ ok((await action("amendPaymentReceipt",[{paymentId:fx.id,targetId:fxReceipt.receiptId,requestId:randomUUID(),revision:2,operation:"withdraw",date:today,cash:0,withheld:0,note:"Foreign cost withdrawal QA"}]))===null);
+ ok((await fxBalance()).remaining===60);
+ ok((await q`select stage from project where id=${fxProject}`)[0].stage==="collecting_payment");
  // Leave a fresh unpaid example only when explicitly running interactive QA.
  if(process.argv.includes("--keep-ui")){
   const ui=await action("savePaymentWithId",[{...input,label:"UI Partial Receipt QA"}]);ok(ui.id);

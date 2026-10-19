@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { postalAddressInput, formatPostalAddress } from "./address";
+import { billingDocumentKinds, isBillingCurrency } from "./document";
 import { invoiceTaxInput, paymentTaxBasisInput } from "./tax";
 import { quote } from "../domain/money";
 import type { InvoiceSnapshot, InvoiceStatus } from "./types";
@@ -9,15 +11,18 @@ export const invoiceInput = z
   .object({
     id: z.uuid().optional(),
     revision: z.number().int().positive().optional(),
+    documentKind: z.enum(billingDocumentKinds).optional(),
     documentLanguage: z.enum(["en", "zh-TW"]).default("en"),
     paymentId: z.uuid(),
     issueOn: z.iso.date(),
     dueOn: z.iso.date(),
     sellerName: header(150),
     sellerAddress: text(600),
+    sellerAddressParts: postalAddressInput.optional(),
     sellerEmail: z.email().max(254),
     buyerName: header(150),
     buyerAddress: text(600),
+    buyerAddressParts: postalAddressInput.optional(),
     recipient: z.email().max(254),
     description: text(1500),
     paymentInstructions: text(1200),
@@ -29,6 +34,7 @@ export const invoiceInput = z
     taxConfirmed: z.literal(true),
     autoGmailDraft: z.boolean().default(false),
   })
+  .refine(v => (!v.sellerAddressParts || formatPostalAddress(v.sellerAddressParts) === v.sellerAddress) && (!v.buyerAddressParts || formatPostalAddress(v.buyerAddressParts) === v.buyerAddress), {message:"address"})
   .refine((v) => v.dueOn >= v.issueOn, { message: "dates" })
   .refine((v) => !v.taxReview || !!v.paymentBasis, { message: "paymentBasis" });
 export type InvoiceInput = z.infer<typeof invoiceInput>;
@@ -41,15 +47,15 @@ export function invoiceAmounts(p: {
   currency: string;
 }) {
   if (
-    p.currency !== "USD" ||
+    !isBillingCurrency(p.currency) ||
     !Number.isFinite(p.amount) ||
     p.amount <= 0 ||
     p.amount > 9999999999.99
   )
     throw new Error("payment");
-  const q = quote(p.amount, p.taxRate, p.taxIncluded, "USD");
+  const q = quote(p.amount, p.taxRate, p.taxIncluded, p.currency);
   return {
-    currency: "USD" as const,
+    currency: p.currency,
     subtotal: q.net,
     tax: q.tax,
     total: q.total,

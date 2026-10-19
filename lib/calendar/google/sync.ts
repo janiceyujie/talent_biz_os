@@ -1,11 +1,12 @@
 import "server-only";
 import { and, eq, sql } from "drizzle-orm";
-import { getTranslations } from "next-intl/server";
-import { after } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { calendarConnection, calendarEventSync, person, talent } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
+import { translator } from "@/lib/i18n/translator";
+import { queue } from "@/lib/queue";
+import { calendarSyncKey, calendarSyncQueue } from "@/lib/queue/jobs";
 import { feedEvents } from "../feed";
 import { googleCalendar, GoogleCalendarError } from "./api";
 import { planSync, toGoogleEvent } from "./plan";
@@ -14,32 +15,57 @@ import { planSync, toGoogleEvent } from "./plan";
 // person's Google account. A sync compares what belongs there with what was
 // pushed (plan.ts) and makes the difference. One sync per connection at a time
 // (a transaction-scoped advisory lock); a change arriving mid-sync sets
-// `dirty`, and the running sync goes around again.
+// `dirty`, and the running sync goes around again. It runs as a job in the
+// worker (calendar.sync, decision 0014), which retries what Google or the
+// network failed on; Sync now still runs it in the request, to show the result.
 
 export { CALENDAR_SCOPE } from "./scope";
 
 export type SyncFailure = "auth" | "google" | "network";
 
-/** After a change to a talent's events: mark its connections and sync once the response is sent. */
+/** After a change to a talent's events: mark its connections and queue their syncs. */
 export async function requestCalendarSync(talentId: string) {
   const rows = await db
     .update(calendarConnection)
     .set({ dirty: true })
     .where(and(eq(calendarConnection.talentId, talentId), eq(calendarConnection.status, "connected")))
     .returning({ id: calendarConnection.id });
-  if (rows.length) after(() => Promise.all(rows.map((r) => syncConnection(r.id))));
+  for (const r of rows) await queueCalendarSync(r.id);
 }
 
-/** Bring one connection's Google calendar in line with our events. Never throws; failures are recorded on the connection. */
-export async function syncConnection(connectionId: string) {
-  await db.transaction(async (tx) => {
+/** A sync for one connection; a waiting one is replaced, so a burst of changes syncs once. */
+export const queueCalendarSync = (connectionId: string, attempt = 0, runAt?: Date) =>
+  queue.enqueue("calendar.sync", { connectionId, attempt }, { queueName: calendarSyncQueue(connectionId), jobKey: calendarSyncKey(connectionId), runAt });
+
+/** After a failure Google or the network may get over: 1 min, 5 min, 30 min, 2 h, then every 6 h (launch checklist). */
+const RETRY_AFTER_MS = [60_000, 5 * 60_000, 30 * 60_000, 2 * 60 * 60_000, 6 * 60 * 60_000];
+export const retryAfter = (attempt: number) => RETRY_AFTER_MS[Math.min(attempt, RETRY_AFTER_MS.length - 1)];
+
+/**
+ * calendar.sync: one connection's sync, and the next try when it failed on
+ * something that passes (the network, Google down or asking us to slow down).
+ * Lost access waits for the person to reconnect; a request Google rejects
+ * would fail the same way again, so it waits for the next change or Sync now.
+ */
+export async function runCalendarSync(connectionId: string, attempt: number) {
+  const result = await syncConnection(connectionId);
+  if (result?.retry) await queueCalendarSync(connectionId, attempt + 1, new Date(Date.now() + retryAfter(attempt)));
+}
+
+/**
+ * Bring one connection's Google calendar in line with our events. Never throws;
+ * failures are recorded on the connection, and returned with whether trying
+ * again later may help.
+ */
+export async function syncConnection(connectionId: string): Promise<{ failure: SyncFailure; retry: boolean } | null> {
+  return db.transaction(async (tx) => {
     const [{ locked }] = (await tx.execute(sql`select pg_try_advisory_xact_lock(hashtext(${connectionId})) as locked`)) as unknown as {
       locked: boolean;
     }[];
-    if (!locked) return; // another sync is running; it will see `dirty`
+    if (!locked) return null; // another sync is running; it will see `dirty`
     for (let pass = 0; pass < 5; pass++) {
       const [c] = await tx.select().from(calendarConnection).where(eq(calendarConnection.id, connectionId));
-      if (!c || c.status !== "connected" || !c.dirty) return;
+      if (!c || c.status !== "connected" || !c.dirty) return null;
       await tx.update(calendarConnection).set({ dirty: false }).where(eq(calendarConnection.id, c.id));
       try {
         await pushOnce(tx, c);
@@ -47,16 +73,18 @@ export async function syncConnection(connectionId: string) {
       } catch (e) {
         const failure: SyncFailure =
           e instanceof AccessLost || (e instanceof GoogleCalendarError && e.authLost) ? "auth" : e instanceof GoogleCalendarError && e.status ? "google" : "network";
-        // Still behind Google, so stay dirty. Lost access needs the person; anything else
-        // goes again on the next change or Sync now (automatic retries come with the job queue).
+        // Still behind Google, so stay dirty. Lost access needs the person; the network,
+        // Google being down, or its "slow down" are tried again later (runCalendarSync).
         await tx
           .update(calendarConnection)
           .set({ dirty: true, lastError: failure, ...(failure === "auth" ? { status: "needs_reconnect" as const } : {}) })
           .where(eq(calendarConnection.id, c.id));
         console.error("calendar sync failed", { connectionId, failure, message: e instanceof Error ? e.message : String(e) });
-        return;
+        const status = e instanceof GoogleCalendarError ? e.status : 0;
+        return { failure, retry: failure === "network" || (failure === "google" && (status === 429 || status >= 500)) };
       }
     }
+    return null;
   });
 }
 
@@ -95,7 +123,7 @@ async function pushOnce(tx: Tx, c: Connection) {
     }
   }
   if (!calendarId) {
-    const t = await getTranslations({ locale: toLocale(locale), namespace: "googleCalendar" });
+    const t = await translator(toLocale(locale), "googleCalendar");
     calendarId = (await google.createCalendar({ summary: t("calendarName", { talent: name }), description: t("calendarDescription"), timeZone })).id;
     await tx.update(calendarConnection).set({ externalCalendarId: calendarId }).where(eq(calendarConnection.id, c.id));
     await tx.delete(calendarEventSync).where(eq(calendarEventSync.connectionId, c.id)); // nothing is in the new calendar yet

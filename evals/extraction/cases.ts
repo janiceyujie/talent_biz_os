@@ -5,6 +5,8 @@
 // it contains the expected text; `true` only requires the field to be filled;
 // "a|b" accepts the value in either field (a clause may fit more than one).
 
+import type { ThreadNote } from "../../lib/ai/prompts";
+
 export type ExpectedDate = { date: string; time?: string; timeZone?: string };
 export type EvalCase = {
   id: string;
@@ -14,6 +16,8 @@ export type EvalCase = {
   files?: string[];
   /** The artist's own reply in an email thread, read with the sent-reply prompt (lib/ai/prompts.ts). */
   sent?: boolean;
+  /** Earlier messages in its email thread, as the analysis job summarizes them (lib/ai/analyze-message.ts). */
+  thread?: ThreadNote[];
   expect: {
     intent?: string;
     projectType?: string;
@@ -413,5 +417,25 @@ Subject: Re: 河岸音樂節 彩排時間
 
 收到，謝謝阿傑！`,
     expect: { amount: null, replyBy: "" },
+  },
+  {
+    id: "thread-same-fee-zh",
+    note: "a reply that refers to the fee and date earlier in the thread",
+    thread: [{ date: "2026-09-28", from: "them", name: "Maya", intent: "inquiry", fee: "30000 TWD", dates: ["2026-11-14 18:00 演出"], asks: ["11/14 檔期", "演出費是否可以"] }],
+    message: `From: Maya <maya@blueroom.example>
+Subject: Re: Blue Room 11/14 演出邀請
+
+不好意思，場地那天臨時有狀況。預算跟之前說的一樣沒問題，但演出想改到隔週的週六，同樣時間可以嗎？`,
+    expect: { intent: "negotiation", amount: 30000, currency: "TWD", dates: [{ date: "2026-11-21", time: "18:00" }] },
+  },
+  {
+    id: "thread-logistics-zh",
+    note: "logistics in a thread: the day is resolved, the earlier fee isn't repeated",
+    thread: [{ date: "2026-09-28", from: "them", name: "Maya", intent: "inquiry", fee: "30000 TWD", dates: ["2026-11-14 18:00 演出"], asks: ["11/14 檔期", "演出費是否可以"] }, { date: "2026-09-30", from: "you", name: "", intent: "confirmation", fee: "30000 TWD", dates: ["2026-11-14 18:00 演出"], asks: [] }],
+    message: `From: Maya <maya@blueroom.example>
+Subject: Re: Blue Room 11/14 演出邀請
+
+謝謝確認！提醒您演出當天下午四點進場彩排，音響跟鼓組我們準備好。`,
+    expect: { intent: "logistics", amount: null, dates: [{ date: "2026-11-14", time: "16:00" }] },
   },
 ];

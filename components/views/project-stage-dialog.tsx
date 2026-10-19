@@ -11,12 +11,13 @@ import { stages, type Project, type ProjectSummary, type Stage } from "@/lib/typ
 import { useClosingChecks } from "./project-workflow-panel";
 
 /** Stage confirmation is separate from task completion and financial records. */
-export function ProjectStageDialog({ project, full, target, pending, error, onTarget, onClose, onConfirm, onMoney }: {
+export function ProjectStageDialog({ project, full, target, pending, error, onReload, onTarget, onClose, onConfirm, onMoney }: {
   project: ProjectSummary;
   full: Project | null;
   target: Stage;
   pending: boolean;
   error: string | null;
+  onReload?: () => void;
   onTarget: (stage: Stage) => void;
   onClose: () => void;
   onConfirm: () => void;
@@ -35,7 +36,7 @@ export function ProjectStageDialog({ project, full, target, pending, error, onTa
   const unchanged = target === project.stage;
   return (
     <Modal title={t("stageChange.title")} onClose={onClose} narrow>
-      <form className="project-stage-form" onSubmit={e => { e.preventDefault(); if (!paymentBlocked && !pending && !unchanged && (!closing || (full && (!outstanding || acknowledged)))) onConfirm(); }}>
+      <form className="project-stage-form" onSubmit={e => { e.preventDefault(); if (!onReload && !paymentBlocked && !pending && !unchanged && (!closing || (full && (!outstanding || acknowledged)))) onConfirm(); }}>
         <p className="stage-current-summary">{t("stageChange.current")} <strong>{labels.stage(project.stage)}</strong></p>
         <label className="field">
           <span>{t("stageChange.target")}</span>
@@ -64,7 +65,7 @@ export function ProjectStageDialog({ project, full, target, pending, error, onTa
         {error && <p className="notice error" role="alert">{error}</p>}
         <footer className="form-actions">
           <button type="button" className="secondary" disabled={pending} onClick={onClose}>{t("stageChange.cancel")}</button>
-          <button className="primary" type="submit" disabled={paymentBlocked || pending || unchanged || (closing && (!full || (outstanding && !acknowledged)))}>{pending ? common("saving") : t("stageChange.confirm", {stage: labels.stage(target)})}</button>
+          {onReload ? <button className="primary" type="button" onClick={onReload}>{t("stageChange.reload")}</button> : <button className="primary" type="submit" disabled={paymentBlocked || pending || unchanged || (closing && (!full || (outstanding && !acknowledged)))}>{pending ? common("saving") : t("stageChange.confirm", {stage: labels.stage(target)})}</button>}
         </footer>
       </form>
     </Modal>

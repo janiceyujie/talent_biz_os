@@ -1,4 +1,6 @@
 "use client";
+import { ActionNotice } from "@/components/app/action-notice";
+import { isBillingCurrency } from "@/lib/invoices/document";
 
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -16,7 +18,7 @@ import { placeholderKeys, placeholderName, toDisplay, toStored } from "@/lib/tem
 import { isSigned } from "@/lib/domain/phases";
 import { paymentBalance, receiptHistory, type PaymentReceipt } from "@/lib/domain/payment-receipts";
 import { money } from "@/lib/domain/money";
-import { supportedCurrencies } from "@/lib/domain/money";
+import { supportedCurrencies, type Currency } from "@/lib/domain/money";
 import { moneyPreview } from "@/lib/domain/money-preview";
 import { PaymentReceiptHistory } from "./payment-receipt-history";
 import { ReceiptCorrection } from "./receipt-correction";
@@ -39,6 +41,8 @@ import { OrganizationPicker } from "./organization-picker";
 import { DateTimeInput } from "./date-time-input";
 import { TimeZonePicker } from "./time-zone-picker";
 import { Modal } from "./modal";
+import { loadProject } from "./project-detail";
+import { ProjectCurrencyCorrection } from "./project-currency-correction";
 
 export type RecordData = Record<string, string | number | boolean>;
 export type EditorKind = "project" | "contact" | "calendar" | "payment" | "template" | "draft";
@@ -173,6 +177,11 @@ export function RecordEditor({
   };
   const kind = editor.kind;
   const onSave = savers[kind];
+  const [currencyCorrection, setCurrencyCorrection] = useState(false);
+  const [currencyCorrected, setCurrencyCorrected] = useState(false);
+  const [linkedEditor, setLinkedEditor] = useState<Editor | null>(null);
+  const [savedLinkedProject, setSavedLinkedProject] = useState<RecordData | null>(null);
+  const returningFromProject = useRef(false);
   const [newContact, setNewContact] = useState<NewContact | null>(null); // a project's partner, added to contacts on save
   // Opening at one field: focus it once the dialog is open (opening it moves focus to its first control).
   // The dialog is a child, so its effect has run by the time this one does.
@@ -180,6 +189,12 @@ export function RecordEditor({
   useEffect(() => {
     if (editor.focus) form.current?.querySelector<HTMLElement>(`[data-field="${editor.focus}"]`)?.focus();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on opening
+  useEffect(() => {
+    if (!linkedEditor && returningFromProject.current) {
+      returningFromProject.current = false;
+      form.current?.querySelector<HTMLElement>('[data-field="currency"]')?.focus();
+    }
+  }, [linkedEditor]);
   const originalPayment = kind === "payment" ? data$.payments.find(p => p.id === editor.item?.id) : undefined;
   const [correction, setCorrection] = useState<{receipt: PaymentReceipt; operation: "correct" | "withdraw"} | null>(null);
   const history = originalPayment ? receiptHistory(originalPayment) : [];
@@ -242,14 +257,15 @@ export function RecordEditor({
   const stay = kind === "calendar" && data.kind === "accommodation";
   const [error, setError] = useState<string | null>(null);
 
-  const change = (key: string, value: string | number | boolean) =>
+  const change = (key: string, value: string | number | boolean) => {
+    setError(null);
     setData((d) => ({
       ...d,
       [key]: value,
       ...(key === "shortfallReason" && value !== "withholding" ? { withheldAmount: "" } : {}),
       ...(key === "direction" ? { shortfallReason: "", withheldAmount: "" } : {}),
       ...(key === "status" ? { settledDate: value === "settled" ? d.settledDate || today : "" } : {}),
-      ...(key === "projectId" && value ? { currency: data$.projects.find((p) => p.id === String(value))?.currency ?? d.currency } : {}),
+      ...(kind === "payment" && key === "projectId" && value && !history.length && data.direction === "in" ? { currency: data$.projects.find((p) => p.id === String(value))?.currency ?? d.currency } : {}),
       // An arrival or check-out usually happens in the same zone; start from it.
       ...(key === "endDate" && value ? { endTimeZone: d.endTimeZone || d.timeZone } : {}),
       // A trip's arrival or a stay's check-out isn't another kind's end time: drop it on switching.
@@ -257,6 +273,7 @@ export function RecordEditor({
         ? { endDate: "", endTime: "", endTimeZone: "" }
         : {}),
     }));
+  };
 
   function field(key: string, label: string, type = "text", required = false, options?: Option[], list?: string, disabled = false) {
     if (type === "date" || type === "time") {
@@ -324,6 +341,29 @@ export function RecordEditor({
     </div>
   );
 
+  const linkedSummary = kind === "payment" ? data$.projects.find(p => p.id === data.projectId) : undefined;
+  const linkedPaymentProject = linkedSummary && savedLinkedProject?.id === linkedSummary.id
+    ? {...linkedSummary, currency: String(savedLinkedProject.currency), title: String(savedLinkedProject.title)}
+    : linkedSummary;
+  const editLinkedProject = async () => {
+    if (!linkedSummary || pending) return;
+    setPending(true);
+    setError(null);
+    try {
+      const full = await loadProject(linkedSummary);
+      setLinkedEditor({kind: "project", item: projectRecord(full), focus: "currency"});
+    } catch {
+      setError(t("linkedCurrency.loadFailed"));
+    } finally {
+      setPending(false);
+    }
+  };
+  const returnToPayment = () => {
+    returningFromProject.current = true;
+    setLinkedEditor(null);
+  };
+  const currencyMismatch = data.direction === "in" && !!linkedPaymentProject && linkedPaymentProject.currency !== data.currency;
+  const currencyMessage = linkedPaymentProject ? t("linkedCurrency.mismatch", { project: linkedPaymentProject.title, currency: linkedPaymentProject.currency }) : "";
   const currencyOptions = supportedCurrencies.map((currency) => [currency, `${currency} · ${tFinance(`currencyNames.${currency}`)}`] as const);
   const projectCurrencyLocked = kind === "project" && Boolean(data.id) && data$.payments.some((p) => p.projectId === data.id);
   const pricing = (amountKey: string, amountRequired = true, legend = t("section.amount"), amountLabel = t("field.amount")) => (
@@ -335,15 +375,44 @@ export function RecordEditor({
         {field("taxRate", t("field.taxRate"), "number", true, undefined, undefined, kind === "payment" && history.length > 0)}
         {field("taxIncluded", t("field.taxIncluded"), "checkbox", false, undefined, undefined, kind === "payment" && history.length > 0)}
       </div>
+      {kind === "payment" && linkedPaymentProject && (
+        currencyMismatch ? <ActionNotice className="error" role="alert" actions={<>
+          <button type="button" className="secondary" onClick={() => change("currency", linkedPaymentProject.currency)}>{t("linkedCurrency.restore", {currency: linkedPaymentProject.currency})}</button>
+          <button type="button" className="secondary" disabled={pending} onClick={() => void editLinkedProject()}>{t("linkedCurrency.editProject")}</button>
+        </>} detail={t("linkedCurrency.changeProject")}>
+          {currencyMessage}
+        </ActionNotice> : <div className="muted">{data.direction === "out" && data.currency !== linkedPaymentProject.currency
+          ? t("linkedCurrency.foreignCost", {currency: String(data.currency), projectCurrency: linkedPaymentProject.currency})
+          : t("linkedCurrency.follows", {currency: linkedPaymentProject.currency})}</div>
+      )}
       <MoneyBreakdown totals={moneyPreview(data[amountKey], data.taxRate, !!data.taxIncluded, String(data.currency))} currency={String(data.currency)} />
-      {amountKey === "quotedAmount" && projectCurrencyLocked && <small className="muted">{t("projectCurrencyLocked")}</small>}
+      {amountKey === "quotedAmount" && !!data.id && <>
+        {projectCurrencyLocked ? <ActionNotice actions={<button type="button" className="secondary" disabled={!!data$.preview} onClick={()=>setCurrencyCorrection(true)}>{t("currencyCorrection.title")}</button>}>
+          {t("projectCurrencyLocked")}
+        </ActionNotice> : <button type="button" className="secondary" disabled={!!data$.preview} onClick={()=>setCurrencyCorrection(true)}>{t("currencyCorrection.title")}</button>}
+        {currencyCorrected && <p role="status">{t("currencyCorrection.saved")}</p>}
+      </>}
     </fieldset>
   );
   // Income is collected, a cost is paid: the payment form's words follow the direction.
   const out = data.direction === "out";
 
   const canPrepareInvoice = !!onPrepareInvoice && kind === "payment" && !data.id && !!data.projectId &&
-    data.direction === "in" && data.status === "expected" && data.currency === "USD" && Number(data.amount) > 0 && !data.invoiceRef;
+    data.direction === "in" && data.status === "expected" && isBillingCurrency(data.currency) && Number(data.amount) > 0 && !data.invoiceRef;
+
+  if (currencyCorrection) return <ProjectCurrencyCorrection projectId={String(data.id)} currency={String(data.currency) as Currency}
+    onClose={()=>setCurrencyCorrection(false)} onDone={currency=>{onSaved?.({...editor.item!,currency});setData(current=>({...current,currency}));setError(null);setCurrencyCorrected(true);setCurrencyCorrection(false);}}/>;
+
+  // Keep this editor mounted while its linked project is edited, preserving unsaved payment fields.
+  if (linkedEditor) return <RecordEditor
+    editor={linkedEditor}
+    onClose={returnToPayment}
+    onSaved={saved => {
+      setSavedLinkedProject(saved);
+      setError(null);
+      setData(current => ({...current, currency: saved.currency}));
+    }}
+  />;
 
   if (correction && originalPayment) return <ReceiptCorrection payment={originalPayment} receipt={correction.receipt} operation={correction.operation} today={today} onCancel={() => setCorrection(null)} onDone={onClose}/>;
 
@@ -360,6 +429,11 @@ export function RecordEditor({
             localTemplates.save({...data, id: String(data.id || crypto.randomUUID()), body: toStored(String(data.body)), archived: false} as ReplyTemplate);
             onSaved?.(data);
             onClose();
+            return;
+          }
+          if (currencyMismatch) {
+            setError(currencyMessage);
+            form.current?.querySelector<HTMLSelectElement>('[data-field="currency"]')?.focus();
             return;
           }
           setPending(true);
@@ -579,7 +653,7 @@ export function RecordEditor({
                 {originalPayment && <PaymentReceiptHistory key={originalPayment.id} payment={originalPayment} timeZone={data$.talent.timeZone} preview={!!data$.preview} disabled={dirty || !!data$.preview || !!originalPayment.voided} onAmend={(receipt, operation) => setCorrection({receipt,operation})} />}
                 {dirty && <p className="muted">{t("receiptCorrection.saveFirst")}</p>}
               </details>}
-              {!out && data.currency === "USD" && field("invoiceOn", t("field.invoiceOn"), "date")}
+              {!out && isBillingCurrency(data.currency) && field("invoiceOn", t("field.invoiceOn"), "date")}
               <details className="form-details">
                 <summary>{t("section.other")}</summary>
                 {field("invoiceRef", t("field.invoiceRef"))}
@@ -647,11 +721,11 @@ export function RecordEditor({
             <button type="button" className="secondary" disabled={pending} onClick={requestClose}>
               {t("cancel")}
             </button>
-            <button disabled={!onSave || pending || (!!data$.preview && kind !== "template")} type="submit" className={canPrepareInvoice ? "secondary" : "primary"}>
+            <button disabled={!onSave || pending || currencyMismatch || (!!data$.preview && kind !== "template")} type="submit" className={canPrepareInvoice ? "secondary" : "primary"}>
               {pending ? t("saving") : t("save")}
             </button>
             {canPrepareInvoice && (
-              <button disabled={pending || !!data$.preview} type="submit" name="next" value="invoice" className="primary">
+              <button disabled={pending || currencyMismatch || !!data$.preview} type="submit" name="next" value="invoice" className="primary">
                 {tInvoice("saveAndPrepare")}
               </button>
             )}

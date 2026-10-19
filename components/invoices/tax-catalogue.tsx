@@ -1,4 +1,5 @@
 "use client";
+import { ActionNotice } from "@/components/app/action-notice";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { DateTimeInput } from "@/components/app/date-time-input";
@@ -92,13 +93,12 @@ export function TaxCatalogueLookup({ state, location, saleOn, initial, disabled,
           setResult(await response.json());
         } catch { setError(true); } finally { setBusy(false); }
       }}>{t("check")}</button>
-      {result && <div role="status" className="notice">
-        {result.status === "review" ? t(`reasons.${result.reason}`) : <>
-          <p>{result.rateName ? `${result.rateName} · ` : ""}{t("result", { treatment: tax(`treatments.${result.treatment}`), rate: result.rate })}</p>
-          <a href={result.source} target="_blank" rel="noreferrer">{t("source")}</a>
-          <button type="button" className="primary" onClick={() => { onApply({ ...context, state, location }, result); if (detailsRef.current) { detailsRef.current.open = false; detailsRef.current.querySelector("summary")?.focus(); } }}>{t("apply")}</button>
-        </>}
-      </div>}
+      {result && (result.status === "review" ? <p role="status" className="notice">{t(`reasons.${result.reason}`)}</p> : <ActionNotice role="status" actions={<>
+        <button type="button" className="primary" onClick={() => { onApply({ ...context, state, location }, result); if (detailsRef.current) { detailsRef.current.open = false; detailsRef.current.querySelector("summary")?.focus(); } }}>{t("apply")}</button>
+        <a className="text-button" href={result.source} target="_blank" rel="noreferrer">{t("source")}</a>
+      </>}>
+        {result.rateName ? `${result.rateName} · ` : ""}{t("result", { treatment: tax(`treatments.${result.treatment}`), rate: result.rate })}
+      </ActionNotice>)}
     </fieldset>
     {busy && <p role="status">{t("loading")}</p>}
     {error && <p role="alert" className="notice error">{t("error")}</p>}

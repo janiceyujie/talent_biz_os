@@ -9,8 +9,12 @@ import { expireNotices } from "./notice";
 //   - skipped decisions older than 90 days: Filtered out stops at 90 days, and
 //     the ids of mail never brought in aren't kept longer (decision 0013);
 //   - payment notices left unhandled for 30 days (./notice.ts);
-//   - jobs that gave up more than 14 days ago, and the queues and task names
-//     nothing uses any more: Graphile keeps a failed job until it's deleted.
+//   - jobs that gave up more than 14 days ago, and the queues nothing uses any
+//     more: Graphile keeps a failed job until it's deleted.
+//
+// Never Graphile's GC_TASK_IDENTIFIERS: a running worker remembers each task
+// name's id, and a name deleted under it comes back with a new id when a job
+// is next queued, which that worker never takes (jobs waited until a restart).
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const SKIPPED_KEPT_DAYS = 90;
@@ -28,7 +32,7 @@ export async function cleanup() {
   );
   const utils = await makeWorkerUtils({ connectionString: process.env.DATABASE_URL });
   try {
-    await utils.cleanup({ tasks: ["GC_JOB_QUEUES", "GC_TASK_IDENTIFIERS"] });
+    await utils.cleanup({ tasks: ["GC_JOB_QUEUES"] });
   } finally {
     await utils.release();
   }

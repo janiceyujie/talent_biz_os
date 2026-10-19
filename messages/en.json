@@ -1171,6 +1171,7 @@
     "syncNow": "Check now",
     "syncing": "Checking…",
     "syncedAt": "Checked {time}",
+    "syncedJustNow": "Checked just now",
     "neverSynced": "Not checked yet",
     "syncFailed": "Last check failed",
     "lastSynced": "Last synced",

@@ -1171,6 +1171,7 @@
     "syncNow": "立即檢查",
     "syncing": "檢查中…",
     "syncedAt": "{time}檢查過",
+    "syncedJustNow": "剛剛檢查過",
     "neverSynced": "尚未檢查",
     "syncFailed": "上次檢查失敗",
     "lastSynced": "上次同步",

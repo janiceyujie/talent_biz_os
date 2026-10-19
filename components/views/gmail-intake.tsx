@@ -43,9 +43,13 @@ export function GmailSync({ onNotice }: { onNotice: (text: string | null) => voi
     : c.status === "error"
       ? t("syncFailed")
       : c.lastSyncedAt
-        ? t("syncedAt", {
-            time: format.relativeTime(new Date(c.lastSyncedAt), now),
-          })
+        ? // Under a minute reads as just now: the clock here ticks every 30 s, so a check that just
+          // landed can be newer than it ("in 6 seconds"), as in Google Calendar's settings.
+          now.getTime() - new Date(c.lastSyncedAt).getTime() < 60_000
+          ? t("syncedJustNow")
+          : t("syncedAt", {
+              time: format.relativeTime(new Date(c.lastSyncedAt), now),
+            })
         : t("neverSynced");
   // Mail arrives on its own (decision 0013): when it was last checked, and a quiet way to check now.
   return (

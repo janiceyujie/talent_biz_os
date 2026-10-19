@@ -15,7 +15,6 @@ import { isPersonalDomain } from "@/lib/mail/relevance/rules";
 import type { GmailMailItem, GmailMailPage, GmailMailView } from "@/lib/types";
 
 const POLL_MS = 3000; // while a sync runs, look again this often
-const IDLE_POLL_MS = 60_000; // otherwise: the worker checks every 2 minutes (15 with push)
 const outcomeChip: Record<GmailMailItem["outcome"], string> = { work: "status-confirmed", unsure: "status-analyzed", pending: "", skipped: "", not_work: "" };
 
 /** The header's "Checked 2 min ago", with Check now. */
@@ -30,11 +29,11 @@ export function GmailSync({ onNotice }: { onNotice: (text: string | null) => voi
   const syncing = !!c?.syncing;
   const sorting = c?.sorting ?? 0;
 
-  // While a check runs or emails are sorted, look again often; otherwise once a minute, so
-  // "Checked 2 min ago" follows the worker's own checks (not while the tab is hidden).
+  // While a check runs or emails are sorted, look again often (not while the tab is hidden).
+  // Otherwise the app-wide check catches the worker's own checks (components/app/live-refresh.tsx).
   useEffect(() => {
-    const busy = syncing || sorting > 0;
-    const timer = setInterval(() => document.visibilityState === "visible" && router.refresh(), busy ? POLL_MS : IDLE_POLL_MS);
+    if (!syncing && !sorting) return;
+    const timer = setInterval(() => document.visibilityState === "visible" && router.refresh(), POLL_MS);
     return () => clearInterval(timer);
   }, [syncing, sorting, router]);
 

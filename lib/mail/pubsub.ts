@@ -1,6 +1,7 @@
 import "server-only";
 import { createSign } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { PUSH_SETTINGS } from "./push-mode";
 import { readNotice, type GmailNotice } from "./push-notice";
 
 // Gmail's push notices, pulled from our Pub/Sub subscription by the worker
@@ -13,10 +14,11 @@ import { readNotice, type GmailNotice } from "./push-notice";
 //   PUBSUB_SUBSCRIPTION     projects/<project>/subscriptions/<subscription>: what the worker pulls
 //   GCP_PUBSUB_CREDENTIALS  the service account's JSON key, or a path to it (worker only)
 //
-// PUBSUB_API_URL points it at a fake Pub/Sub in tests.
+// PUBSUB_API_URL points it at a fake Pub/Sub in tests. Required in production
+// (./push-mode.ts): the worker refuses to start without them.
 
 /** Whether push is set up; otherwise mail is polled. */
-export const pushConfigured = () => !!(process.env.PUBSUB_TOPIC && process.env.PUBSUB_SUBSCRIPTION && process.env.GCP_PUBSUB_CREDENTIALS);
+export const pushConfigured = () => PUSH_SETTINGS.every((name) => !!process.env[name]);
 
 export const pushTopic = () => process.env.PUBSUB_TOPIC ?? "";
 
@@ -34,6 +36,18 @@ type ServiceAccount = { client_email: string; private_key: string; token_uri?: s
 function credentials(): ServiceAccount {
   const raw = process.env.GCP_PUBSUB_CREDENTIALS ?? "";
   return JSON.parse(raw.trim().startsWith("{") ? raw : readFileSync(raw, "utf8"));
+}
+
+/** At startup: the key can be read and looks like a service account's. Throws without its content. */
+export function checkCredentials() {
+  let sa: Partial<ServiceAccount>;
+  try {
+    sa = credentials();
+  } catch (e) {
+    // The file error's code (ENOENT) or the parse error's name; never the key's text.
+    throw new Error(`GCP_PUBSUB_CREDENTIALS can't be read as a service account's JSON key (${(e as NodeJS.ErrnoException)?.code ?? (e as Error)?.name})`);
+  }
+  if (!sa.client_email || !sa.private_key) throw new Error("GCP_PUBSUB_CREDENTIALS isn't a service account's key: no client_email or private_key");
 }
 
 const b64url = (data: string | Buffer) => Buffer.from(data).toString("base64url");

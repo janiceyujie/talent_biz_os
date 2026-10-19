@@ -659,7 +659,7 @@
       "forwarded_email": "Forwarded email",
       "gmail": "Gmail"
     },
-    "pendingBody": "The AI is reading this message; the result appears here on its own. The local model takes about half a minute.",
+    "pendingBody": "The AI is reading this message; the result appears here on its own, usually within a minute.",
     "failed": "The analysis didn't finish: {reason}",
     "facts": "What the AI read",
     "field": {
@@ -1171,6 +1171,7 @@
     "syncNow": "Check now",
     "syncing": "Checking…",
     "syncedAt": "Checked {time}",
+    "syncedJustNow": "Checked just now",
     "neverSynced": "Not checked yet",
     "syncFailed": "Last check failed",
     "lastSynced": "Last synced",

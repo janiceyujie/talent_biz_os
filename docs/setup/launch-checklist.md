@@ -45,7 +45,7 @@ Do this **once**, as late as possible (right before creating the production data
 - [ ] Calendar change notifications and sync tokens replacing polling (decision 0009, phase 2).
 - [ ] The consent screen moved from Testing to In production before anyone besides the builder connects Gmail (Testing expires refresh tokens after 7 days).
 - [ ] Google verification for `gmail.readonly`, then the CASA security assessment ([decision 0013](../decisions/0013-connected-gmail-mailbox.md)); until both pass, at most 100 users.
-- [ ] Pub/Sub topic with publish rights for Gmail, and the worker's pull subscription.
+- [ ] Pub/Sub topic with publish rights for Gmail, and the worker's pull subscription, its settings on the worker (required: the worker refuses to start in production without them).
 
 ## 5. AI
 

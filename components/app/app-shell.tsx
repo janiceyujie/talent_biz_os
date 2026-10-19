@@ -9,6 +9,7 @@ import { COLLAPSE_SHORTCUT, PRODUCT_MONOGRAM, PRODUCT_NAME, PRODUCT_TAGLINE, SEA
 import { useLabels } from "@/lib/i18n/labels";
 import { AccountMenu } from "./account-menu";
 import { Companion } from "./companion";
+import { LiveRefresh } from "./live-refresh";
 import { NotificationList, ReminderToast, useNotifications } from "./notifications";
 import { useAppData } from "./app-data";
 import { Modal } from "./modal";
@@ -269,6 +270,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <NotificationList open={open} />
         </Modal>
       )}
+      <LiveRefresh />
       <ReminderToast onOpen={() => setShowNotifications(true)} suppress={showNotifications || showSearch || companionOpen} />
       {showSearch && (
         <Modal title={t("searchTitle")} onClose={() => setShowSearch(false)}>

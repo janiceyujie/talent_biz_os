@@ -6,6 +6,8 @@ The core mechanism is the same regardless of who's using it: a message comes in,
 
 Scope here is grounded in interviews with two real prospective users — a talent manager and an independent creator — not just assumption. Where their stated needs shaped what's here, it's noted inline.
 
+How the running pieces connect (the web app, the worker and its queue, Gmail push, Google Calendar, the models, and the recovery paths) is drawn in [system-map.md](system-map.md).
+
 ## Table of contents
 
 - [Functionality](#functionality)

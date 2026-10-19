@@ -37,7 +37,7 @@ With push, Gmail tells the worker about new mail within seconds, and the 2-minut
 1. **APIs & Services → Library**: enable **Cloud Pub/Sub API**.
 2. **Pub/Sub → Topics → Create topic**: for example `gmail-notices`, without a default subscription.
 3. On the topic, **Permissions → Add principal**: `gmail-api-push@system.gserviceaccount.com`, role **Pub/Sub Publisher**. This lets Gmail post to the topic, and nothing else.
-4. **Pub/Sub → Subscriptions → Create subscription**: for example `gmail-notices-worker`, on that topic, delivery type **Pull**, message retention 1 day.
+4. **Pub/Sub → Subscriptions → Create subscription**: for example `gmail-notices-worker`, on that topic, delivery type **Pull**, message retention 1 day, expiration period **Never expire** (by default a pull subscription is deleted after 31 days without activity, which would quietly stop push).
 5. **IAM & Admin → Service accounts → Create service account**: for example `talent-worker`, then on the subscription, **Permissions → Add principal**: that account, role **Pub/Sub Subscriber**. On the account, **Keys → Add key → JSON**: a file downloads. Keep it out of Git.
 6. **`.env.local`**:
    ```

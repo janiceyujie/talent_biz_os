@@ -15,6 +15,6 @@ export async function GET(req: NextRequest) {
   if (!workspace) return new Response("Not found", { status: 404 });
   const params = grantListParams.safeParse(Object.fromEntries(req.nextUrl.searchParams));
   if (!params.success) return new Response("Invalid filters", { status: 400 });
-  try { return Response.json(await listGrantOpportunities(current.id, workspace.timeZone, params.data), { headers: { "Cache-Control": "private, no-store" } }); }
+  try { return Response.json(await listGrantOpportunities(current.id, workspace.timeZone, params.data, session.personId), { headers: { "Cache-Control": "private, no-store" } }); }
   catch (error) { if (error instanceof InvalidCursor) return new Response("Invalid cursor", { status: 400 }); throw error; }
 }

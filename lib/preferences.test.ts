@@ -6,11 +6,11 @@ import { preferences, readPreferences } from "./preferences";
 describe("readPreferences", () => {
   test("a fitting value is read; a broken one, an unknown key, or none at all is null (defaults apply)", () => {
     assert.deepEqual(readPreferences([{ key: "overview.layout", value: { version: 1, hidden: ["income"] } }]), {
-      "profile.role": null, "overview.layout": { version: 1, hidden: ["income"] },
+      "opportunities.profile": null, "profile.role": null, "overview.layout": { version: 1, hidden: ["income"] },
     });
-    assert.deepEqual(readPreferences([{ key: "overview.layout", value: { version: 2 } }]), { "profile.role": null, "overview.layout": null });
-    assert.deepEqual(readPreferences([{ key: "someday.setting", value: 1 }]), { "profile.role": null, "overview.layout": null });
-    assert.deepEqual(readPreferences([]), { "profile.role": null, "overview.layout": null });
+    assert.deepEqual(readPreferences([{ key: "overview.layout", value: { version: 2 } }]), { "opportunities.profile": null, "profile.role": null, "overview.layout": null });
+    assert.deepEqual(readPreferences([{ key: "someday.setting", value: 1 }]), { "opportunities.profile": null, "profile.role": null, "overview.layout": null });
+    assert.deepEqual(readPreferences([]), { "opportunities.profile": null, "profile.role": null, "overview.layout": null });
   });
 
   test("saving only accepts known widget ids", () => {

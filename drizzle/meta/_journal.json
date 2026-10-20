@@ -260,6 +260,13 @@
       "when": 1792453918205,
       "tag": "0036_calendar_two_way",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792468158406,
+      "tag": "0037_calendar_series_projects",
+      "breakpoints": true
     }
   ]
 }

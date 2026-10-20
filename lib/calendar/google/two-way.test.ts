@@ -54,13 +54,21 @@ describe("mergeFields", () => {
 });
 
 describe("fieldsOfTheirs", () => {
-  test("a timed event in its own zone; an hour long is no end recorded", () => {
+  test("a timed event in its own zone, with the end Google gives", () => {
     const f = fieldsOfTheirs(
       { id: "g", summary: "Show", start: { dateTime: "2026-12-13T19:30:00+08:00", timeZone: "Asia/Taipei" }, end: { dateTime: "2026-12-13T20:30:00+08:00", timeZone: "Asia/Taipei" } },
       "Asia/Taipei",
       markers,
     );
-    assert.deepEqual(f, { title: "Show", date: "2026-12-13", time: "19:30", timeZone: "Asia/Taipei", end: null, location: null });
+    assert.deepEqual(f, { title: "Show", date: "2026-12-13", time: "19:30", timeZone: "Asia/Taipei", end: { date: "2026-12-13", time: "20:30" }, location: null });
+  });
+  test("made in Google in another zone (the account's, Los Angeles): the same moment, in ours", () => {
+    const f = fieldsOfTheirs(
+      { id: "g", summary: "Call", start: { dateTime: "2026-10-19T19:30:00-07:00", timeZone: "America/Los_Angeles" }, end: { dateTime: "2026-10-19T20:30:00-07:00", timeZone: "America/Los_Angeles" } },
+      "Asia/Taipei",
+      markers,
+    );
+    assert.deepEqual([f?.date, f?.time, f?.timeZone, f?.end], ["2026-10-20", "10:30", "Asia/Taipei", { date: "2026-10-20", time: "11:30" }]);
   });
   test("a longer one keeps its end", () => {
     const f = fieldsOfTheirs({ id: "g", summary: "Show", start: { dateTime: "2026-12-13T19:30:00+08:00" }, end: { dateTime: "2026-12-13T21:00:00+08:00" } }, "Asia/Taipei", markers);
@@ -71,9 +79,15 @@ describe("fieldsOfTheirs", () => {
     assert.equal(f?.time, "19:30");
     assert.equal(f?.timeZone, "Asia/Taipei");
   });
-  test("no offset: already wall time in the zone Google names, whatever zone the machine is in", () => {
+  test("no offset: wall time in the zone Google names, read into ours, whatever zone the machine is in", () => {
     const f = fieldsOfTheirs({ id: "g", summary: "Show", start: { dateTime: "2026-12-13T20:00:00", timeZone: "Asia/Tokyo" }, end: { dateTime: "2026-12-13T22:00:00", timeZone: "Asia/Tokyo" } }, "Asia/Taipei", markers);
-    assert.deepEqual([f?.time, f?.timeZone, f?.end], ["20:00", "Asia/Tokyo", { date: "2026-12-13", time: "22:00" }]);
+    assert.deepEqual([f?.time, f?.timeZone, f?.end], ["19:00", "Asia/Taipei", { date: "2026-12-13", time: "21:00" }]);
+  });
+  test("an end of exactly an hour is the same as none: no change either way", () => {
+    const none = fields({ end: null });
+    const hour = fields({ end: { date: "2026-12-13", time: "20:30" } });
+    assert.deepEqual(mergeFields(keys, none, none, hour, true), {});
+    assert.deepEqual(mergeFields(keys, none, none, fields({ end: { date: "2026-12-13", time: "21:30" } }), true), { end: { date: "2026-12-13", time: "21:30" } });
   });
   test("all day: no time", () => {
     const f = fieldsOfTheirs({ id: "g", summary: "Day off", start: { date: "2026-12-14" }, end: { date: "2026-12-15" } }, "Asia/Taipei", markers);

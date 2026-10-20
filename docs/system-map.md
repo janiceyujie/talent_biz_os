@@ -275,7 +275,7 @@ flowchart LR
     REC["Worker: calendar.reconcile<br/>every 5 min, whether or not<br/>anyone has the app open"] --> CS
     SN["Sync now (in the request)"] --> CS
     CS --> RB["1. Read Google's changes<br/>since the sync token"]
-    RB --> AP["Edits merged by field ·<br/>added → an event, not in a project ·<br/>deleted → hidden, gone after 30 days ·<br/>repeating → read-only"]
+    RB --> AP["Edits merged by field ·<br/>added → an event, not in a project ·<br/>deleted → hidden, gone after 30 days ·<br/>repeating → read-only,<br/>filed by series"]
     AP --> PU["2. Push ours: create, update, remove"]
     PU --> DC["The dedicated calendar"]
     PU -.->|"failed: retry after 1 min, 5 min,<br/>30 min, 2 h, then every 6 h"| CS
@@ -295,7 +295,7 @@ flowchart LR
 What to know:
 
 - **Nothing is shown about a sync on screen.** A change on either side just appears on the other. Out of sight, the merge keeps both sides' fields, every change is recorded in `audit_log`, and a deleted event is kept 30 days, so a history or Restore can come later.
-- **What comes back from Google:** title, date, time, end, and time zone; the location where it's a single field (shows, meetings); notes, from below the description's notes line. A travel route, a stay's hotel, and the description's lines above the notes stay ours: an edit to them in Google is put back by the next push.
+- **What comes back from Google:** title, date, time, and end, as the same moment in the event's own zone (the workspace's for an event added there; never the zone Google's screen attached); the location where it's a single field (shows, meetings); notes, from below the description's notes line. A travel route, a stay's hotel, and the description's lines above the notes stay ours: an edit to them in Google is put back by the next push.
 - **Every connected teammate has their own copy.** A change in anyone's copy comes here, and the others' copies follow at their next sync.
 - **A sync token can't be limited to a date window** (Google's rule), so for the chosen calendars it only says *whether* something changed. The window is re-read then, or once a day as it moves on.
 

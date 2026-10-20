@@ -12,7 +12,7 @@ import { readPreferences } from "@/lib/preferences";
 import { pairKey } from "@/lib/domain/organizations";
 import { summaryOf } from "./projects";
 import { changeMark } from "./changes";
-import { authAccount, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { mailConfigured } from "@/lib/mail/connect";
 import { isProjectType } from "@/lib/project-types";
@@ -139,6 +139,8 @@ export const getAppData = cache(async (): Promise<AppData> => {
   const importSources = connection
     ? await db.select().from(calendarImportSource).where(eq(calendarImportSource.connectionId, connection.id))
     : [];
+  // Repeating events in our own calendar added to a project, by series (decision 0017).
+  const seriesLinks = connection ? await db.select().from(calendarSeriesProject).where(eq(calendarSeriesProject.connectionId, connection.id)) : [];
   const importedRows = importSources.length
     ? await db
         .select()
@@ -263,6 +265,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
         timeZone: e.timeZone,
         location: e.location ?? "",
         link: e.htmlLink ?? "",
+        series: source.own && e.seriesId ? { id: e.seriesId, projectId: seriesLinks.find((l) => l.seriesId === e.seriesId)?.projectId ?? null } : null,
       };
     }),
     googleCalendar: {

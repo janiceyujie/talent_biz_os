@@ -3698,6 +3698,29 @@ button.primary.danger {
 .page-title .page-actions .primary {
   min-height: 42px;
 }
+/* Today and Intake on a phone: the title, Import offer and + on one row. */
+@media (max-width: 560px) {
+  .page-title.with-offer-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .page-title.with-offer-actions .page-actions {
+    margin-top: 0;
+  }
+  /* Intake's Import offer is how a phone pastes or uploads there: shown, unlike other headers' secondary buttons. */
+  .page-title.with-offer-actions .more-menu > .secondary {
+    display: inline-flex;
+  }
+  .page-title.with-offer-actions .page-action-label {
+    display: none;
+  }
+  .page-title.with-offer-actions .page-actions .primary {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+}
 
 /* Calendar: title and every control on one row; wraps on narrow windows */
 .page-title:has(.planner-date-nav, .planner-view-select) {
@@ -3947,7 +3970,9 @@ button.primary.danger {
 }
 .inbox-workspace .intake-tabs {
   position: static;
-  margin: 16px 0 0;
+  margin: 0;
+  padding: 0;
+  border-bottom: 0;
   border-radius: 0;
   background: transparent;
 }
@@ -4086,6 +4111,7 @@ p.gmail-skipped {
   padding: 0 20px;
 }
 .settings-row {
+  scroll-margin-top: calc(var(--topbar) + 24px); /* reached by a link (/settings#gmail): clear of the top bar */
   display: flex;
   align-items: center;
   gap: 8px 16px;

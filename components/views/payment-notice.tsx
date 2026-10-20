@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { useState, useTransition, type RefObject } from "react";
+import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { InfoHint } from "@/components/app/info-hint";
@@ -59,12 +59,10 @@ type Choice = { kind: "match" } | { kind: "payment"; id: string } | { kind: "new
 export function NoticeDetail({
   message,
   notice,
-  headingRef,
   gmailUrl,
 }: {
   message: InboxMessage;
   notice: NoticeFields;
-  headingRef: RefObject<HTMLHeadingElement | null>;
   gmailUrl: string | null;
 }) {
   const t = useTranslations("paymentNotice");
@@ -101,7 +99,7 @@ export function NoticeDetail({
   return (
     <>
       <header className="review-head">
-        <h2 ref={headingRef} tabIndex={-1}>
+        <h2 tabIndex={-1}>
           {t("title", { amount })}
         </h2>
         <em className={`message-status status-${message.status}`}>{tInbox(`status.${message.status}`)}</em>

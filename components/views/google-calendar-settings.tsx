@@ -144,6 +144,7 @@ export function GoogleCalendarSettings({ onNotice }: { onNotice: (text: string) 
   return (
     <>
       <SettingsRow
+        id="google-calendar"
         icon={<CalendarDays size={20} />}
         label={t("title")}
         hint={[t("aboutSend"), t("aboutShow")]}

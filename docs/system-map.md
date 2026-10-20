@@ -4,6 +4,7 @@ How the running pieces connect: the web app, the worker, the database and its jo
 
 - [The big picture](#the-big-picture)
 - [A new email, end to end](#a-new-email-end-to-end)
+- [Paste and upload, end to end](#paste-and-upload-end-to-end)
 - [The job queue and the worker](#the-job-queue-and-the-worker)
 - [Deciding what's work](#deciding-whats-work)
 - [Where the models come in, and which one answers](#where-the-models-come-in-and-which-one-answers)
@@ -123,6 +124,46 @@ In practice: about 1 s from Gmail to the worker, 20 to 30 s through sync, scorin
 
 **Without push** (no `PUBSUB_*` settings, allowed in development only), `mail.reconcile` syncs every mailbox every 2 minutes instead. In production, or with only some of the settings, the worker refuses to start (`lib/mail/push-mode.ts`); its first log line says which mode it runs in. With push, reconcile still runs every 15 minutes as a safety net.
 
+## Paste and upload, end to end
+
+The two ways a person sends a message in themselves: Import offer → Paste an offer, and Import offer → Upload screenshot / PDF (also Today's Upload an offer). **Neither is scored.** The person chose the message, so it's work; scoring is only for what Gmail brings in on its own. Both go straight to the same analysis as an email.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Browser
+  participant W as Web: action
+  participant S as Storage
+  participant DB as Postgres
+  participant Q as Job queue
+  participant J as Worker: message.analyze
+  participant M as Models
+
+  alt Paste an offer
+    UI->>W: the text (up to 50,000 characters)
+  else Upload screenshot / PDF
+    UI->>W: names, types, sizes (prepareUpload)
+    W-->>UI: a signed upload URL per file (10 min)
+    UI->>S: the bytes, straight to storage
+    UI->>W: register them (registerUpload)
+    W->>S: each file there, its size and type as declared, its first bytes really an image or a PDF
+  end
+  W->>DB: message (+ files), and message.analyze, in one transaction
+  Note over W,DB: the same text, or the same files in the same order, returns the message already there
+  W-->>UI: its id: Intake opens it
+  Q->>J: run (one at a time per talent)
+  J->>DB: under the day's cap? (AI_DAILY_ANALYSES)
+  J->>S: the files' bytes
+  J->>M: the text, and the files as they are (images, PDFs), never converted to text first
+  J->>DB: message_analysis, status analyzed
+  UI->>UI: Intake checks until it's done, then shows the proposals
+```
+
+- **Which model** follows the routing below: a PDF or a long text goes to `analysis_complex` at once; screenshots and short text start on `analysis`.
+- **Limits** (`lib/uploads.ts`): up to 10 files, 10 MB each, 12 MB together, since files go to the model inline. PNG, JPEG, WebP, HEIC/HEIF, and PDF.
+- **Locally**, an Ollama model can't read a PDF, and one without vision can't read images: an upload then fails with Retry rather than being analyzed without its files. An email with text keeps its text and says its attachments weren't read.
+- **Retry** queues the same `message.analyze` again; earlier analyses are kept.
+
 ## The job queue and the worker
 
 The queue is Graphile Worker on our own Postgres. A **named queue** runs its jobs one at a time, in order. A **job key** makes a second "do this" replace a waiting one.
@@ -169,7 +210,7 @@ flowchart LR
 
 ## Deciding what's work
 
-Most mail never reaches a model, and no email body is read until it's decided as work ([decision 0013](decisions/0013-connected-gmail-mailbox.md)).
+Most mail never reaches a model, and no email body is read until it's decided as work ([decision 0013](decisions/0013-connected-gmail-mailbox.md)). Only Gmail is sorted this way: a pasted or uploaded message is work because the person sent it in.
 
 ```mermaid
 flowchart TB

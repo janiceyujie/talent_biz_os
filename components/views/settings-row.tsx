@@ -20,6 +20,7 @@ export function SettingsGroup({ title, hint, children }: { title: string; hint?:
 }
 
 export function SettingsRow({
+  id,
   label,
   htmlFor,
   description,
@@ -29,6 +30,7 @@ export function SettingsRow({
   error,
   children,
 }: {
+  id?: string; // for a link straight to this row (/settings#gmail)
   label: string;
   htmlFor?: string; // the control's id, when it's a single field
   description?: ReactNode;
@@ -39,7 +41,7 @@ export function SettingsRow({
   children?: ReactNode;
 }) {
   return (
-    <div className="settings-row">
+    <div className="settings-row" id={id}>
       {icon && (
         <span className="settings-row-icon" aria-hidden="true">
           {icon}

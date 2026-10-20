@@ -8,6 +8,7 @@ import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { InboxReaderLayout } from "@/components/app/inbox-reader-layout";
 import { InfoHint } from "@/components/app/info-hint";
 import { addSenderRule, markWasWork, syncGmail } from "@/lib/actions/mail";
 import { domainOf } from "@/lib/mail/metadata";
@@ -77,12 +78,11 @@ export function GmailSync({ onNotice }: { onNotice: (text: string | null) => voi
 
 export type IntakeTab = "messages" | GmailMailView;
 
-/** Messages · Waiting · Filtered out, shown once a mailbox is connected. */
+/** Messages · Waiting · Filtered out; before a mailbox is connected, the two Gmail lists count 0. */
 export function IntakeTabs({ tab, onTab }: { tab: IntakeTab; onTab: (tab: IntakeTab) => void }) {
   const { gmail, inbox } = useAppData();
   const t = useTranslations("gmail");
-  const counts = gmail.connection?.counts;
-  if (!counts) return null;
+  const counts = gmail.connection?.counts ?? { waiting: 0, skipped: 0 };
   // Messages counts what's waiting for review, as the Intake badge in the menu does (app-shell).
   const toReview = inbox.filter((m) => m.status === "analyzed" || m.status === "error").length;
   // Every tab shows its count, 0 too: a missing number reads as "nothing here" when that isn't known.
@@ -119,21 +119,26 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
   const version = `${c?.lastSyncedAt}:${c?.syncing}:${c?.sorting}:${c?.counts.waiting}:${c?.counts.skipped}`;
   const sorting = !!c?.syncing; // while a check runs, wait for it; emails still being scored show as Not decided yet
 
-  // Only the latest request may fill the list: an older, slower one (a refresh racing it) is ignored.
-  const latest = useRef(0);
+  // Only the latest request may fill the list: a newer one cancels an older, slower one (a refresh racing it).
+  const latest = useRef<AbortController | null>(null);
   const load = useCallback(
     async (offset: number) => {
-      const request = ++latest.current;
+      latest.current?.abort();
+      const request = new AbortController();
+      latest.current = request;
       setLoading(true);
       try {
-        const res = await fetch(`/api/mail/decisions?${new URLSearchParams({ view, offset: String(offset) })}`, { cache: "no-store" });
+        const res = await fetch(`/api/mail/decisions?${new URLSearchParams({ view, offset: String(offset) })}`, { cache: "no-store", signal: request.signal });
         const page = res.ok ? ((await res.json()) as GmailMailPage) : { items: [], more: false, error: "unavailable" as const };
-        if (request !== latest.current) return;
-        setItems((prev) => (offset ? [...(prev ?? []), ...page.items] : page.items));
+        if (request.signal.aborted) return;
+        // An email can move between pages while they load: keep each once.
+        setItems((prev) => [...new Map((offset ? [...(prev ?? []), ...page.items] : page.items).map((i) => [i.id, i])).values()]);
         setMore(page.more);
         setError(page.error);
+      } catch {
+        if (!request.signal.aborted) setError("unavailable"); // offline, or the server didn't answer
       } finally {
-        if (request === latest.current) setLoading(false);
+        if (!request.signal.aborted) setLoading(false);
       }
     },
     [view],
@@ -142,6 +147,7 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
   useEffect(() => {
     if (sorting) return;
     queueMicrotask(() => load(0));
+    return () => latest.current?.abort();
   }, [load, version, sorting]);
 
   const picked = items?.find((i) => i.id === active) ?? items?.[0];
@@ -157,54 +163,59 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
     );
 
   return (
-    <div className="inbox-layout section-gap" id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${view}`}>
-      <section className="surface padded inbox-messages" aria-label={view === "waiting" ? t("tabWaiting") : t("tabSkipped")}>
-        <p className="muted gmail-about">{view === "waiting" ? t("aboutWaiting") : t("aboutSkipped")}</p>
-        {peekError && (
-          <p className="notice error" role="alert">
-            {peekError}
-          </p>
-        )}
-        {items === null && <p className="muted">{t("loading")}</p>}
-        {items?.length === 0 && (
-          <div className="empty">
-            <p>{c?.lastSyncedAt ? (view === "waiting" ? t("emptyWaiting") : t("emptySkipped")) : t("notSyncedYet")}</p>
-          </div>
-        )}
-        {items?.map((m) => (
-          <div className={`mail-item single ${picked?.id === m.id ? "is-active" : ""}`} key={m.id}>
-            <button className={`mail-summary ${picked?.id === m.id ? "active" : ""}`} aria-pressed={picked?.id === m.id} onClick={() => setActive(m.id)}>
-              <small>
-                {view === "waiting" && (
-                  <em className={`message-status ${outcomeChip[m.outcome]}`}>{t(`outcome.${m.outcome}`)}</em>
-                )}{" "}
-                {m.from ? m.from.name || m.from.address : ""}
-              </small>
-              <strong>{m.subject === null ? (error ? t("notLoaded") : t("unreadable")) : m.subject || t("noSubject")}</strong>
-              <span className="mail-summary-meta">
-                <time dateTime={m.receivedAt}>
-                  {format.dateTime(new Date(m.receivedAt), {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </time>
-              </span>
-            </button>
-          </div>
-        ))}
-        {more && (
-          <button className="secondary section-gap" disabled={loading} onClick={() => load(items?.length ?? 0)}>
-            {loading ? t("loading") : t("showMore")}
-          </button>
-        )}
-      </section>
-      <section className="surface padded inbox-reader" aria-label={tInbox("readerLabel")}>
+    <div id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${view}`}>
+      <InboxReaderLayout
+        selectedId={picked?.id ?? ""}
+        listLabel={view === "waiting" ? t("tabWaiting") : t("tabSkipped")}
+        list={
+          <>
+            <p className="muted gmail-about">{view === "waiting" ? t("aboutWaiting") : t("aboutSkipped")}</p>
+            {peekError && (
+              <p className="notice error" role="alert">
+                {peekError}
+              </p>
+            )}
+            {items === null && <p className="muted">{t("loading")}</p>}
+            {items?.length === 0 && (
+              <div className="empty">
+                <p>{c?.lastSyncedAt ? (view === "waiting" ? t("emptyWaiting") : t("emptySkipped")) : t("notSyncedYet")}</p>
+              </div>
+            )}
+            {items?.map((m) => (
+              <div className={`mail-item single ${picked?.id === m.id ? "is-active" : ""}`} key={m.id}>
+                <button className={`mail-summary ${picked?.id === m.id ? "active" : ""}`} aria-pressed={picked?.id === m.id} onClick={() => setActive(m.id)}>
+                  <small>
+                    {view === "waiting" && (
+                      <em className={`message-status ${outcomeChip[m.outcome]}`}>{t(`outcome.${m.outcome}`)}</em>
+                    )}{" "}
+                    {m.from ? m.from.name || m.from.address : ""}
+                  </small>
+                  <strong>{m.subject === null ? (error ? t("notLoaded") : t("unreadable")) : m.subject || t("noSubject")}</strong>
+                  <span className="mail-summary-meta">
+                    <time dateTime={m.receivedAt}>
+                      {format.dateTime(new Date(m.receivedAt), {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </time>
+                  </span>
+                </button>
+              </div>
+            ))}
+            {more && (
+              <button className="secondary section-gap" disabled={loading} onClick={() => load(items?.length ?? 0)}>
+                {loading ? t("loading") : t("showMore")}
+              </button>
+            )}
+          </>
+        }
+      >
         {picked && c ? (
           <GmailMailDetail key={picked.id} item={picked} view={view} accountEmail={c.accountEmail} loadFailed={!!error} onNotice={onNotice} />
         ) : (
           <p className="empty">{tInbox("pick")}</p>
         )}
-      </section>
+      </InboxReaderLayout>
     </div>
   );
 }
@@ -242,7 +253,7 @@ function GmailMailDetail({
 
   return (
     <>
-      <h2>{item.subject === null ? (loadFailed ? t("notLoaded") : t("unreadable")) : item.subject || t("noSubject")}</h2>
+      <h2 tabIndex={-1}>{item.subject === null ? (loadFailed ? t("notLoaded") : t("unreadable")) : item.subject || t("noSubject")}</h2>
       <dl className="mail-metadata">
         <div>
           <dt>{t("from")}</dt>

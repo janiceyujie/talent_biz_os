@@ -627,9 +627,7 @@
     }
   },
   "inbox": {
-    "title": "Offers to review",
-    "gmailSoon": "Gmail add-on coming soon",
-    "intro": "Paste an offer and the system pulls out the key facts and suggests a type; nothing becomes a project until you confirm. Screenshot upload and the Gmail add-on are on the way.",
+    "intro": "Messages from Gmail, pasted text and uploads land here. Each is analyzed for the key facts and a suggested type; nothing becomes a project until you confirm.",
     "upload": "Upload screenshot / PDF",
     "paste": "Paste an offer",
     "emptyTitle": "No offers here yet",
@@ -643,7 +641,7 @@
     "analyze": "Analyze",
     "submitting": "Sending…",
     "duplicate": "You've brought this in before — here it is.",
-    "showDismissed": "Show dismissed",
+    "showDismissed": "Show dismissed ({count})",
     "status": {
       "pending": "Analyzing",
       "analyzed": "To review",
@@ -761,7 +759,8 @@
     "historyGroup": "From your history",
     "historyInfo": "Older threads from the last 30 days, nothing new in them for two weeks. They're kept for reference; opening one analyzes it.",
     "historyCount": "{count, plural, one {# email} other {# emails}}",
-    "unverifiedSenderPayment": "Gmail couldn't verify the sender, and this asks about payment or bank details: a common fraud. Don't pay or reply with details; confirm with them using contact details you already have."
+    "unverifiedSenderPayment": "Gmail couldn't verify the sender, and this asks about payment or bank details: a common fraud. Don't pay or reply with details; confirm with them using contact details you already have.",
+    "requestFailed": "That didn't go through: check your connection and try again."
   },
   "intake": {
     "targetHeading": "File under a project",
@@ -1287,7 +1286,12 @@
     "notWorkBody": "It leaves Intake, and its text and attachments are deleted. It stays listed in Filtered out, where This was work brings it back.",
     "notWorkNeverFrom": "Also stop bringing in mail from {sender}",
     "autoInfo": "New mail arrives on its own. Check now to look right away, say for a reply you're waiting on.",
-    "sortingCount": "sorting {count, plural, one {# email} other {# emails}}"
+    "sortingCount": "sorting {count, plural, one {# email} other {# emails}}",
+    "connectInSettings": "Connect Gmail in Settings",
+    "connectToSee": "Connect Gmail to sort your email here: work email waits for you, the rest is filtered out.",
+    "reconnectInSettings": "Gmail needs reconnecting",
+    "reconnectWhy": "Google's access expired, so new mail isn't coming in.",
+    "reconnectGo": "Reconnect in Settings"
   },
   "paymentNotice": {
     "chip": "Payment",
@@ -1685,7 +1689,6 @@
     "savedDrafts": "Saved drafts",
     "quoteCalculator": "Quote calculator",
     "ledger": "Ledger",
-    "intake": "Intake",
     "files": "Files & assets",
     "talentAssistant": "Talent Assistant",
     "yourWorkspace": "YOUR WORKSPACE"

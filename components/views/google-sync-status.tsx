@@ -34,7 +34,7 @@ export function GoogleSyncStatus() {
   if (!c) return null;
   if (!connected)
     return (
-      <Link className="planner-google-status is-warning" href="/settings">
+      <Link className="planner-google-status is-warning" href="/settings#google-calendar">
         {t("googleReconnect")}
       </Link>
     );

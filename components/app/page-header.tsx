@@ -1,9 +1,10 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
+import { MoreMenu } from "@/components/views/more-menu";
 import type { NavKey } from "./nav";
 import { PasteDialog } from "./paste-dialog";
 import { RecordEditor, type Editor } from "./record-editor";
@@ -20,7 +21,7 @@ export function PageHeader({ titleKey, subtitle, children }: { titleKey: NavKey;
   const [toast, setToast] = useState<string | null>(null);
   return (
     <>
-      <header className="page-title">
+      <header className={withActions.includes(titleKey) ? "page-title with-offer-actions" : "page-title"}>
         {subtitle ? (
           // Beside the heading, not in it: the page's name stays just its name.
           <div className="page-heading">
@@ -33,18 +34,34 @@ export function PageHeader({ titleKey, subtitle, children }: { titleKey: NavKey;
         {withActions.includes(titleKey) && (
           <div className="page-actions">
             {/* On Intake its own dialog opens (and selects the new message); elsewhere it opens here, without leaving the page. */}
+            {/* Intake has no buttons of its own for these: both ways in are here. */}
             {titleKey === "inbox" ? (
-              <Link className="secondary" href="/inbox?paste=1">
-                {t("shell.importOffer")}
-              </Link>
+              <MoreMenu
+                label={t("shell.importOffer")}
+                className="secondary"
+                button={
+                  <>
+                    {t("shell.importOffer")}
+                    <ChevronDown size={16} aria-hidden="true" />
+                  </>
+                }
+              >
+                <Link role="menuitem" href="/inbox?paste=1">
+                  {t("inbox.paste")}
+                </Link>
+                <Link role="menuitem" href="/inbox?upload=1">
+                  {t("inbox.upload")}
+                </Link>
+              </MoreMenu>
             ) : (
               <button className="secondary" onClick={() => setPasting(true)}>
                 {t("shell.importOffer")}
               </button>
             )}
-            <button className="primary" onClick={() => setEditor({ kind: "project" })}>
-              <Plus size={16} />
-              {t("shell.newProject")}
+            {/* On a phone just +, so the title and both actions fit one row. */}
+            <button className="primary" aria-label={t("shell.newProject")} onClick={() => setEditor({ kind: "project" })}>
+              <Plus size={16} aria-hidden="true" />
+              <span className="page-action-label">{t("shell.newProject")}</span>
             </button>
           </div>
         )}

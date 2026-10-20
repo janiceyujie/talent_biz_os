@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useTransition, type RefObject } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
+import { InboxReaderLayout } from "@/components/app/inbox-reader-layout";
 import { InfoHint } from "@/components/app/info-hint";
 import { MoreMenu } from "./more-menu";
 import { ANALYSIS_POLL_MS, PasteDialog } from "@/components/app/paste-dialog";
-import { FileText, TriangleAlert } from "lucide-react";
+import { FileText, MailWarning, TriangleAlert } from "lucide-react";
 import { markNotWork, markSureWork, reopenReplies } from "@/lib/actions/mail";
 import { dismissMessage, openFromHistory, reanalyzeMessage } from "@/lib/actions/messages";
 import { useMoney } from "@/lib/i18n/format";
@@ -29,11 +30,18 @@ import { UploadDialog } from "./upload-dialog";
 
 const firstLine = (text: string) => text.trim().split("\n")[0]?.slice(0, 80) ?? "";
 
+/** Beside the page title: what Intake does, and today's AI analyses left. */
+export function IntakeHint() {
+  const { aiUsage } = useAppData();
+  const t = useTranslations("inbox");
+  return <InfoHint notes={[t("intro"), t("usageRemaining", aiUsage)]} />;
+}
+
 export function InboxView() {
   const data = useAppData();
   const t = useTranslations("inbox");
+  const tGmail = useTranslations("gmail");
   const tNotice = useTranslations("paymentNotice");
-  const tEyebrow = useTranslations("eyebrow");
   const money = useMoney();
   const router = useRouter();
   const params = useSearchParams();
@@ -41,20 +49,21 @@ export function InboxView() {
   const [pasting, setPasting] = useState(params.get("paste") === "1");
   const [uploading, setUploading] = useState(params.get("upload") === "1");
   const [active, setActive] = useState(params.get("message") ?? ""); // ?message= from a project timeline
+  const [opened, setOpened] = useState(""); // a message just pasted or uploaded: a phone opens it
   const [showDismissed, setShowDismissed] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [tab, setTab] = useState<IntakeTab>("messages");
   // From your history: kept apart, collapsed, and analyzed only when opened (decision 0013).
   const history = data.inbox.filter((m) => m.status === "history");
   const visible = data.inbox.filter((m) => m.status !== "history" && (showDismissed || m.status !== "dismissed"));
+  const dismissed = data.inbox.filter((m) => m.status === "dismissed").length;
   const [, startOpening] = useTransition();
   const message = data.inbox.find((m) => m.id === active) ?? visible[0];
   const analyzing = data.inbox.some((m) => m.status === "pending");
-  const listHeading = useRef<HTMLHeadingElement>(null);
-  const readerHeading = useRef<HTMLHeadingElement>(null);
-  const lastMessageButton = useRef<HTMLButtonElement | null>(null);
+  // Waiting and Filtered out show before Gmail is connected too, so they can be found; they say how to connect.
+  const gmailTabs = !!data.gmail.connection || data.gmail.available;
 
-  // ?paste=1 / ?upload=1 (the header's Import offer here, Today's Upload an offer) open a dialog —
+  // ?paste=1 / ?upload=1 (the header's Import offer, Today's Upload an offer) open a dialog —
   // also when already on this page, where the address changes without a reload —
   // then leave the address so a reload doesn't open it again.
   useEffect(() => {
@@ -74,140 +83,154 @@ export function InboxView() {
 
   return (
     <div className="inbox-workspace">
-      <section className="surface padded">
-        <div className="section-header">
-          <div>
-            <span>{tEyebrow("intake")}</span>
-            <h2>{t("title")}</h2>
-          </div>
-          {data.gmail.connection ? <GmailSync onNotice={setNotice} /> : <span className="mock-chip">{t("gmailSoon")}</span>}
-        </div>
-        <p className="muted">{t("intro")}</p>
-        <p className={data.aiUsage.remaining === 0 ? "notice error" : "muted ai-usage"}>
-          {data.aiUsage.remaining === 0 ? t("usageExhausted", { limit: data.aiUsage.limit }) : t("usageRemaining", data.aiUsage)}
+      {data.aiUsage.remaining === 0 && (
+        <p className="notice error" role="status">
+          {t("usageExhausted", { limit: data.aiUsage.limit })}
         </p>
-        <div className="row-actions">
-          <button className="primary" onClick={() => setPasting(true)}>
-            {t("paste")}
-          </button>
-          <button className="secondary" onClick={() => setUploading(true)}>
-            {t("upload")}
-          </button>
-        </div>
-        {notice && (
-          <p className="notice" role="status">
-            {notice}
-          </p>
+      )}
+      {notice && (
+        <p className="notice" role="status">
+          {notice}
+        </p>
+      )}
+      <div className="intake-bar">
+        {gmailTabs ? <IntakeTabs tab={tab} onTab={setTab} /> : <span />}
+        {data.gmail.connection?.status === "reconnect_needed" ? (
+          // Google's access expired: no mail comes in until it's reconnected, so say it where mail shows.
+          <>
+            <Link className="link-button gmail-reconnect" href="/settings#gmail" title={tGmail("reconnectWhy")}>
+              <MailWarning size={16} aria-hidden="true" />
+              {tGmail("reconnectInSettings")}
+            </Link>
+            {/* On a phone just the icon beside the tabs; a tap says why, then leads to Settings. */}
+            <MoreMenu
+              label={tGmail("reconnectInSettings")}
+              className="icon-button gmail-reconnect-icon"
+              button={<MailWarning size={20} aria-hidden="true" />}
+              heading={
+                <>
+                  <strong>{tGmail("reconnectInSettings")}</strong>
+                  {tGmail("reconnectWhy")}
+                </>
+              }
+            >
+              <Link role="menuitem" href="/settings#gmail">
+                {tGmail("reconnectGo")}
+              </Link>
+            </MoreMenu>
+          </>
+        ) : data.gmail.connection ? (
+          <GmailSync onNotice={setNotice} />
+        ) : (
+          data.gmail.available && (
+            <Link className="link-button" href="/settings#gmail">
+              {tGmail("connectInSettings")}
+            </Link>
+          )
         )}
-      </section>
-      <IntakeTabs tab={data.gmail.connection ? tab : "messages"} onTab={setTab} />
-      {data.gmail.connection && tab !== "messages" ? (
-        <GmailMail key={tab} view={tab} onNotice={setNotice} />
+      </div>
+      {gmailTabs && tab !== "messages" ? (
+        data.gmail.connection ? (
+          <GmailMail key={tab} view={tab} onNotice={setNotice} />
+        ) : (
+          <section className="surface padded section-gap empty" id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${tab}`}>
+            <h3>{tab === "waiting" ? tGmail("tabWaiting") : tGmail("tabSkipped")}</h3>
+            <p>{tGmail("connectToSee")}</p>
+            <Link className="secondary" href="/settings#gmail">
+              {tGmail("connectInSettings")}
+            </Link>
+          </section>
+        )
       ) : (
-        <div className="inbox-layout section-gap">
-          <section className="surface padded inbox-messages" aria-label={t("listLabel")}>
-            <div className="inbox-list-heading">
-              <h2 ref={listHeading} tabIndex={-1}>
-                {t("listHeading")}
-              </h2>
-              <span role="status">{t("listCount", { count: visible.length })}</span>
-            </div>
-            <label className="check-line">
-              <input type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} />
-              {t("showDismissed")}
-            </label>
-            {!visible.length && (
-              <div className="empty">
-                <h3>{t("emptyTitle")}</h3>
-                <p>{t("emptyBody")}</p>
-              </div>
-            )}
-            {visible.map((m) => (
-              <div className={`mail-item single ${message?.id === m.id ? "is-active" : ""}`} key={m.id}>
-                <button
-                  className={`mail-summary ${message?.id === m.id ? "active" : ""}`}
-                  aria-pressed={message?.id === m.id}
-                  onClick={(e) => {
-                    lastMessageButton.current = e.currentTarget;
-                    setActive(m.id);
-                    // On narrow screens the message is below the list: take the reader there.
-                    if (window.matchMedia("(max-width: 900px)").matches)
-                      requestAnimationFrame(() => {
-                        readerHeading.current?.focus({ preventScroll: true });
-                        readerHeading.current?.scrollIntoView({ block: "start" });
-                      });
-                  }}
-                >
-                  <small>
-                    <StatusChip status={m.status} />
-                    {!!m.analysis?.flags.length && <em className="message-status status-flagged">{t("flagChip")}</em>}
-                    {m.notice && <em className="message-status status-payment">{tNotice("chip")}</em>}
-                    {m.gmail?.sent && <em className="message-status status-sent">{t("yourReply")}</em>} {t(`channel.${m.channel}`)}
-                  </small>
-                  {m.notice ? (
-                    <>
-                      <strong>
-                        {money(m.notice.amount, m.notice.currency)}
-                        {m.notice.payer && ` · ${m.notice.payer}`}
-                      </strong>
-                      <span className="mail-snippet">
-                        <NoticeRowLine notice={m.notice} />
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <strong>{m.analysis?.title || fallbackTitle(m, t)}</strong>
-                      <span className="mail-snippet">{(m.analysis?.summary || m.body || m.files.map((f) => f.filename).join(", ")).slice(0, 110)}</span>
-                    </>
-                  )}
-                  <span className="mail-summary-meta">
-                    <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
-                    {m.status === "confirmed" && m.projectId && <span>{t("filedChip")}</span>}
-                  </span>
-                </button>
-              </div>
-            ))}
-            {history.length > 0 && (
-              <details className="history-group">
-                <summary>
-                  <strong>{t("historyGroup")}</strong> <span className="muted">{t("historyCount", { count: history.length })}</span> <InfoHint notes={[t("historyInfo")]} />
-                </summary>
-                {history.map((m) => (
-                  <button
-                    key={m.id}
-                    className={`history-row ${message?.id === m.id ? "active" : ""}`}
-                    onClick={() => {
-                      setActive(m.id);
-                      startOpening(async () => setNotice(await openFromHistory(m.id)));
-                    }}
-                  >
-                    <span>{m.gmail?.sent ? t("yourReply") : senderName(m.gmail?.sender ?? "")}</span>
-                    <strong>{fallbackTitle(m, t)}</strong>
-                    <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
-                  </button>
-                ))}
-              </details>
-            )}
-          </section>
-          <section className="surface padded inbox-reader" aria-label={t("readerLabel")}>
-            {message ? (
+        <div id="intake-panel" role={gmailTabs ? "tabpanel" : undefined} aria-labelledby={gmailTabs ? "intake-tab-messages" : undefined}>
+          <InboxReaderLayout
+            selectedId={message?.id ?? ""}
+            listLabel={t("listLabel")}
+            startReading={!!params.get("message")}
+            openId={opened}
+            list={
               <>
-                <button
-                  className="secondary inbox-back"
-                  onClick={() => {
-                    const target = lastMessageButton.current?.isConnected ? lastMessageButton.current : listHeading.current;
-                    target?.focus({ preventScroll: true });
-                    target?.scrollIntoView({ block: "center" });
-                  }}
-                >
-                  {t("backToList")}
-                </button>
-                <MessageDetail key={message.id} message={message} headingRef={readerHeading} />
+                <div className="inbox-list-heading">
+                  <h2>{t("listHeading")}</h2>
+                  <span role="status">{t("listCount", { count: visible.length })}</span>
+                </div>
+                {/* Only when something was dismissed: an option that does nothing is just noise. */}
+                {(dismissed > 0 || showDismissed) && (
+                  <label className="check-line">
+                    <input type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} />
+                    {t("showDismissed", { count: dismissed })}
+                  </label>
+                )}
+                {!visible.length && (
+                  <div className="empty">
+                    <h3>{t("emptyTitle")}</h3>
+                    <p>{t("emptyBody")}</p>
+                  </div>
+                )}
+                {visible.map((m) => (
+                  <div className={`mail-item single ${message?.id === m.id ? "is-active" : ""}`} key={m.id}>
+                    <button className={`mail-summary ${message?.id === m.id ? "active" : ""}`} aria-pressed={message?.id === m.id} onClick={() => setActive(m.id)}>
+                      <small>
+                        <StatusChip status={m.status} />
+                        {!!m.analysis?.flags.length && <em className="message-status status-flagged">{t("flagChip")}</em>}
+                        {m.notice && <em className="message-status status-payment">{tNotice("chip")}</em>}
+                        {m.gmail?.sent && <em className="message-status status-sent">{t("yourReply")}</em>} {t(`channel.${m.channel}`)}
+                      </small>
+                      {m.notice ? (
+                        <>
+                          <strong>
+                            {money(m.notice.amount, m.notice.currency)}
+                            {m.notice.payer && ` · ${m.notice.payer}`}
+                          </strong>
+                          <span className="mail-snippet">
+                            <NoticeRowLine notice={m.notice} />
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <strong>{m.analysis?.title || fallbackTitle(m, t)}</strong>
+                          <span className="mail-snippet">{(m.analysis?.summary || m.body || m.files.map((f) => f.filename).join(", ")).slice(0, 110)}</span>
+                        </>
+                      )}
+                      <span className="mail-summary-meta">
+                        <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
+                        {m.status === "confirmed" && m.projectId && <span>{t("filedChip")}</span>}
+                      </span>
+                    </button>
+                  </div>
+                ))}
+                {history.length > 0 && (
+                  <details className="history-group">
+                    <summary>
+                      <strong>{t("historyGroup")}</strong> <span className="muted">{t("historyCount", { count: history.length })}</span> <InfoHint notes={[t("historyInfo")]} />
+                    </summary>
+                    {history.map((m) => (
+                      <button
+                        key={m.id}
+                        className={`history-row ${message?.id === m.id ? "active" : ""}`}
+                        onClick={() => {
+                          setActive(m.id);
+                          startOpening(async () => {
+                            try {
+                              setNotice(await openFromHistory(m.id));
+                            } catch {
+                              setNotice(t("requestFailed"));
+                            }
+                          });
+                        }}
+                      >
+                        <span>{m.gmail?.sent ? t("yourReply") : senderName(m.gmail?.sender ?? "")}</span>
+                        <strong>{fallbackTitle(m, t)}</strong>
+                        <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
+                      </button>
+                    ))}
+                  </details>
+                )}
               </>
-            ) : (
-              <p className="empty">{t("pick")}</p>
-            )}
-          </section>
+            }
+          >
+            {message ? <MessageDetail key={message.id} message={message} /> : <p className="empty">{t("pick")}</p>}
+          </InboxReaderLayout>
         </div>
       )}
       {pasting && (
@@ -216,6 +239,7 @@ export function InboxView() {
           onSubmitted={(id, duplicate) => {
             setPasting(false);
             setActive(id);
+            setOpened(id);
             if (duplicate) setShowDismissed(true); // the earlier copy may have been dismissed
             setNotice(duplicate ? t("duplicate") : null);
           }}
@@ -227,6 +251,7 @@ export function InboxView() {
           onSubmitted={(id, duplicate) => {
             setUploading(false);
             setActive(id);
+            setOpened(id);
             if (duplicate) setShowDismissed(true);
             setNotice(duplicate ? t("duplicate") : null);
           }}
@@ -252,7 +277,7 @@ function StatusChip({ status }: { status: InboxMessage["status"] }) {
 }
 
 
-function MessageDetail({ message, headingRef }: { message: InboxMessage; headingRef: RefObject<HTMLHeadingElement | null> }) {
+function MessageDetail({ message }: { message: InboxMessage }) {
   const t = useTranslations("inbox");
   const labels = useLabels();
   const tGmail = useTranslations("gmail");
@@ -261,7 +286,15 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
   const [error, setError] = useState<string | null>(null);
   const [notWorkOpen, setNotWorkOpen] = useState(false);
   const [never, setNever] = useState(false); // also a "never" rule for the sender
-  const run = (action: () => Promise<string | null>) => startTransition(async () => setError(await action()));
+  // A failed request (offline, a server error) says so here; the message and the list stay usable.
+  const run = (action: () => Promise<string | null>) =>
+    startTransition(async () => {
+      try {
+        setError(await action());
+      } catch {
+        setError(t("requestFailed"));
+      }
+    });
   const a = message.analysis;
   const analyzed = !!a && message.status !== "pending";
   const data = useAppData();
@@ -271,7 +304,7 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
       ? `https://mail.google.com/mail/?${new URLSearchParams({ authuser: data.gmail.connection.accountEmail })}#all/${message.gmail.gmailId}`
       : null;
 
-  if (message.notice) return <NoticeDetail message={message} notice={message.notice} headingRef={headingRef} gmailUrl={gmailUrl} />;
+  if (message.notice) return <NoticeDetail message={message} notice={message.notice} gmailUrl={gmailUrl} />;
 
   // The journey, top to bottom (docs/design/intake-to-project.md, screen 1): who and what (triage);
   // what they want and on what terms (understand); the original, a glance away; then the one decision,
@@ -280,7 +313,7 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
   return (
     <>
       <header className="review-head">
-        <h2 ref={headingRef} tabIndex={-1}>
+        <h2 tabIndex={-1}>
           {a?.title || fallbackTitle(message, t)}
         </h2>
         <StatusChip status={message.status} />

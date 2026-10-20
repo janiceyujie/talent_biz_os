@@ -627,9 +627,7 @@
     }
   },
   "inbox": {
-    "title": "待確認的邀約",
-    "gmailSoon": "Gmail 外掛即將推出",
-    "intro": "貼上邀約文字，系統會整理重點並建議分類；你確認後才會建立合作案。截圖上傳與 Gmail 外掛開發中。",
+    "intro": "Gmail 的信、貼上的文字和上傳的檔案都會進到這裡。系統會整理重點並建議分類；你確認後才會建立合作案。",
     "upload": "上傳截圖／PDF",
     "paste": "貼上邀約文字",
     "emptyTitle": "這裡還沒有邀約",
@@ -643,7 +641,7 @@
     "analyze": "開始分析",
     "submitting": "送出中…",
     "duplicate": "這段內容先前已匯入，已為你開啟。",
-    "showDismissed": "顯示已略過",
+    "showDismissed": "顯示已略過（{count}）",
     "status": {
       "pending": "分析中",
       "analyzed": "待確認",
@@ -761,7 +759,8 @@
     "historyGroup": "過往信件",
     "historyInfo": "過去 30 天內、兩週沒有新進度的信件串，留著備查；打開時才會分析。",
     "historyCount": "{count} 封",
-    "unverifiedSenderPayment": "Gmail 無法驗證寄件者，而這封信提到付款或匯款資料：這是常見的詐騙手法。請先別付款或回覆資料，用你原本就有的聯絡方式向對方確認。"
+    "unverifiedSenderPayment": "Gmail 無法驗證寄件者，而這封信提到付款或匯款資料：這是常見的詐騙手法。請先別付款或回覆資料，用你原本就有的聯絡方式向對方確認。",
+    "requestFailed": "沒有送出成功，請確認網路連線後再試一次。"
   },
   "intake": {
     "targetHeading": "歸入合作案",
@@ -1287,7 +1286,12 @@
     "notWorkBody": "這封信會移出進件分類，內文與附件會刪除。它仍會列在「已過濾」，可按「這是工作信」收回。",
     "notWorkNeverFrom": "也不再收 {sender} 的信",
     "autoInfo": "新信件會自動收進來。想馬上看到（例如正在等的回覆），可以按立即檢查。",
-    "sortingCount": "整理中 {count} 封"
+    "sortingCount": "整理中 {count} 封",
+    "connectInSettings": "到設定連結 Gmail",
+    "connectToSee": "連結 Gmail 後，信件會在這裡分類：工作信等你確認，其他的會被過濾。",
+    "reconnectInSettings": "Gmail 需要重新連結",
+    "reconnectWhy": "Google 的授權已失效，新信暫時進不來。",
+    "reconnectGo": "到設定重新連結"
   },
   "paymentNotice": {
     "chip": "收款",
@@ -1685,7 +1689,6 @@
     "savedDrafts": "Saved drafts",
     "quoteCalculator": "Quote calculator",
     "ledger": "Ledger",
-    "intake": "Intake",
     "files": "Files & assets",
     "talentAssistant": "Talent Assistant",
     "yourWorkspace": "YOUR WORKSPACE"

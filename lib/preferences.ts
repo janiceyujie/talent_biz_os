@@ -7,12 +7,10 @@ import { widgetIds } from "@/lib/overview/widgets";
 
 import { profileRoleSchema } from "@/lib/profile";
 
-import { eligibilityProfileSchema } from "@/lib/grants/eligibility";
 
 const MAX_IDS = 50;
 
 export const preferences = {
-  "opportunities.profile": { read: eligibilityProfileSchema, save: eligibilityProfileSchema },
   "profile.role": { read: profileRoleSchema, save: profileRoleSchema },
   /** Today's arrangement: only what differs from the role's defaults (lib/overview/layout). */
   "overview.layout": {

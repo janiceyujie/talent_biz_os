@@ -20,7 +20,7 @@ async function context() {
 }
 export async function refreshGrants(): Promise<string|null> {
   const {t}=await context();
-  const result=await refreshGrantSources({manual:true}); refresh();
+  const result=await refreshGrantSources(); refresh();
   return result.some(s=>!s.ok) ? t("refreshFailed") : null;
 }
 export async function saveGrant(id:string, plan?:unknown): Promise<string|null> {

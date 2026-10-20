@@ -4,8 +4,6 @@ import { db } from "@/lib/db";
 import { grantOpportunity, grantSource } from "@/lib/db/schema";
 import { grantsLocalEnabled } from "./config";
 import { grantPlainText, listingHash, parseGrantsGov, parseMoc } from "./domain";
-import { enrichGrantsGovEligibility } from "./grants-gov-eligibility";
-import { reuseGrantRefresh } from "./refresh-policy";
 import { grantSources, type GrantListing, type GrantSource } from "./types";
 
 async function request(url: string, body?: object, budget?:AbortSignal) {
@@ -31,9 +29,8 @@ async function readSource(source: (typeof grantSources)[number]): Promise<GrantL
   throw new Error("source_result_limit");
 }
 /** Cached once for all accounts. No AI, credentials, mail, or paid lookup service. */
-export async function refreshGrantSources(options: {manual?:boolean} = {}): Promise<{source:GrantSource;ok:boolean}[]> {
+export async function refreshGrantSources(): Promise<{source:GrantSource;ok:boolean}[]> {
   if (!grantsLocalEnabled()) throw new Error("grants_local_only");
-  const requestedAt = new Date();
   const outcomes=[];
   for (const source of grantSources) {
     const outcome=await db.transaction(async tx => {
@@ -41,11 +38,10 @@ export async function refreshGrantSources(options: {manual?:boolean} = {}): Prom
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`grant-source:${source}`}))`);
       await tx.insert(grantSource).values({id:source}).onConflictDoNothing();
       const [state]=await tx.select().from(grantSource).where(eq(grantSource.id,source));
-      if (reuseGrantRefresh(state.attemptedAt, requestedAt, !!options.manual)) return {source,ok:!state.failure};
+      if (state.attemptedAt && Date.now()-state.attemptedAt.getTime()<15*60*1000) return {source,ok:!state.failure};
       const now=new Date();
       try {
-        let listings=await readSource(source);
-        if(source==="grants_gov") listings=await enrichGrantsGovEligibility(listings,async(id,signal)=>JSON.parse(await request("https://api.grants.gov/v1/api/fetchOpportunity",{opportunityId:Number(id)},signal)),now);
+        const listings=await readSource(source);
         const previous=source==="moc"?await tx.select({externalId:grantOpportunity.externalId,title:grantOpportunity.title}).from(grantOpportunity).where(eq(grantOpportunity.source,source)):[];
         for (const incoming of listings) {
           const matches=previous.filter(row=>grantPlainText(row.title)===incoming.title);

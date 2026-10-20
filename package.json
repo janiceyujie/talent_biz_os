@@ -21,8 +21,7 @@
     "eval:assistant": "tsx --conditions=react-server scripts/eval-assistant.mts",
     "db:seed-templates": "tsx --conditions=react-server scripts/seed-document-templates.mts",
     "db:seed-trial": "tsx --conditions=react-server scripts/seed-local-trial.mts",
-    "db:seed-manager": "tsx --conditions=react-server scripts/seed-manager-trial.mts",
-    "worker:grants": "tsx --conditions=react-server worker/grants-local.ts"
+    "db:seed-manager": "tsx --conditions=react-server scripts/seed-manager-trial.mts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1146.0",

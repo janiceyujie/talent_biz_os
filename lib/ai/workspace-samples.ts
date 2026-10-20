@@ -23,5 +23,5 @@ export function workspaceSamples(real: AppData): AppData {
   return {...real,...portfolio,calendar:portfolio.calendar.map(c=>c.projectId==="film"?{...c,source:"event",kind:"meeting"}:c),preview:true,previewProjectDetails:portfolio.projectDetails,organizations:[],distinctOrganizations:[],projectPeople:[],previewDate:"2026-10-07",inbox,inboxOverview:undefined,
     contacts:[{id:"preview-contact",role:"counterparty",organizationId:null,name:"Sam [Sample]",company:"Morrow Studio",email:"sample@example.com",phone:"",notes:"Synthetic contact",archived:false}],
     projects:portfolio.projects.map(p=>({...p,nextAction:p.id==="show"?{id:"preview-next-show",title:"Confirm festival availability [Sample]",dueDate:"2026-10-08"}:p.nextAction,updatedAt:p.id==="show"?"2026-09-25T12:00:00.000Z":p.updatedAt})),
-    contracts:[],templates:[],drafts:[],files:[],externalEvents:[],notificationState:{},preferences:{"opportunities.profile":null,"profile.role":real.preferences?.["profile.role"]??null,"overview.layout":null},calendarFeed:false};
+    contracts:[],templates:[],drafts:[],files:[],externalEvents:[],notificationState:{},preferences:{"profile.role":real.preferences?.["profile.role"]??null,"overview.layout":null},calendarFeed:false};
 }

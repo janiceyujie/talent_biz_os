@@ -1,9 +1,8 @@
 "use client";
-import { EligibilitySummary, EligibilityProfileDialog } from "./opportunity-eligibility";
 import { ActionNotice } from "@/components/app/action-notice";
 import { ExternalLink, Plus, RefreshCw, Bell, CalendarDays, X } from "lucide-react";
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { PageLoader, useCursorPages } from "@/components/app/cursor-pages";
 import { useAppData } from "@/components/app/app-data";
 import { useState, useTransition } from "react";
@@ -27,14 +26,9 @@ import type { ProjectSummary } from "@/lib/types";
 
 export function GrantsView({workspace,projects,timeZone,initialOpportunityId=""}:{workspace:GrantWorkspace;projects:ProjectSummary[];timeZone:string;initialOpportunityId?:string}) {
   const t=useTranslations("grants");
-  const locale=useLocale();
   const tPage=useTranslations("pagination");
-  const [region,setRegion]=useState(workspace.opportunities.find(g=>g.id===initialOpportunityId)?.region||"all");
+  const [region,setRegion]=useState(workspace.opportunities.find(g=>g.id===initialOpportunityId)?.region||(timeZone==="Asia/Taipei"?"TW":"all"));
   const [scope,setScope]=useState<"discover"|"mine">(initialOpportunityId?"mine":"discover");
-  const [kind,setKind]=useState(initialOpportunityId?"all":"grant");
-  const [eligibility,setEligibility]=useState("all");
-  const [profileOpen,setProfileOpen]=useState(false);
-  const [refreshing,setRefreshing]=useState(false);
   const [query,setQuery]=useState("");
   const [availability,setAvailability]=useState<GrantAvailabilityFilter>("active");
   const [selected,setSelected]=useState<string|null>(initialOpportunityId||null);
@@ -45,35 +39,31 @@ export function GrantsView({workspace,projects,timeZone,initialOpportunityId=""}
   const run=(action:()=>Promise<string|null>,success=t("saved"))=>startTransition(async()=>{setError(null);try{const failure=await action();setError(failure);if(!failure)setStatus(success);}catch{setError(t("failed"));}});
   const today=dateInZone(timeZone);
   const data=useAppData();
-  const profile=data.preferences?.["opportunities.profile"]??null;
-  const page=useCursorPages<GrantOpportunity>(`/api/grants?${new URLSearchParams({region,scope,q:query,availability,kind,eligibility})}`, `${data.person.email}:${data.talent.id}`, workspace);
+  const page=useCursorPages<GrantOpportunity>(`/api/grants?${new URLSearchParams({region,scope,q:query,availability})}`, `${data.person.email}:${data.talent.id}`, workspace);
   const filtered=page.items;
   // Keep the selected detail open when filters/page data refresh after a save.
   const [opened,setOpened]=useState<GrantOpportunity|null>(null);
 
-  const clearFilters=()=>{setQuery("");setRegion("all");setAvailability("active");setEligibility("all");setSelected(null);};
+  const clearFilters=()=>{setQuery("");setRegion("all");setAvailability("active");setSelected(null);};
   const current=workspace.opportunities.find(g=>g.id===selected)||filtered.find(g=>g.id===selected)||(opened?.id===selected?opened:null);
   const application=workspace.applications.find(a=>a.opportunityId===selected);
   return <div className="grants-workspace">
     <div className="grant-toolbar">
       <div className="grant-tabs" role="group" aria-label={t("view")}>
-        {(["grant","opportunities","mine"] as const).map(tab=>{const active=tab==="mine"?scope==="mine":scope==="discover"&&kind===tab;return <button type="button" key={tab} aria-pressed={active} className={active?"primary":"secondary"} onClick={()=>{setScope(tab==="mine"?"mine":"discover");setKind(tab==="mine"?"all":tab);setSelected(null);}}>{t(`exploreTabs.${tab}`)}</button>;})}
+        {(["discover","mine"] as const).map(s=><button type="button" key={s} aria-pressed={scope===s} className={scope===s?"primary":"secondary"} onClick={()=>{setScope(s);setSelected(null);}}>{t(s)}</button>)}
       </div>
       <div className="grant-tools">
         <InfoHint label={t("about")} notes={[t("aboutText"),t("coverage"),t("eligibilityHint")]} />
-        <button type="button" className="secondary" disabled={pending} onClick={()=>{setRefreshing(true);setStatus("");run(async()=>{try{return await refreshGrants();}finally{setRefreshing(false);}},t("refreshed"));}}><RefreshCw size={16} aria-hidden="true"/>{t(refreshing?"refreshing":"refresh")}</button>
+        <button type="button" className="secondary" disabled={pending} onClick={()=>run(refreshGrants,t("refreshed"))}><RefreshCw size={16} aria-hidden="true"/>{t("refresh")}</button>
         <button type="button" className="secondary" onClick={()=>setWatch(true)}><Bell size={16} aria-hidden="true"/>{t(workspace.watch.enabled?"watchSettings":"watchEnable")}</button>
       </div>
     </div>
     <div className="grant-filters">
-      <button type="button" className="secondary" onClick={()=>setProfileOpen(true)}>{t("qualification.profile")}</button>
       <label className="grant-search"><span className="sr-only">{t("search")}</span><input type="search" placeholder={t("search")} value={query} onChange={e=>{setQuery(e.target.value);setSelected(null);}}/></label>
       <label><span className="sr-only">{t("region")}</span><select aria-label={t("region")} value={region} onChange={e=>{setRegion(e.target.value);setSelected(null);}}><option value="all">{t("allRegions")}</option>{grantRegions.map(r=><option key={r} value={r}>{t(`regions.${r}`)}</option>)}</select></label>
       {scope==="discover"&&<label><span className="sr-only">{t("availabilityFilter")}</span><select aria-label={t("availabilityFilter")} value={availability} onChange={e=>{setAvailability(e.target.value as GrantAvailabilityFilter);setSelected(null);}}>{(["active","open","upcoming","check","closed","all"] as const).map(state=><option key={state} value={state}>{t(state==="active"?"activeListings":state==="all"?"allStatuses":`availability.${state}`)}</option>)}</select></label>}
-      <label><span className="sr-only">{t("qualification.filter")}</span><select aria-label={t("qualification.filter")} value={eligibility} onChange={e=>{setEligibility(e.target.value);setSelected(null);}}>{(["all","possible","match","check","mismatch"] as const).map(k=><option value={k} key={k}>{t(`qualification.filters.${k}`)}</option>)}</select></label>
     </div>
-    {kind==="opportunities"&&<p className="grant-curated-note">{t("reviewedCoverage")}</p>}
-    <div className="grant-list-summary"><span role="status">{page.total===null?(page.failed?tPage("failed"):tPage("loading")):t("resultCount",{count:page.total})}</span><details className="grant-source-status"><summary>{t("sourceStatus")}{workspace.sources.some(s=>s.failed)&&` · ${t("sourceFailed")}`}</summary><div className="grant-source-line">{workspace.sources.map(s=><span key={s.id}>{t(`sources.${s.id}`)} · {s.failed?t("sourceFailed"):s.checkedAt?t("checkedDate",{date:new Intl.DateTimeFormat(locale,{dateStyle:"short",timeStyle:"short",timeZone}).format(new Date(s.checkedAt))}):t("notChecked")}</span>)}</div></details></div>
+    <div className="grant-list-summary"><span role="status">{page.total===null?(page.failed?tPage("failed"):tPage("loading")):t("resultCount",{count:page.total})}</span><details className="grant-source-status"><summary>{t("sourceStatus")}{workspace.sources.some(s=>s.failed)&&` · ${t("sourceFailed")}`}</summary><div className="grant-source-line">{workspace.sources.map(s=><span key={s.id}>{t(`sources.${s.id}`)} · {s.failed?t("sourceFailed"):s.checkedAt?t("checkedDate",{date:s.checkedAt.slice(0,10)}):t("notChecked")}</span>)}</div></details></div>
     {error&&<p className="notice error" role="alert">{error}</p>}
     <p className="sr-only" role="status">{status}</p>
     <div className={`grant-columns ${current?"has-selection":""}`}>
@@ -84,11 +74,10 @@ export function GrantsView({workspace,projects,timeZone,initialOpportunityId=""}
           return <button type="button" className={`grant-list-item ${selected===g.id?"selected":""}`} key={g.id} aria-pressed={selected===g.id} onClick={()=>{setOpened(g);setSelected(g.id);}}>
             <span className="grant-card-header"><span className="grant-card-source"><span>{t(`regions.${g.region}`)}</span><span aria-hidden="true">·</span><span>{g.source==="moc"?t("sources.moc"):g.agency}</span></span><span className={`grant-state ${state}`}>{t(`availability.${state}`)}</span></span>
             <strong className="grant-card-title">{g.title}</strong>
-            <span className="grant-card-classification"><span className="grant-source-tag">{t(`kinds.${g.kind??"grant"}`)}</span><EligibilitySummary opportunity={g} profile={profile} compact/></span>
             <span className="grant-card-deadline"><CalendarDays size={14} aria-hidden="true"/>{g.closesOn?t("deadlineDate",{date:g.closesOn}):t("deadlineUnknown")}</span>
             {app&&<span className="grant-card-footer"><span className="grant-saved">{t(`stages.${app.stage}`)}</span><GrantSubmissionSummary application={app} compact/></span>}
           </button>;
-        }):!page.loading&&!page.failed&&<div className="grant-empty"><h2>{t(scope==="mine"&&!workspace.applications.length?"emptyMine":"empty")}</h2><button type="button" className="secondary" onClick={()=>scope==="mine"&&!workspace.applications.length?(setScope("discover"),setKind("grant"),clearFilters()):clearFilters()}>{t(scope==="mine"&&!workspace.applications.length?"discover":"clearFilters")}</button></div>}
+        }):!page.loading&&!page.failed&&<div className="grant-empty"><h2>{t(scope==="mine"&&!workspace.applications.length?"emptyMine":"empty")}</h2><button type="button" className="secondary" onClick={()=>scope==="mine"&&!workspace.applications.length?(setScope("discover"),clearFilters()):clearFilters()}>{t(scope==="mine"&&!workspace.applications.length?"discover":"clearFilters")}</button></div>}
         <PageLoader page={page}/>
       </section>
       {current?<section className="grant-detail" aria-label={current.title}>
@@ -96,15 +85,12 @@ export function GrantsView({workspace,projects,timeZone,initialOpportunityId=""}
         <h2>{current.title}</h2>
         <dl className="grant-dates"><div><dt>{t("opens")}</dt><dd>{current.opensOn||t("unknown")}</dd></div><div><dt>{t("deadline")}</dt><dd>{current.closesOn||t("unknown")}</dd></div></dl>
         <div className="grant-detail-actions"><a className="secondary" href={current.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true"/>{t("official")}</a></div>
-        <EligibilitySummary opportunity={current} profile={profile}/>
         {!application&&<SaveGrantPlan key={current.id} opportunity={current} timeZone={timeZone} pending={pending} run={run}/>}
         {application&&<ApplicationPanel key={application.id} application={application} opportunity={current} projects={projects} timeZone={timeZone} today={today} pending={pending} run={run}/>}
         <details className="grant-reference"><summary>{t("requirements")}</summary><p>{t("eligibilityHint")}</p>{current.summary&&<p>{current.summary}</p>}<p>{t("dateHint")}</p><p>{t("checkedDate",{date:current.checkedAt.slice(0,10)})}</p></details>
 
       </section>:<aside className="grant-guide"><h2>{t("guideTitle")}</h2><ol><li>{t("guideDiscover")}</li><li>{t("guidePrepare")}</li><li>{t("guideConnect")}</li></ol></aside>}
     </div>
-    {status&&<Toast message={status} onClose={()=>setStatus("")}/>}
-    {profileOpen&&<EligibilityProfileDialog profile={profile} onClose={()=>setProfileOpen(false)} run={run} pending={pending}/>}
     {watch&&<WatchDialog workspace={workspace} onClose={()=>setWatch(false)} run={run} pending={pending}/>}
   </div>;
 }

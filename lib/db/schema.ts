@@ -1047,7 +1047,7 @@ export const grantOpportunity = pgTable("grant_opportunity", {
   opensOn: date(), closesOn: date(), sourceStatus: text({enum:["posted","forecasted","unknown"]}).notNull(),
   summary: text().notNull().default(""), contentHash: text().notNull(),
   kind: text({enum:["grant","competition","exhibition","showcase"]}).notNull().default("grant"),
-  eligibility: jsonb().$type<import("@/lib/grants/eligibility").EligibilityRule>(),
+  eligibility: jsonb().$type<import("@/lib/grants/eligibility-types").EligibilityRule>(),
   checkedAt: createdAt(), changedAt: createdAt(), createdAt: createdAt(),
 }, t => [unique("grant_opportunity_source_external").on(t.source,t.externalId), check("grant_opportunity_kind_check",oneOf(t.kind,["grant","competition","exhibition","showcase"])), index("grant_opportunity_kind_idx").on(t.kind), index("grant_opportunity_region_close_idx").on(t.region,t.closesOn), check("grant_opportunity_region_check",oneOf(t.region,["TW","US"])), check("grant_opportunity_status_check",oneOf(t.sourceStatus,["posted","forecasted","unknown"]))]).enableRLS();
 export const grantApplication = pgTable("grant_application", {

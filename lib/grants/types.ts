@@ -1,4 +1,4 @@
-import type { EligibilityRule } from "./eligibility";
+import type { EligibilityRule } from "./eligibility-types";
 export const opportunityKinds = ["grant", "competition", "exhibition", "showcase"] as const;
 export type OpportunityKind = (typeof opportunityKinds)[number];
 export const grantRegions = ["TW", "US"] as const;

@@ -11,7 +11,7 @@ import { createPaymentPlan } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
 import { splitPayments } from "@/lib/domain/money";
 import { useMoney } from "@/lib/i18n/format";
-import { isSigned } from "@/lib/domain/phases";
+import { isOpenStage } from "@/lib/domain/phases";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
 import type { Project } from "@/lib/types";
@@ -94,8 +94,8 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
   const payments = data.payments.filter((p) => p.projectId === project.id && !p.voided);
   const hasIncome = payments.some((p) => p.direction === "in");
   const quoteSet = project.quotedAmount !== null;
-  // New payments need a live, signed project; the server enforces the same rule.
-  const canAdd = !project.archived && isSigned(project.stage);
+  // New payments need a project still going (decision 0018); the server enforces the same rule.
+  const canAdd = !project.archived && isOpenStage(project.stage);
   const checks = useClosingChecks(project);
 
   let preview: ReturnType<typeof splitPayments> | undefined;

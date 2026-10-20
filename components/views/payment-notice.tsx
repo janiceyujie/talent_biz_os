@@ -7,7 +7,8 @@ import { useAppData } from "@/components/app/app-data";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { InfoHint } from "@/components/app/info-hint";
 import { markNotWork, recordNoticePayment } from "@/lib/actions/mail";
-import { isSigned } from "@/lib/domain/phases";
+import { isOpenStage } from "@/lib/domain/phases";
+import { countedPayments } from "@/lib/domain/workflow";
 import { useMoney } from "@/lib/i18n/format";
 import type { NoticeFields } from "@/lib/mail/payment-notice/fields";
 import { expectedTotal, matchNotice, openIncome, type NoticeMatch } from "@/lib/mail/payment-notice/match";
@@ -28,7 +29,8 @@ export function useNoticeMatch(notice: NoticeFields | null): NoticeMatch {
     const people = data.projectPeople.filter((x) => x.projectId === project.id).flatMap((x) => contactName.get(x.contactId) ?? []);
     return [project.counterparty, ...people].filter(Boolean);
   };
-  return matchNotice(notice, data.payments, namesFor);
+  // A notice settles expected money on signed work, or with no project (decision 0018).
+  return matchNotice(notice, countedPayments(data.payments, data.projects), namesFor);
 }
 
 /** "Project · label" for a payment, as the card and the list row name it. */
@@ -81,8 +83,9 @@ export function NoticeDetail({
 
   const amount = money(notice.amount, notice.currency);
   const twd = notice.currency === "TWD";
-  const others = openIncome(data.payments, notice.currency).filter((p) => p.id !== match?.payment.id);
-  const signed = data.projects.filter((p) => !p.archived && isSigned(p.stage));
+  const others = openIncome(countedPayments(data.payments, data.projects), notice.currency).filter((p) => p.id !== match?.payment.id);
+  // Money that arrived may go on any deal still going (decision 0018).
+  const signed = data.projects.filter((p) => !p.archived && isOpenStage(p.stage));
   const recorded = notice.paymentId ? data.payments.find((p) => p.id === notice.paymentId) : undefined;
   const day = (iso: string) => format.dateTime(new Date(`${iso}T12:00:00Z`), { year: "numeric", month: "numeric", day: "numeric", weekday: "short", timeZone: "UTC" });
   const target =
@@ -214,7 +217,7 @@ export function NoticeDetail({
                       ) : (
                         <small className="muted">{t("noProjects")}</small>
                       ))}{" "}
-                    {choice.kind === "new" && !!signed.length && <InfoHint notes={[t("signedOnly")]} />}
+                    {choice.kind === "new" && !!signed.length && <InfoHint notes={[t("openOnly")]} />}
                   </span>
                 </label>
               </div>

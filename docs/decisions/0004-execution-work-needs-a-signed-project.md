@@ -1,6 +1,6 @@
 # 0004 — Execution work attaches only to signed projects
 
-**Status:** Accepted (recorded 2026-10-03; decided while porting project phases)
+**Status:** Superseded by [0018](0018-anything-on-an-open-deal.md) (2026-10-20): anything can go on an open deal, and only signed work counts. Accepted (recorded 2026-10-03; decided while porting project phases)
 
 ## Context
 

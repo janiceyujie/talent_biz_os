@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Maximize2, MessageCircle, X } from "lucide-react";
+import { Maximize2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AssistantView } from "@/components/views/assistant";
+import { AssistantMascot } from "./assistant-mascot";
 import { useAssistantConversation } from "./assistant-provider";
 
 /** A non-modal conversation that stays available while navigating the workspace. */
@@ -37,7 +38,7 @@ export function AssistantDock({ hidden = false }: { hidden?: boolean }) {
   return <div className="assistant-dock" data-preview-safe="true">
     {visible && <section ref={panel} id="assistant-dock-panel" className="assistant-dock-panel" role="dialog" aria-modal="false" aria-labelledby="assistant-dock-title" tabIndex={-1}>
       <div className="assistant-dock-heading">
-        <h2 id="assistant-dock-title">{t("dockTitle")}</h2>
+        <h2 id="assistant-dock-title"><AssistantMascot size={32}/>{t("dockTitle")}</h2>
         <div>
           <Link className="assistant-dock-action" href="/assistant" aria-label={t("expand")} title={t("expand")} onClick={() => setOpen(false)}><Maximize2 size={18} aria-hidden="true" /></Link>
           <button type="button" className="assistant-dock-action" aria-label={t("minimize")} title={t("minimize")} onClick={close}><X size={20} aria-hidden="true" /></button>
@@ -46,7 +47,7 @@ export function AssistantDock({ hidden = false }: { hidden?: boolean }) {
       <AssistantView compact />
     </section>}
     <button ref={launcher} type="button" className="assistant-launcher" aria-label={t(visible ? "minimize" : "openChat")} aria-expanded={visible} aria-controls={visible ? "assistant-dock-panel" : undefined} onClick={() => setOpen(!open)}>
-      {visible ? <X size={22} aria-hidden="true" /> : <MessageCircle size={22} aria-hidden="true" />}
+      {visible ? <X size={22} aria-hidden="true" /> : <AssistantMascot thinking={pending} size={32}/>}
       <span>{t("dockTitle")}</span>
       {pending && <i className="assistant-launcher-pending" aria-label={t("working")} />}
     </button>

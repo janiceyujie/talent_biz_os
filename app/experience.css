@@ -5731,3 +5731,22 @@ html:has(dialog[open]) .assistant-dock { visibility: hidden; }
 .intake-demo-toolbar, .intake-connect-notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .intake-demo-toolbar { margin: 12px 0; color: var(--muted); font-size: 13px; }
 .intake-demo-toolbar > span, .intake-connect-notice > span { flex: 1 1 240px; }
+
+/* The brand helper moves only while a response is pending. */
+.assistant-mascot { display:block; flex:0 0 auto; overflow:visible; }
+.assistant-mascot-body { transform-origin:32px 36px; }
+.assistant-mascot.is-thinking .assistant-mascot-body { animation:assistant-helper-think 1.8s ease-in-out infinite; }
+.assistant-pending { display:flex; align-items:center; gap:12px; }
+.assistant-pending p { margin:0; flex-wrap:wrap; }
+.assistant-dock-heading h2 { display:flex; align-items:center; gap:8px; }
+.assistant-launcher > .assistant-mascot { margin-block:-4px; }
+@keyframes assistant-helper-think {
+  0%, 100% { transform:translateY(0) rotate(-3deg); }
+  50% { transform:translateY(-3px) rotate(3deg); }
+}
+@media (prefers-reduced-motion:reduce) {
+  .assistant-mascot.is-thinking .assistant-mascot-body { animation:none; }
+}
+@media (max-width:600px) {
+  .workspace-tools .assistant-launcher:has(> .assistant-mascot) { padding:6px; }
+}

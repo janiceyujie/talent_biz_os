@@ -29,3 +29,5 @@ The running local checkout, web server and database remain on the complete devel
 ## Verification
 
 Run unit tests, type checking, lint, bilingual catalogue checks and production builds on the changed third, fourth and fifth tips. Compare the fifth's complete product source against `35e07df`: all non-document product files must be byte-identical, including CSS, assistant UI, all migrations and business logic. This confirms extraction fidelity; prior browser acceptance reports describe the unchanged UI, not a new browser test in this split.
+
+Completed validation: third branch 425 tests; fourth and fifth branches 433 tests each. All three passed ESLint, TypeScript, 3,633 bilingual locale keys / 75 registry labels and the standard production build. The fifth branch changes only five visual source files relative to the fourth, plus this validation record. All final non-document product files are byte-identical to `35e07df`; database migration history and business logic are unchanged. Browser and real-provider workflows were not rerun for this source-identical extraction.

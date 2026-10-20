@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
 import { freeTierOk, keepsData, modelFor } from "@/lib/ai/model";
 import { relevanceQueue } from "@/lib/queue/jobs";
 import { cache } from "react";
@@ -69,7 +69,8 @@ export const getAppData = cache(async (): Promise<AppData> => {
       .leftJoin(project, eq(project.id, payment.projectId))
       .where(eq(payment.talentId, current.id))
       .orderBy(desc(payment.recordedOn), desc(payment.createdAt)),
-    db.select().from(calendarEvent).where(eq(calendarEvent.talentId, current.id)),
+    // Not events deleted in Google Calendar: they're gone from every screen (decision 0017).
+    db.select().from(calendarEvent).where(and(eq(calendarEvent.talentId, current.id), isNull(calendarEvent.deletedInGoogleAt))),
     db.select().from(todo).where(eq(todo.talentId, current.id)).orderBy(todo.createdAt),
     db.select().from(replyTemplate).where(eq(replyTemplate.talentId, current.id)).orderBy(desc(replyTemplate.updatedAt)),
     db.select().from(notificationState).where(eq(notificationState.personId, person.personId)),
@@ -181,6 +182,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       timeZone: e.timeZone,
       location: e.location ?? "",
       projectId: e.projectId,
+      suggestedProjectId: e.suggestedProjectId,
       notes: e.notes ?? "",
       done: false,
       archived: e.archivedAt !== null,
@@ -213,6 +215,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
         timeZone: t.timeZone,
         location: "",
         projectId: t.projectId,
+        suggestedProjectId: null,
         notes: t.notes ?? "",
         done: t.status === "done",
         archived: t.status === "dismissed",
@@ -265,7 +268,8 @@ export const getAppData = cache(async (): Promise<AppData> => {
     googleCalendar: {
       available: isGoogleConfigured,
       importGranted: hasScopes(accountRows.find((a) => a.providerId === "google")?.scope, IMPORT_SCOPES),
-      importing: importSources.map((x) => ({ name: x.name, color: x.color, lastImportedAt: x.lastImportedAt?.toISOString() ?? null })),
+      // The person's chosen calendars; not our own calendar's repeating events, read the same way.
+      importing: importSources.filter((x) => !x.own).map((x) => ({ name: x.name, color: x.color, lastImportedAt: x.lastImportedAt?.toISOString() ?? null })),
       granted: !!accountRows.find((a) => a.providerId === "google")?.scope?.split(/[ ,]/).includes(CALENDAR_SCOPE),
       connection: connection
         ? {

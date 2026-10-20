@@ -6,7 +6,7 @@ import { refresh } from "next/cache";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { authAccount, calendarConnection, calendarImportSource } from "@/lib/db/schema";
-import { googleCalendar, revokeGoogleToken } from "@/lib/calendar/google/api";
+import { googleCalendar, GoogleCalendarError, revokeGoogleToken } from "@/lib/calendar/google/api";
 import { importConnection } from "@/lib/calendar/google/import";
 import { CALENDAR_SCOPE, hasScopes, IMPORT_SCOPES } from "@/lib/calendar/google/scope";
 import { accessToken, queueCalendarSync, syncConnection } from "@/lib/calendar/google/sync";
@@ -56,7 +56,7 @@ export async function syncGoogleCalendarNow(): Promise<string | null> {
     .returning({ id: calendarConnection.id });
   if (!connection) return fail("calendarNotConnected");
   await syncConnection(connection.id); // here, not after the response: the card shows the result
-  await importConnection(connection.id);
+  await importConnection(connection.id, { force: true });
   refresh();
   return null;
 }
@@ -108,8 +108,11 @@ async function myConnection() {
 
 export type GoogleCalendarChoice = { id: string; name: string; color: string | null; selected: boolean };
 
-/** The person's Google calendars to choose from (not our own Talent Biz OS calendar). */
-export async function listGoogleCalendars(): Promise<{ calendars: GoogleCalendarChoice[] } | { error: string }> {
+/**
+ * The person's Google calendars to choose from (not our own Talent Biz OS calendar). `grant`: the
+ * token can't read calendars after all (a reconnect that asked for less), so ask Google again.
+ */
+export async function listGoogleCalendars(): Promise<{ calendars: GoogleCalendarChoice[] } | { error: string } | { grant: true }> {
   const fail = await errorText();
   const c = await myConnection();
   if (!c || c.status !== "connected") return { error: fail("calendarNotConnected") };
@@ -124,7 +127,8 @@ export async function listGoogleCalendars(): Promise<{ calendars: GoogleCalendar
         .map((g) => ({ id: g.id, name: g.summaryOverride || g.summary || g.id, color: g.backgroundColor ?? null, selected: chosen.has(g.id) }))
         .sort((a, b) => Number(b.selected) - Number(a.selected)),
     };
-  } catch {
+  } catch (e) {
+    if (e instanceof GoogleCalendarError && e.scopeMissing) return { grant: true };
     return { error: fail("calendarUnreachable") };
   }
 }
@@ -146,19 +150,20 @@ export async function saveGoogleCalendarChoice(calendars: z.input<typeof choice>
   // Calendars no longer chosen go, with their events.
   await db
     .delete(calendarImportSource)
-    .where(ids.length ? and(eq(calendarImportSource.connectionId, c.id), notInArray(calendarImportSource.externalCalendarId, ids)) : eq(calendarImportSource.connectionId, c.id));
+    // Never our own calendar's repeating events: they aren't a choice here.
+    .where(
+      and(
+        eq(calendarImportSource.connectionId, c.id),
+        eq(calendarImportSource.own, false),
+        ids.length ? notInArray(calendarImportSource.externalCalendarId, ids) : undefined,
+      ),
+    );
   for (const x of parsed.data)
     await db
       .insert(calendarImportSource)
       .values({ connectionId: c.id, externalCalendarId: x.id, name: x.name, color: x.color })
       .onConflictDoUpdate({ target: [calendarImportSource.connectionId, calendarImportSource.externalCalendarId], set: { name: x.name, color: x.color } });
-  await importConnection(c.id);
+  await importConnection(c.id, { force: true });
   refresh();
   return null;
-}
-
-/** While the calendar is open: read the chosen calendars again if it's been a couple of minutes. */
-export async function refreshGoogleCalendars(): Promise<void> {
-  const c = await myConnection();
-  if (c && (await importConnection(c.id, { minAgeMs: 2 * 60_000 }))) refresh();
 }

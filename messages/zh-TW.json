@@ -973,7 +973,8 @@
       "arrives": "抵達 {when}",
       "noArrival": "抵達時間尚未登錄",
       "seat": "座位 {seat}"
-    }
+    },
+    "onlyNoProject": "只看未歸入合作案（{count}）"
   },
   "planner": {
     "views": "行事曆檢視",
@@ -1038,7 +1039,9 @@
     "fromGoogle": "來自 Google · {calendar}",
     "untitled": "（無標題）",
     "create": "新增",
-    "zone": "時間以 {zone} 顯示"
+    "zone": "時間以 {zone} 顯示",
+    "noProject": "未歸入合作案",
+    "addToProject": "加到合作案"
   },
   "calendarFeed": {
     "title": "訂閱連結",
@@ -1075,7 +1078,7 @@
   },
   "googleCalendar": {
     "calendarName": "Talent Biz OS · {talent}",
-    "calendarDescription": "由 Talent Biz OS 建立並同步的行程。請在 Talent Biz OS 中修改；在這裡的修改會在下次同步時被覆蓋。",
+    "calendarDescription": "由 Talent Biz OS 建立的行程。在這裡或 Talent Biz OS 修改，兩邊都會更新。",
     "title": "Google 日曆",
     "notConfigured": "這個環境尚未設定 Google。",
     "needGoogle": "請先在上方「以 Google 登入」連結 Google 帳號",
@@ -1107,8 +1110,8 @@
     "chooseNone": "這個 Google 帳號沒有其他日曆。",
     "chooseSave": "儲存",
     "saving": "儲存中…",
-    "sendTitle": "傳送到 Google",
-    "sendTo": "你的行程 → Google 上的「Talent Biz OS」日曆",
+    "sendTitle": "與 Google 同步",
+    "sendTo": "你的行程 ⇄ Google 上的「Talent Biz OS」日曆。在任一邊修改，另一邊也會跟著更新。",
     "importNone": "尚未選擇",
     "aboutSend": "傳送到 Google：已確認的行程會放進你 Google 帳號中專屬的「Talent Biz OS」日曆，儲存後隨即更新。本服務只會建立與修改這個日曆；同步標題、時間、地點與所屬合作案，待辦與款項不會同步。",
     "aboutShow": "在這裡顯示：你勾選的 Google 日曆會唯讀顯示在這裡的行事曆中，只有你看得到，方便看出和私人行程的衝突。本服務只讀取你勾選的日曆。",
@@ -1118,7 +1121,8 @@
     "syncFailed": "上次同步失敗",
     "manage": "管理",
     "done": "完成",
-    "syncedJustNow": "剛剛同步"
+    "syncedJustNow": "剛剛同步",
+    "notesMarker": "── 備註（與 Talent Biz OS 同步）──"
   },
   "gmail": {
     "title": "Gmail",
@@ -1912,5 +1916,13 @@
       "distinctTitle": "已標記為不同的公司",
       "undo": "復原"
     }
+  },
+  "projectPicker": {
+    "title": "加到合作案",
+    "search": "搜尋合作案",
+    "suggested": "建議",
+    "none": "還沒有已簽約的合作案。合作案簽約後，才能把行程加進去。",
+    "noMatch": "找不到符合的合作案。",
+    "added": "已加到「{project}」。"
   }
 }

@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useOptimistic, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { ProjectPicker } from "@/components/app/project-picker";
 import { calendarRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
 import { TravelSummary } from "@/components/app/travel-summary";
 import { YourTime } from "@/components/app/your-time";
@@ -10,6 +11,7 @@ import { calendarPoints, externalPoints, pointKind, type CalendarPoint, type Ext
 import { archiveCalendarItem, setTodoDone } from "@/lib/actions/calendar";
 import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
+import type { CalendarItem } from "@/lib/types";
 
 // Weekday headers from the locale itself, Sunday first (2024-01-07 was a Sunday).
 const weekdays = (locale: string) =>
@@ -31,6 +33,8 @@ export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?
   const [day, setDay] = useState(initialDay);
   const [showDone, setShowDone] = useState(false);
   const [archived, setArchived] = useState(false);
+  const [unfiled, setUnfiled] = useState(false); // only events not in a project (decision 0017)
+  const [filing, setFiling] = useState<CalendarItem | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const run = (action: () => Promise<string | null>) => startTransition(async () => setError(await action()));
@@ -46,9 +50,11 @@ export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?
   // The person's Google events (decision 0009, phase 2): read-only, never archived or done.
   const google = externalPoints(data.externalEvents);
   const shown = (p: { date: string }) => p.date.startsWith(month) && (!day || p.date === day);
+  const noProject = (c: CalendarItem) => c.source === "event" && !c.projectId && !c.archived;
+  const unfiledCount = new Set(points.filter((p) => noProject(p.item) && shown(p)).map((p) => p.item.id)).size;
   const items: (CalendarPoint | ExternalPoint)[] = [
-    ...points.filter((p) => p.item.archived === archived && (showDone || !p.item.done) && shown(p)),
-    ...(archived ? [] : google.filter(shown)),
+    ...points.filter((p) => p.item.archived === archived && (showDone || !p.item.done) && shown(p) && (!unfiled || noProject(p.item))),
+    ...(archived || unfiled ? [] : google.filter(shown)),
   ].sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`) || a.key.localeCompare(b.key));
   const move = (n: number) => {
     const d = new Date(start);
@@ -91,6 +97,10 @@ export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?
         <label className="check-line">
           <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
           {t("archivedOnly")}
+        </label>
+        <label className="check-line">
+          <input type="checkbox" checked={unfiled} onChange={(e) => setUnfiled(e.target.checked)} />
+          {t("onlyNoProject", { count: unfiledCount })}
         </label>
       </div>
       <p className="muted">{t("note")}</p>
@@ -167,6 +177,14 @@ export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?
                 {c.projectId && (
                   <small>{t("project", { title: data.projects.find((x) => x.id === c.projectId)?.title || t("notFound") })}</small>
                 )}
+                {noProject(c) && (
+                  <p className="no-project-line">
+                    <span className="no-project">{tp("noProject")}</span>
+                    <button className="text-button" onClick={() => setFiling(c)}>
+                      {tp("addToProject")}
+                    </button>
+                  </p>
+                )}
                 {c.source === "event" && !c.archived && !p.end && (
                   <a className="text-button" href={`/api/calendar/events/${c.id}`} download>
                     {t("downloadIcs")}
@@ -181,6 +199,7 @@ export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?
         })}
         {!items.length && <p className="empty">{t("empty")}</p>}
       </section>
+      {filing && <ProjectPicker item={filing} onClose={() => setFiling(null)} />}
       {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
     </>
   );

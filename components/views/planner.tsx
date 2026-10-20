@@ -12,14 +12,15 @@ import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition, typ
 import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
 import { PageHeader } from "@/components/app/page-header";
+import { ProjectPicker } from "@/components/app/project-picker";
 import { Toast } from "@/components/app/toast";
 import { calendarRecord, RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { deleteCalendarItem, saveCalendarItem } from "@/lib/actions/calendar";
-import { refreshGoogleCalendars } from "@/lib/actions/google-calendar";
 import { at, clock, conflicts, layoutDay, minutes, moveItem, planItems, plusDays, segment, validItem, weekStart, type PlanItem } from "@/lib/calendar/planner";
 import { dateInZone } from "@/lib/domain/dates";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
+import type { CalendarItem } from "@/lib/types";
 import { CalendarView } from "./calendar";
 
 type View = "day" | "week" | "month";
@@ -38,6 +39,7 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
   // The item being edited; `dropped` when it came from a drag, so the dialog only asks to confirm.
   const [editing, setEditing] = useState<(PlanItem & { dropped?: boolean }) | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [filing, setFiling] = useState<CalendarItem | null>(null); // Add to a project
   const [message, setMessage] = useState("");
   const [, startTransition] = useTransition();
   const saved = useMemo(() => planItems(data), [data]);
@@ -75,15 +77,8 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
       if (failure) return setMessage(failure);
       setMessage(t("deleted", { title: item.title }));
     });
-  // The person's own Google calendars (decision 0009, phase 2): read again on opening and every few
-  // minutes while the calendar is open (the server skips it if read in the last two minutes).
-  const importing = data.googleCalendar.importing.length > 0;
-  useEffect(() => {
-    if (!importing) return;
-    void refreshGoogleCalendars();
-    const timer = setInterval(() => void refreshGoogleCalendars(), 3 * 60_000);
-    return () => clearInterval(timer);
-  }, [importing]);
+  // The person's own Google calendars (decision 0009, phase 2) are read by the worker every few
+  // minutes (calendar.sync); the app-wide change check shows what it brings (live-refresh.tsx).
   const open = (item: PlanItem) => {
     // A Google event opens in Google Calendar: it's read-only here.
     if (item.ref.source === "google") return void (item.ref.link && window.open(item.ref.link, "_blank", "noopener"));
@@ -245,8 +240,14 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
             setEditing(null);
             if (c) setEditor({ kind: "calendar", item: calendarRecord(c) });
           }}
+          onAddToProject={() => {
+            const c = data.calendar.find((x) => x.id === editing.ref.id && x.source === "event");
+            setEditing(null);
+            if (c) setFiling(c);
+          }}
         />
       )}
+      {filing && <ProjectPicker item={filing} onClose={() => setFiling(null)} onDone={setMessage} />}
       {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
     </div>
   );
@@ -542,6 +543,7 @@ export function EventCard({
             : t("noTime")}
         </span>
         {!compact && item.project && <span>{item.project}</span>}
+        {!compact && !item.projectId && item.ref.source === "event" && <span className="no-project">{t("noProject")}</span>}
         {!compact && item.client && <span className="planner-event-meta">{item.client}</span>}
         {item.amount !== null && <span className="planner-event-meta">{money(Math.abs(item.amount))}</span>}
         {clash && <span className="planner-conflict">{t("conflict")}</span>}
@@ -561,6 +563,7 @@ function TimeEditor({
   onSave,
   onDelete,
   onFull,
+  onAddToProject,
 }: {
   item: PlanItem;
   dropped: boolean;
@@ -570,6 +573,7 @@ function TimeEditor({
   onSave: (next: PlanItem) => void;
   onDelete: () => void;
   onFull: () => void;
+  onAddToProject: () => void;
 }) {
   const t = useTranslations("planner");
   const [draft, setDraft] = useState<PlanItem>(item);
@@ -592,6 +596,14 @@ function TimeEditor({
           <p>
             {item.project}
             {item.client ? ` · ${item.client}` : ""}
+          </p>
+        )}
+        {!item.projectId && item.ref.source === "event" && (
+          <p className="no-project-line">
+            <span className="no-project">{t("noProject")}</span>
+            <button className="text-button" onClick={onAddToProject}>
+              {t("addToProject")}
+            </button>
           </p>
         )}
         {draft.fixed && changed && (

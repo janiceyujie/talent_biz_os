@@ -246,6 +246,20 @@
       "when": 1792351289658,
       "tag": "0034_sender_check",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792451985065,
+      "tag": "0035_calendar_sync_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792453918205,
+      "tag": "0036_calendar_two_way",
+      "breakpoints": true
     }
   ]
 }

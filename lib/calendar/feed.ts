@@ -16,10 +16,13 @@ export const hashFeedToken = (token: string) => createHash("sha256").update(toke
 export const appUrl = () => (process.env.BETTER_AUTH_URL ?? "http://localhost:3000").replace(/\/$/, "");
 export const feedUrl = (token: string) => `${appUrl()}/api/calendar/feed/${token}.ics`;
 
-/** Confirmed, non-archived events for one talent, ready for .ics output, described in `locale`. */
-export async function feedEvents(talentId: string, locale: unknown, eventId?: string): Promise<IcsEvent[]> {
+/**
+ * Confirmed, non-archived events for one talent, ready for .ics output and Google, described in
+ * `locale`. Inside a sync, `tx` reads them in its transaction, with the changes it just made.
+ */
+export async function feedEvents(talentId: string, locale: unknown, eventId?: string, tx: Pick<typeof db, "select"> = db): Promise<IcsEvent[]> {
   const t = await translator(toLocale(locale), "calendar"); // also in the worker, with no request
-  const rows = await db
+  const rows = await tx
     .select({ event: calendarEvent, projectTitle: project.title })
     .from(calendarEvent)
     .leftJoin(project, eq(project.id, calendarEvent.projectId))
@@ -28,6 +31,7 @@ export async function feedEvents(talentId: string, locale: unknown, eventId?: st
         eq(calendarEvent.talentId, talentId),
         eq(calendarEvent.status, "confirmed"),
         isNull(calendarEvent.archivedAt),
+        isNull(calendarEvent.deletedInGoogleAt), // deleted in Google: gone everywhere (decision 0017)
         eventId ? eq(calendarEvent.id, eventId) : undefined,
       ),
     );
@@ -48,6 +52,9 @@ export async function feedEvents(talentId: string, locale: unknown, eventId?: st
       ]
         .filter(Boolean)
         .join("\n") || null,
+    kind: e.kind,
+    notes: e.notes,
+    info: [projectTitle ? t("project", { title: projectTitle }) : "", [e.operator, e.serviceNumber, e.seat].filter(Boolean).join(" · ")].filter(Boolean),
     updatedAt: e.updatedAt,
   }));
 }

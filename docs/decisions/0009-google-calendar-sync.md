@@ -1,6 +1,6 @@
 # 0009 — Syncing with Google Calendar
 
-**Status:** Accepted (2026-10-05)
+**Status:** Accepted (2026-10-05). Phase 3 and the ownership rules changed by [0017](0017-two-way-google-calendar.md): edits made in Google come back.
 
 ## Context
 

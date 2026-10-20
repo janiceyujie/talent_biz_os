@@ -18,13 +18,15 @@ export const jobs = {
   /** Revoke a mailbox's token at Google and delete the connection (lib/mail/jobs/disconnect.ts). */
   // keep: "filed" keeps email filed under a project; "none" removes everything brought in.
   "mail.disconnect": z.strictObject({ connectionId: z.uuid(), keep: z.enum(["filed", "none"]).default("none") }),
-  /** Push a talent's events to one Google Calendar connection (lib/calendar/google/sync.ts); `attempt` counts tries after a failure. */
+  /** One Google Calendar connection both ways (lib/calendar/google/sync.ts): read our calendar back, push our events, read the chosen calendars; `attempt` counts push tries after a failure. */
   "calendar.sync": z.strictObject({ connectionId: z.uuid(), attempt: z.number().int().min(0).max(1000).default(0) }),
   // Scheduled by the worker (worker/schedule.ts); the scheduler adds its own `_cron` details, ignored here.
   /** A sync for every connected mailbox: the poll, and push's safety net (lib/mail/jobs/reconcile.ts). */
   "mail.reconcile": z.object({}),
   /** Daily: old skipped decisions, unhandled payment notices, and jobs that gave up long ago (lib/mail/jobs/cleanup.ts). */
   "mail.cleanup": z.object({}),
+  /** A sync for every connected Google Calendar connection with none waiting (lib/calendar/google/sync.ts). */
+  "calendar.reconcile": z.object({}),
 };
 
 export type JobName = keyof typeof jobs;
@@ -53,6 +55,8 @@ export const jobAttempts: Record<JobName, number> = {
   // The next run comes on schedule anyway.
   "mail.reconcile": 1,
   "mail.cleanup": 3,
+  // The next run comes on schedule anyway.
+  "calendar.reconcile": 1,
 };
 
 /** The key that makes a second "analyze this message" replace a waiting one instead of queueing twice. */

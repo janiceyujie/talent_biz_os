@@ -2,6 +2,7 @@
 // what a Google event looks like, and what a sync has to create, update, or
 // remove. Pure functions; lib/calendar/google/sync.ts does the calls.
 import { DEFAULT_DURATION_MINUTES, type IcsEvent } from "../ics";
+import { googleDescription } from "./two-way";
 
 /** The fields we write on a Google Calendar event (Events resource). */
 export type GoogleEventBody = {
@@ -32,10 +33,12 @@ function addMinutes(date: string, time: string, minutes: number) {
  * 0003), so a Tokyo show stays at Tokyo time. An event without a time is
  * all-day; a timed event without an end lasts an hour, as in the .ics feed.
  */
-export function toGoogleEvent(e: IcsEvent): GoogleEventBody {
+export function toGoogleEvent(e: IcsEvent, notesMarker?: string): GoogleEventBody {
+  // With the notes line (decision 0017): our lines above it, the event's notes below, read back.
+  const description = notesMarker ? googleDescription(e.info ?? [], e.notes, notesMarker) : e.description;
   const base = {
     summary: e.title,
-    ...(e.description ? { description: e.description } : {}),
+    ...(description ? { description } : {}),
     ...(e.location ? { location: e.location } : {}),
     extendedProperties: { private: { talentBizOsId: e.id } },
   };

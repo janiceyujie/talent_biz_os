@@ -11,8 +11,8 @@ const phaseByStage: Record<Stage, Phase> = {
   signed: "execution",
   in_progress: "execution",
   collecting_payment: "settlement",
-  closed: "settlement",
-  declined: "ended", // exits: finished, outside the three phases
+  closed: "ended",
+  declined: "ended",
   cancelled: "ended",
 };
 
@@ -22,7 +22,9 @@ export const phaseOf = (stage: Stage): Phase => phaseByStage[stage];
 export const mainStages: Stage[] = ["offer", "negotiating", "signed", "in_progress", "collecting_payment", "closed"];
 
 /**
- * Signed work (execution or settlement phase). Only signed projects take new
- * linked events, execution to-dos, and payments.
+ * Signed work, including completed projects. Expected amounts count only after signing.
  */
-export const isSigned = (stage: Stage) => phaseOf(stage) === "execution" || phaseOf(stage) === "settlement";
+export const isSigned = (stage: Stage) => ["signed", "in_progress", "collecting_payment", "closed"].includes(stage);
+
+/** Open deals accept new plan items; completed projects retain correction access. */
+export const isOpenStage = (stage: Stage) => stage !== "declined" && stage !== "cancelled";

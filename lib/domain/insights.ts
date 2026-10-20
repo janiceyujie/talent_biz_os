@@ -3,7 +3,7 @@ import type { AppData, Organization, Payment, ProjectSummary } from "@/lib/types
 import { dateInZone } from "./dates";
 import { minorUnitFactor, minorUnits, totalsByCurrency, type Currency } from "./money";
 import { isSigned } from "./phases";
-import { paymentCash, paymentTotal, projectQuoteTotal } from "./workflow";
+import { countedPayments, paymentCash, paymentTotal, projectQuoteTotal } from "./workflow";
 
 const live = (p: Payment) => !p.voided && p.status !== "cancelled";
 
@@ -31,7 +31,7 @@ export function financeInsights(data: AppData, now = new Date(), currency: Curre
   const unbilled = quoted.reduce((n, p) => n + Math.max(0, units(projectQuoteTotal(p)!) - billedFor(p)), 0);
 
   const aging = Object.fromEntries(agingBuckets.map((b) => [b, 0])) as Record<(typeof agingBuckets)[number], number>;
-  for (const p of payments.filter((x) => x.direction === "in" && x.status === "expected")) {
+  for (const p of countedPayments(payments, data.projects).filter((x) => x.direction === "in" && x.status === "expected")) {
     const late = p.dueDate ? daysBetween(p.dueDate, today) : null;
     const bucket = late === null ? "noDueDate" : late <= 0 ? "notDue" : late <= 30 ? "late1to30" : "late31plus";
     aging[bucket] += units(paymentTotal(p));

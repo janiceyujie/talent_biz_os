@@ -15,7 +15,7 @@ import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { InfoHint } from "@/components/app/info-hint";
 import { MoreMenu } from "./more-menu";
 import { ANALYSIS_POLL_MS, PasteDialog } from "@/components/app/paste-dialog";
-import { FileText, TriangleAlert } from "lucide-react";
+import { FileText, TriangleAlert, Mail, MailWarning } from "lucide-react";
 import { markNotWork, markSureWork, reopenReplies } from "@/lib/actions/mail";
 import { dismissMessage, openFromHistory, reanalyzeMessage } from "@/lib/actions/messages";
 import { useMoney } from "@/lib/i18n/format";
@@ -35,6 +35,13 @@ import { UploadDialog } from "./upload-dialog";
 // it here (docs/architecture.md, "Analysis"; the message is untrusted input).
 
 const firstLine = (text: string) => text.trim().split("\n")[0]?.slice(0, 80) ?? "";
+
+/** Beside the page title: what Intake does, and today's AI analyses left. */
+export function IntakeHint() {
+  const { aiUsage } = useAppData();
+  const t = useTranslations("inbox");
+  return <InfoHint notes={[t("intro"), t("usageRemaining", aiUsage)]} />;
+}
 
 export function InboxView() {
   const data = useAppData();
@@ -64,6 +71,7 @@ function InboxWorkspace() {
   const demoItems = data.preview ? previewIntakeItems(data.inbox, tDemo) : [];
   const preview = demoItems.filter(item => previewIntakeTab(item, previewOverrides) === tab).map(item => item.message)
     .filter(m => showDismissed || m.status !== "dismissed");
+  const dismissedCount = data.preview ? demoItems.filter(item => previewIntakeTab(item, previewOverrides) === "messages" && item.message.status === "dismissed").length : (data.inboxOverview?.counts.dismissed ?? 0);
   const previewCounts = { messages: 0, waiting: 0, skipped: 0 };
   for (const item of demoItems) {
     const category = previewIntakeTab(item, previewOverrides);
@@ -86,7 +94,7 @@ function InboxWorkspace() {
   const requestedId = params.get("message") ?? "";
   useEffect(() => { if (requestedId) queueMicrotask(() => {setActive(requestedId);setTab("messages");}); }, [requestedId]);
 
-  // ?paste=1 / ?upload=1 (the header's Import offer here, Today's Upload an offer) open a dialog —
+  // ?paste=1 / ?upload=1 (the header's Import offer, Today's Upload an offer) open a dialog —
   // also when already on this page, where the address changes without a reload —
   // then leave the address so a reload doesn't open it again.
   useEffect(() => {
@@ -141,31 +149,26 @@ function InboxWorkspace() {
           <div>
             <h2>{t("title")} <InfoHint label={t("title")} notes={[t("intro"),t("usageRemaining",data.aiUsage)]} /></h2>
           </div>
-          {data.gmail.connection && !data.preview ? <GmailSync onNotice={setNotice} /> : <Link className="text-button" href="/settings">{tGmail("title")}</Link>}
+
         </div>
 
         {data.aiUsage.remaining===0&&<p className="notice error" role="status">{t("usageExhausted",{limit:data.aiUsage.limit})}</p>}
-        <div className="row-actions">
-          <button className="primary" disabled={data.preview} onClick={() => setPasting(true)}>
-            {t("paste")}
-          </button>
-          <button className="secondary" disabled={data.preview} onClick={() => setUploading(true)}>
-            {t("upload")}
-          </button>
-        </div>
         {notice && (
           <p className="notice" role="status">
             {notice}
           </p>
         )}
       </section>
+      <div className="intake-navigation">
       <IntakeTabs tab={tab} onTab={next => { setTab(next); setActive(""); setNotice(null); }} previewCounts={data.preview ? previewCounts : undefined} />
+      <div className="intake-mail-source" data-preview-safe="true">
+        <span className="intake-mail-source-label"><Mail size={18} aria-hidden="true"/>{t("gmailSource")} <InfoHint label={t("gmailSource")} notes={[tDemo("connectHint")]}/></span>
+        {data.gmail.connection && !data.preview ? data.gmail.connection.status === "reconnect_needed" ? <Link className="secondary compact gmail-reconnect" href="/settings#gmail" title={tGmail("reconnectWhy")}><MailWarning size={16} aria-hidden="true"/>{tGmail("reconnectInSettings")}</Link> : <GmailSync onNotice={setNotice}/> : <Link className="secondary compact" href="/settings#gmail">{tDemo("connect")}</Link>}
+      </div>
+      </div>
       {data.preview && <div className="intake-demo-toolbar" data-preview-safe="true">
         <span>{tDemo("label")} <InfoHint label={tDemo("label")} notes={[tDemo("hint")]} /></span>
         <button className="text-button" onClick={() => { setPreviewOverrides({}); setActive(""); setTab("messages"); setNotice(tDemo("resetDone")); }}>{tDemo("reset")}</button>
-      </div>}
-      {!data.preview && !data.gmail.connection && <div className="notice intake-connect-notice" role="note">
-        <span>{tDemo("connectHint")}</span><Link className="secondary" href="/settings">{tDemo("connect")}</Link>
       </div>}
       {!data.preview && tab !== "messages" ? (data.gmail.connection ? <GmailMail key={tab} view={tab} onNotice={setNotice} /> :
         <section id="intake-panel" role="tabpanel" aria-labelledby={`intake-tab-${tab}`} className="surface padded section-gap empty">
@@ -180,9 +183,9 @@ function InboxWorkspace() {
             </h2>
             <span role="status">{!data.preview && pages.total === null ? tPage("loading") : t("listCount", { count: data.preview ? visible.length : (pages.total ?? 0) })}</span>
           </div>
-          {tab === "messages" && <label className="check-line">
+          {tab === "messages" && (dismissedCount > 0 || showDismissed) && <label className="check-line">
             <input data-preview-safe="true" type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} />
-            {t("showDismissed")}
+            {t("showDismissed", { count: dismissedCount })}
           </label>}
           {!visible.length && (data.preview || (!pages.loading && !pages.failed)) && (
             <div className="empty">
@@ -209,7 +212,7 @@ function InboxWorkspace() {
       </InboxReaderLayout>
       </div>
       )}
-      {pasting && !data.preview && (
+      {pasting && (
         <PasteDialog
           onClose={() => setPasting(false)}
           onSubmitted={(id, duplicate) => {
@@ -220,7 +223,7 @@ function InboxWorkspace() {
           }}
         />
       )}
-      {uploading && !data.preview && (
+      {uploading && (
         <UploadDialog
           onClose={() => setUploading(false)}
           onSubmitted={(id, duplicate) => {

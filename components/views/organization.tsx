@@ -12,7 +12,7 @@ import { ContactPicker, type ContactValue } from "@/components/app/contact-picke
 import { Modal } from "@/components/app/modal";
 import { addOrganizationPerson as addOrganizationPersonRemote, archiveOrganization as archiveOrganizationRemote, removeOrganizationPerson as removeOrganizationPersonRemote, saveOrganization } from "@/lib/actions/organizations";
 import type { OrganizationProject } from "@/lib/data/organizations";
-import { paymentCash, paymentTotal } from "@/lib/domain/workflow";
+import { countedPayments, paymentCash, paymentTotal } from "@/lib/domain/workflow";
 import { totalsByCurrency } from "@/lib/domain/money";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
@@ -46,7 +46,7 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
   const clientOf = new Set(projects.filter((p) => p.primary).map((p) => p.projectId));
   const payments = data.payments.filter((p) => p.projectId && clientOf.has(p.projectId) && p.direction === "in" && !p.voided && p.status !== "cancelled");
   const received = totalsByCurrency(payments, paymentCash);
-  const outstanding = totalsByCurrency(payments.filter((p) => p.status === "expected"), paymentTotal);
+  const outstanding = totalsByCurrency(countedPayments(payments, data.projects).filter((p) => p.status === "expected"), paymentTotal);
   const titleOf = (projectId: string | null) => projects.find((p) => p.projectId === projectId)?.title ?? "";
 
   return (

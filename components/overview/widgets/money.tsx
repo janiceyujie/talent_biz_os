@@ -3,6 +3,7 @@
 import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMoney } from "@/lib/i18n/format";
+import { countedPayments } from "@/lib/domain/workflow";
 import { outstandingMoney } from "@/lib/overview/money";
 import type { OverviewContext } from "../context";
 import { Widget } from "../widget";
@@ -11,7 +12,7 @@ import { Widget } from "../widget";
 export function MoneyWidget({ ctx: { data, today } }: { ctx: OverviewContext }) {
   const t = useTranslations("today");
   const money = useMoney();
-  const m = outstandingMoney(data.payments, today);
+  const m = outstandingMoney(countedPayments(data.payments, data.projects), today); // signed work only (decision 0018)
   const rows = [
     ["moneyOverdue", m.overdue],
     ["moneyThisWeek", m.thisWeek],

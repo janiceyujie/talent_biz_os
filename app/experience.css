@@ -2845,7 +2845,16 @@ summary:focus-visible {
   box-shadow: 0 8px 24px rgba(21, 23, 17, 0.12);
   display: grid;
 }
-.more-menu-list button {
+.more-menu-list.is-above {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+.more-menu-list.is-start {
+  right: auto;
+  left: 0;
+}
+.more-menu-list button,
+.more-menu-list a {
   padding: 10px 12px;
   border: 0;
   border-radius: 6px;
@@ -2855,7 +2864,9 @@ summary:focus-visible {
   cursor: pointer;
 }
 .more-menu-list button:hover,
-.more-menu-list button:focus-visible {
+.more-menu-list button:focus-visible,
+.more-menu-list a:hover,
+.more-menu-list a:focus-visible {
   background: var(--paper);
 }
 
@@ -4043,9 +4054,11 @@ button.deal-record:hover {
   font-size: inherit;
   color: var(--accent);
 }
-.inbox-workspace .inbox-reader {
-  position: sticky;
-  top: calc(var(--topbar) + 24px);
+/* Both panes end at the window's bottom edge and scroll on their own: reading a long message
+   never moves the list (components/app/inbox-reader-layout.tsx sets the height). */
+.inbox-workspace .inbox-panes > .surface {
+  max-height: var(--inbox-panes-height, none);
+  overflow-y: auto;
 }
 .inbox-workspace .inbox-reader h2 {
   scroll-margin-top: 24px;
@@ -4103,20 +4116,91 @@ button.deal-record:hover {
 .inbox-workspace .inbox-back {
   display: none;
 }
+/* A phone shows one at a time: the list, or the message opened from it. */
 @media (max-width: 900px) {
   .inbox-workspace .inbox-layout {
     grid-template-columns: minmax(0, 1fr);
   }
-  .inbox-workspace .inbox-reader {
-    position: static;
+  .inbox-workspace .inbox-panes > .surface {
+    max-height: none;
+    overflow: visible;
+  }
+  .inbox-workspace .inbox-panes:not(.is-reading) > .inbox-reader,
+  .inbox-workspace .inbox-panes.is-reading > .inbox-messages {
+    display: none;
   }
   .inbox-workspace .inbox-back {
     display: inline-flex;
+    gap: 8px;
     margin-bottom: 20px;
   }
-  .inbox-workspace .inbox-messages {
-    max-height: 460px;
-    overflow-y: auto;
+}
+/* The Messages · Waiting · Filtered out tabs, with Gmail's status at the row's end. */
+.intake-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.intake-bar .gmail-sync {
+  padding: 8px 0;
+}
+.intake-bar .gmail-reconnect {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  color: var(--red);
+  font-size: 13px;
+}
+.intake-bar .gmail-reconnect-icon {
+  color: var(--red);
+}
+.intake-bar .more-menu:has(.gmail-reconnect-icon) {
+  display: none;
+}
+/* The phone's "Gmail needs reconnecting" box: one type size throughout, the title above why. */
+.intake-bar .more-menu-list {
+  width: 260px;
+  font-size: 14px;
+}
+.intake-bar .more-menu-heading {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px 6px;
+  color: var(--muted);
+  font-size: inherit;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.intake-bar .more-menu-heading strong {
+  color: var(--red);
+  font-weight: 600;
+}
+.intake-bar .more-menu-list a {
+  font-size: inherit;
+  font-weight: 600;
+  color: var(--accent);
+}
+@media (max-width: 560px) {
+  .intake-bar {
+    flex-wrap: nowrap;
+  }
+  .intake-bar .intake-tabs {
+    min-width: 0;
+  }
+  .intake-bar .intake-tabs button {
+    gap: 4px;
+    padding: 0 6px;
+  }
+  .intake-bar .gmail-reconnect {
+    display: none;
+  }
+  .intake-bar .more-menu:has(.gmail-reconnect-icon) {
+    display: block;
+    flex: none;
   }
 }
 @media (max-width: 600px) {

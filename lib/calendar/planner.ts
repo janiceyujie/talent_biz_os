@@ -32,9 +32,13 @@ export type PlanItem = {
   done: boolean;
   /** Shown when the item can't sit on the timeline as stated (another zone, multi-day). */
   note: string;
-  amount: number | null; // payment due dates
-  /** From one of the person's own Google calendars (decision 0009, phase 2): read-only, never on a project. */
-  external: { calendar: string; color: string | null } | null;
+  amount: number | null;
+  currency?: string; // payment due dates
+  /**
+   * From the person's Google calendars (decision 0009, phase 2): read-only. `series`: a repeating event
+   * in our own Talent Biz OS calendar, which can be added to a project as a whole (decision 0017).
+   */
+  external: { calendar: string; color: string | null; series: string | null } | null;
 };
 
 export const plusDays = (date: string, days: number) => {
@@ -246,19 +250,20 @@ export function planItems(data: Pick<AppData, "calendar" | "payments" | "project
     const local = g.time && g.timeZone !== zone ? wallTime(wallTimeToUtc(g.date, g.time, g.timeZone), zone) : { date: g.date, time: g.time };
     const endDay = g.endDate || g.date;
     const localEnd = g.endTime && g.timeZone !== zone ? wallTime(wallTimeToUtc(endDay, g.endTime, g.timeZone), zone) : { date: endDay, time: g.endTime };
+    const filed = g.series?.projectId ? projectOf(g.series.projectId) : undefined;
     const base = {
       ref: { source: "google" as const, id: g.id, link: g.link },
       title: g.title,
       kind: "meeting" as CalendarKind,
       fixed: true,
       movable: false,
-      projectId: null,
-      project: "",
-      client: "",
+      projectId: filed?.id ?? null,
+      project: filed?.title ?? "",
+      client: filed?.counterparty ?? "",
       done: false,
       note: "",
       amount: null,
-      external: { calendar: g.calendar, color: g.color },
+      external: { calendar: g.calendar, color: g.color, series: g.series?.id ?? null },
     };
     if (g.time) {
       items.push({ ...base, id: `google:${g.id}`, date: local.date, start: local.time, endDate: localEnd.time ? localEnd.date : "", end: localEnd.time });

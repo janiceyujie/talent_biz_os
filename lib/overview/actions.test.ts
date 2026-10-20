@@ -66,7 +66,7 @@ describe("todayActions", () => {
   });
 
   test("clashes beyond the week, or between two of the person's own Google events, are left out", () => {
-    const g = (id: string, start: string) => item({ id, start, end: "12:00", external: { calendar: "Personal", color: null } });
+    const g = (id: string, start: string) => item({ id, start, end: "12:00", external: { calendar: "Personal", color: null, series: null } });
     const late = (id: string) => item({ id, date: "2026-10-20", endDate: "2026-10-20" });
     const got = todayActions({ reminders: [], inbox: [], items: [g("google:1", "10:00"), g("google:2", "11:00"), late("event:x"), late("event:y")], today: TODAY });
     assert.deepEqual(got, []);

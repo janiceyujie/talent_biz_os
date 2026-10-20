@@ -95,6 +95,7 @@ const event = (over: Partial<CalendarItem> = {}): CalendarItem => ({
   timeZone: "Asia/Taipei",
   location: "",
   projectId: "p1",
+  suggestedProjectId: null,
   notes: "",
   done: false,
   archived: false,

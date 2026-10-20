@@ -2,7 +2,8 @@ import { processMailReview } from "@/lib/mail/jobs/review";
 import { refreshGrantSources } from "@/lib/grants/sync";
 import type { Task } from "graphile-worker";
 import { analyzeMessage, markAnalysisFailed } from "@/lib/ai/analyze-message";
-import { runCalendarSync } from "@/lib/calendar/google/sync";
+import { importConnection } from "@/lib/calendar/google/import";
+import { reconcileCalendars, runCalendarSync } from "@/lib/calendar/google/sync";
 import { disconnectMailbox } from "@/lib/mail/jobs/disconnect";
 import { cleanup } from "@/lib/mail/jobs/cleanup";
 import { fetchDecision } from "@/lib/mail/jobs/fetch";
@@ -62,13 +63,19 @@ const tasks: Record<JobName, Task> = {
   },
   "calendar.sync": async (payload) => {
     const { connectionId, attempt } = jobs["calendar.sync"].parse(payload);
+    // Both ways on the connection's own queue: Google's changes, then ours (runCalendarSync),
+    // then the person's chosen calendars.
     await runCalendarSync(connectionId, attempt);
+    await importConnection(connectionId);
   },
     "mail.reconcile": async () => {
     await reconcile();
   },
   "mail.cleanup": async () => {
     await cleanup();
+  },
+  "calendar.reconcile": async () => {
+    await reconcileCalendars();
   },
 };
 

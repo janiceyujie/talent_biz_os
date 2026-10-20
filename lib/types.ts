@@ -50,7 +50,7 @@ export type Project = {
   updatedAt: string; // ISO instant of the last change (any edit, including stage)
 };
 
-/** A date kept on a project before it's signed, or one that isn't a calendar event (decision 0004). */
+/** A date kept on a project before it's signed, or one that isn't a calendar event (the intake's rule, decision 0018). */
 export type ProjectDate = { what: string; date: string; time: string; timeZone: string };
 
 /**
@@ -138,6 +138,8 @@ export type CalendarItem = {
   timeZone: string;
   location: string;
   projectId: string | null;
+  /** Added in Google Calendar without a project: the one it most likely belongs to (decision 0017). */
+  suggestedProjectId: string | null;
   notes: string;
   done: boolean;
   archived: boolean;
@@ -305,6 +307,8 @@ export type ExternalEvent = {
   timeZone: string;
   location: string;
   link: string; // opens the event in Google Calendar
+  /** An occurrence of a repeating event in our own Talent Biz OS calendar (decision 0017): the series can be added to a project as a whole. */
+  series: { id: string; projectId: string | null } | null;
 };
 
 export type AppData = {
@@ -376,6 +380,7 @@ export type AppData = {
   // The AI service's name when it may keep what's sent (e.g. a free tier) — shown as a notice; null otherwise.
   aiDataNotice: string | null;
   aiUsage: { used: number; limit: number; remaining: number }; // AI analyses in the last 24 hours (docs/decisions/0008)
+  changes: string; // the change mark this data was read at (lib/data/changes.ts): screens reload when it moves
 };
 
 export type GmailSenderRule = { id: string; kind: "address" | "domain"; value: string; verdict: "always" | "never" };

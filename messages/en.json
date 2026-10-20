@@ -699,7 +699,7 @@
   "inbox": {
     "title": "Offers to review",
     "gmailSoon": "Gmail add-on coming soon",
-    "intro": "Paste an offer and the system pulls out the key facts and suggests a type; nothing becomes a project until you confirm. Screenshot upload and the Gmail add-on are on the way.",
+    "intro": "Messages from Gmail, pasted text and uploads land here. Each is analyzed for the key facts and a suggested type; nothing becomes a project until you confirm.",
     "upload": "Upload screenshot / PDF",
     "paste": "Paste an offer",
     "emptyTitle": "No offers here yet",
@@ -713,7 +713,7 @@
     "analyze": "Analyze",
     "submitting": "Sending…",
     "duplicate": "You've brought this in before — here it is.",
-    "showDismissed": "Show dismissed",
+    "showDismissed": "Show dismissed ({count})",
     "status": {
       "pending": "Analyzing",
       "analyzed": "To review",
@@ -729,7 +729,7 @@
       "forwarded_email": "Forwarded email",
       "gmail": "Gmail"
     },
-    "pendingBody": "The AI is reading this message; the result appears here on its own. The local model takes about half a minute.",
+    "pendingBody": "The AI is reading this message; the result appears here on its own, usually within a minute.",
     "failed": "The analysis didn't finish: {reason}",
     "facts": "What the AI read",
     "field": {
@@ -833,7 +833,8 @@
     "historyInfo": "Older threads from the last 30 days, nothing new in them for two weeks. They're kept for reference; opening one analyzes it.",
     "historyCount": "{count, plural, one {# email} other {# emails}}",
     "unverifiedSenderPayment": "Gmail couldn't verify the sender, and this asks about payment or bank details: a common fraud. Don't pay or reply with details; confirm with them using contact details you already have.",
-    "requestFailed": "The result could not be confirmed. Try again later or return to the message list."
+    "requestFailed": "That didn't go through: check your connection and try again.",
+    "gmailSource": "Gmail inbox source"
   },
   "intake": {
     "targetHeading": "File under a project",
@@ -1121,7 +1122,16 @@
       "seat": "Seat {seat}"
     },
     "notes": "Notes",
-    "openGrant": "Open grant application"
+    "openGrant": "Open grant application",
+    "monthLabel": "The month's events and to-dos",
+    "openDay": "Open {date}",
+    "more": "+{count} more",
+    "emptyDay": "Nothing on this day.",
+    "openInWeek": "Open this day in the week view",
+    "addOnDay": "＋ Add on this day",
+    "show": "Show",
+    "showOpen": "Current",
+    "showUnfiled": "Not in a project"
   },
   "planner": {
     "views": "Calendar views",
@@ -1187,7 +1197,21 @@
     "untitled": "(No title)",
     "create": "Create",
     "zone": "Times are in {zone}",
-    "grantSource": "Open grant application"
+    "grantSource": "Open grant application",
+    "noProject": "Not in a project",
+    "addToProject": "Add to a project",
+    "repeatingFromGoogle": "Repeating, from your Talent Biz OS calendar in Google: change it there.",
+    "openInGoogle": "Open in Google Calendar",
+    "changeProject": "Change",
+    "seriesNote": "Adding it to a project adds every occurrence of the series.",
+    "close": "Close",
+    "googleSynced": "Google Calendar · synced {time}",
+    "googleJustNow": "Google Calendar · synced just now",
+    "googleNever": "Google Calendar · not synced yet",
+    "googleSyncing": "Google Calendar · syncing…",
+    "googleFailed": "Google Calendar · last sync failed",
+    "googleReconnect": "Google Calendar needs reconnecting",
+    "googleSyncNow": "Sync now"
   },
   "calendarFeed": {
     "title": "Subscription link",
@@ -1224,7 +1248,7 @@
   },
   "googleCalendar": {
     "calendarName": "Talent Biz OS · {talent}",
-    "calendarDescription": "Events created and synced by Talent Biz OS. Change them in Talent Biz OS; edits made here are overwritten on the next sync.",
+    "calendarDescription": "Events created by Talent Biz OS. Change them here or in Talent Biz OS: both stay up to date.",
     "title": "Google Calendar",
     "notConfigured": "Google isn't set up in this environment.",
     "needGoogle": "Connect your Google account under “Sign in with Google” above first",
@@ -1256,8 +1280,8 @@
     "chooseNone": "This Google account has no other calendars.",
     "chooseSave": "Save",
     "saving": "Saving…",
-    "sendTitle": "Send to Google",
-    "sendTo": "Your events → the “Talent Biz OS” calendar in Google",
+    "sendTitle": "Sync with Google",
+    "sendTo": "Your events ⇄ the “Talent Biz OS” calendar in Google",
     "importNone": "None chosen",
     "aboutSend": "Send to Google: confirmed events go into a dedicated “Talent Biz OS” calendar in your Google account, updated as soon as you save. This app only creates and changes that calendar; it sends the title, time, place, and project. To-dos and payments aren’t sent.",
     "aboutShow": "Show here: the Google calendars you tick appear read-only in the calendar here, visible only to you, so clashes with personal plans show. This app reads only the calendars you tick.",
@@ -1267,7 +1291,9 @@
     "syncFailed": "Last sync failed",
     "manage": "Manage",
     "done": "Done",
-    "syncedJustNow": "Synced just now"
+    "syncedJustNow": "Synced just now",
+    "sendNote": "A change on either side updates the other.",
+    "notesMarker": "── Notes (synced with Talent Biz OS) ──"
   },
   "gmail": {
     "title": "Gmail",
@@ -1415,7 +1441,13 @@
     "notWorkBody": "It leaves Intake, and its text and attachments are deleted. It stays listed in Filtered out, where This was work brings it back.",
     "notWorkNeverFrom": "Also stop bringing in mail from {sender}",
     "autoInfo": "New mail arrives on its own. Check now to look right away, say for a reply you're waiting on.",
-    "sortingCount": "sorting {count, plural, one {# email} other {# emails}}"
+    "sortingCount": "sorting {count, plural, one {# email} other {# emails}}",
+    "syncedJustNow": "Checked just now",
+    "connectInSettings": "Connect Gmail in Settings",
+    "connectToSee": "Connect Gmail to sort your email here: work email waits for you, the rest is filtered out.",
+    "reconnectInSettings": "Gmail needs reconnecting",
+    "reconnectWhy": "Google's access expired, so new mail isn't coming in.",
+    "reconnectGo": "Reconnect in Settings"
   },
   "paymentNotice": {
     "chip": "Payment",
@@ -1440,7 +1472,7 @@
     "newPayment": "Add a payment to",
     "pickPayment": "Choose a payment…",
     "pickProject": "Choose a project…",
-    "noProjects": "No signed projects yet.",
+    "noProjects": "No projects still going yet.",
     "signedOnly": "Only signed projects are listed.",
     "shortBy": "{amount} less, likely a transfer fee.",
     "currencyOnly": "Only NT$ payments can be recorded for now.",
@@ -1453,7 +1485,8 @@
     "paymentOption": "{project} · {label}",
     "dropTitle": "Drop this notice?",
     "dropBody": "Its details are deleted and it leaves Intake. The email stays in Gmail.",
-    "dropNeverFrom": "Also stop bringing in notices from {sender}"
+    "dropNeverFrom": "Also stop bringing in notices from {sender}",
+    "openOnly": "Only projects still going are listed: not declined or cancelled."
   },
   "settings": {
     "name": "Artist or brand name",
@@ -1617,7 +1650,8 @@
     "contactDetails": "Contact details (optional)",
     "contactAlreadyHere": "“{name}” is already here. Add another contact with the same name?",
     "contactSameNameElsewhere": "There's a “{name}” at {org}; this adds a different contact with the same name here.",
-    "grantSource": "Open grant application"
+    "grantSource": "Open grant application",
+    "openOnly": "Any project still going can be linked, signed or not; only signed ones count in expected money and reminders. Linking is optional."
   },
   "tone": {
     "natural": "Natural and professional",
@@ -1804,7 +1838,8 @@
     "clientCantBeRemoved": "This is the project's client. Make another organization the client first, then remove it.",
     "clientRequired": "Enter the client organization.",
     "gmailNotConnected": "Gmail isn't connected.",
-    "noticeCurrency": "Only NT$ payments can be recorded for now."
+    "noticeCurrency": "Only NT$ payments can be recorded for now.",
+    "projectEnded": "This project was declined or cancelled, so it can't take new items."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",
@@ -2892,5 +2927,28 @@
       }
     },
     "label": "Sample classification"
+  },
+  "projectPicker": {
+    "title": "Add to a project",
+    "search": "Search projects",
+    "suggested": "Suggested",
+    "none": "No signed projects yet. An event can be added to a project once it's signed.",
+    "noMatch": "No projects match.",
+    "added": "Added to {project}."
+  },
+  "lostDeal": {
+    "titleDeclined": "Mark as declined?",
+    "titleCancelled": "Mark as cancelled?",
+    "intro": "“{project}” still has these open:",
+    "payments": "{count, plural, one {# expected payment} other {# expected payments}}",
+    "todos": "{count, plural, one {# to-do} other {# to-dos}}",
+    "events": "{count, plural, one {# upcoming event} other {# upcoming events}}",
+    "eventsGoogle": "also removed from Google Calendar",
+    "due": "due {date}",
+    "separator": "; ",
+    "stays": "Money already received or paid, and past events, won't change.",
+    "keep": "Only mark it, keep these",
+    "cancelDeclined": "Mark as declined and cancel these",
+    "cancelCancelled": "Mark as cancelled and cancel these"
   }
 }

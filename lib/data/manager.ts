@@ -34,7 +34,7 @@ export async function getManagerOverview(personId:string,requested:string[]|unde
   const [events,tasks,messages,payments]=await Promise.all([
     db.select({id:calendarEvent.id,artistId:calendarEvent.talentId,title:calendarEvent.title,date:calendarEvent.startDate,endDate:calendarEvent.endDate,time:calendarEvent.startTime,timeZone:calendarEvent.timeZone}).from(calendarEvent)
       .innerJoin(membership,and(eq(membership.talentId,calendarEvent.talentId),access))
-      .where(and(inArray(calendarEvent.talentId,ids),isNull(calendarEvent.archivedAt),eq(calendarEvent.status,"confirmed"),sql`${calendarEvent.startDate}<=${end} and coalesce(${calendarEvent.endDate},${calendarEvent.startDate})>=${start}`)).orderBy(asc(calendarEvent.startDate)).limit(301),
+      .where(and(inArray(calendarEvent.talentId,ids),isNull(calendarEvent.archivedAt),eq(calendarEvent.status,"confirmed"),isNull(calendarEvent.deletedInGoogleAt),sql`${calendarEvent.startDate}<=${end} and coalesce(${calendarEvent.endDate},${calendarEvent.startDate})>=${start}`)).orderBy(asc(calendarEvent.startDate)).limit(301),
     db.select({id:todo.id,artistId:todo.talentId,title:todo.title,date:todo.dueDate,time:todo.dueTime,timeZone:todo.timeZone}).from(todo)
       .innerJoin(membership,and(eq(membership.talentId,todo.talentId),access))
       .where(and(inArray(todo.talentId,ids),eq(todo.status,"open"),sql`${todo.dueDate} between ${start} and ${end}`)).orderBy(asc(todo.dueDate)).limit(301),
@@ -43,7 +43,7 @@ export async function getManagerOverview(personId:string,requested:string[]|unde
       .where(and(inArray(message.talentId,ids),sql`${message.receivedAt}>=${start}::date and ${message.receivedAt}<(${end}::date + interval '1 day')`,sql`${message.status}<>'dismissed'`)).orderBy(desc(message.receivedAt)).limit(151),
     db.select({talentId:payment.talentId,currency:payment.currency,amount:payment.amount,settledAmount:payment.settledAmount,direction:payment.direction,status:payment.status,taxRate:payment.taxRate,taxIncluded:payment.taxIncluded,voidedAt:payment.voidedAt}).from(payment)
       .innerJoin(membership,and(eq(membership.talentId,payment.talentId),access))
-      .where(and(inArray(payment.talentId,ids),isNull(payment.voidedAt),sql`(case when ${payment.status}='settled' then ${payment.settledOn} else coalesce(${payment.dueOn},${payment.recordedOn}) end) between ${start} and ${end}`)),
+      .where(and(inArray(payment.talentId,ids),sql`(${payment.status} <> 'expected' or ${payment.projectId} is null or exists(select 1 from project p where p.id=${payment.projectId} and p.talent_id=${payment.talentId} and p.stage in ('signed','in_progress','collecting_payment','closed')))`,isNull(payment.voidedAt),sql`(case when ${payment.status}='settled' then ${payment.settledOn} else coalesce(${payment.dueOn},${payment.recordedOn}) end) between ${start} and ${end}`)),
   ]);
   const currentCapability=await requireManagerCapability(personId);
   selectManagedArtists(await getManagerRoster(personId),ids,currentCapability.artistLimit);

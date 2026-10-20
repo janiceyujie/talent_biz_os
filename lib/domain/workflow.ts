@@ -80,9 +80,19 @@ export function renderTemplate(template: ReplyTemplate, source: string, project:
 /** Date a payment counts on: settled date once settled, otherwise the recorded date. */
 export const paymentDate = (p: Payment) => (p.status === "settled" ? p.settledDate || p.recordedDate : p.recordedDate);
 
+/**
+ * Payments as totals, reminders, and matching count them (decision 0018): money still expected
+ * counts only for signed work or no project, since a deal being negotiated may never happen;
+ * money that moved always counts, whatever the deal's stage.
+ */
+export function countedPayments<P extends Pick<Payment, "status" | "projectId">>(payments: P[], projects: Pick<ProjectSummary, "id" | "stage">[]): P[] {
+  const signed = new Set(projects.filter((p) => isSigned(p.stage)).map((p) => p.id));
+  return payments.filter((p) => p.status !== "expected" || !p.projectId || signed.has(p.projectId));
+}
+
 /** Cash-basis totals for one currency and date range; settled rows count their cash. */
-export function summarize(data: Pick<AppData, "payments">, from = "", to = "9999-12-31", currency: Payment["currency"] = "TWD") {
-  const rows = data.payments.filter(
+export function summarize(data: Pick<AppData, "payments"> & {projects?: Pick<ProjectSummary,"id"|"stage">[]}, from = "", to = "9999-12-31", currency: Payment["currency"] = "TWD") {
+  const rows = (data.projects ? countedPayments(data.payments, data.projects) : data.payments).filter(
     (p) => p.currency === currency && !p.voided && p.status !== "cancelled" && paymentDate(p) >= from && paymentDate(p) <= to,
   );
   const value = (p: Payment) => (p.status === "settled" ? paymentCash(p) : paymentTotal(p));

@@ -33,12 +33,12 @@ NEXT_DIST_DIR=.next-test GOOGLE_CLIENT_ID= GOOGLE_CLIENT_SECRET= GOOGLE_TEST_STU
 
 ## Phase 2 (Google → ours): showing your Google calendars
 
-Works locally (it polls; no public address needed). In the same **Data access** screen, add:
+Works locally: the worker checks every minute in development, so no public address is needed (`npm run dev` runs it). In the same **Data access** screen, add:
 
 - `https://www.googleapis.com/auth/calendar.calendarlist.readonly` — list the person's calendars to choose from
 - `https://www.googleapis.com/auth/calendar.events.readonly` — read events on the chosen calendars
 
-Then 設定 → 連結的服務 → Google 日曆 → 管理 → 在這裡顯示 → 選擇日曆: Google asks for the two permissions, and you tick which calendars to show. These are sensitive scopes, asked only when someone turns this on. After deploying, Google's change notifications can replace polling (decision 0009).
+Then 設定 → 連結的服務 → Google 日曆 → 管理 → 在這裡顯示 → 選擇日曆: Google asks for the two permissions, and you tick which calendars to show. These are sensitive scopes, asked only when someone turns this on. After deploying, Google's change notices make it near-instant ([calendar-two-way](../design/calendar-two-way.md)).
 
 ## Before real users: verification
 

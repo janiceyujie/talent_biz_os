@@ -699,7 +699,7 @@
   "inbox": {
     "title": "待確認的邀約",
     "gmailSoon": "Gmail 外掛即將推出",
-    "intro": "貼上邀約文字，系統會整理重點並建議分類；你確認後才會建立合作案。截圖上傳與 Gmail 外掛開發中。",
+    "intro": "Gmail 的信、貼上的文字和上傳的檔案都會進到這裡。系統會整理重點並建議分類；你確認後才會建立合作案。",
     "upload": "上傳截圖／PDF",
     "paste": "貼上邀約文字",
     "emptyTitle": "這裡還沒有邀約",
@@ -713,7 +713,7 @@
     "analyze": "開始分析",
     "submitting": "送出中…",
     "duplicate": "這段內容先前已匯入，已為你開啟。",
-    "showDismissed": "顯示已略過",
+    "showDismissed": "顯示已略過（{count}）",
     "status": {
       "pending": "分析中",
       "analyzed": "待確認",
@@ -729,7 +729,7 @@
       "forwarded_email": "轉寄信件",
       "gmail": "Gmail"
     },
-    "pendingBody": "AI 正在整理這則訊息，完成後會自動顯示。本機模型約需半分鐘。",
+    "pendingBody": "AI 正在整理這則訊息，完成後會自動顯示，通常不到一分鐘。",
     "failed": "分析沒有完成：{reason}",
     "facts": "AI 整理的資訊",
     "field": {
@@ -833,7 +833,8 @@
     "historyInfo": "過去 30 天內、兩週沒有新進度的信件串，留著備查；打開時才會分析。",
     "historyCount": "{count} 封",
     "unverifiedSenderPayment": "Gmail 無法驗證寄件者，而這封信提到付款或匯款資料：這是常見的詐騙手法。請先別付款或回覆資料，用你原本就有的聯絡方式向對方確認。",
-    "requestFailed": "暫時無法確認操作結果。請稍後重試，或返回訊息列表。"
+    "requestFailed": "沒有送出成功，請確認網路連線後再試一次。",
+    "gmailSource": "Gmail 收件來源"
   },
   "intake": {
     "targetHeading": "歸入合作案",
@@ -1121,7 +1122,16 @@
       "seat": "座位 {seat}"
     },
     "notes": "備註",
-    "openGrant": "查看補助申請"
+    "openGrant": "查看補助申請",
+    "monthLabel": "這個月的行程與待辦",
+    "openDay": "打開 {date}",
+    "more": "+{count} 更多",
+    "emptyDay": "這天沒有行程。",
+    "openInWeek": "在週檢視開啟這天",
+    "addOnDay": "＋ 在這天新增",
+    "show": "顯示",
+    "showOpen": "進行中",
+    "showUnfiled": "未歸入合作案"
   },
   "planner": {
     "views": "行事曆檢視",
@@ -1187,7 +1197,21 @@
     "untitled": "（無標題）",
     "create": "新增",
     "zone": "時間以 {zone} 顯示",
-    "grantSource": "查看補助申請"
+    "grantSource": "查看補助申請",
+    "noProject": "未歸入合作案",
+    "addToProject": "加到合作案",
+    "repeatingFromGoogle": "週期性行程，來自 Google 上的 Talent Biz OS 日曆；請在 Google 修改。",
+    "openInGoogle": "在 Google 日曆開啟",
+    "changeProject": "更換",
+    "seriesNote": "加到合作案時，會連同這個系列的每一次一起加入。",
+    "close": "關閉",
+    "googleSynced": "Google 日曆 · {time}同步",
+    "googleJustNow": "Google 日曆 · 剛剛同步",
+    "googleNever": "Google 日曆 · 尚未同步",
+    "googleSyncing": "Google 日曆 · 同步中…",
+    "googleFailed": "Google 日曆 · 上次同步失敗",
+    "googleReconnect": "Google 日曆需要重新連結",
+    "googleSyncNow": "立即同步"
   },
   "calendarFeed": {
     "title": "訂閱連結",
@@ -1224,7 +1248,7 @@
   },
   "googleCalendar": {
     "calendarName": "Talent Biz OS · {talent}",
-    "calendarDescription": "由 Talent Biz OS 建立並同步的行程。請在 Talent Biz OS 中修改；在這裡的修改會在下次同步時被覆蓋。",
+    "calendarDescription": "由 Talent Biz OS 建立的行程。在這裡或 Talent Biz OS 修改，兩邊都會更新。",
     "title": "Google 日曆",
     "notConfigured": "這個環境尚未設定 Google。",
     "needGoogle": "請先在上方「以 Google 登入」連結 Google 帳號",
@@ -1256,8 +1280,8 @@
     "chooseNone": "這個 Google 帳號沒有其他日曆。",
     "chooseSave": "儲存",
     "saving": "儲存中…",
-    "sendTitle": "傳送到 Google",
-    "sendTo": "你的行程 → Google 上的「Talent Biz OS」日曆",
+    "sendTitle": "與 Google 同步",
+    "sendTo": "你的行程 ⇄ Google 上的「Talent Biz OS」日曆",
     "importNone": "尚未選擇",
     "aboutSend": "傳送到 Google：已確認的行程會放進你 Google 帳號中專屬的「Talent Biz OS」日曆，儲存後隨即更新。本服務只會建立與修改這個日曆；同步標題、時間、地點與所屬合作案，待辦與款項不會同步。",
     "aboutShow": "在這裡顯示：你勾選的 Google 日曆會唯讀顯示在這裡的行事曆中，只有你看得到，方便看出和私人行程的衝突。本服務只讀取你勾選的日曆。",
@@ -1267,7 +1291,9 @@
     "syncFailed": "上次同步失敗",
     "manage": "管理",
     "done": "完成",
-    "syncedJustNow": "剛剛同步"
+    "syncedJustNow": "剛剛同步",
+    "sendNote": "在任一邊修改，另一邊也會跟著更新。",
+    "notesMarker": "── 備註（與 Talent Biz OS 同步）──"
   },
   "gmail": {
     "title": "Gmail",
@@ -1415,7 +1441,13 @@
     "notWorkBody": "這封信會移出進件分類，內文與附件會刪除。它仍會列在「已過濾」，可按「這是工作信」收回。",
     "notWorkNeverFrom": "也不再收 {sender} 的信",
     "autoInfo": "新信件會自動收進來。想馬上看到（例如正在等的回覆），可以按立即檢查。",
-    "sortingCount": "整理中 {count} 封"
+    "sortingCount": "整理中 {count} 封",
+    "syncedJustNow": "剛剛檢查過",
+    "connectInSettings": "到設定連結 Gmail",
+    "connectToSee": "連結 Gmail 後，信件會在這裡分類：工作信等你確認，其他的會被過濾。",
+    "reconnectInSettings": "Gmail 需要重新連結",
+    "reconnectWhy": "Google 的授權已失效，新信暫時進不來。",
+    "reconnectGo": "到設定重新連結"
   },
   "paymentNotice": {
     "chip": "收款",
@@ -1440,7 +1472,7 @@
     "newPayment": "新增款項到",
     "pickPayment": "選擇款項…",
     "pickProject": "選擇合作案…",
-    "noProjects": "還沒有已簽約的合作案。",
+    "noProjects": "目前沒有進行中的合作案。",
     "signedOnly": "只列出已簽約的合作案。",
     "shortBy": "少 {amount}，可能是匯款手續費。",
     "currencyOnly": "目前只能記錄新台幣款項。",
@@ -1453,7 +1485,8 @@
     "paymentOption": "{project} · {label}",
     "dropTitle": "捨棄這則通知？",
     "dropBody": "它的明細會刪除，並從進件分類移除；信件仍留在 Gmail。",
-    "dropNeverFrom": "之後不再收進「{sender}」的通知"
+    "dropNeverFrom": "之後不再收進「{sender}」的通知",
+    "openOnly": "只列出進行中的合作案（未婉拒或取消）。"
   },
   "settings": {
     "name": "藝名或品牌名稱",
@@ -1617,7 +1650,8 @@
     "contactDetails": "聯絡方式（選填）",
     "contactAlreadyHere": "「{name}」已經在這裡了；確定要再新增一位同名的聯絡人嗎？",
     "contactSameNameElsewhere": "{org} 已經有一位「{name}」；這會在這裡新增另一位同名的聯絡人。",
-    "grantSource": "查看補助申請"
+    "grantSource": "查看補助申請",
+    "openOnly": "進行中的合作案都可以關聯，不論是否簽約；簽約後才會算進預計收支與提醒。也可不關聯。"
   },
   "tone": {
     "natural": "自然專業",
@@ -1804,7 +1838,8 @@
     "clientCantBeRemoved": "這是合作案的主要客戶；請先把另一家公司設為主要客戶，再移除它。",
     "clientRequired": "請填寫客戶（公司）。",
     "gmailNotConnected": "尚未連結 Gmail。",
-    "noticeCurrency": "目前只能記錄新台幣款項。"
+    "noticeCurrency": "目前只能記錄新台幣款項。",
+    "projectEnded": "這個合作案已婉拒或已取消，不能再加入新的項目。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",
@@ -2892,5 +2927,28 @@
       }
     },
     "label": "範例分類"
+  },
+  "projectPicker": {
+    "title": "加到合作案",
+    "search": "搜尋合作案",
+    "suggested": "建議",
+    "none": "還沒有已簽約的合作案。合作案簽約後，才能把行程加進去。",
+    "noMatch": "找不到符合的合作案。",
+    "added": "已加到「{project}」。"
+  },
+  "lostDeal": {
+    "titleDeclined": "標記為已婉拒？",
+    "titleCancelled": "標記為已取消？",
+    "intro": "「{project}」還有這些未完成的項目：",
+    "payments": "{count} 筆預計款項",
+    "todos": "{count} 項待辦",
+    "events": "{count} 個尚未發生的行程",
+    "eventsGoogle": "也會從 Google 日曆移除",
+    "due": "{date} 到期",
+    "separator": "；",
+    "stays": "已收到或已付出的款項、已經過去的行程都不會變動。",
+    "keep": "只標記，保留這些項目",
+    "cancelDeclined": "標記為已婉拒，並取消這些項目",
+    "cancelCancelled": "標記為已取消，並取消這些項目"
   }
 }

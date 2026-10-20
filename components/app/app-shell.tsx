@@ -13,6 +13,7 @@ import { AssistantDock } from "./assistant-dock";
 import { WorkspaceSearch } from "./workspace-search";
 import { AccountMenu } from "./account-menu";
 import { Companion } from "./companion";
+import { LiveRefresh } from "./live-refresh";
 import { NotificationList, ReminderToast, useNotifications } from "./notifications";
 import { PreviewBanner, useAppData } from "./app-data";
 import { Modal } from "./modal";
@@ -258,6 +259,7 @@ function ShellContent({ children }: { children: ReactNode }) {
           <NotificationList open={open} />
         </Modal>
       )}
+      <LiveRefresh />
       <AssistantDock hidden={mobile || showNotifications} />
       <ReminderToast onOpen={() => setShowNotifications(true)} suppress={portfolioActive || showNotifications || showSearch || companionOpen || pathname.startsWith("/grants") || pathname === "/manager" || pathname.startsWith("/manager/")} />
 

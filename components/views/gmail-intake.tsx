@@ -16,7 +16,6 @@ import { isPersonalDomain } from "@/lib/mail/relevance/rules";
 import type { GmailMailItem, GmailMailPage, GmailMailView } from "@/lib/types";
 
 const POLL_MS = 3000; // while a sync runs, look again this often
-const IDLE_POLL_MS = 60_000; // otherwise: the worker checks every 2 minutes (15 with push)
 const outcomeChip: Record<GmailMailItem["outcome"], string> = { work: "status-confirmed", unsure: "status-analyzed", pending: "", skipped: "", not_work: "" };
 
 /** The header's "Checked 2 min ago", with Check now. */
@@ -32,11 +31,11 @@ export function GmailSync({ onNotice }: { onNotice: (text: string | null) => voi
   const syncing = !!c?.syncing;
   const sorting = c?.sorting ?? 0;
 
-  // While a check runs or emails are sorted, look again often; otherwise once a minute, so
-  // "Checked 2 min ago" follows the worker's own checks (not while the tab is hidden).
+  // While a check runs or emails are sorted, look again often (not while the tab is hidden).
+  // Otherwise the app-wide check catches the worker's own checks (components/app/live-refresh.tsx).
   useEffect(() => {
-    const busy = syncing || sorting > 0;
-    const timer = setInterval(() => document.visibilityState === "visible" && router.refresh(), busy ? POLL_MS : IDLE_POLL_MS);
+    if (!syncing && !sorting) return;
+    const timer = setInterval(() => document.visibilityState === "visible" && router.refresh(), POLL_MS);
     return () => clearInterval(timer);
   }, [syncing, sorting, router]);
 
@@ -46,9 +45,13 @@ export function GmailSync({ onNotice }: { onNotice: (text: string | null) => voi
     : c.status === "error"
       ? t("syncFailed")
       : c.lastSyncedAt
-        ? t("syncedAt", {
-            time: format.relativeTime(new Date(c.lastSyncedAt), now),
-          })
+        ? // Under a minute reads as just now: the clock here ticks every 30 s, so a check that just
+          // landed can be newer than it ("in 6 seconds"), as in Google Calendar's settings.
+          now.getTime() - new Date(c.lastSyncedAt).getTime() < 60_000
+          ? t("syncedJustNow")
+          : t("syncedAt", {
+              time: format.relativeTime(new Date(c.lastSyncedAt), now),
+            })
         : t("neverSynced");
   // Mail arrives on its own (decision 0013): when it was last checked, and a quiet way to check now.
   return (
@@ -256,7 +259,7 @@ function GmailMailDetail({
 
   return (
     <>
-      <h2>{item.subject === null ? (loadFailed ? t("notLoaded") : t("unreadable")) : item.subject || t("noSubject")}</h2>
+      <h2 tabIndex={-1}>{item.subject === null ? (loadFailed ? t("notLoaded") : t("unreadable")) : item.subject || t("noSubject")}</h2>
       <dl className="mail-metadata">
         <div>
           <dt>{t("from")}</dt>

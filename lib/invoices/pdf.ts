@@ -10,7 +10,7 @@ import type { InvoiceDetail } from "./types";
 
 let fontBytes: Promise<Buffer> | undefined;
 /** A deterministic document snapshot; no network, browser, AI, or operating-system font dependency. */
-export async function renderInvoicePdf(row: InvoiceDetail, draft = true) {
+export async function renderInvoicePdf(row: Pick<InvoiceDetail, "snapshot" | "number" | "issueOn" | "dueOn">, draft = true) {
   const doc = await PDFDocument.create();
   doc.registerFontkit(invoiceFontkit);
   fontBytes ??= readFile(

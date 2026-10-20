@@ -30,7 +30,7 @@
     "collapseMenu": "收合側欄",
     "expandMenu": "展開側欄",
     "home": "回到首頁",
-    "grants": "補助",
+    "grants": "機會探索",
     "manager": "經紀人工作區"
   },
   "shell": {
@@ -64,7 +64,7 @@
     "closeReminder": "關閉提醒",
     "accountMenu": "{name} 的帳號選單",
     "settings": "設定",
-    "roleAndAssistant": "角色與助理",
+    "roleAndAssistant": "個人資料與小幫手",
     "importSent": "已送出分析，完成後會出現在「需要你處理」。",
     "importDuplicate": "這段內容先前已匯入過，可在「進件分類」查看。",
     "clearSearch": "清除搜尋",
@@ -769,7 +769,7 @@
   "inbox": {
     "title": "待確認的邀約",
     "gmailSoon": "Gmail 外掛即將推出",
-    "intro": "貼上邀約文字，系統會整理重點並建議分類；你確認後才會建立合作案。截圖上傳與 Gmail 外掛開發中。",
+    "intro": "Gmail 的信、貼上的文字和上傳的檔案都會進到這裡。系統會整理重點並建議分類；你確認後才會建立合作案。",
     "upload": "上傳截圖／PDF",
     "paste": "貼上邀約文字",
     "emptyTitle": "這裡還沒有邀約",
@@ -783,7 +783,7 @@
     "analyze": "開始分析",
     "submitting": "送出中…",
     "duplicate": "這段內容先前已匯入，已為你開啟。",
-    "showDismissed": "顯示已略過",
+    "showDismissed": "顯示已略過（{count}）",
     "status": {
       "pending": "分析中",
       "analyzed": "待確認",
@@ -799,7 +799,7 @@
       "forwarded_email": "轉寄信件",
       "gmail": "Gmail"
     },
-    "pendingBody": "AI 正在整理這則訊息，完成後會自動顯示。本機模型約需半分鐘。",
+    "pendingBody": "AI 正在整理這則訊息，完成後會自動顯示，通常不到一分鐘。",
     "failed": "分析沒有完成：{reason}",
     "facts": "AI 整理的資訊",
     "field": {
@@ -904,7 +904,7 @@
     "historyInfo": "過去 30 天內、兩週沒有新進度的信件串，留著備查；打開時才會分析。",
     "historyCount": "{count} 封",
     "unverifiedSenderPayment": "Gmail 無法驗證寄件者，而這封信提到付款或匯款資料：這是常見的詐騙手法。請先別付款或回覆資料，用你原本就有的聯絡方式向對方確認。",
-    "requestFailed": "暫時無法確認操作結果。請稍後重試，或返回訊息列表。"
+    "requestFailed": "沒有送出成功，請確認網路連線後再試一次。"
   },
   "intake": {
     "targetHeading": "歸入合作案",
@@ -1192,7 +1192,16 @@
       "seat": "座位 {seat}"
     },
     "notes": "備註",
-    "openGrant": "查看補助申請"
+    "openGrant": "查看補助申請",
+    "monthLabel": "這個月的行程與待辦",
+    "openDay": "打開 {date}",
+    "more": "+{count} 更多",
+    "emptyDay": "這天沒有行程。",
+    "openInWeek": "在週檢視開啟這天",
+    "addOnDay": "＋ 在這天新增",
+    "show": "顯示",
+    "showOpen": "進行中",
+    "showUnfiled": "未歸入合作案"
   },
   "planner": {
     "views": "行事曆檢視",
@@ -1258,7 +1267,21 @@
     "untitled": "（無標題）",
     "create": "新增",
     "zone": "時間以 {zone} 顯示",
-    "grantSource": "查看補助申請"
+    "grantSource": "查看補助申請",
+    "noProject": "未歸入合作案",
+    "addToProject": "加到合作案",
+    "repeatingFromGoogle": "週期性行程，來自 Google 上的 Talent Biz OS 日曆；請在 Google 修改。",
+    "openInGoogle": "在 Google 日曆開啟",
+    "changeProject": "更換",
+    "seriesNote": "加到合作案時，會連同這個系列的每一次一起加入。",
+    "close": "關閉",
+    "googleSynced": "Google 日曆 · {time}同步",
+    "googleJustNow": "Google 日曆 · 剛剛同步",
+    "googleNever": "Google 日曆 · 尚未同步",
+    "googleSyncing": "Google 日曆 · 同步中…",
+    "googleFailed": "Google 日曆 · 上次同步失敗",
+    "googleReconnect": "Google 日曆需要重新連結",
+    "googleSyncNow": "立即同步"
   },
   "calendarFeed": {
     "title": "訂閱連結",
@@ -1295,7 +1318,7 @@
   },
   "googleCalendar": {
     "calendarName": "Talent Biz OS · {talent}",
-    "calendarDescription": "由 Talent Biz OS 建立並同步的行程。請在 Talent Biz OS 中修改；在這裡的修改會在下次同步時被覆蓋。",
+    "calendarDescription": "由 Talent Biz OS 建立的行程。在這裡或 Talent Biz OS 修改，兩邊都會更新。",
     "title": "Google 日曆",
     "notConfigured": "這個環境尚未設定 Google。",
     "needGoogle": "請先在上方「以 Google 登入」連結 Google 帳號",
@@ -1327,8 +1350,8 @@
     "chooseNone": "這個 Google 帳號沒有其他日曆。",
     "chooseSave": "儲存",
     "saving": "儲存中…",
-    "sendTitle": "傳送到 Google",
-    "sendTo": "你的行程 → Google 上的「Talent Biz OS」日曆",
+    "sendTitle": "與 Google 同步",
+    "sendTo": "你的行程 ⇄ Google 上的「Talent Biz OS」日曆",
     "importNone": "尚未選擇",
     "aboutSend": "傳送到 Google：已確認的行程會放進你 Google 帳號中專屬的「Talent Biz OS」日曆，儲存後隨即更新。本服務只會建立與修改這個日曆；同步標題、時間、地點與所屬合作案，待辦與款項不會同步。",
     "aboutShow": "在這裡顯示：你勾選的 Google 日曆會唯讀顯示在這裡的行事曆中，只有你看得到，方便看出和私人行程的衝突。本服務只讀取你勾選的日曆。",
@@ -1338,7 +1361,9 @@
     "syncFailed": "上次同步失敗",
     "manage": "管理",
     "done": "完成",
-    "syncedJustNow": "剛剛同步"
+    "syncedJustNow": "剛剛同步",
+    "sendNote": "在任一邊修改，另一邊也會跟著更新。",
+    "notesMarker": "── 備註（與 Talent Biz OS 同步）──"
   },
   "gmail": {
     "title": "Gmail",
@@ -1489,7 +1514,13 @@
     "draftAccess": "同時允許 TALOOX 建立請款文件草稿",
     "draftDisclosure": "Google 將管理草稿與寄信合併在同一項權限；TALOOX 只建立請款草稿，不會寄出、覆寫或刪除。重新授權時請選擇原本連結的 Gmail 帳號。",
     "autoInfo": "新信件會自動收進來。想馬上看到（例如正在等的回覆），可以按立即檢查。",
-    "sortingCount": "整理中 {count} 封"
+    "sortingCount": "整理中 {count} 封",
+    "syncedJustNow": "剛剛檢查過",
+    "connectInSettings": "到設定連結 Gmail",
+    "connectToSee": "連結 Gmail 後，信件會在這裡分類：工作信等你確認，其他的會被過濾。",
+    "reconnectInSettings": "Gmail 需要重新連結",
+    "reconnectWhy": "Google 的授權已失效，新信暫時進不來。",
+    "reconnectGo": "到設定重新連結"
   },
   "paymentNotice": {
     "chip": "收款",
@@ -1514,7 +1545,7 @@
     "newPayment": "新增款項到",
     "pickPayment": "選擇款項…",
     "pickProject": "選擇合作案…",
-    "noProjects": "還沒有已簽約的合作案。",
+    "noProjects": "目前沒有進行中的合作案。",
     "signedOnly": "只列出已簽約的合作案。",
     "shortBy": "少 {amount}，可能是匯款手續費。",
     "currencyOnly": "目前只能記錄新台幣款項。",
@@ -1529,7 +1560,8 @@
     "remainingAfter": "登錄後仍待收：{amount}，未付差額會保留在提醒。",
     "dropTitle": "捨棄這則通知？",
     "dropBody": "它的明細會刪除，並從進件分類移除；信件仍留在 Gmail。",
-    "dropNeverFrom": "之後不再收進「{sender}」的通知"
+    "dropNeverFrom": "之後不再收進「{sender}」的通知",
+    "openOnly": "只列出進行中的合作案（未婉拒或取消）。"
   },
   "settings": {
     "name": "藝名或品牌名稱",
@@ -1818,7 +1850,8 @@
       "save": "確認更正幣別",
       "saved": "幣別與相關應收款已更正。其他未儲存的欄位仍保留。",
       "failed": "無法完成核對，請重試。原表單內容仍保留。"
-    }
+    },
+    "openOnly": "進行中的合作案都可以關聯，不論是否簽約；簽約後才會算進預計收支與提醒。也可不關聯。"
   },
   "tone": {
     "natural": "自然專業",
@@ -2014,7 +2047,9 @@
     "withholdingInvalid": "請填寫已確認的扣繳金額，須大於 0，且不能超過待收金額扣除本次實收後的差額。",
     "noticeCurrency": "目前只能記錄新台幣款項。",
     "currencyCorrectionChanged": "資料已變更，請重新核對後再確認。",
-    "currencyCorrectionBlocked": "相關紀錄需要先處理，請重新核對下方提示。此次未修改任何資料。"
+    "currencyCorrectionBlocked": "相關紀錄需要先處理，請重新核對下方提示。此次未修改任何資料。",
+    "profileSaveFailed": "個人資料未能儲存，已保留填寫內容，請再試一次。",
+    "projectEnded": "這個合作案已婉拒或已取消，不能再加入新的項目。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",
@@ -2077,7 +2112,7 @@
     "name": "藝名或品牌名稱",
     "managedName": "你負責的藝人名稱",
     "managedVertical": "這位藝人的類型",
-    "managerNote": "多位藝人管理功能推出後，即可加入更多藝人。",
+    "managerNote": "管理藝人需要適用方案，並由各藝人邀請授權。",
     "assistantLook": "助理造型",
     "appearance": {
       "female": "女性",
@@ -2090,11 +2125,17 @@
     "back": "返回角色選擇",
     "avatarWave": "{role}助理：揮手",
     "avatarHint": "點一下，打個招呼",
-    "change": "變更角色",
-    "settingsTitle": "角色與助理",
-    "settingsBody": "角色只影響介面用語與建議，不會限制任何功能或權限。可隨時變更角色或助理造型。",
-    "cancelChange": "取消變更角色",
-    "saveNotice": "按下儲存後才會變更角色。"
+    "change": "編輯資料",
+    "settingsTitle": "個人資料與小幫手",
+    "settingsBody": "職業為選填資料，用來了解使用者背景，不會改變工作區設定或管理權限。",
+    "cancelChange": "取消",
+    "saveNotice": "按下儲存後才會變更角色。",
+    "workspaceName": "工作區名稱",
+    "optionalRole": "你的職業（選填）",
+    "notProvided": "暫不提供",
+    "skipRole": "先略過",
+    "profileHelp": "協助我們了解使用者背景，不會變更工作區或可用功能。",
+    "managerAccessHelp": "管理藝人需要適用方案與藝人的授權；在此選擇經紀人不會開啟管理權限。"
   },
   "itinerary": {
     "title": "交通住宿與演出",
@@ -2212,7 +2253,15 @@
     "another": "再來一句",
     "automatic": "自動打氣",
     "pause": "暫停助理動畫",
-    "resume": "繼續助理動畫"
+    "resume": "繼續助理動畫",
+    "general": {
+      "0": "今天先做一件你在意的事。小小的進度，也值得算進去。",
+      "1": "不用跟別人的速度一樣。照你的步調，今天再往前一點。",
+      "2": "有些想法要慢慢長大。今天留一點空間給還沒成形的那個。",
+      "3": "事情很多的時候，先挑最重要的一件。我們一件一件來。",
+      "4": "工作之外，你也有自己的生活。今天記得留一點時間給它。",
+      "5": "開始不一定要很有把握。先試一小步，也是一個不錯的開始。"
+    }
   },
   "timeZone": {
     "clear": "清除時區",
@@ -2726,32 +2775,33 @@
     "monthlyAverage": "每月平均 USD"
   },
   "grants": {
-    "view": "補助工作區",
-    "discover": "找補助",
+    "view": "機會工作區",
+    "discover": "探索機會",
     "mine": "我的申請",
-    "about": "補助說明",
-    "aboutText": "查看官方公告、開始準備申請，再安排交件與核銷待辦。目前先在本機工作區使用。",
-    "coverage": "目前涵蓋文化部首頁最新消息，以及 Grants.gov 藝術類已公告或預告案件，並非全部補助。本機背景服務運行時，每六小時查一次。",
+    "about": "機會探索說明",
+    "aboutText": "在同一處探索補助、比賽與參展，設定預計提交日，接著在待辦和行事曆追蹤。",
+    "coverage": "自動來源：台灣文化部最新消息、Grants.gov 藝術類公告。Worker 啟動時每日 UTC 00:00 更新；手動更新立即查詢。未涵蓋所有補助。",
     "eligibilityHint": "藝術相關補助不代表個人創作者都能申請。請核對官方規定的申請主體、居住地、計畫所在地、可報支項目與應備文件。",
     "refresh": "更新公告",
-    "refreshFailed": "部分來源暫時無法更新，保留原有資料，請查閱官方網站。每十五分鐘最多更新一次。",
-    "refreshed": "公告已查核",
+    "refreshFailed": "部分來源暫時無法更新；舊資料仍可查看，可按更新重試。",
+    "refreshed": "自動來源已更新；人工整理的機會以各筆查核日為準。",
     "sourceFailed": "暫時無法更新",
     "checkedDate": "查核 {date}",
     "notChecked": "尚未查核",
     "watchSettings": "公告提醒",
     "watchEnable": "提醒我有新公告",
     "watchHint": "所選來源有新公告、內容更新或到了受理開始日，會顯示在今日總覽，不會寄信。本機背景服務運行時才會查詢。",
-    "region": "補助來源",
+    "region": "來源地區",
     "allRegions": "全部來源",
-    "search": "搜尋補助或主辦單位",
+    "search": "搜尋機會或主辦單位",
     "regions": {
       "TW": "台灣來源",
       "US": "美國來源"
     },
     "sources": {
       "moc": "文化部",
-      "grants_gov": "Grants.gov"
+      "grants_gov": "Grants.gov",
+      "reviewed": "官方資料人工查核"
     },
     "availability": {
       "open": "受理中",
@@ -2762,7 +2812,7 @@
     "deadlineDate": "截止 {date}",
     "deadlineUnknown": "截止日待確認",
     "empty": "沒有符合的公告",
-    "emptyMine": "選一個補助，開始準備申請",
+    "emptyMine": "選一個機會，開始準備申請",
     "close": "關閉詳細資訊",
     "opens": "開始受理",
     "deadline": "申請截止",
@@ -2774,21 +2824,21 @@
     "dateHint": "只顯示公告明列的日期，實際截止時間與時區請以官方網站為準。待辦日期是你的工作提醒，完成待辦不代表已正式送件。",
     "application": "申請紀錄",
     "applicationHint": "先獨立準備申請，進入執行且有已簽約合作案時再關聯。儲存申請不會自動建立合作案，也不會代為送件。",
-    "paymentHint": "核定補助不等於已收到收入。實際收付款請到內帳記錄；查看補助不會自動產生營收或收款紀錄。",
+    "paymentHint": "獲選或核定補助不等於已收到收入。實際收付款請到內帳記錄；追蹤機會不會自動產生營收。",
     "stage": "進度",
     "stages": {
       "preparing": "準備中",
       "submitted": "已送件",
-      "awarded": "已核定",
-      "not_selected": "未獲補助",
+      "awarded": "獲選／獲補助",
+      "not_selected": "未獲選／未獲補助",
       "closed": "已結案"
     },
     "project": "關聯已簽約合作案",
     "noProject": "獨立追蹤",
     "notes": "備註",
     "saveChanges": "儲存修改",
-    "checklist": "交件與核銷待辦",
-    "checklistHint": "加入這個補助需要的步驟，會出現在 Taloox 行程與今日總覽；點日期可修改。目前待辦不會同步到 Google 或 Apple 日曆。成果報告與核銷期限，請依核定函或補助契約設定。",
+    "checklist": "申請與執行待辦",
+    "checklistHint": "加入準備、提交或核銷步驟，會出現在行程與今日總覽；點日期可修改。目前不會同步到 Google 或 Apple 日曆。實際期限依主辦規則設定。",
     "addTask": "新增期限",
     "calendar": "查看行程",
     "openProject": "開啟合作案",
@@ -2811,20 +2861,20 @@
       "settlement": "提交經費核銷／結案資料",
       "custom": "其他待辦"
     },
-    "taskContext": "補助工作提醒，請核對此補助的正式要求。",
+    "taskContext": "機會申請待辦",
     "invalid": "請確認欄位與日期後再試一次。",
     "notFound": "工作區找不到這筆申請。",
     "failed": "暫時無法儲存，請再試一次。",
-    "guideTitle": "從公告到結案",
-    "guideDiscover": "找到官方補助，先確認誰能申請。",
-    "guidePrepare": "開始準備，安排申請文件與交件期限。",
-    "guideConnect": "確認核定後，關聯已簽約工作，追蹤憑證、成果報告與實際收付款。",
-    "newNotices": "有 {count} 筆補助公告新增、更新或開始受理",
+    "guideTitle": "找到機會，接著開始準備",
+    "guideDiscover": "選擇機會並對照資格與官方規則。",
+    "guidePrepare": "加入追蹤並設定提交日期，會同步建立待辦與行事曆提醒。",
+    "guideConnect": "確定有合作要執行後，再連結已簽約合作案；收藏不會自動建立合作案。",
+    "newNotices": "有 {count} 筆機會公告新增、更新或開始受理",
     "markSeen": "標示已看過",
     "availabilityFilter": "申請狀態",
     "activeListings": "目前與即將開放",
     "allStatuses": "所有狀態",
-    "resultCount": "{count} 則補助公告",
+    "resultCount": "{count} 則機會公告",
     "sourceStatus": "來源更新狀態",
     "clearFilters": "重設篩選",
     "completedTasks": "已完成 {count} 項",
@@ -2837,13 +2887,71 @@
     "editTask": "修改期限",
     "editTaskNamed": "修改「{title}」的期限",
     "addedToCalendar": "已儲存至 Taloox 行程",
-    "editLinkInGrant": "請在補助申請中修改關聯合作案，讓這份申請的待辦保持一致。",
+    "editLinkInGrant": "請在機會申請中修改關聯合作案，讓這份申請的待辦保持一致。",
     "applicationDetails": "進度與關聯資料",
     "noOpenTasks": "目前沒有未完成期限，可新增下一步待辦。",
     "planSubmission": "安排申請",
     "planHint": "選擇你預計提交的日期，儲存後會同步顯示在今日總覽與行程。還沒決定日期，也可以先收藏。",
     "afterDeadline": "預計日期晚於公告截止日，儲存前請確認官方期限。",
-    "saveAndSchedule": "收藏並加入行程"
+    "saveAndSchedule": "收藏並加入行程",
+    "exploreTabs": {
+      "grant": "補助",
+      "opportunities": "比賽／參展",
+      "mine": "我的追蹤"
+    },
+    "kinds": {
+      "grant": "補助",
+      "competition": "比賽",
+      "exhibition": "參展",
+      "showcase": "展演徵選"
+    },
+    "refreshing": "更新中…",
+    "reviewedCoverage": "比賽與參展目前為人工查核的官方機會；尚未串接自動徵件來源，日期不明者請查看官方公告。",
+    "qualification": {
+      "title": "資格初篩",
+      "profile": "申請身分",
+      "profileScope": "這個工作區的申請身分",
+      "profileHint": "請填實際申請人的法律身分與設立／居住國家。此設定只用於你在這個工作區的初篩，不會變更帳號權限；所在地不等於國籍或所有補助的居留資格。",
+      "entity": "申請人類型",
+      "country": "設立／居住國家",
+      "unknown": "尚未確認",
+      "entities": {
+        "individual": "個人",
+        "business": "公司／營利工作室",
+        "nonprofit": "非營利組織",
+        "government": "政府單位",
+        "tribal": "美國聯邦認可部落",
+        "other": "其他"
+      },
+      "countries": {
+        "TW": "台灣",
+        "US": "美國",
+        "other": "其他國家"
+      },
+      "status": {
+        "match": "已知條件相符",
+        "check": "資格待確認",
+        "mismatch": "有不符條件"
+      },
+      "filter": "資格篩選",
+      "filters": {
+        "all": "全部資格狀態",
+        "possible": "排除明確不符",
+        "match": "已知條件相符",
+        "check": "資格待確認",
+        "mismatch": "有不符條件"
+      },
+      "reasons": {
+        "noRules": "官方條件尚未完整整理，請查看申請規則；不會因此排除這個機會。",
+        "stale": "資格依據已超過查核有效期，請重新確認官方規則。",
+        "applicantType": "你設定的申請人類型不在已知接受範圍內。",
+        "country": "你設定的國家不在已知接受範圍內。",
+        "missingProfile": "請先補齊申請身分，才能比較這些已知條件。",
+        "knownMatch": "已整理的身分類型／地區條件相符，仍需確認其他規則。"
+      },
+      "evidence": "官方資格依據 · {date} 查核",
+      "caution": "這是初篩，不代表符合全部資格或保證錄取；年齡、設立年限、作品權利、費用與附件仍需依官方規則確認。"
+    }
   },
   "dateTimeInput": {
     "datePlaceholder": "YYYY/MM/DD",
@@ -3379,7 +3487,7 @@
       "loading": "正在查詢本機稅務資料…",
       "error": "無法讀取稅務資料，請重試或使用已確認的手動稅率。",
       "categories": {
-        "livePerformance": "現場演出",
+        "livePerformance": "演出服務費",
         "influencerSponsorship": "網紅業配",
         "videoProduction": "影片製作",
         "photography": "攝影",
@@ -3390,7 +3498,8 @@
         "merchandise": "周邊商品",
         "consulting": "顧問／創意服務",
         "management": "經紀佣金",
-        "mixed": "混合／尚未確定"
+        "mixed": "混合／尚未確定",
+        "ticketAdmissions": "售票收入／入場費"
       },
       "deliveries": {
         "electronic": "僅電子交付",
@@ -3423,7 +3532,8 @@
         "rule": "這個服務、交付形式與日期尚無已確認規則，目前未帶入稅率。",
         "rate": "請選擇已核對的完整稅區合計稅率，不能單獨套用分項稅率。",
         "date": "尚無適用於此交易日期的稅率。",
-        "stale": "此稅率來源需重新更新後才能套用。"
+        "stale": "此稅率來源需重新更新後才能套用。",
+        "admissions": "售票可能另有地方入場稅或娛樂稅，請確認後再填入稅率；不能直接套用周邊商品或服務費的稅率。"
       },
       "references": {
         "title": "官方稅務參考",
@@ -3457,7 +3567,9 @@
           "addressOverride": "地址有特殊條件，不能直接套用單一稅率"
         },
         "localSource": "官方地方稅資料"
-      }
+      },
+      "merchandiseConditions": "僅限一般實體周邊（衣服、CD 或海報），在本州零售地點當面交付。不含寄送、食品飲料、轉售免稅、搭售門票、平台代徵或特殊商品。",
+      "performanceScope": "這裡指藝人收取的演出服務費，不含售票收入或周邊商品。服務課稅規則仍需確認，未知不會當成零稅率。"
     },
     "withheld": "已確認扣繳",
     "documentKind": "文件類型",
@@ -3885,7 +3997,39 @@
       "chooseCountyFirst": "請先選擇縣市",
       "existingDistrict": "原有資料：{name}",
       "postalHelp": "選擇鄉鎮市區後帶入 3 碼郵遞區號。完整 6 碼需依街道與門牌確認；特殊投遞區域可能不同，可直接修改。"
-    }
+    },
+    "taiwanSetup": {
+      "title": "台灣電子發票設定",
+      "notEnabled": "正式開票尚未啟用",
+      "help": "台幣請款文件或 PDF 不等於台灣統一發票。正式開票需要營業人資格、電子發票字軌及已授權的傳輸連線。",
+      "providerHelp": "可以選擇電子發票服務商，或自行接財政部 Turnkey。此設定不綁定綠界，也不會直接啟用開票。",
+      "registered": "我的營業人已具備開立統一發票資格",
+      "businessName": "營業人名稱",
+      "taxId": "統一編號（8 碼）",
+      "route": "發票傳輸方式",
+      "routes": {
+        "undecided": "尚未決定",
+        "provider": "電子發票服務商",
+        "turnkey": "自行串接財政部 Turnkey"
+      },
+      "providerName": "服務商名稱",
+      "numberTracks": "已核准電子發票字軌",
+      "save": "儲存設定",
+      "saving": "儲存中…",
+      "loading": "載入中…",
+      "saved": "設定已儲存，正式開票仍未啟用。",
+      "reload": "重新載入已存設定",
+      "error": "無法載入或儲存設定。填寫內容仍保留，可再次儲存，或重新載入先前設定。",
+      "official": "查看官方 Turnkey 申請流程",
+      "pending": {
+        "business": "確認營業人資格並填寫登記資料。",
+        "route": "選擇傳輸方式；使用服務商時請填寫名稱。",
+        "tracks": "申請電子發票字軌。",
+        "connection": "完成商家帳號或 Turnkey 授權連線與驗證後，才能正式開票。"
+      }
+    },
+    "pdfLifecycle": "草稿預覽即時產生，不會每次多存一份檔案。修改同一張文件會保留編號並更新版本。",
+    "pdfFrozen": "建立 Gmail 草稿後，會保留當時的 PDF 附件，不會因為其他資料變動而偷偷覆蓋或刪除。"
   },
   "briefing": {
     "title": "今日提醒",
@@ -3954,5 +4098,28 @@
       }
     },
     "label": "範例分類"
+  },
+  "projectPicker": {
+    "title": "加到合作案",
+    "search": "搜尋合作案",
+    "suggested": "建議",
+    "none": "還沒有已簽約的合作案。合作案簽約後，才能把行程加進去。",
+    "noMatch": "找不到符合的合作案。",
+    "added": "已加到「{project}」。"
+  },
+  "lostDeal": {
+    "titleDeclined": "標記為已婉拒？",
+    "titleCancelled": "標記為已取消？",
+    "intro": "「{project}」還有這些未完成的項目：",
+    "payments": "{count} 筆預計款項",
+    "todos": "{count} 項待辦",
+    "events": "{count} 個尚未發生的行程",
+    "eventsGoogle": "也會從 Google 日曆移除",
+    "due": "{date} 到期",
+    "separator": "；",
+    "stays": "已登錄的收付款、扣繳及其未付餘額會保留。只會取消上方列出的未付款計畫；過往行程與聯絡待辦也會保留。",
+    "keep": "只標記，保留這些項目",
+    "cancelDeclined": "標記為已婉拒，並取消這些項目",
+    "cancelCancelled": "標記為已取消，並取消這些項目"
   }
 }

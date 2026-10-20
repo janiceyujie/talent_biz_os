@@ -1,8 +1,6 @@
-// The onboarding role ("what's your role?") is a working preference, saved
-// onto two existing settings rather than as a field of its own:
-// Manager → person.account_type = manager; every other role → talent.vertical.
-// It never grants or limits access — permissions come from membership.role.
-// See docs/architecture.md, "Roles and verticals".
+// Legacy workspace presentation defaults. Existing accounts retain these values.
+// Optional occupation is stored separately in preference["profile.role"] (lib/profile).
+// These helpers never grant access; manager entitlements and memberships do.
 import type { verticals } from "@/lib/db/schema";
 
 export const roles = ["musician", "manager", "video", "influencer", "model", "other"] as const;

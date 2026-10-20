@@ -8,12 +8,12 @@ import { dateInZone } from "@/lib/domain/dates";
 import { useAppData } from "./app-data";
 
 // The role character walking in the top bar. Clicking it shows a pep talk
-// from a fixed, reviewed list per role (messages: encouragement.lines) — no
-// model call, no guessing at how the person feels. It greets once per role
+// from a fixed, reviewed general list (messages: encouragement.general) — no
+// model call, no guessing at how the person feels. It greets once
 // per local day on its own; both that and pausing the animation are browser
 // preferences in localStorage, not synced across devices.
 
-const lineKeys = ["0", "1", "2", "3", "4", "5"] as const; // six lines per role
+const lineKeys = ["0", "1", "2", "3", "4", "5"] as const;
 const preferencesKey = "talent-companion-preferences-v1";
 const greetingKey = "talent-companion-greetings-v1";
 
@@ -50,10 +50,10 @@ export function Companion({
 }) {
   const data = useAppData();
   const t = useTranslations("encouragement");
-  const tRoles = useTranslations("roles");
   const tEyebrow = useTranslations("eyebrow");
   const { role, appearance } = data.person;
   const timeZone = data.talent.timeZone;
+  const greetingScope = `${data.person.email}:${data.talent.id}`;
   const [prefs, setPrefs] = useState({ loaded: false, paused: false, automatic: true });
   const [hidden, setHidden] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -83,16 +83,16 @@ export function Companion({
   // The daily greeting, a second after the workspace opens.
   useEffect(() => {
     if (!prefs.loaded || !prefs.automatic || blocked || hidden || !day) return;
-    const key = `${role}:${day}`;
-    if (shown.current.has(key) || stored(greetingKey)[role] === day) return;
+    const key = day;
+    if (shown.current.has(key) || stored(greetingKey)[greetingScope] === day) return;
     const timer = setTimeout(() => {
-      if (document.hidden || document.querySelector("dialog[open]") || stored(greetingKey)[role] === day) return;
+      if (document.hidden || document.querySelector("dialog[open]") || stored(greetingKey)[greetingScope] === day) return;
       shown.current.add(key);
-      store(greetingKey, { ...stored(greetingKey), [role]: day });
+      store(greetingKey, { ...stored(greetingKey), [greetingScope]: day });
       onOpenChange(true);
     }, 1000);
     return () => clearTimeout(timer);
-  }, [prefs.loaded, prefs.automatic, blocked, hidden, day, role, onOpenChange]);
+  }, [prefs.loaded, prefs.automatic, blocked, hidden, day, greetingScope, onOpenChange]);
 
   useEffect(() => {
     if (!visible) return;
@@ -137,8 +137,8 @@ export function Companion({
             if (!open) {
               setOffset((n) => n + 1);
               // Opening it by hand counts as today's greeting.
-              shown.current.add(`${role}:${today}`);
-              store(greetingKey, { ...stored(greetingKey), [role]: today });
+              shown.current.add(today);
+              store(greetingKey, { ...stored(greetingKey), [greetingScope]: today });
             }
             onOpenChange(!open);
           }}
@@ -165,14 +165,14 @@ export function Companion({
         <section id={panelId} className="companion-bubble" aria-label={t("messageLabel")}>
           <div className="companion-bubble-header">
             <span>
-              {tEyebrow("talentAssistant")} <span>· {tRoles(`${role}.label`)}</span>
+              {tEyebrow("talentAssistant")}
             </span>
             <button type="button" aria-label={t("close")} onClick={close}>
               <X size={18} />
             </button>
           </div>
           <p aria-live="polite" aria-atomic="true">
-            {t(`lines.${role}.${lineKey(today, offset)}`)}
+            {t(`general.${lineKey(today, offset)}`)}
           </p>
           <div className="companion-bubble-actions">
             <button type="button" onClick={() => setOffset((n) => n + 1)}>

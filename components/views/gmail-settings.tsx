@@ -77,7 +77,7 @@ export function GmailSettings({ onNotice }: { onNotice: (text: string) => void }
 
   return (
     <>
-      <SettingsRow icon={<Mail size={20} />} label={t("title")} hintBulleted hint={[t("aboutRead"), t("aboutDecide"), t("aboutMembers")]} description={description} error={rowError}>
+      <SettingsRow id="gmail" icon={<Mail size={20} />} label={t("title")} hintBulleted hint={[t("aboutRead"), t("aboutDecide"), t("aboutMembers")]} description={description} error={rowError}>
         {gmail.available && (!connection || connection.status === "reconnect_needed") && (
           <button className="primary" onClick={() => setDialog("connect")}>
             {connection ? t("reconnect") : t("connect")}

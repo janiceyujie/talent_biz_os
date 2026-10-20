@@ -13,6 +13,7 @@ import { AssistantDock } from "./assistant-dock";
 import { WorkspaceSearch } from "./workspace-search";
 import { AccountMenu } from "./account-menu";
 import { Companion } from "./companion";
+import { LiveRefresh } from "./live-refresh";
 import { NotificationList, useNotifications } from "./notifications";
 import { ReminderProvider } from "./reminder-feed";
 import { DailyBriefing } from "./daily-briefing";
@@ -238,7 +239,7 @@ function ShellContent({ children, sessionKey }: { children: ReactNode; sessionKe
             <WorkspaceSearch key={`${data.talent.id}:${data.person.email}:${Boolean(data.preview)}`} open={showSearch} onOpenChange={setShowSearch} />
           </div>
           <Companion
-            key={data.person.role}
+            key={`${data.talent.id}:${data.person.email}`}
             open={companionOpen}
             onOpenChange={setCompanionOpen}
             blocked={mobile || showNotifications || showSearch}
@@ -264,6 +265,7 @@ function ShellContent({ children, sessionKey }: { children: ReactNode; sessionKe
           <NotificationList open={open} />
         </Modal>
       )}
+      <LiveRefresh />
       <div className="workspace-tools">
       <DailyBriefing requestId={briefingRequest} sessionKey={sessionKey} onShow={() => setCompanionOpen(false)} onOpen={open} suppress={showNotifications || showSearch || mobile} />
       <AssistantDock hidden={mobile || showNotifications || showSearch} />

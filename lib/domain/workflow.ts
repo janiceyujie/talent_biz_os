@@ -95,14 +95,25 @@ export function renderTemplate(template: ReplyTemplate, source: string, project:
 /** Date a payment counts on: settled date once settled, otherwise the recorded date. */
 export const paymentDate = (p: Payment) => (p.status === "settled" ? p.settledDate || p.recordedDate : p.recordedDate);
 
+/** Expected amounts count only for signed work; actual receipts always remain visible. */
+export function countedPayments<P extends Pick<Payment, "status" | "projectId"> & Partial<Pick<Payment, "receipts">>>(payments: P[], projects: Pick<ProjectSummary, "id" | "stage">[]): P[] {
+  const signed = new Set(projects.filter(p => isSigned(p.stage)).map(p => p.id));
+  return payments.filter(p => {
+    const replaced = new Set(p.receipts?.flatMap(r => r.replaces ? [r.replaces] : []) ?? []);
+    const recorded = p.receipts?.some(r => !r.withdrawn && !replaced.has(r.id) && (r.cash > 0 || r.withheld > 0));
+    return p.status !== "expected" || !p.projectId || signed.has(p.projectId) || recorded;
+  });
+}
+
 /** Cash-basis totals by receipt date, with outstanding balances grouped by recorded date. */
-export function summarize(data: Pick<AppData, "payments">, from = "", to = "9999-12-31", currency: Payment["currency"] = "TWD") {
+export function summarize(data: Pick<AppData, "payments"> & { projects?: Pick<ProjectSummary, "id" | "stage">[] }, from = "", to = "9999-12-31", currency: Payment["currency"] = "TWD") {
   const live = data.payments.filter(p => p.currency === currency && !p.voided && p.status !== "cancelled");
+  const counted = new Set(data.projects ? countedPayments(live, data.projects) : live);
   const inRange = (date: string) => date >= from && date <= to;
   const rows = live.filter(p => inRange(p.recordedDate) || activeReceipts(p).some(r => inRange(r.date)));
   const sum = (direction: Payment["direction"], cash: boolean, type?: Payment["projectType"]) => rows
     .filter(p => p.direction === direction && (!type || p.projectType === type))
-    .reduce((n, p) => n + minorUnits(cash ? cashInRange(p, from, to) : inRange(p.recordedDate) ? paymentRemaining(p) : 0, currency), 0) / minorUnitFactor(currency);
+    .reduce((n, p) => n + minorUnits(cash ? cashInRange(p, from, to) : counted.has(p) && inRange(p.recordedDate) ? paymentRemaining(p) : 0, currency), 0) / minorUnitFactor(currency);
   return { rows, received: sum("in", true), receivable: sum("in", false), paid: sum("out", true), payable: sum("out", false),
     split: projectTypes.map(t => ({ type: t.key, amount: sum("in", true, t.key) })) };
 

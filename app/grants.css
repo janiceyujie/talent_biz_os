@@ -1,3 +1,17 @@
+/* Opportunities extend the existing grant workflow and semantic palette. */
+.grant-tabs { flex-wrap:wrap; }
+.grant-card-classification { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.eligibility-badge { display:inline-block; padding:4px 8px; border-radius:6px; font-size:12px; background:var(--paper); color:var(--muted); }
+.eligibility-badge.match { background:var(--lime-soft); color:var(--ink-soft); }
+.eligibility-badge.mismatch { color:var(--red); }
+.eligibility-summary summary { display:list-item; }
+.eligibility-summary summary .eligibility-badge { margin-left:12px; }
+.eligibility-summary ul { padding-left:20px; font-size:13px; line-height:1.6; }
+.eligibility-summary a { font-size:13px; }
+.grant-curated-note { font-size:12px; color:var(--muted); margin:0; }
+.grant-filters { flex-wrap:wrap; }
+.grant-search { min-width:180px; }
+@media(max-width:600px) { .grant-tabs { width:100%; gap:8px; }.grant-tabs button { flex:1; padding-inline:8px; font-size:13px; }.grant-filters>button { width:100%; }.grant-filters>label { flex-basis:40%; } }
 /* Grants use the existing paper, surface, and lime palette. */
 .grants-workspace { display:grid; gap:16px; }
 .grant-toolbar,.grant-tools,.grant-tabs,.grant-filters,.grant-item-meta,.grant-detail-top,.grant-detail-actions,.grant-section-title,.grant-links { display:flex; align-items:center; gap:12px; }

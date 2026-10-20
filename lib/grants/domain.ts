@@ -43,6 +43,8 @@ export function parseGrantsGov(value: unknown): {rows: GrantListing[]; total: nu
 }
 export const listingHash = (g: GrantListing) => {
   // MOC rotates opaque view-state links; a new token is not a content update.
-  const value = g.source === "moc" ? {...g, url:new URL(g.url).origin + new URL(g.url).pathname} : g;
+  const {eligibility,...base}=g;
+  const semantic = eligibility?{...base,eligibility:{applicantTypes:eligibility.applicantTypes,countries:eligibility.countries,notes:eligibility.notes,evidenceUrl:eligibility.evidenceUrl}}:base;
+  const value = g.source === "moc" ? {...semantic, url:new URL(g.url).origin + new URL(g.url).pathname} : semantic;
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 };

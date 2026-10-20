@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { roleReturnHref } from "./role-return";
 
 test("role cancellation returns to a workspace page and preserves URL filters", () => {
-  for (const path of ["/", "/settings", "/assistant", "/projects/example?tab=payments#details", "/inbox?status=new"]) {
+  for (const path of ["/", "/settings", "/assistant", "/projects/example?tab=payments#details", "/inbox?status=new", "/grants?view=mine", "/manager/access"]) {
     assert.equal(roleReturnHref(path), path);
   }
 });

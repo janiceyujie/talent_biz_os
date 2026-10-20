@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 import { mailConnection, mailDecision, mailSenderRule, message, payment, project, talent as talentTable, todo } from "@/lib/db/schema";
 import { appendReceipt, ReceiptError } from "@/lib/domain/payment-receipts";
 import { dateInZone } from "@/lib/domain/dates";
-import { isSigned } from "@/lib/domain/phases";
+import { isOpenStage } from "@/lib/domain/phases";
 import { supportedCurrencies, type Currency } from "@/lib/domain/money";
 import { queueFetch } from "@/lib/mail/jobs/fetch";
 import { domainOf, parseAddress } from "@/lib/mail/metadata";
@@ -242,7 +242,7 @@ export async function recordNoticePayment(messageId: string, target: { paymentId
           .returning({ id: payment.id, projectId: payment.projectId });
       } else {
         const [parent] = await tx.select().from(project).where(and(eq(project.id,target_.projectId),eq(project.talentId,talent.id))).for("update");
-        if (!parent || parent.archivedAt || !isSigned(parent.stage)) throw new Refused("paymentNotFound");
+        if (!parent || parent.archivedAt || !isOpenStage(parent.stage)) throw new Refused("paymentNotFound");
         if (parent.quoteCurrency !== n.currency) throw new Refused("paymentCurrencyMismatch");
         [p] = await tx
           .insert(payment)

@@ -18,6 +18,7 @@ import { useProjectPages } from "@/components/app/project-pages";
 import { useFitToWindow } from "@/components/app/use-fit-to-window";
 import { projectRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
 import { archiveProject as archiveProjectRemote, setProjectStage as setProjectStageRemote } from "@/lib/actions/projects";
+import { openDealItems, type OpenDealItems } from "@/lib/actions/projects";
 import { useMoney } from "@/lib/i18n/format";
 import { mainStages, phaseOf, phases, type Phase } from "@/lib/domain/phases";
 import { listSorts, type ListSort, type ListView } from "@/lib/domain/project-list";
@@ -34,6 +35,7 @@ import { MoreMenu } from "./more-menu";
 import { DealCard } from "./deal-card";
 import { ProjectOverview } from "./project-overview";
 import { TravelItinerary } from "./travel-itinerary";
+import { LostDealDialog } from "./lost-deal-dialog";
 import { ContractVersions, ProjectTimeline } from "./project-timeline";
 
 const NARROW = "(max-width: 1000px)"; // list and detail stack: show one at a time
@@ -545,13 +547,13 @@ function ProjectDetail({
     switched.current = false;
   }, [tab]);
 
-  const moveTo = (stage: Stage) =>
+  const moveTo = (stage: Stage, cancelOpen = false) =>
     startTransition(async () => {
       if (stageNeedsReload) return;
       setError(null);
       let failure: string | null;
       try {
-        failure = await setProjectStage(project.id, stage);
+        failure = await setProjectStage(project.id, stage, { cancelOpen });
       } catch (error) {
         const outdated = unstable_isUnrecognizedActionError(error);
         setStageNeedsReload(outdated);
@@ -562,6 +564,7 @@ function ProjectDetail({
       setError(failure);
       if (!failure) {
         setRequestedStage(null);
+        setEnding(null);
         onMoved(stage);
       }
     });
@@ -577,6 +580,25 @@ function ProjectDetail({
         setError(t("archiveFailed"));
       }
     });
+  // Declined or cancelled with things still open on it: ask what to do with them first (decision 0018).
+  const [ending, setEnding] = useState<{ stage: "declined" | "cancelled"; items: OpenDealItems } | null>(null);
+  const endDeal = (stage: "declined" | "cancelled") =>
+    startTransition(async () => {
+      setError(null);
+      try {
+        const items = await openDealItems(project.id);
+        if (items && (items.payments.length || items.todos.length || items.events.length)) {
+          setRequestedStage(null);
+          setEnding({ stage, items });
+          return;
+        }
+        moveTo(stage);
+      } catch (error) {
+        const outdated = unstable_isUnrecognizedActionError(error);
+        setStageNeedsReload(outdated);
+        setError(t(outdated ? "stageChange.outdated" : "stageChange.failed"));
+      }
+    });
 
   return (
     <article className="deal-detail deal-dossier">
@@ -589,9 +611,20 @@ function ProjectDetail({
         onReload={stageNeedsReload ? () => window.location.reload() : undefined}
         onTarget={requestStage}
         onClose={() => { if (!pending) { setRequestedStage(null); setError(null); } }}
-        onConfirm={() => moveTo(requestedStage)}
+        onConfirm={() => requestedStage === "declined" || requestedStage === "cancelled" ? endDeal(requestedStage) : moveTo(requestedStage)}
         onMoney={() => { setRequestedStage(null); openTab("money"); }}
       />}
+      {ending && (
+        <LostDealDialog
+          title={project.title}
+          stage={ending.stage}
+          items={ending.items}
+          error={error}
+          pending={pending}
+          onChoose={(cancelOpen) => moveTo(ending.stage, cancelOpen)}
+          onClose={() => setEnding(null)}
+        />
+      )}
       {/* Two boxes: where the project stands and what to do about it, then its details under tabs. */}
       <section className="surface dossier-box">
         <button className="text-button deal-back" onClick={onBack}>

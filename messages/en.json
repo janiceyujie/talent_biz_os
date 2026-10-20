@@ -30,7 +30,7 @@
     "collapseMenu": "Collapse sidebar",
     "expandMenu": "Expand sidebar",
     "home": "Back to home",
-    "grants": "Grants",
+    "grants": "Opportunities",
     "manager": "Manager workspace"
   },
   "shell": {
@@ -64,7 +64,7 @@
     "closeReminder": "Close reminder",
     "accountMenu": "Account menu for {name}",
     "settings": "Settings",
-    "roleAndAssistant": "Role and assistant",
+    "roleAndAssistant": "Profile and assistant",
     "importSent": "Sent for analysis; it will appear under “Needs you” when it’s done.",
     "importDuplicate": "This was imported before; see it in Intake.",
     "clearSearch": "Clear search",
@@ -769,7 +769,7 @@
   "inbox": {
     "title": "Offers to review",
     "gmailSoon": "Gmail add-on coming soon",
-    "intro": "Paste an offer and the system pulls out the key facts and suggests a type; nothing becomes a project until you confirm. Screenshot upload and the Gmail add-on are on the way.",
+    "intro": "Messages from Gmail, pasted text and uploads land here. Each is analyzed for the key facts and a suggested type; nothing becomes a project until you confirm.",
     "upload": "Upload screenshot / PDF",
     "paste": "Paste an offer",
     "emptyTitle": "No offers here yet",
@@ -783,7 +783,7 @@
     "analyze": "Analyze",
     "submitting": "Sending…",
     "duplicate": "You've brought this in before — here it is.",
-    "showDismissed": "Show dismissed",
+    "showDismissed": "Show dismissed ({count})",
     "status": {
       "pending": "Analyzing",
       "analyzed": "To review",
@@ -799,7 +799,7 @@
       "forwarded_email": "Forwarded email",
       "gmail": "Gmail"
     },
-    "pendingBody": "The AI is reading this message; the result appears here on its own. The local model takes about half a minute.",
+    "pendingBody": "The AI is reading this message; the result appears here on its own, usually within a minute.",
     "failed": "The analysis didn't finish: {reason}",
     "facts": "What the AI read",
     "field": {
@@ -904,7 +904,7 @@
     "historyInfo": "Older threads from the last 30 days, nothing new in them for two weeks. They're kept for reference; opening one analyzes it.",
     "historyCount": "{count, plural, one {# email} other {# emails}}",
     "unverifiedSenderPayment": "Gmail couldn't verify the sender, and this asks about payment or bank details: a common fraud. Don't pay or reply with details; confirm with them using contact details you already have.",
-    "requestFailed": "The result could not be confirmed. Try again later or return to the message list."
+    "requestFailed": "That didn't go through: check your connection and try again."
   },
   "intake": {
     "targetHeading": "File under a project",
@@ -1192,7 +1192,16 @@
       "seat": "Seat {seat}"
     },
     "notes": "Notes",
-    "openGrant": "Open grant application"
+    "openGrant": "Open grant application",
+    "monthLabel": "The month's events and to-dos",
+    "openDay": "Open {date}",
+    "more": "+{count} more",
+    "emptyDay": "Nothing on this day.",
+    "openInWeek": "Open this day in the week view",
+    "addOnDay": "＋ Add on this day",
+    "show": "Show",
+    "showOpen": "Current",
+    "showUnfiled": "Not in a project"
   },
   "planner": {
     "views": "Calendar views",
@@ -1258,7 +1267,21 @@
     "untitled": "(No title)",
     "create": "Create",
     "zone": "Times are in {zone}",
-    "grantSource": "Open grant application"
+    "grantSource": "Open grant application",
+    "noProject": "Not in a project",
+    "addToProject": "Add to a project",
+    "repeatingFromGoogle": "Repeating, from your Talent Biz OS calendar in Google: change it there.",
+    "openInGoogle": "Open in Google Calendar",
+    "changeProject": "Change",
+    "seriesNote": "Adding it to a project adds every occurrence of the series.",
+    "close": "Close",
+    "googleSynced": "Google Calendar · synced {time}",
+    "googleJustNow": "Google Calendar · synced just now",
+    "googleNever": "Google Calendar · not synced yet",
+    "googleSyncing": "Google Calendar · syncing…",
+    "googleFailed": "Google Calendar · last sync failed",
+    "googleReconnect": "Google Calendar needs reconnecting",
+    "googleSyncNow": "Sync now"
   },
   "calendarFeed": {
     "title": "Subscription link",
@@ -1295,7 +1318,7 @@
   },
   "googleCalendar": {
     "calendarName": "Talent Biz OS · {talent}",
-    "calendarDescription": "Events created and synced by Talent Biz OS. Change them in Talent Biz OS; edits made here are overwritten on the next sync.",
+    "calendarDescription": "Events created by Talent Biz OS. Change them here or in Talent Biz OS: both stay up to date.",
     "title": "Google Calendar",
     "notConfigured": "Google isn't set up in this environment.",
     "needGoogle": "Connect your Google account under “Sign in with Google” above first",
@@ -1327,8 +1350,8 @@
     "chooseNone": "This Google account has no other calendars.",
     "chooseSave": "Save",
     "saving": "Saving…",
-    "sendTitle": "Send to Google",
-    "sendTo": "Your events → the “Talent Biz OS” calendar in Google",
+    "sendTitle": "Sync with Google",
+    "sendTo": "Your events ⇄ the “Talent Biz OS” calendar in Google",
     "importNone": "None chosen",
     "aboutSend": "Send to Google: confirmed events go into a dedicated “Talent Biz OS” calendar in your Google account, updated as soon as you save. This app only creates and changes that calendar; it sends the title, time, place, and project. To-dos and payments aren’t sent.",
     "aboutShow": "Show here: the Google calendars you tick appear read-only in the calendar here, visible only to you, so clashes with personal plans show. This app reads only the calendars you tick.",
@@ -1338,7 +1361,9 @@
     "syncFailed": "Last sync failed",
     "manage": "Manage",
     "done": "Done",
-    "syncedJustNow": "Synced just now"
+    "syncedJustNow": "Synced just now",
+    "sendNote": "A change on either side updates the other.",
+    "notesMarker": "── Notes (synced with Talent Biz OS) ──"
   },
   "gmail": {
     "title": "Gmail",
@@ -1489,7 +1514,13 @@
     "draftAccess": "Also allow Taloox to create invoice drafts",
     "draftDisclosure": "Google bundles draft management and sending in one permission. Taloox only creates invoice drafts; it does not send, overwrite or delete them. Select the same Gmail account when reconnecting.",
     "autoInfo": "New mail arrives on its own. Check now to look right away, say for a reply you're waiting on.",
-    "sortingCount": "sorting {count, plural, one {# email} other {# emails}}"
+    "sortingCount": "sorting {count, plural, one {# email} other {# emails}}",
+    "syncedJustNow": "Checked just now",
+    "connectInSettings": "Connect Gmail in Settings",
+    "connectToSee": "Connect Gmail to sort your email here: work email waits for you, the rest is filtered out.",
+    "reconnectInSettings": "Gmail needs reconnecting",
+    "reconnectWhy": "Google's access expired, so new mail isn't coming in.",
+    "reconnectGo": "Reconnect in Settings"
   },
   "paymentNotice": {
     "chip": "Payment",
@@ -1514,7 +1545,7 @@
     "newPayment": "Add a payment to",
     "pickPayment": "Choose a payment…",
     "pickProject": "Choose a project…",
-    "noProjects": "No signed projects yet.",
+    "noProjects": "No projects still going yet.",
     "signedOnly": "Only signed projects are listed.",
     "shortBy": "{amount} less, likely a transfer fee.",
     "currencyOnly": "Only NT$ payments can be recorded for now.",
@@ -1529,7 +1560,8 @@
     "remainingAfter": "Still due after recording: {amount}. This balance stays in reminders.",
     "dropTitle": "Drop this notice?",
     "dropBody": "Its details are deleted and it leaves Intake. The email stays in Gmail.",
-    "dropNeverFrom": "Also stop bringing in notices from {sender}"
+    "dropNeverFrom": "Also stop bringing in notices from {sender}",
+    "openOnly": "Only projects still going are listed: not declined or cancelled."
   },
   "settings": {
     "name": "Artist or brand name",
@@ -1818,7 +1850,8 @@
       "save": "Confirm currency correction",
       "saved": "Currency and related receivables corrected. Other unsaved fields are preserved.",
       "failed": "Could not complete the check. Try again; your form is preserved."
-    }
+    },
+    "openOnly": "Any project still going can be linked, signed or not; only signed ones count in expected money and reminders. Linking is optional."
   },
   "tone": {
     "natural": "Natural and professional",
@@ -2014,7 +2047,9 @@
     "withholdingInvalid": "Enter the confirmed withholding amount. It must be positive and no greater than the difference between outstanding and cash received.",
     "noticeCurrency": "Only NT$ payments can be recorded for now.",
     "currencyCorrectionChanged": "Records changed. Check again before confirming.",
-    "currencyCorrectionBlocked": "Related records need attention. Check the review again. Nothing was changed."
+    "currencyCorrectionBlocked": "Related records need attention. Check the review again. Nothing was changed.",
+    "profileSaveFailed": "Could not save your profile. Your entries are still here; please try again.",
+    "projectEnded": "This project was declined or cancelled, so it can't take new items."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",
@@ -2077,7 +2112,7 @@
     "name": "Artist or brand name",
     "managedName": "Name of the artist you manage",
     "managedVertical": "What they do",
-    "managerNote": "You'll be able to add more artists once multi-artist accounts arrive.",
+    "managerNote": "Artist management requires an eligible plan and an invitation from each artist.",
     "assistantLook": "Assistant look",
     "appearance": {
       "female": "Female",
@@ -2090,11 +2125,17 @@
     "back": "Back to roles",
     "avatarWave": "{role} assistant: wave",
     "avatarHint": "Click to say hi",
-    "change": "Change role",
-    "settingsTitle": "Role and assistant",
-    "settingsBody": "Your role shapes wording and suggestions, never what you can access. Change it, or the assistant's look, any time.",
-    "cancelChange": "Cancel role change",
-    "saveNotice": "Changes apply only after you save."
+    "change": "Edit profile",
+    "settingsTitle": "Profile and assistant",
+    "settingsBody": "Occupation is optional. It helps us understand our users; it does not change workspace settings or management permissions.",
+    "cancelChange": "Cancel",
+    "saveNotice": "Changes apply only after you save.",
+    "workspaceName": "Workspace name",
+    "optionalRole": "Your occupation (optional)",
+    "notProvided": "Prefer not to say",
+    "skipRole": "Skip for now",
+    "profileHelp": "This helps us understand who uses TALOOX. It does not change your workspace or available features.",
+    "managerAccessHelp": "Managing artists requires an eligible plan and each artist’s permission. Choosing Manager here does not grant access."
   },
   "itinerary": {
     "title": "Travel, stays & performances",
@@ -2212,7 +2253,15 @@
     "another": "Another one",
     "automatic": "Daily pep talk",
     "pause": "Pause assistant animation",
-    "resume": "Resume assistant animation"
+    "resume": "Resume assistant animation",
+    "general": {
+      "0": "Start with one thing that matters to you. A little progress still counts.",
+      "1": "Your pace doesn't have to match anyone else's. Take your own next step today.",
+      "2": "Some ideas need time to grow. Leave a little space for the one that isn't quite ready yet.",
+      "3": "If the list feels long, choose one thing that matters most. Then take it from there.",
+      "4": "There's a life outside the work, too. Save a little time for it today.",
+      "5": "You don't have to feel certain to begin. A small experiment is a good start."
+    }
   },
   "timeZone": {
     "clear": "Clear time zone",
@@ -2726,32 +2775,33 @@
     "monthlyAverage": "Monthly mean USD"
   },
   "grants": {
-    "view": "Grant workspace",
-    "discover": "Find grants",
+    "view": "Opportunity workspace",
+    "discover": "Discover opportunities",
     "mine": "My applications",
-    "about": "About grants",
-    "aboutText": "Explore official announcements, save an application, and plan its paperwork. All data stays in your local workspace in this preview.",
-    "coverage": "Coverage: the Taiwan Ministry of Culture home page’s latest news, and Grants.gov arts-category posted or forecast opportunities. This is not every grant. Sources are checked every six hours while the local worker is running.",
+    "about": "About opportunities",
+    "aboutText": "Explore grants, competitions and exhibitions, then plan submissions with the same tasks and calendar.",
+    "coverage": "Automatic coverage: Taiwan Ministry of Culture latest news and Grants.gov arts announcements. The running worker refreshes daily at 00:00 UTC; manual refresh checks immediately. Coverage is not exhaustive.",
     "eligibilityHint": "An arts-related grant is not automatically open to an individual artist. Check the official rules for applicant type, residency, location, eligible expenses and required documents.",
     "refresh": "Check announcements",
-    "refreshFailed": "A source could not be checked. Earlier records remain available; check the official site. Refreshes are limited to once every 15 minutes.",
-    "refreshed": "Announcements checked",
+    "refreshFailed": "Some sources could not be updated. Earlier records are available. Refresh to retry.",
+    "refreshed": "Automatic sources updated. Curated opportunities retain their own review dates.",
     "sourceFailed": "Update unavailable",
     "checkedDate": "Checked {date}",
     "notChecked": "Not checked yet",
     "watchSettings": "Announcement reminders",
     "watchEnable": "Notify me about new announcements",
     "watchHint": "Show an alert on Today when announcements are added, changed, or reach their stated opening date for your selected sources. No email is sent. Checks run while the local worker is running.",
-    "region": "Funding source",
+    "region": "Source region",
     "allRegions": "All sources",
-    "search": "Search grants or agencies",
+    "search": "Search opportunities or organizers",
     "regions": {
       "TW": "Taiwan sources",
       "US": "U.S. sources"
     },
     "sources": {
       "moc": "Ministry of Culture",
-      "grants_gov": "Grants.gov"
+      "grants_gov": "Grants.gov",
+      "reviewed": "Reviewed official sources"
     },
     "availability": {
       "open": "Accepting applications",
@@ -2762,7 +2812,7 @@
     "deadlineDate": "Due {date}",
     "deadlineUnknown": "Deadline not confirmed",
     "empty": "No matching announcements",
-    "emptyMine": "Save a grant to start preparing",
+    "emptyMine": "Choose an opportunity to start preparing",
     "close": "Close details",
     "opens": "Applications open",
     "deadline": "Application deadline",
@@ -2774,21 +2824,21 @@
     "dateHint": "Only dates explicitly stated in the announcement are shown. The exact cutoff time and time zone need checking on the official site. Your task dates are planning reminders, not proof that an application was submitted.",
     "application": "Application",
     "applicationHint": "Prepare this application independently. Link signed execution work when needed; saving an application does not create a project or submit it.",
-    "paymentHint": "An award is not received income. Record confirmed payments in Finance; grant discovery never creates revenue or payments automatically.",
+    "paymentHint": "Selection or a grant award is not received income. Record actual transactions in Finance; following an opportunity creates no revenue.",
     "stage": "Progress",
     "stages": {
       "preparing": "Preparing",
       "submitted": "Submitted",
-      "awarded": "Awarded",
-      "not_selected": "Not selected",
+      "awarded": "Selected / awarded",
+      "not_selected": "Not selected / awarded",
       "closed": "Closed"
     },
     "project": "Related signed project",
     "noProject": "Track independently",
     "notes": "Notes",
     "saveChanges": "Save changes",
-    "checklist": "Paperwork and deadlines",
-    "checklistHint": "Add the steps this program needs. They appear in Taloox Calendar and Today; click a date to edit it. These to-dos are not currently exported to Google or Apple Calendar. Use official award documents for report and closeout deadlines.",
+    "checklist": "Application and follow-up tasks",
+    "checklistHint": "Preparation, submission and reporting tasks appear in Calendar and Today. Select a date to edit it. These tasks do not sync to Google or Apple Calendar; use the organizer’s actual deadlines.",
     "addTask": "Add a deadline",
     "calendar": "Open Calendar",
     "openProject": "Open project",
@@ -2811,20 +2861,20 @@
       "settlement": "Submit financial reconciliation / closeout",
       "custom": "Other task"
     },
-    "taskContext": "Grant planning reminder; verify the program’s official requirements.",
+    "taskContext": "Opportunity application task",
     "invalid": "Check the fields and dates, then try again.",
     "notFound": "This application is not available in your workspace.",
     "failed": "The change could not be saved. Please try again.",
-    "guideTitle": "From announcement to closeout",
-    "guideDiscover": "Find an official opportunity and check who can apply.",
-    "guidePrepare": "Save it and add the preparation and submission deadlines you need.",
-    "guideConnect": "After an award is confirmed, link signed work and track receipts, reports and actual payments.",
-    "newNotices": "{count} new, updated or newly opening grant announcements",
+    "guideTitle": "Discover, then prepare",
+    "guideDiscover": "Choose an opportunity and review its criteria and official rules.",
+    "guidePrepare": "Follow it and set a submission date to create a task and calendar reminder.",
+    "guideConnect": "Link a signed project when execution work is confirmed. Following does not create a project.",
+    "newNotices": "{count} new, updated or opening opportunities",
     "markSeen": "Mark as seen",
     "availabilityFilter": "Application status",
     "activeListings": "Current and upcoming",
     "allStatuses": "All statuses",
-    "resultCount": "{count} announcements",
+    "resultCount": "{count} opportunities",
     "sourceStatus": "Source updates",
     "clearFilters": "Reset filters",
     "completedTasks": "{count} completed tasks",
@@ -2837,13 +2887,71 @@
     "editTask": "Edit deadline",
     "editTaskNamed": "Edit deadline for {title}",
     "addedToCalendar": "Saved to Taloox Calendar",
-    "editLinkInGrant": "Change the related project in the grant application; its deadlines stay linked together.",
+    "editLinkInGrant": "Change the project link in the opportunity application to keep its tasks together.",
     "applicationDetails": "Application details",
     "noOpenTasks": "No outstanding deadlines. Add the next step when ready.",
     "planSubmission": "Plan your application",
     "planHint": "Choose your target submission date. Saving creates one deadline shared with Today and Calendar. Leave the date empty to save for later.",
     "afterDeadline": "Your target is after the listed deadline. Check the official dates before saving.",
-    "saveAndSchedule": "Save and add to Calendar"
+    "saveAndSchedule": "Save and add to Calendar",
+    "exploreTabs": {
+      "grant": "Grants",
+      "opportunities": "Competitions & showcases",
+      "mine": "Following"
+    },
+    "kinds": {
+      "grant": "Grant",
+      "competition": "Competition",
+      "exhibition": "Exhibition",
+      "showcase": "Showcase"
+    },
+    "refreshing": "Updating…",
+    "reviewedCoverage": "Competitions and exhibitions are curated from official sources, not automatically refreshed. Check the official announcement when dates are unknown.",
+    "qualification": {
+      "title": "Eligibility screening",
+      "profile": "Applicant profile",
+      "profileScope": "Applicant for this workspace",
+      "profileHint": "Use the actual applicant’s legal type and country of registration/residence. This is your screening profile in this workspace, not an account permission or proof of nationality or residency eligibility.",
+      "entity": "Applicant type",
+      "country": "Country of registration / residence",
+      "unknown": "Not specified",
+      "entities": {
+        "individual": "Individual",
+        "business": "Business / for-profit studio",
+        "nonprofit": "Nonprofit organization",
+        "government": "Government unit",
+        "tribal": "US federally recognized tribe",
+        "other": "Other"
+      },
+      "countries": {
+        "TW": "Taiwan",
+        "US": "United States",
+        "other": "Other country"
+      },
+      "status": {
+        "match": "Known criteria match",
+        "check": "Check eligibility",
+        "mismatch": "Criteria mismatch"
+      },
+      "filter": "Eligibility filter",
+      "filters": {
+        "all": "All eligibility states",
+        "possible": "Exclude known mismatches",
+        "match": "Known criteria match",
+        "check": "Check eligibility",
+        "mismatch": "Criteria mismatch"
+      },
+      "reasons": {
+        "noRules": "Structured criteria are not available. Review the official rules; the opportunity is not excluded.",
+        "stale": "The criteria review has expired. Check the current official rules.",
+        "applicantType": "Your applicant type is outside the documented eligible types.",
+        "country": "Your country is outside the documented eligible countries.",
+        "missingProfile": "Complete your applicant profile to compare the documented criteria.",
+        "knownMatch": "Your profile matches the documented type/country criteria. Other rules still need review."
+      },
+      "evidence": "Official eligibility source · reviewed {date}",
+      "caution": "This preliminary screen does not establish full eligibility or acceptance. Check age, operating history, rights, fees and required documents in the official rules."
+    }
   },
   "dateTimeInput": {
     "datePlaceholder": "YYYY/MM/DD",
@@ -3379,7 +3487,7 @@
       "loading": "Checking local tax data…",
       "error": "Tax data could not be loaded. Retry or use a verified manual rate.",
       "categories": {
-        "livePerformance": "Live performance",
+        "livePerformance": "Performer service fee",
         "influencerSponsorship": "Influencer sponsorship",
         "videoProduction": "Video production",
         "photography": "Photography",
@@ -3390,7 +3498,8 @@
         "merchandise": "Merchandise",
         "consulting": "Consulting / creative services",
         "management": "Management commission",
-        "mixed": "Mixed / not sure"
+        "mixed": "Mixed / not sure",
+        "ticketAdmissions": "Ticket sales / admission"
       },
       "deliveries": {
         "electronic": "Electronic delivery only",
@@ -3423,7 +3532,8 @@
         "rule": "A reviewed rule is not available for this service, delivery format and date. No rate was applied.",
         "rate": "Select a verified combined jurisdiction rate; component rates cannot be applied alone.",
         "date": "No rate is available for this transaction date.",
-        "stale": "This rate source needs refreshing before it can be applied."
+        "stale": "This rate source needs refreshing before it can be applied.",
+        "admissions": "Ticket sales may have separate local admission or amusement taxes. Confirm those rules before entering a rate; merchandise or service rates cannot be reused."
       },
       "references": {
         "title": "Official tax references",
@@ -3457,7 +3567,9 @@
           "addressOverride": "Address override: published figures cannot be used as a single rate"
         },
         "localSource": "Official local tax source"
-      }
+      },
+      "merchandiseConditions": "Only ordinary physical merchandise (shirts, CDs or posters), handed to the buyer at this in-state retail location. No delivery, food, drinks, resale exemption, bundled admission, marketplace collection or special goods.",
+      "performanceScope": "This is the performer’s service fee, not ticket revenue or merchandise. The applicable service rule still needs review; an unknown rule is never treated as zero tax."
     },
     "withheld": "Confirmed withholding",
     "documentKind": "Document type",
@@ -3885,7 +3997,39 @@
       "chooseCountyFirst": "Select a city / county first",
       "existingDistrict": "Existing value: {name}",
       "postalHelp": "Selecting a district fills its 3-digit postal prefix. The full 6-digit code depends on the street and building number. Special delivery areas may differ; you can edit the code."
-    }
+    },
+    "taiwanSetup": {
+      "title": "Taiwan e-invoice setup",
+      "notEnabled": "Official issuance is not enabled",
+      "help": "A TWD payment request or PDF is not a Taiwan uniform invoice. Business eligibility, invoice number tracks and an authorized transmission connection are required.",
+      "providerHelp": "Choose an e-invoice service provider or your own Ministry of Finance Turnkey connection. This setup does not bind you to ECPay or activate issuance.",
+      "registered": "My business is registered to issue uniform invoices",
+      "businessName": "Registered business name",
+      "taxId": "Business tax ID (8 digits)",
+      "route": "Transmission route",
+      "routes": {
+        "undecided": "Not decided yet",
+        "provider": "E-invoice service provider",
+        "turnkey": "Our own Turnkey connection"
+      },
+      "providerName": "Provider name",
+      "numberTracks": "Electronic invoice number tracks have been approved",
+      "save": "Save setup",
+      "saving": "Saving…",
+      "loading": "Loading…",
+      "saved": "Saved. Official issuance remains disabled.",
+      "reload": "Reload saved setup",
+      "error": "Could not load or save setup. Your entries remain here; try saving again or reload the saved setup.",
+      "official": "Official Turnkey application",
+      "pending": {
+        "business": "Confirm business eligibility and registered details.",
+        "route": "Choose a transmission route and, if applicable, a provider.",
+        "tracks": "Apply for electronic invoice number tracks.",
+        "connection": "Connect the authorized merchant account or Turnkey system and complete verification before official issuance."
+      }
+    },
+    "pdfLifecycle": "Draft previews are generated on demand without storing a new file. Editing the same document keeps its number and updates its revision.",
+    "pdfFrozen": "Once a Gmail draft is created, its PDF attachment is preserved. It is not silently replaced or deleted when other information changes."
   },
   "briefing": {
     "title": "Today’s briefing",
@@ -3954,5 +4098,28 @@
       }
     },
     "label": "Sample classification"
+  },
+  "projectPicker": {
+    "title": "Add to a project",
+    "search": "Search projects",
+    "suggested": "Suggested",
+    "none": "No signed projects yet. An event can be added to a project once it's signed.",
+    "noMatch": "No projects match.",
+    "added": "Added to {project}."
+  },
+  "lostDeal": {
+    "titleDeclined": "Mark as declined?",
+    "titleCancelled": "Mark as cancelled?",
+    "intro": "“{project}” still has these open:",
+    "payments": "{count, plural, one {# expected payment} other {# expected payments}}",
+    "todos": "{count, plural, one {# to-do} other {# to-dos}}",
+    "events": "{count, plural, one {# upcoming event} other {# upcoming events}}",
+    "eventsGoogle": "also removed from Google Calendar",
+    "due": "due {date}",
+    "separator": "; ",
+    "stays": "Receipts, withholding and their unpaid balances stay recorded. Only wholly unpaid plans listed above can be cancelled. Past events and communication tasks stay.",
+    "keep": "Only mark it, keep these",
+    "cancelDeclined": "Mark as declined and cancel these",
+    "cancelCancelled": "Mark as cancelled and cancel these"
   }
 }

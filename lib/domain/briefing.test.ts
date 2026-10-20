@@ -30,7 +30,7 @@ test("manager briefing uses selected artists with labels and never falls back to
  const {portfolioReminderData}=await import("./briefing");
  const {notifications}=await import("./notifications");
  const own={talent:{timeZone:"UTC"},calendar:[{title:"Private owner event"}],payments:[{label:"Private owner payment"}],projects:[],notificationState:{},preview:true,previewDate:"2026-10-07"} as unknown as import("@/lib/types").AppData;
- const events=["Alpha","Beta","Gamma"].map((name,i)=>({id:`00000000-0000-4000-8000-00000000000${i}`,artistId:name,artistName:name,title:"Rehearsal",source:"event" as const,kind:"meeting" as const,date:"2026-10-17",time:"18:00",timeZone:"UTC",location:"",projectId:null,notes:"",done:false,archived:false,travel:null,endDate:"",endTime:""}));
+ const events=["Alpha","Beta","Gamma"].map((name,i)=>({id:`00000000-0000-4000-8000-00000000000${i}`,artistId:name,artistName:name,title:"Rehearsal",source:"event" as const,kind:"meeting" as const,date:"2026-10-17",time:"18:00",timeZone:"UTC",location:"",projectId:null,suggestedProjectId:null,notes:"",done:false,archived:false,travel:null,endDate:"",endTime:""}));
  const workspace={artists:[],selectedIds:["Alpha","Beta","Gamma"],calendar:events,payments:[],projects:[],limited:false};
  const all=portfolioReminderData(own,workspace);
  assert.deepEqual(notifications(all,now,true).map(n=>n.title).sort(),["Alpha · Rehearsal","Beta · Rehearsal","Gamma · Rehearsal"]);
@@ -65,4 +65,21 @@ test("Sunday and local midnight use the manager display zone, without hiding the
  assert.equal(briefingItems(withState([event],{},monday),{},monday,"America/New_York").length,0);
  const next={...event,dueAt:Date.parse("2026-10-19T15:00:00Z")};
  assert.equal(briefingItems(withState([next],{},monday),{},monday,"America/New_York").length,1);
+});
+
+test("newly due invoice tokens work after the welcome briefing and are stable across refresh", async () => {
+ const {briefingPromptTokens}=await import("./briefing");
+ const rows=briefingItems(withState([base],{},now),{},now,"America/New_York");
+ const first=briefingPromptTokens(rows,{},now);
+ assert.deepEqual(first,[`invoice:${base.id}`]);
+ assert.deepEqual(briefingPromptTokens([...rows],{},new Date(now.getTime()+60000)),first);
+ const seen=new Set(first);
+ const added={...base,id:base.id.replace(":1:",":2:")};
+ const tokens=briefingPromptTokens(withState([base,added],{},now),{},now);
+ assert.deepEqual(tokens.filter(token=>!seen.has(token)),[`invoice:${added.id}`]);
+ const active={[base.id]:{readAt:null,snoozedUntil:"2026-10-17T16:00:00Z"}};
+ assert.deepEqual(briefingPromptTokens(withState([base],active,now),active,now),[]);
+ const later=new Date("2026-10-17T16:01:00Z");
+ assert.deepEqual(briefingPromptTokens(withState([base],active,later),active,later),[`invoice:${base.id}`,`snooze:${base.id}:2026-10-17T16:00:00Z`]);
+ assert.deepEqual(briefingPromptTokens([],active,later),[]);
 });

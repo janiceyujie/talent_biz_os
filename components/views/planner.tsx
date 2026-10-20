@@ -15,16 +15,18 @@ import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition, typ
 import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
 import { PageHeader } from "@/components/app/page-header";
+import { EventProjectPicker, SeriesProjectPicker } from "@/components/app/project-picker";
 import { Toast } from "@/components/app/toast";
 import { calendarRecord, RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { deleteCalendarItem as deleteCalendarItemRemote, saveCalendarItem as saveCalendarItemRemote } from "@/lib/actions/calendar";
-import { refreshGoogleCalendars } from "@/lib/actions/google-calendar";
 import { at, clock, conflicts, layoutDay, minutes, moveItem, planItems, plusDays, segment, validItem, weekStart, type PlanItem } from "@/lib/calendar/planner";
 import { dateInZone } from "@/lib/domain/dates";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { DateTimeInput } from "@/components/app/date-time-input";
-import { CalendarView } from "./calendar";
+import { CalendarView, MonthNav, MonthShowSelect, type MonthShow } from "./calendar";
+import { GoogleSyncStatus } from "./google-sync-status";
+import type { CalendarItem } from "@/lib/types";
 
 type View = "day" | "week" | "month";
 type Edge = "move" | "start" | "end";
@@ -44,9 +46,15 @@ export function PlannerView({ initialDay = "", initialDate = "", readOnly=false,
   const [view, setView] = useState<View>(initialDay ? "month" : initialDate ? "day" : "week");
   const [date, setDate] = useState(initialDay || initialDate || today);
   useEffect(()=>{if(view!=="month")onVisibleDateChange?.(date);},[date,view,onVisibleDateChange]);
+  // The month view's, kept here so its ‹ › and Show share the header row with everything else.
+  const [month, setMonth] = useState((initialDay || today).slice(0, 7));
+  const [monthShow, setMonthShow] = useState<MonthShow>("open");
   // The item being edited; `dropped` when it came from a drag, so the dialog only asks to confirm.
   const [editing, setEditing] = useState<(PlanItem & { dropped?: boolean }) | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [filing, setFiling] = useState<CalendarItem | null>(null); // Add to a project
+  const [series, setSeries] = useState<PlanItem | null>(null); // a repeating event in our own calendar
+  const [filingSeries, setFilingSeries] = useState<PlanItem | null>(null);
   const [message, setMessage] = useState("");
   const [, startTransition] = useTransition();
   const saved = useMemo(() => planItems(data).map(item=>readOnly?{...item,movable:false,title:`${data.calendar.find(row=>row.id===item.ref.id&&row.source===item.ref.source)?.artistName||data.payments.find(row=>row.id===item.ref.id)?.artistName||data.projects.find(row=>row.id===item.projectId)?.artist||""} · ${item.title}`}:item), [data,readOnly]);
@@ -84,18 +92,13 @@ export function PlannerView({ initialDay = "", initialDate = "", readOnly=false,
       if (failure) return setMessage(failure);
       setMessage(t("deleted", { title: item.title }));
     });
-  // The person's own Google calendars (decision 0009, phase 2): read again on opening and every few
-  // minutes while the calendar is open (the server skips it if read in the last two minutes).
-  const importing = !data.preview && data.googleCalendar.importing.length > 0;
-  useEffect(() => {
-    if (!importing) return;
-    void refreshGoogleCalendars();
-    const timer = setInterval(() => void refreshGoogleCalendars(), 3 * 60_000);
-    return () => clearInterval(timer);
-  }, [importing]);
+  // The person's own Google calendars (decision 0009, phase 2) are read by the worker every few
+  // minutes (calendar.sync); the app-wide change check shows what it brings (live-refresh.tsx).
   const open = (item: PlanItem) => {
-    if(readOnly)return setViewing(item);
-    // A Google event opens in Google Calendar: it's read-only here.
+    if (readOnly) return setViewing(item);
+    // A repeating event in our own calendar: its project, and a way to Google, where it's edited (decision 0017).
+    if (item.ref.source === "google" && item.external?.series) return setSeries(item);
+    // Any other Google event opens in Google Calendar: it's read-only here.
     if (item.ref.source === "google") return void (item.ref.link && window.open(item.ref.link, "_blank", "noopener"));
     if (item.movable) return setEditing(item);
     // Multi-day, other-zone, and payment items are edited in their full form.
@@ -115,6 +118,7 @@ export function PlannerView({ initialDay = "", initialDate = "", readOnly=false,
     <div className={`planner ${readOnly?"portfolio-read-only":""}`}>
       {/* The calendar is the page: every control shares the title's row; help sits behind ⓘ. */}
       <PageHeader titleKey="calendar">
+        {view === "month" && <MonthNav month={month} onMonth={setMonth} />}
         {view !== "month" && (
           <div className="planner-date-nav">
             <button className="secondary" aria-label={t(view === "week" ? "prevWeek" : "prevDay")} onClick={() => setDate(plusDays(date, view === "week" ? -7 : -1))}>
@@ -129,6 +133,8 @@ export function PlannerView({ initialDay = "", initialDate = "", readOnly=false,
           </div>
         )}
         <span className="planner-toolbar-spacer" />
+        <GoogleSyncStatus />
+        {view === "month" && <MonthShowSelect show={monthShow} onShow={setMonthShow} />}
         <select className="planner-view-select" aria-label={t("views")} value={view} onChange={(e) => setView(e.target.value as View)}>
           {(["day", "week", "month"] as const).map((v) => (
             <option key={v} value={v}>
@@ -147,7 +153,17 @@ export function PlannerView({ initialDay = "", initialDate = "", readOnly=false,
         </button>}
       </PageHeader>
       {view === "month" ? (
-        <CalendarView initialDay={initialDay||date} hideAdd readOnly={readOnly} onVisibleDateChange={onVisibleDateChange} />
+        <CalendarView
+          readOnly={readOnly}
+          onVisibleDateChange={onVisibleDateChange}
+          month={month}
+          show={monthShow}
+          initialDay={initialDay}
+          onOpenWeek={(d) => {
+            setDate(d);
+            setView("week");
+          }}
+        />
       ) : (
         <>
           <TimeGrid
@@ -251,8 +267,28 @@ export function PlannerView({ initialDay = "", initialDate = "", readOnly=false,
             setEditing(null);
             if (c) setEditor({ kind: "calendar", item: calendarRecord(c) });
           }}
+          onAddToProject={() => {
+            const c = data.calendar.find((x) => x.id === editing.ref.id && x.source === "event");
+            setEditing(null);
+            if (c) setFiling(c);
+          }}
         />
       )}
+      {filing && <EventProjectPicker item={filing} onClose={() => setFiling(null)} onDone={setMessage} />}
+      {series && (
+        <SeriesDialog
+          item={series}
+          onClose={() => setSeries(null)}
+          onFile={() => {
+            setFilingSeries(series);
+            setSeries(null);
+          }}
+        />
+      )}
+      {filingSeries?.external?.series && (
+        <SeriesProjectPicker seriesId={filingSeries.external.series} title={filingSeries.title} onClose={() => setFilingSeries(null)} onDone={setMessage} />
+      )}
+
       {!readOnly&&editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
       {viewing&&items.some(item=>item.id===viewing.id)&&<Modal title={tp("details")} onClose={()=>setViewing(null)}><div className="portfolio-detail"><h3>{viewing.title}</h3><dl><div><dt>{tp("when")}</dt><dd>{viewing.date} {viewing.start}{viewing.end?` – ${viewing.endDate} ${viewing.end}`:""}</dd></div><div><dt>{tp("zone")}</dt><dd>{data.talent.timeZone}</dd></div><div><dt>{tp("notes")}</dt><dd>{data.calendar.find(row=>row.id===viewing.ref.id&&row.source===viewing.ref.source)?.notes||""}</dd></div></dl></div></Modal>}
     </div>
@@ -560,6 +596,7 @@ export function EventCard({
             : t("noTime")}
         </span>
         {!compact && item.project && <span>{item.project}</span>}
+        {!compact && !item.projectId && (item.ref.source === "event" || !!item.external?.series) && <span className="no-project">{t("noProject")}</span>}
         {!compact && item.client && <span className="planner-event-meta">{item.client}</span>}
         {item.amount !== null && <span className="planner-event-meta">{money(Math.abs(item.amount),item.currency)}</span>}
         {clash && <span className="planner-conflict">{t("conflict")}</span>}
@@ -579,6 +616,7 @@ function TimeEditor({
   onSave,
   onDelete,
   onFull,
+  onAddToProject,
 }: {
   item: PlanItem;
   dropped: boolean;
@@ -588,6 +626,7 @@ function TimeEditor({
   onSave: (next: PlanItem) => void;
   onDelete: () => void;
   onFull: () => void;
+  onAddToProject: () => void;
 }) {
   const t = useTranslations("planner");
   const data=useAppData();
@@ -614,6 +653,14 @@ function TimeEditor({
           <p>
             {item.project}
             {item.client ? ` · ${item.client}` : ""}
+          </p>
+        )}
+        {!item.projectId && item.ref.source === "event" && (
+          <p className="no-project-line">
+            <span className="no-project">{t("noProject")}</span>
+            <button className="text-button" onClick={onAddToProject}>
+              {t("addToProject")}
+            </button>
           </p>
         )}
         {draft.fixed && changed && (
@@ -738,4 +785,38 @@ function ChangeSummary({ before, after }: { before: PlanItem; after: PlanItem })
 function zoneOffset(date: string, timeZone: string, locale: string) {
   const parts = new Intl.DateTimeFormat(locale, { timeZone, timeZoneName: "shortOffset" }).formatToParts(new Date(`${date}T12:00:00Z`));
   return parts.find((p) => p.type === "timeZoneName")?.value ?? timeZone;
+}
+
+/** A repeating event in our own Talent Biz OS calendar: read-only here, but it can go on a project as a whole (decision 0017). */
+function SeriesDialog({ item, onClose, onFile }: { item: PlanItem; onClose: () => void; onFile: () => void }) {
+  const t = useTranslations("planner");
+  const link = item.ref.source === "google" ? item.ref.link : "";
+  return (
+    <Modal title={item.title || t("untitled")} onClose={onClose} narrow>
+      <div className="planner-editor">
+        <p>
+          {item.date} {item.start ? `${item.start}${item.end ? `–${item.end}` : ""}` : t("noTime")}
+        </p>
+        <p className="muted">{t("repeatingFromGoogle")}</p>
+        <p className="no-project-line">
+          {item.projectId ? <strong>{item.project}</strong> : <span className="no-project">{t("noProject")}</span>}
+          <button className="text-button" onClick={onFile}>
+            {item.projectId ? t("changeProject") : t("addToProject")}
+          </button>
+        </p>
+        <p className="muted">{t("seriesNote")}</p>
+        <div className="planner-actions planner-editor-actions">
+          <span className="planner-actions-spacer" />
+          {link && (
+            <a className="secondary" href={link} target="_blank" rel="noopener noreferrer">
+              {t("openInGoogle")}
+            </a>
+          )}
+          <button className="secondary" onClick={onClose}>
+            {t("close")}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
 }

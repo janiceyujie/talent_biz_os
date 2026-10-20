@@ -31,7 +31,7 @@ export function AppDataProvider({ data, children, previewAvailable = false }: { 
     queueMicrotask(()=>{setEnabled(value);setReady(true);});
   },[key,previewAvailable]);
   const openRealWorkspace=()=>{setEnabled(false);try{localStorage.setItem(key,"0");}catch{}};
-  const persistedRoute = pathname === "/manager" || pathname.startsWith("/manager/") || pathname.startsWith("/grants");
+  const persistedRoute = pathname === "/role" || pathname === "/manager" || pathname.startsWith("/manager/") || pathname.startsWith("/grants");
   const active=enabled&&pathname!=="/settings"&&!persistedRoute;
   const toggle=()=>{setEnabled(!enabled);try{localStorage.setItem(key,enabled?"0":"1");}catch{}};
   const save = (template: ReplyTemplate) => setTemplates(current => [...current.filter(x => x.id !== template.id), template]);

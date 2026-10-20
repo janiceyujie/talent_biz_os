@@ -1,10 +1,10 @@
 import { PageHeader } from "@/components/app/page-header";
-import { InboxView } from "@/components/views/inbox";
+import { InboxView, IntakeHint } from "@/components/views/inbox";
 
 export default function Page() {
   return (
     <>
-      <PageHeader titleKey="inbox" />
+      <PageHeader titleKey="inbox" subtitle={<IntakeHint />} />
       <InboxView />
     </>
   );

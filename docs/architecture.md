@@ -6,6 +6,8 @@ The core mechanism is the same regardless of who's using it: a message comes in,
 
 Scope here is grounded in interviews with two real prospective users — a talent manager and an independent creator — not just assumption. Where their stated needs shaped what's here, it's noted inline.
 
+How the running pieces connect (the web app, the worker and its queue, Gmail push, Google Calendar, the models, and the recovery paths) is drawn in [system-map.md](system-map.md).
+
 ## Table of contents
 
 - [Functionality](#functionality)
@@ -136,14 +138,16 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 
 ## Roles and verticals
 
-Vertical and account type are independent axes, set separately at onboarding. A manager can represent talents across different verticals; a solo model and a solo musician use the same account type with different extraction fields.
+Occupation is optional research context, separate from workspace classification and access. Since the October 18 product review, onboarding creates a personal workspace with a neutral `other` vertical. The short profile form writes `preference["profile.role"]` as `{version: 1, role: Role | null}`; `null` means skipped or declined, distinct from explicitly choosing `other`. Existing accounts keep their account type and workspace vertical. Existing role settings are shown as a legacy fallback until the person saves or clears their profile.
 
-| Axis | Values | What it changes |
+| Axis | Storage | What it changes |
 |---|---|---|
-| Vertical | Music artist, influencer, model, video (videographer / filmmaker), other | Which extraction fields apply beyond the core set, and which labels the dashboard uses |
-| Account type | Individual, manager, agency | Whether one `Talent` or many are attached to the person's account, and who can see what |
+| Optional occupation | Person/workspace-scoped `profile.role` preference | Research/profile context only; no access grant or workspace mutation |
+| Workspace vertical | `talent.vertical` | Existing domain defaults and extraction context; not changed by profile edits |
+| Account type | `person.account_type` | Legacy account classification; not an entitlement |
+| Manager access | Active manager entitlement plus artist memberships | Authorized portfolio visibility and artist capacity |
 
-Onboarding asks a single question — "what's your role?" — with six cards: 音樂人 (musician), 經紀人 (manager), 影像工作者 (videographer / filmmaker), Influencer, Model, 其他 (other). The answer is saved onto these two axes, not as a third field: 經紀人 sets `account_type = manager`; every other card sets `vertical`. A manager picks the vertical of the talent they're setting up. Choosing 經紀人 is allowed now and still manages one talent until multi-talent accounts ship (Later). The role is a working preference shown in the UI and can be changed in settings; it never grants or limits access — permissions come from `membership.role`.
+Choosing Manager in the profile cannot upgrade a plan, create an artist relationship, or change an artist's data. The account menu opens a compact profile dialog within the workspace shell; closing or cancelling returns to a validated local workspace URL without saving. Assistant appearance remains optional, and reviewed encouragement text is shared across occupations without a model request.
 
 Each person also picks how the assistant character looks — female, male, or non-binary (`person.avatar_appearance`). It's purely presentational.
 
@@ -223,7 +227,7 @@ A deal is rarely one message. A venue's first offer, the signed contract, and a 
 - **Explicit tagging first.** If the message arrived through a channel that lets the person specify the project directly (e.g. the Gmail add-on's dropdown), use that — no inference needed.
 - **Email threading next.** When a message is a reply within an existing email thread (Gmail's thread id, then `In-Reply-To` / `References`), the project its thread is filed under is the strongest suggestion.
 - **Known facts next.** Built: the same contact (email, then company or name), a date the project already has, the same venue or event, and for a payment notice an expected payment of that amount; a similar title only adds weight. Each suggestion shows its reasons (`lib/domain/intake.ts`, `suggestTargets`).
-- **Similarity as a fallback** (later). For anything the facts don't settle, compare the extracted summary against the open projects for that talent using embedding similarity, and propose the closest match above a threshold.
+- **Similarity as a fallback** (later). For anything the facts don't settle, compare the extracted summary against the open projects for that talent using embedding similarity, and propose the closest match above a threshold. Per talent only, and when to start: [design/embeddings.md](design/embeddings.md).
 - **Always proposed, never automatic** for anything inferred. A proposed match is presented as "this looks like the same deal as [project] — is it?" alongside the extraction review, and a person confirms, rejects, or starts a new project instead.
 - **Then the message's changes are proposed against that project** — a checklist the person edits and ticks, applied in one transaction and recorded in `audit_log` as `message.applied` (what changed, what was left as a proposal). Code decides what to propose by intent; the server recomputes it on apply and refuses items no longer in it. See [docs/design/intake-to-project.md](design/intake-to-project.md).
 
@@ -273,7 +277,7 @@ A rejected proposal never generates a file. A cancelled confirmed event only sto
 - **The calendar is the page**: every control shares the title's row — date navigation with the time zone, a view dropdown (day, week, month), a date jump, and 新增; it wraps on narrow windows. Help is where it applies: hovering a block says what dragging, its edges, and right-click do (and that a project's item asks first); hovering empty time says a click adds an event. What just happened shows as a short toast.
 - **Placed by time**: each item sits at its start and is as tall as it lasts; overlapping items share the column side by side, and an item running past midnight continues on the next day. Items without a time sit in a row above the hours.
 - **Fixed vs. flexible** is derived, not stored: a project's events and payment dates are fixed (the other side may depend on them); the person's own events and to-dos are flexible. Dragging a flexible item saves at once; a fixed item or a clash asks to confirm, naming the project and showing only what changed (the day if it moved, the time, the length if it changed). A warning that always appeared would stop being read. There's no undo for now (decided 2026-10-05): a change is corrected by changing it back.
-- **Editing by dragging**: an item moves in 5-minute steps; its top and bottom edges change the start and end. Clicking empty time opens a new event there, an hour long. Changes save through the calendar form's action, so the same rules apply (decision 0004). Touch and keyboard use the date-and-time editor; narrow screens get a list per day.
+- **Editing by dragging**: an item moves in 5-minute steps; its top and bottom edges change the start and end. Clicking empty time opens a new event there, an hour long. Changes save through the calendar form's action, so the same rules apply (decision 0018). Touch and keyboard use the date-and-time editor; narrow screens get a list per day.
 - **Deleting**: right-clicking an event or to-do (or 刪除 in its date-and-time editor, for touch) deletes it after a confirmation, for good, as decision 0002 defines delete; the confirmation points to archiving as the way to keep it. Each deletion is written to `audit_log` (`calendar.deleted`, with the title, date, and project). Payment dates are voided in the ledger, not deleted from the calendar.
 - **Never invented**: an item without an end time keeps none when moved and isn't checked for clashes. Ordinary events can end later the same day or on a later day (`end_date`, `end_time`, in the start's zone); travel and stays keep their own arrival and check-out and are edited in the full form, as are items in another zone.
 
@@ -425,7 +429,7 @@ Type labels: `gig` 演出 · `brand_deal` 品牌合作 · `sponsored_post` 業�
 
 **Phases.** The UI groups stages into four views, computed, not stored: negotiation (`offer`, `negotiating`), execution (`signed`, `in_progress`), settlement (`collecting_payment`), and ended (`closed`, `declined`, `cancelled`). Completion moves a project to Ended without archiving it. Archiving is a separate, reversible choice. Completed projects retain their signed-work identity and payment history; receipt corrections that restore debt reopen settlement.
 
-**Which to-dos a project can have depends on its phase.** Communication to-dos — `reply` and `follow_up` — are allowed at any stage; they're how a message shows as waiting for a reply during negotiation. Execution to-dos (deliverables, logistics, payment due, milestones), calendar events, and payments linked to a project are allowed only once it's signed (including completed projects) and not archived, and the server enforces it, not just the UI; so is the deposit/balance split. The rule applies when a link is made: an item keeping the link it already has stays editable if the project later moves back to negotiation. Standalone to-dos, events, and payments need no project. Why: [decision 0004](decisions/0004-execution-work-needs-a-signed-project.md).
+**What a project can have, and what counts.** Events, to-dos, and payments can be linked to any project still going (not archived, declined, or cancelled), before or after signing; the server checks every new link, and an item keeping its link stays editable whatever the stage. Only signed work (including completed projects) counts: money still expected counts in totals, reminders, and bank-notice matching only for signed deals or none (`countedPayments`), and reminders for events and to-dos leave out unsigned deals; money that moved always counts, including partial receipts. Cancelling open items preserves payments with receipts or withholding. Marking a deal declined or cancelled asks whether to cancel what's still open on it. Standalone to-dos, events, and payments need no project. Why: [decision 0018](decisions/0018-anything-on-an-open-deal.md), which replaced 0004.
 
 **Unset quote.** `project.quoted_amount` null means the fee isn't decided yet (報價未定), not zero; zero is an explicit free project. In forms, a blank amount means unset. An unset quote can't be split into deposit and balance, is left out of the billed-vs-quoted check, and drafts mark it to confirm rather than quoting 0.
 
@@ -842,7 +846,7 @@ Shaped by the situation: a part-time build, a handful of solo artists at first, 
 | App auth (login) | Better Auth — email/password + Google sign-in | Decided | Users and sessions live in our own Postgres tables, so changing host never touches identity. Google sign-in from day one eases linking the Gmail add-on later. Login only — separate from any mailbox authorization |
 | Blob storage | Supabase Storage, through its S3-compatible API | Decided | Raw emails, screenshots, PDFs; presigned uploads straight from the browser. The S3 API means moving to S3, R2, or GCS is an endpoint change |
 | LLM | OpenAI and Anthropic in production, one primary and one backup set in configuration; Gemini's free tier for testing until launch | Decided | Structured JSON extraction, vision input for screenshots and PDF pages, drafting; a provider outage delays mail instead of stopping it. See [decision 0015](decisions/0015-production-model-providers.md) |
-| Embeddings | Voyage AI or similar | Open — M4 | Claude has no embeddings API; needed only once project matching is built |
+| Embeddings | OpenAI's embedding models first; Voyage AI as an alternative | Open — M4 | Claude has no embeddings API. OpenAI is already our backup model provider ([decision 0015](decisions/0015-production-model-providers.md)), so it adds no new vendor, key, or data terms. Needed only once project matching is built; plan in [design/embeddings.md](design/embeddings.md) |
 | Transactional email | Plain SMTP (nodemailer); Mailpit locally, provider TBD at deploy (e.g. Resend) | Decided — provider open until M2 | Password reset and verification. Every provider speaks SMTP, so switching is a `SMTP_URL` change |
 | Job queue | Graphile Worker in our Postgres, behind a `Queue` interface (`lib/queue`), run by `npm run worker` | Decided | Enqueue inside our own transactions with plain SQL, one-at-a-time queues per mailbox, retries and cron built in, no new vendor. See [decision 0014](decisions/0014-hosting-and-job-queue.md) |
 | Hosting | Render in Singapore: a web service and a background worker from one Docker image (`render.yaml`) | Decided | The worker runs the queue, Gmail sync, and Calendar retries; fixed per-instance pricing. See [decision 0014](decisions/0014-hosting-and-job-queue.md) |
@@ -900,6 +904,8 @@ The pipeline already creates the seam this would use: ingestion, classification,
 - **Manager visibility boundary.** Once a manager account exists, do they see raw source messages or only extracted summaries? Worth deciding before building multi-talent accounts, since it shapes the Membership and Message access rules.
 - **Screenshot and forwarded-mail retention.** Both can contain a counterparty's private content. How long originals are kept, and whether anything gets redacted, is still open.
 
-## Local grant discovery experiment
+## Local opportunity discovery experiment
 
-The local Grants surface caches official public announcements separately from talent-scoped applications. Application deadlines and paperwork steps reuse `todo`, Calendar and Today; award progress does not create income or alter signed-project rules. Five additive tables and the existing Graphile Worker implement it, behind an explicit loopback/development gate. See [decision 0017](decisions/0017-local-grant-discovery.md) and [local validation](testing/grants-local-2026-10-11.md) for source coverage and deployment boundaries.
+The local Opportunities surface (Grants and Competitions/showcases tabs) caches official public announcements separately from talent-scoped applications. Application deadlines and paperwork steps reuse `todo`, Calendar and Today; award progress does not create income or alter signed-project rules. Five additive tables and the existing Graphile Worker implement it, behind an explicit loopback/development gate. See [decision 0017](decisions/0017-local-grant-discovery.md) and [local validation](testing/grants-local-2026-10-11.md) for source coverage and deployment boundaries.
+
+Opportunity eligibility, scoped applicant preferences, bounded official detail enrichment and the daily/manual update policy are documented in the October 20 extension of [decision 0017](decisions/0017-local-grant-discovery.md). Migration 0037 preserves existing grant IDs and adds only kind and reviewed eligibility metadata; [local acceptance results](testing/opportunities-2026-10-20.md) cover shared application/calendar behavior.

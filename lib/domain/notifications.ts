@@ -6,7 +6,7 @@ import { calendarPoints, pointKind } from "@/lib/calendar/points";
 import type { AppData, CalendarKind, NotificationState } from "@/lib/types";
 import { dateInZone, exactInstant } from "./dates";
 import { isSigned } from "./phases";
-import { paymentRemaining } from "./workflow";
+import { countedPayments, paymentRemaining } from "./workflow";
 
 /** Most urgent first: timed and within two hours, then overdue, then today, then the rest. */
 export const urgencies = ["soon", "overdue", "today", "upcoming"] as const;
@@ -63,8 +63,8 @@ export function compareNotifications(a: Notification, b: Notification) {
 /**
  * Open to-dos due within a week (overdue ones stay), events and travel markers
  * still ahead in the coming week, and expected payments in or out due within a
- * week or overdue. Items linked to an archived or unsigned project are left
- * out: execution work belongs to signed projects.
+ * week or overdue. Items on an archived or unsigned project are left out: a
+ * deal being negotiated may never happen, so it doesn't nag (decision 0018).
  */
 export function notifications(data: AppData, now = new Date(), includeTodayHistory = false): Notification[] {
   const talentZone = data.talent.timeZone;
@@ -93,7 +93,7 @@ export function notifications(data: AppData, now = new Date(), includeTodayHisto
       }];
     });
   const soon = dateInZone(talentZone, WINDOW_DAYS, now);
-  const payments = data.payments
+  const payments = countedPayments(data.payments, data.projects)
     .filter((p) => !p.voided && paymentRemaining(p) > 0 && p.dueDate && p.dueDate <= soon)
     .map((p): Notification => ({
       id: `payment:${p.id}:${p.dueDate}`,

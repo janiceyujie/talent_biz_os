@@ -5,7 +5,7 @@ import {getManagerCapability} from "./manager-entitlement";
 import {hasManagerWorkspace} from "./manager";
 import { grantsLocalEnabled } from "@/lib/grants/config";
 import { getGrantNotice } from "./grants";
-import { and, count, sql, desc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { and, count, sql, desc, eq, getTableColumns, inArray, isNull } from "drizzle-orm";
 import { cache } from "react";
 import { inboxOverview } from "./inbox";
 import { relevanceQueue } from "@/lib/queue/jobs";
@@ -17,7 +17,8 @@ import { db } from "@/lib/db";
 import { readPreferences } from "@/lib/preferences";
 import { pairKey } from "@/lib/domain/organizations";
 import { summaryOf } from "./projects";
-import { authAccount, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailDecision, mailSenderRule, mailConnection, externalEvent, contact, membership, notificationState, grantApplication, grantTask, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { changeMark } from "./changes";
+import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailDecision, mailSenderRule, mailConnection, externalEvent, contact, membership, notificationState, grantApplication, grantTask, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { mailPipelineEnabled } from "@/lib/mail/config";
 import { mailConfigured } from "@/lib/mail/connect";
@@ -37,6 +38,7 @@ const eventKind = (k: string): CalendarKind => (calendarKinds.includes(k as Cale
  */
 export const getAppData = cache(async (): Promise<AppData> => {
   const { person, talent: current } = await requireTalent();
+  const changes = await changeMark(current.id, person.personId);
   const [[talentRow], [memberRow], projectRows, contactRows, organizationRows, distinctRows, clientRows, projectPeopleRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows, inboxStats, preferenceRows] = await Promise.all([
     db
       .select({ id: talent.id, name: talent.name, timeZone: talent.timeZone, vertical: talent.vertical })
@@ -73,7 +75,8 @@ export const getAppData = cache(async (): Promise<AppData> => {
       .leftJoin(project, eq(project.id, payment.projectId))
       .where(eq(payment.talentId, current.id))
       .orderBy(desc(payment.recordedOn), desc(payment.createdAt)),
-    db.select().from(calendarEvent).where(eq(calendarEvent.talentId, current.id)),
+    // Not events deleted in Google Calendar: they're gone from every screen (decision 0017).
+    db.select().from(calendarEvent).where(and(eq(calendarEvent.talentId, current.id), isNull(calendarEvent.deletedInGoogleAt))),
     db.select().from(todo).where(eq(todo.talentId, current.id)).orderBy(todo.createdAt),
     db.select().from(replyTemplate).where(eq(replyTemplate.talentId, current.id)).orderBy(desc(replyTemplate.updatedAt)),
     db.select().from(notificationState).where(eq(notificationState.personId, person.personId)),
@@ -143,6 +146,8 @@ export const getAppData = cache(async (): Promise<AppData> => {
   const importSources = connection
     ? await db.select().from(calendarImportSource).where(eq(calendarImportSource.connectionId, connection.id))
     : [];
+  // Repeating events in our own calendar added to a project, by series (decision 0017).
+  const seriesLinks = connection ? await db.select().from(calendarSeriesProject).where(eq(calendarSeriesProject.connectionId, connection.id)) : [];
   const importedRows = importSources.length
     ? await db
         .select()
@@ -167,6 +172,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       timeZone: e.timeZone,
       location: e.location ?? "",
       projectId: e.projectId,
+      suggestedProjectId: e.suggestedProjectId,
       notes: e.notes ?? "",
       done: false,
       archived: e.archivedAt !== null,
@@ -200,6 +206,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
         timeZone: t.timeZone,
         location: "",
         projectId: t.projectId,
+        suggestedProjectId: null,
         notes: t.notes ?? "",
         done: t.status === "done",
         archived: t.status === "dismissed",
@@ -223,6 +230,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     managerAvailable: (await getManagerCapability(person.personId)).enabled && (memberRow.accountType === "manager" || await hasManagerWorkspace(person.personId)),
     grantsAvailable: grantsLocalEnabled(),
     grantNotice: await getGrantNotice(current.id, person.personId),
+    changes,
     talent: { id: talentRow.id, name: talentRow.name, timeZone: talentRow.timeZone },
     person: {
       displayName: person.displayName,
@@ -250,12 +258,14 @@ export const getAppData = cache(async (): Promise<AppData> => {
         timeZone: e.timeZone,
         location: e.location ?? "",
         link: e.htmlLink ?? "",
+        series: source.own && e.seriesId ? { id: e.seriesId, projectId: seriesLinks.find((l) => l.seriesId === e.seriesId)?.projectId ?? null } : null,
       };
     }),
     googleCalendar: {
       available: isGoogleConfigured,
       importGranted: hasScopes(accountRows.find((a) => a.providerId === "google")?.scope, IMPORT_SCOPES),
-      importing: importSources.map((x) => ({ name: x.name, color: x.color, lastImportedAt: x.lastImportedAt?.toISOString() ?? null })),
+      // The person's chosen calendars; not our own calendar's repeating events, read the same way.
+      importing: importSources.filter((x) => !x.own).map((x) => ({ name: x.name, color: x.color, lastImportedAt: x.lastImportedAt?.toISOString() ?? null })),
       granted: !!accountRows.find((a) => a.providerId === "google")?.scope?.split(/[ ,]/).includes(CALENDAR_SCOPE),
       connection: connection
         ? {

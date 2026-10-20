@@ -1,11 +1,12 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { RolePicker } from "@/components/role/role-picker";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { person } from "@/lib/db/schema";
-import { roleOf, toVertical } from "@/lib/roles";
+import { person, preference } from "@/lib/db/schema";
+import { roleOf } from "@/lib/roles";
 import { roleReturnHref } from "@/lib/role-return";
-import { updateRole } from "./actions";
+import { profileRoleSchema } from "@/lib/profile";
+import { updateRole } from "@/app/role/actions";
 
 /** "Change role": the onboarding role picker, without the name step. */
 export default async function ChangeRolePage({ searchParams }: { searchParams: Promise<{ returnTo?: string | string[] }> }) {
@@ -15,6 +16,8 @@ export default async function ChangeRolePage({ searchParams }: { searchParams: P
     .select({ accountType: person.accountType, avatarAppearance: person.avatarAppearance })
     .from(person)
     .where(eq(person.id, current.personId));
+  const [saved] = await db.select({ value: preference.value }).from(preference).where(and(eq(preference.personId, current.personId), eq(preference.talentId, talent.id), eq(preference.key, "profile.role")));
+  const profile = profileRoleSchema.safeParse(saved?.value);
   return (
     <RolePicker
       mode="change"
@@ -22,7 +25,7 @@ export default async function ChangeRolePage({ searchParams }: { searchParams: P
       initial={{
         role: roleOf(row.accountType, talent.vertical),
         appearance: row.avatarAppearance,
-        vertical: toVertical(talent.vertical),
+        profileRole: profile.success ? profile.data.role : roleOf(row.accountType, talent.vertical),
       }}
       action={updateRole}
     />

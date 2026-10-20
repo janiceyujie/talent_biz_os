@@ -20,6 +20,15 @@ export function briefingItems(items: StatefulNotification[], state: Notification
   });
 }
 
+/** Tokens distinguish newly due invoices from expired snoozes without repeated prompts. */
+export function briefingPromptTokens(items: StatefulNotification[], state: NotificationState, now: Date) {
+  return items.flatMap(item => {
+    if (item.snoozedUntil) return [];
+    if (snoozeReady(item.id, state, now)) return [...(item.kind === "invoice" ? [`invoice:${item.id}`] : []), `snooze:${item.id}:${state[item.id].snoozedUntil}`];
+    return item.kind === "invoice" ? [`invoice:${item.id}`] : [];
+  });
+}
+
 /** Manager reminders use only the authorized selection, never owner or stale fallback records. */
 export function portfolioReminderData(own: import("@/lib/types").AppData, workspace?: import("@/lib/manager/workspace-types").PortfolioWorkspace): import("@/lib/types").AppData {
   const ids = new Set(workspace?.selectedIds ?? []);

@@ -42,7 +42,7 @@ Who decides what:
 
 The proposal is a project plus what comes with it, reviewed together:
 
-- **The project**, prefilled and editable: title, type, stage (待確認), counterparty, quote and tax, the type's fields (venue, set length, deliverables, usage rights…), dates. Dates are kept on the project; they become calendar events once it's signed (decision 0004).
+- **The project**, prefilled and editable: title, type, stage (待確認), counterparty, quote and tax, the type's fields (venue, set length, deliverables, usage rights…), dates. Dates are kept on the project; the intake makes them calendar events once it's signed (a person can add events before; decision 0018).
 - **The contact**: link an existing one, or create one from the sender's name, company, email, and phone.
 - **A reply to-do** with the reply-by date (confirmed in the form).
 - **The to-confirm list** (需向對方確認), saved on the project for the reply draft to ask about.
@@ -94,7 +94,7 @@ The facts table goes away; the summary stays short. Flags (decision 0007) stay a
 ## Edge cases
 
 - **Two messages change the same field**: each proposal compares against the project as it is when opened, so the second sees the first's result.
-- **Stage going backwards** (a cancellation after signing): allowed, with the reason on the timeline; items already linked keep their links (decision 0004).
+- **Stage going backwards** (a cancellation after signing): allowed, with the reason on the timeline; items already linked keep their links (decision 0018).
 - **A payment amount that doesn't match any expected payment**: offer "record as a new payment" instead of guessing.
 - **A date only an earlier message gave** (the project doesn't keep it): treated as known, so a later "11/14 at 8pm" reads as setting the time of that date; applying adds it to the project.
 - **A new date vs. a changed one**: a stated date replaces a project date only for the same occasion or the same day (a time being set); otherwise it's a new date, so a rehearsal doesn't move the show. A postponement moves the project's single date.

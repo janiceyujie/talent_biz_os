@@ -93,11 +93,14 @@ try {
   const res=await get(`/api/manager/workspace?view=calendar&start=${from}&end=${end}&${selection(artists.slice(0,n).map(a=>a.talentId))}`,mc);
   ok(res.status===200,`${n} artists allowed`);const body=await res.json();ok(body.calendar.length===n&&!body.limited,`${n} calendar complete`);
  }
+ // Unsigned plans disappear from expected totals; recorded cash and its remaining debt survive.
+ await q`update project set stage='negotiating' where id=${artists[0].projectId}`;
  const ids=artists.slice(0,30).map(a=>a.talentId);
  const res=await get(`/api/manager/overview?view=finance&start=${from}&end=${end}&${selection(ids)}`,mc);ok(res.status===200,"SQL finance loads");const aggregate=await res.json();
  const {inArray}=await import("drizzle-orm");
  const raw=await db.select().from(s.payment).where(inArray(s.payment.talentId,ids));
- const expected=managerFinance(raw,from,end).sort((a,b)=>`${a.artistId}:${a.currency}`.localeCompare(`${b.artistId}:${b.currency}`));
+ const stages=await q`select id,stage from project where talent_id in ${q(ids)}`;
+ const expected=managerFinance(raw.map(row=>({...row,projectStage:stages.find(p=>p.id===row.projectId)?.stage})),from,end).sort((a,b)=>`${a.artistId}:${a.currency}`.localeCompare(`${b.artistId}:${b.currency}`));
  assert.deepEqual(aggregate.finance.sort((a:{artistId:string;currency:string},b:{artistId:string;currency:string})=>`${a.artistId}:${a.currency}`.localeCompare(`${b.artistId}:${b.currency}`)),expected);checks++;
  ok(!aggregate.calendar.length&&!aggregate.messages.length,"Finance overview fetches no other tab records");
  await db.insert(s.message).values(Array.from({length:45},(_,i)=>({talentId:artist.talentId,submittedBy:artist.personId,channel:"paste" as const,receivedAt:new Date(`${today}T12:00:00.000Z`),bodyText:`Synthetic message ${i}`,dedupKey:randomUUID(),status:"confirmed" as const})));

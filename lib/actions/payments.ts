@@ -12,7 +12,7 @@ import { db } from "@/lib/db";
 import { auditLog, invoice, notificationState, payment, project, talent } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
 import { quote, SplitError, splitPayments, supportedCurrencies } from "@/lib/domain/money";
-import { isSigned } from "@/lib/domain/phases";
+import { isOpenStage } from "@/lib/domain/phases";
 import { checkProjectLink } from "./project-link";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
@@ -120,7 +120,7 @@ export async function savePaymentWithId(data: Record<string, unknown>): Promise<
       if (!parent) return "projectNotFound" as const;
       if (parentId === input.projectId) {
         if (input.direction === "in" && input.currency !== parent.quoteCurrency) return "paymentCurrencyMismatch" as const;
-        if (currentLink !== parentId && (parent.archivedAt || !isSigned(parent.stage))) return "projectNotSigned" as const;
+        if (currentLink !== parentId && (parent.archivedAt || !isOpenStage(parent.stage))) return "projectEnded" as const;
       }
     }
     if (!id) {
@@ -205,7 +205,7 @@ export async function createPaymentPlan(data: Record<string, unknown>): Promise<
       .for("update");
     if (!p) return fail("projectNotFound");
     if (p.archivedAt) return fail("projectArchived");
-    if (!isSigned(p.stage)) return fail("projectNotSigned");
+    if (!isOpenStage(p.stage)) return fail("projectEnded");
     if (p.quotedAmount === null) return fail("quoteNotSet");
     const existing = await tx
       .select({ id: payment.id })

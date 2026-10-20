@@ -37,7 +37,7 @@ With push, Gmail tells the worker about new mail within seconds, and the 2-minut
 1. **APIs & Services → Library**: enable **Cloud Pub/Sub API**.
 2. **Pub/Sub → Topics → Create topic**: for example `gmail-notices`, without a default subscription.
 3. On the topic, **Permissions → Add principal**: `gmail-api-push@system.gserviceaccount.com`, role **Pub/Sub Publisher**. This lets Gmail post to the topic, and nothing else.
-4. **Pub/Sub → Subscriptions → Create subscription**: for example `gmail-notices-worker`, on that topic, delivery type **Pull**, message retention 1 day.
+4. **Pub/Sub → Subscriptions → Create subscription**: for example `gmail-notices-worker`, on that topic, delivery type **Pull**, message retention 1 day, expiration period **Never expire** (by default a pull subscription is deleted after 31 days without activity, which would quietly stop push).
 5. **IAM & Admin → Service accounts → Create service account**: for example `talent-worker`, then on the subscription, **Permissions → Add principal**: that account, role **Pub/Sub Subscriber**. On the account, **Keys → Add key → JSON**: a file downloads. Keep it out of Git.
 6. **`.env.local`**:
    ```
@@ -64,7 +64,7 @@ While the app stays in Testing, test users can keep connecting, with the 7-day e
 
 ## Production
 
-Push is expected in production: the Pub/Sub settings above on the worker only (the web service doesn't need them). A production OAuth client (ideally its own project) with `https://app.example.com/api/mail/callback`, the Gmail API enabled there, and on the host: `APP_ENV=production`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `BETTER_AUTH_SECRET` (it also seals the short-lived connect cookie), `BETTER_AUTH_URL`, and the Cloud KMS settings from deploy-render. No `MAIL_KEY_DEV`. The same `WORKER_SECRET` on the web service and the worker; the worker runs as a private service (not reachable from the internet) with `WORKER_HTTP_HOST=0.0.0.0`, and the web service's `WORKER_URL` is its private address.
+Push is required in production: the Pub/Sub settings above on the worker only (the web service doesn't need them). Without them the worker refuses to start, rather than quietly checking every 2 minutes. A production OAuth client (ideally its own project) with `https://app.example.com/api/mail/callback`, the Gmail API enabled there, and on the host: `APP_ENV=production`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `BETTER_AUTH_SECRET` (it also seals the short-lived connect cookie), `BETTER_AUTH_URL`, and the Cloud KMS settings from deploy-render. No `MAIL_KEY_DEV`. The same `WORKER_SECRET` on the web service and the worker; the worker runs as a private service (not reachable from the internet) with `WORKER_HTTP_HOST=0.0.0.0`, and the web service's `WORKER_URL` is its private address.
 
 ## Troubleshooting
 
@@ -75,6 +75,7 @@ Push is expected in production: the Pub/Sub settings above on the worker only (t
 | "Google didn't grant access to read Gmail" | The scope isn't added under Data access, or the box was unticked on Google's screen |
 | `access_denied` for a teammate | Their Google account isn't under Test users |
 | Stuck on "Disconnecting…" or "Syncing…" | `npm run worker` isn't running |
+| The worker exits at startup with "Gmail push isn't fully set up" | Set the settings it names (Push, above). Required in production; in development, set all three or none |
 | New mail takes minutes to appear with push set up | The worker's log says "push pull failed" with a status: 403 is the subscription's Subscriber permission; 404 is the subscription name. The 15-minute check still brings mail in. With "mail.sync watch failed": the topic's Publisher permission for `gmail-api-push@system.gserviceaccount.com` |
 | "Senders and subjects can't be read from Gmail right now" in Waiting or Filtered out | The worker isn't running, `WORKER_SECRET` differs between `.env.local` and the worker (or is missing), or `WORKER_URL` doesn't point at its port. The worker's log says "listening on" when its endpoint is up |
 | A Gmail message shows "this model can't read this file" | A PDF attachment on a local model, which reads text and images only; it's analyzed once a provider that reads PDFs is set for mailbox content |

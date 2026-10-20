@@ -18,6 +18,7 @@ async function main() {
   loadEnvConfig(process.cwd());
   // Imported after the environment is loaded: lib/db reads DATABASE_URL when it loads.
   const { run, parseCronItems } = await import("graphile-worker");
+  const { GRANT_REFRESH_CRON } = await import("@/lib/grants/refresh-policy");
   const { grantsLocalEnabled } = await import("@/lib/grants/config");
   const { taskList } = await import("./tasks");
   const { startHttp } = await import("./http");
@@ -26,6 +27,12 @@ async function main() {
   const { liveness } = await import("./liveness");
   const { freeTierOk } = await import("@/lib/ai/model");
   freeTierOk(); // throws when AI_FREE_TIER_OK=1 in production: refuse to start
+  const { pushMode } = await import("@/lib/mail/push-mode");
+  const { checkCredentials } = await import("@/lib/mail/pubsub");
+  // Push is required in production, and half set up is refused anywhere: refuse to start.
+  const mode = pushMode();
+  if (mode === "push") checkCredentials();
+  console.log(mode === "push" ? "mail: push (Pub/Sub), with a 15-minute check as a safety net" : "mail: checked every 2 minutes (no PUBSUB_* settings; push is required in production)");
   const {prepareInvoices}=await import("@/lib/invoices/service");
   await prepareInvoices();
   const alive = liveness(); // a heartbeat, and releasing jobs a stopped worker left locked
@@ -37,7 +44,7 @@ async function main() {
     parsedCronItems: parseCronItems([
       {task:"invoice.prepare",match:"*/5 * * * *",options:{maxAttempts:3}},
       ...schedule(),
-      ...(grantsLocalEnabled()&&process.env.GRANTS_SYNC_ENABLED==="1"?[{task:"grants.refresh",match:"0 */6 * * *",options:{maxAttempts:3}}]:[]),
+      ...(grantsLocalEnabled()&&process.env.GRANTS_SYNC_ENABLED==="1"?[{task:"grants.refresh",match:GRANT_REFRESH_CRON,options:{maxAttempts:3}}]:[]),
     ]),
   });
   const http = startHttp();

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { CalendarDays, FileText } from "lucide-react";
 import { dateInZone } from "@/lib/domain/dates";
-import { briefingItems, snoozeReady } from "@/lib/domain/briefing";
+import { briefingItems, briefingPromptTokens } from "@/lib/domain/briefing";
 import { markNotificationsRead } from "@/lib/actions/notifications";
 import { useAppData } from "./app-data";
 import { useReminderFeed } from "./reminder-feed";
@@ -71,9 +71,9 @@ export function DailyBriefing({ sessionKey, suppress, requestId, onShow, onOpen 
     const first = `${key}:${visit}:welcome`;
     let welcomed = seen.current.has(first);
     try { welcomed ||= sessionStorage.getItem(key) === visit; } catch {}
-    const due = items.filter(n => snoozeReady(n.id, state, now)).map(n => `${n.id}:${state[n.id].snoozedUntil}`);
+    const due = briefingPromptTokens(items, state, now);
     const expired = due.filter(token => {
-      if (seen.current.has(token)) return false;
+      if (seen.current.has(`${key}:${token}`)) return false;
       try { return sessionStorage.getItem(`${key}:${token}`) !== "1"; } catch { return true; }
     });
     if (!requested && welcomed && !expired.length) return;
@@ -85,7 +85,7 @@ export function DailyBriefing({ sessionKey, suppress, requestId, onShow, onOpen 
           native.current = notice;
           notice.onclick = () => {
             window.focus(); notice.close(); native.current = null;
-            for (const token of expired) { seen.current.add(token); try { sessionStorage.setItem(`${key}:${token}`, "1"); } catch {} }
+            for (const token of expired) { seen.current.add(`${key}:${token}`); try { sessionStorage.setItem(`${key}:${token}`, "1"); } catch {} }
             setOpenedVisit(visitKey);
           };
           // Mark only the system notification; the in-app dialog still appears on return.
@@ -98,7 +98,7 @@ export function DailyBriefing({ sessionKey, suppress, requestId, onShow, onOpen 
       if (document.visibilityState !== "visible" || document.querySelector("dialog[open], [popover]:popover-open") || document.activeElement?.matches("input,textarea,select,[contenteditable=true]")) return;
       seen.current.add(first);
       try { sessionStorage.setItem(key, visit); } catch {}
-      for (const token of expired) { seen.current.add(token); try { sessionStorage.setItem(`${key}:${token}`, "1"); } catch {} }
+      for (const token of expired) { seen.current.add(`${key}:${token}`); try { sessionStorage.setItem(`${key}:${token}`, "1"); } catch {} }
       native.current?.close(); native.current = null;
       handledRequest.current = requestId;
       savedScroll.current = 0;
@@ -106,6 +106,14 @@ export function DailyBriefing({ sessionKey, suppress, requestId, onShow, onOpen 
     }, 900);
     return () => clearTimeout(timer);
   }, [ready, preview, suppress, open, visit, key, items, state, now, browserEnabled, t, onShow, requestId, interaction, visitKey, failed]);
+  // Items arriving while the briefing is visible have already been presented.
+  useEffect(() => {
+    if (!open || suppress) return;
+    for (const token of briefingPromptTokens(items, state, now)) {
+      seen.current.add(`${key}:${token}`);
+      try { sessionStorage.setItem(`${key}:${token}`, "1"); } catch {}
+    }
+  }, [open, suppress, items, state, now, key]);
   const browserNotifications = async () => {
     if (browserEnabled) { setBrowserEnabled(false); setPermission(t("disabled")); try { localStorage.removeItem(`${key}:browser`); } catch {} return; }
     if (!("Notification" in window)) { setPermission(t("unsupported")); return; }
@@ -120,9 +128,8 @@ export function DailyBriefing({ sessionKey, suppress, requestId, onShow, onOpen 
     <button ref={launcher} type="button" data-preview-safe="true" className="briefing-launcher" hidden={open} aria-haspopup="dialog" aria-expanded={open} aria-label={t("resumeAgenda", { count })} onClick={() => {
       seen.current.add(`${key}:${visit}:welcome`);
       try { sessionStorage.setItem(key, visit); } catch {}
-      for (const item of items.filter(n => snoozeReady(n.id, state, now))) {
-        const token=`${item.id}:${state[item.id].snoozedUntil}`;
-        seen.current.add(token); try { sessionStorage.setItem(`${key}:${token}`, "1"); } catch {}
+      for (const token of briefingPromptTokens(items, state, now)) {
+        seen.current.add(`${key}:${token}`); try { sessionStorage.setItem(`${key}:${token}`, "1"); } catch {}
       }
       handledRequest.current=requestId;
       void reload(); onShow(); setOpenedVisit(visitKey);

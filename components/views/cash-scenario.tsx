@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useAppData } from "@/components/app/app-data";
 import { InfoHint } from "@/components/app/info-hint";
 import { cashScenarioExample } from "@/lib/domain/cash-scenario-example";
+import { countedPayments } from "@/lib/domain/workflow";
 import { cashScenario } from "@/lib/domain/cash-scenario";
 import { dateInZone } from "@/lib/domain/dates";
 import { useMoney } from "@/lib/i18n/format";
@@ -33,7 +34,7 @@ export function CashScenario({ currency, payments }: { currency: Currency; payme
   const validExtra = Number.isFinite(Number(extra)) && Number(extra) >= 0 && Number(extra) <= 1e12;
   const validCollection = collection.trim() !== "" && Number.isFinite(Number(collection)) && Number(collection) >= 0 && Number(collection) <= 100;
   const ready = opening.trim() !== "" && validOpening && validExtra && validCollection;
-  const report = cashScenario(example ? cashScenarioExample(today, currency) : payments, today, { opening: Number(opening), delayDays: delay, collectionPercent: Number(collection), extraPer30Days: Number(extra), currency });
+  const report = cashScenario(example ? cashScenarioExample(today, currency) : countedPayments(payments, data.projects), today, { opening: Number(opening), delayDays: delay, collectionPercent: Number(collection), extraPer30Days: Number(extra), currency });
   const point = report.points.find(p => p.days === horizon)!;
   const adjusted = delay !== 0 || Number(collection) !== 100 || Number(extra) !== 0;
   const reset = () => { setDelay(0); setCollection("100"); setExtra(""); };

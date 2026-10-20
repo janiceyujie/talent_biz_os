@@ -15,7 +15,7 @@ import { saveProject } from "@/lib/actions/projects";
 import { saveTemplate } from "@/lib/actions/templates";
 import { localeNames, locales, toLocale } from "@/lib/i18n/config";
 import { placeholderKeys, placeholderName, toDisplay, toStored } from "@/lib/templates/placeholders";
-import { isSigned } from "@/lib/domain/phases";
+import { isOpenStage } from "@/lib/domain/phases";
 import { paymentBalance, receiptHistory, type PaymentReceipt } from "@/lib/domain/payment-receipts";
 import { money } from "@/lib/domain/money";
 import { supportedCurrencies, type Currency } from "@/lib/domain/money";
@@ -334,10 +334,10 @@ export function RecordEditor({
       {field("projectId", t("field.project"), "text", false, [
         ["", t("unlinked")],
         ...data$.projects
-          .filter((p) => (!p.archived && isSigned(p.stage)) || p.id === data.projectId)
+          .filter((p) => (!p.archived && isOpenStage(p.stage)) || p.id === data.projectId)
           .map((p) => [p.id, p.title] as const),
       ], undefined, Boolean(kind === "calendar" && data.grantApplicationId))}
-      {kind === "calendar" && data.grantApplicationId ? <Link className="text-button" href={`/grants?application=${data.grantApplicationId}`}>{t("grantSource")}</Link> : <small className="muted">{t("signedOnly")}</small>}
+      {kind === "calendar" && data.grantApplicationId ? <Link className="text-button" href={`/grants?application=${data.grantApplicationId}`}>{t("grantSource")}</Link> : <small className="muted">{t("openOnly")}</small>}
     </div>
   );
 

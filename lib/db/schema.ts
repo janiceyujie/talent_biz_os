@@ -26,6 +26,7 @@ import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit 
 import { intentKeys } from "../ai/extraction/intents";
 import { supportedCurrencies } from "../domain/money";
 import { historyModes } from "../mail/history";
+import type { SyncFields } from "@/lib/calendar/google/two-way";
 import type { NoticeFields } from "../mail/payment-notice/fields";
 import { mailKinds } from "../mail/relevance/prompt";
 import { senderChecks } from "../mail/sender-auth";
@@ -472,6 +473,10 @@ export const calendarEvent = pgTable(
     status: text({ enum: calendarEventStatuses }).notNull().default("confirmed"),
     notes: text(),
     archivedAt: timestamp({ withTimezone: true }),
+    // Deleted in Google Calendar (decision 0017): gone from every screen, deleted for good 30 days later.
+    deletedInGoogleAt: timestamp({ withTimezone: true }),
+    // Added in Google: the project it most likely belongs to, offered first in Add to a project.
+    suggestedProjectId: uuid().references(() => project.id, { onDelete: "set null" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -780,6 +785,7 @@ export const calendarConnection = pgTable(
     lastError: text(), // a failure code, for the settings card
     lastSyncedAt: timestamp({ withTimezone: true }),
     dirty: boolean().notNull().default(true),
+    syncToken: text(), // where reading our calendar back continues (Google's nextSyncToken); null = read it all
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -804,6 +810,7 @@ export const calendarEventSync = pgTable(
     externalEventId: text().notNull(),
     etag: text(),
     syncedAt: timestamp({ withTimezone: true }).notNull(), // our event's updated_at when last pushed
+    pushed: jsonb().$type<SyncFields>(), // the shared fields as last pushed or read: the merge's base (decision 0017)
   },
   (t) => [
     unique("calendar_event_sync_connection_event").on(t.connectionId, t.eventId),
@@ -825,6 +832,9 @@ export const calendarImportSource = pgTable(
     name: text().notNull(),
     color: text(), // Google's background colour for the calendar, as #rrggbb
     lastImportedAt: timestamp({ withTimezone: true }),
+    syncToken: text(), // tells whether the calendar changed since the last read; null = not known yet
+    // Our own Talent Biz OS calendar's repeating events, read-only like a chosen calendar (decision 0017).
+    own: boolean().notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [unique("calendar_import_source_connection_calendar").on(t.connectionId, t.externalCalendarId)],
@@ -847,8 +857,30 @@ export const externalEvent = pgTable(
     timeZone: text().notNull(),
     location: text(),
     htmlLink: text(), // opens the event in Google Calendar
+    seriesId: text(), // our own calendar's repeating events: the series an occurrence belongs to (Google's recurringEventId)
   },
   (t) => [unique("external_event_source_event").on(t.sourceId, t.externalEventId), index("external_event_source_start_idx").on(t.sourceId, t.startDate)],
+).enableRLS();
+
+// A repeating event made in our own Talent Biz OS calendar, added to a project as a whole (decision
+// 0017): every occurrence shows on it. The series stays read-only here, edited in Google.
+export const calendarSeriesProject = pgTable(
+  "calendar_series_project",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    connectionId: uuid()
+      .notNull()
+      .references(() => calendarConnection.id, { onDelete: "cascade" }),
+    seriesId: text().notNull(), // Google's id for the repeating event
+    projectId: uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [unique("calendar_series_project_connection_series").on(t.connectionId, t.seriesId)],
 ).enableRLS();
 
 // A connected mailbox (decision 0013): one per talent for now, any Google
@@ -1008,13 +1040,16 @@ export const grantSource = pgTable("grant_source", {
   id: text().primaryKey(), checkedAt: timestamp({withTimezone:true}),
   attemptedAt: timestamp({withTimezone:true}), failure: text(),
 }).enableRLS();
+// Shared opportunity catalogue; existing grant identifiers and application links stay stable.
 export const grantOpportunity = pgTable("grant_opportunity", {
   id: id(), source: text().notNull().references(() => grantSource.id), externalId: text().notNull(),
   region: text({enum:["TW","US"]}).notNull(), title: text().notNull(), agency: text().notNull(), url: text().notNull(),
   opensOn: date(), closesOn: date(), sourceStatus: text({enum:["posted","forecasted","unknown"]}).notNull(),
   summary: text().notNull().default(""), contentHash: text().notNull(),
+  kind: text({enum:["grant","competition","exhibition","showcase"]}).notNull().default("grant"),
+  eligibility: jsonb().$type<import("@/lib/grants/eligibility").EligibilityRule>(),
   checkedAt: createdAt(), changedAt: createdAt(), createdAt: createdAt(),
-}, t => [unique("grant_opportunity_source_external").on(t.source,t.externalId), index("grant_opportunity_region_close_idx").on(t.region,t.closesOn), check("grant_opportunity_region_check",oneOf(t.region,["TW","US"])), check("grant_opportunity_status_check",oneOf(t.sourceStatus,["posted","forecasted","unknown"]))]).enableRLS();
+}, t => [unique("grant_opportunity_source_external").on(t.source,t.externalId), check("grant_opportunity_kind_check",oneOf(t.kind,["grant","competition","exhibition","showcase"])), index("grant_opportunity_kind_idx").on(t.kind), index("grant_opportunity_region_close_idx").on(t.region,t.closesOn), check("grant_opportunity_region_check",oneOf(t.region,["TW","US"])), check("grant_opportunity_status_check",oneOf(t.sourceStatus,["posted","forecasted","unknown"]))]).enableRLS();
 export const grantApplication = pgTable("grant_application", {
   id:id(), talentId:uuid().notNull().references(() => talent.id,{onDelete:"cascade"}),
   opportunityId:uuid().notNull().references(() => grantOpportunity.id),

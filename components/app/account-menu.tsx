@@ -3,7 +3,7 @@
 import { Check, LogOut, Palette, Settings } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition, type KeyboardEvent } from "react";
 import { setLocale } from "@/lib/actions/locale";
 import { authClient } from "@/lib/auth/client";
@@ -24,6 +24,8 @@ export function AccountMenu() {
   const current = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const search = useSearchParams().toString();
+  const returnTo = pathname + (search ? `?${search}` : "");
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const menuId = useId();
@@ -81,7 +83,7 @@ export function AccountMenu() {
             <Settings size={16} aria-hidden="true" />
             {t("settings")}
           </Link>
-          <Link role="menuitem" href={`/role?returnTo=${encodeURIComponent(pathname)}`} onClick={() => close(false)}>
+          <Link role="menuitem" href={`/role?returnTo=${encodeURIComponent(returnTo)}`} onClick={() => close(false)}>
             <Palette size={16} aria-hidden="true" />
             {t("roleAndAssistant")}
           </Link>

@@ -9,7 +9,7 @@ export default async function OnboardingPage() {
   return (
     <RolePicker
       mode="onboarding"
-      initial={{ role: "musician", appearance: "non_binary", vertical: "music", name: person.displayName }}
+      initial={{ role: "other", profileRole: null, appearance: "non_binary", name: person.displayName }}
       action={createTalent}
     />
   );

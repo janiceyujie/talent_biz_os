@@ -20,6 +20,7 @@ import { SignInMethods } from "./sign-in-methods";
 
 const REPLY_SAVE_DELAY_MS = 600; // the days field saves once typing or stepping pauses
 const MAX_REPLY_DAYS = 30; // as setReplyWithinDays allows
+const SETTLE_MS = 400; // after arriving on a link to a row, when to check it's still in view
 
 /**
  * Settings, grouped by whose they are: your account, your preferences, the
@@ -33,6 +34,24 @@ export function SettingsView() {
   const tRoles = useTranslations("roles");
   const [toast, setToast] = useState<string | null>(null);
   const saved = () => setToast(t("saved"));
+
+  // A link to one row (/settings#gmail, from Intake's Gmail needs reconnecting) brings it into view.
+  // Done here, after the rows render, since arriving from another page doesn't always scroll to it.
+  // Looked at again a moment later: the page can still move as it finishes loading, or scroll back to the top.
+  useEffect(() => {
+    const row = window.location.hash ? document.getElementById(window.location.hash.slice(1)) : null;
+    if (!row) return;
+    const show = () => {
+      const box = row.getBoundingClientRect();
+      if (box.top < 0 || box.bottom > window.innerHeight) row.scrollIntoView({ block: "center" });
+    };
+    const frame = requestAnimationFrame(show);
+    const later = setTimeout(show, SETTLE_MS);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(later);
+    };
+  }, []);
 
   return (
     <div className="settings-page">
@@ -55,7 +74,7 @@ export function SettingsView() {
           <LocaleSwitch bare className="settings-select" />
         </SettingsRow>
         <SettingsRow label={tRoles("settingsTitle")} hint={[tRoles("settingsBody")]}>
-          <span>{tRoles(`${data.person.role}.label`)}</span>
+          <span>{data.preferences["profile.role"] ? (data.preferences["profile.role"].role ? tRoles(`${data.preferences["profile.role"].role}.label`) : tRoles("notProvided")) : tRoles(`${data.person.role}.label`)}</span>
           <Link className="secondary" href="/role?returnTo=%2Fsettings">
             {tRoles("change")}
           </Link>

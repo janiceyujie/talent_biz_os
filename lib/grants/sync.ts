@@ -4,10 +4,12 @@ import { db } from "@/lib/db";
 import { grantOpportunity, grantSource } from "@/lib/db/schema";
 import { grantsLocalEnabled } from "./config";
 import { grantPlainText, listingHash, parseGrantsGov, parseMoc } from "./domain";
+import { enrichGrantsGovEligibility } from "./grants-gov-eligibility";
+import { reuseGrantRefresh } from "./refresh-policy";
 import { grantSources, type GrantListing, type GrantSource } from "./types";
 
-async function request(url: string, body?: object) {
-  const r = await fetch(url, {method:body ? "POST" : "GET", headers:body ? {"Content-Type":"application/json"} : {}, body:body ? JSON.stringify(body) : undefined, signal:AbortSignal.timeout(20000), redirect:"error", cache:"no-store"});
+async function request(url: string, body?: object, budget?:AbortSignal) {
+  const r = await fetch(url, {method:body ? "POST" : "GET", headers:body ? {"Content-Type":"application/json"} : {}, body:body ? JSON.stringify(body) : undefined, signal:budget?AbortSignal.any([budget,AbortSignal.timeout(10000)]):AbortSignal.timeout(20000), redirect:"error", cache:"no-store"});
   if (!r.ok) throw new Error("source_unavailable");
   // Read a bounded stream; public pages cannot consume unbounded worker memory.
   const reader = r.body?.getReader();
@@ -17,7 +19,7 @@ async function request(url: string, body?: object) {
   finally { await reader.cancel(); }
   return Buffer.concat(chunks).toString("utf8");
 }
-async function readSource(source: GrantSource): Promise<GrantListing[]> {
+async function readSource(source: (typeof grantSources)[number]): Promise<GrantListing[]> {
   if (source === "moc") return parseMoc(await request("https://grants.moc.gov.tw/Web/"));
   const rows: GrantListing[]=[];
   for (let page=0;page<10;page++) {
@@ -29,8 +31,9 @@ async function readSource(source: GrantSource): Promise<GrantListing[]> {
   throw new Error("source_result_limit");
 }
 /** Cached once for all accounts. No AI, credentials, mail, or paid lookup service. */
-export async function refreshGrantSources(): Promise<{source:GrantSource;ok:boolean}[]> {
+export async function refreshGrantSources(options: {manual?:boolean} = {}): Promise<{source:GrantSource;ok:boolean}[]> {
   if (!grantsLocalEnabled()) throw new Error("grants_local_only");
+  const requestedAt = new Date();
   const outcomes=[];
   for (const source of grantSources) {
     const outcome=await db.transaction(async tx => {
@@ -38,10 +41,11 @@ export async function refreshGrantSources(): Promise<{source:GrantSource;ok:bool
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`grant-source:${source}`}))`);
       await tx.insert(grantSource).values({id:source}).onConflictDoNothing();
       const [state]=await tx.select().from(grantSource).where(eq(grantSource.id,source));
-      if (state.attemptedAt && Date.now()-state.attemptedAt.getTime()<15*60*1000) return {source,ok:!state.failure};
+      if (reuseGrantRefresh(state.attemptedAt, requestedAt, !!options.manual)) return {source,ok:!state.failure};
       const now=new Date();
       try {
-        const listings=await readSource(source);
+        let listings=await readSource(source);
+        if(source==="grants_gov") listings=await enrichGrantsGovEligibility(listings,async(id,signal)=>JSON.parse(await request("https://api.grants.gov/v1/api/fetchOpportunity",{opportunityId:Number(id)},signal)),now);
         const previous=source==="moc"?await tx.select({externalId:grantOpportunity.externalId,title:grantOpportunity.title}).from(grantOpportunity).where(eq(grantOpportunity.source,source)):[];
         for (const incoming of listings) {
           const matches=previous.filter(row=>grantPlainText(row.title)===incoming.title);
@@ -52,10 +56,10 @@ export async function refreshGrantSources(): Promise<{source:GrantSource;ok:bool
             .onConflictDoUpdate({target:[grantOpportunity.source,grantOpportunity.externalId],set:{...listing,contentHash,checkedAt:now,changedAt:sql`case when ${grantOpportunity.contentHash} <> ${contentHash} then ${now.toISOString()}::timestamptz else ${grantOpportunity.changedAt} end`}});
         }
         // Absence from a bounded feed is not proof of withdrawal; keep old records and their own check time.
-        await tx.update(grantSource).set({checkedAt:now,attemptedAt:now,failure:null}).where(eq(grantSource.id,source));
+        await tx.update(grantSource).set({checkedAt:now,attemptedAt:new Date(),failure:null}).where(eq(grantSource.id,source));
         return {source,ok:true};
       } catch {
-        await tx.update(grantSource).set({attemptedAt:now,failure:"source_unavailable"}).where(eq(grantSource.id,source));
+        await tx.update(grantSource).set({attemptedAt:new Date(),failure:"source_unavailable"}).where(eq(grantSource.id,source));
         return {source,ok:false};
       }
     });

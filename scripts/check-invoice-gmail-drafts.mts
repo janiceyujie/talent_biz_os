@@ -194,6 +194,20 @@ try {
     role: "manager",
     status: "active",
   });
+  // Readiness is a PostgreSQL preference, never an official issuance permission.
+  ok((await request("/api/invoices/taiwan-setup")).status === 401, "Taiwan setup requires login");
+  const setup = {registered:true,businessName:"Synthetic Taiwan Studio",taxId:"12345675",route:"turnkey",providerName:"",numberTracksReady:true};
+  const ready = await post("/api/invoices/taiwan-setup", setup);
+  ok(ready.status === 200 && ready.data.readiness.available === false, "Turnkey setup saves without enabling official issuance");
+  ok(ready.data.readiness.pending.join() === "connection", "Authorized transmission remains required");
+  const reloaded = await (await request("/api/invoices/taiwan-setup", cookies[0])).json();
+  ok(reloaded.setup.businessName === setup.businessName, "Taiwan setup survives a fresh request");
+  ok((await q`select value from preference where talent_id=${artist.talentId} and person_id=${artist.personId} and key='invoice.taiwan-setup'`).length === 1, "Setup is stored in PostgreSQL");
+  ok((await (await request("/api/invoices/taiwan-setup", cookies[1])).json()).setup.businessName === "", "Another workspace cannot read setup");
+  ok((await post("/api/invoices/taiwan-setup", {...setup, available:true})).status !== 200, "Client cannot enable issuance");
+  ok((await request("/api/invoices/taiwan-setup", cookies[0], setup, "https://example.invalid")).status !== 200, "Cross-origin setup rejected");
+  const {taiwanSetup} = await import("../lib/invoices/taiwan-setup-service");
+  await assert.rejects(() => taiwanSetup(artist.talentId, manager.personId, setup)); checks++;
   // The project continuation returns the exact new receivable; no title matching or duplicate insert.
   await request("/finance", cookies[1]);
   const receivable = {projectId: people[1].projectId, label: "Continuation regression", direction: "in", installment: "regular", amount: 250, currency: "USD", taxRate: 0, taxIncluded: false, recordedDate: today, dueDate: today, status: "expected"};
@@ -255,6 +269,10 @@ try {
   ok(!nextCataloguePage.items.some((r:{id:string})=>cataloguePage.items.some((s:{id:string})=>r.id===s.id)),"Locality pages do not overlap");
   const locality=cataloguePage.items[0];
   const catalogue={state:"CA",sellerState:"CA",saleOn:today,category:"photography",delivery:"physical",collection:"registered",exemption:"none",location:"Synthetic California tax test address",jurisdictionId:locality.id,jurisdictionConfirmed:true,standardSaleConfirmed:true};
+  const merch = {...catalogue, category:"merchandise", merchandiseScope:"ordinaryInPerson"};
+  ok((await post("/api/invoices/tax-catalogue", merch)).data.status === "ready", "Reviewed California ordinary merch uses combined locality rate");
+  ok((await post("/api/invoices/tax-catalogue", {...merch,merchandiseScope:"other"})).data.status === "review", "Other merchandise needs review");
+  ok((await post("/api/invoices/tax-catalogue", {...catalogue,category:"ticketAdmissions"})).data.reason === "admissions", "Tickets do not reuse merch tax");
   const resolved=await post("/api/invoices/tax-catalogue",catalogue);
   ok(resolved.status===200 && resolved.data.status==="ready" && resolved.data.rate===locality.rate,"Reviewed rule resolves a combined locality rate");
   ok((await request("/api/invoices/tax-catalogue",cookies[0],catalogue,"https://example.invalid")).status!==200,"Cross-origin tax resolution denied");
@@ -308,6 +326,15 @@ try {
   const connId=randomUUID(),subject=`synthetic-${suffix}`;
   await db.insert(s.mailConnection).values({id:connId,talentId:artist.talentId,connectedBy:artist.personId,accountEmail:artist.email,accountSubject:subject,scopes:GMAIL_SCOPE,historyMode:"new_only",...toColumns(await seal("synthetic-refresh",tokenAad(artist.talentId,subject)))});
   const made=await post("/api/invoices",input);ok(made.status===200,"Invoice saved");const id=made.data.id;
+  ok((await request(`/api/invoices/payment/${payments[0].id}`)).status === 401, "Payment document lookup requires login");
+  ok((await (await request(`/api/invoices/payment/${payments[0].id}`,cookies[0])).json()).id === id, "Preparing again reopens the same active document");
+  ok(await (await request(`/api/invoices/payment/${payments[0].id}`,cookies[1])).json() === null, "Payment document lookup cannot reveal another workspace");
+  for (let preview = 0; preview < 2; preview++) {
+    const response = await request(`/api/invoices/${id}/pdf`,cookies[0]);
+    ok(response.ok && (await PDFDocument.load(await response.arrayBuffer())).getPageCount() > 0, "Repeated preview returns valid PDF");
+  }
+  ok((await row(id)).storage_key === null, "Preview does not accumulate stored PDF files");
+  ok((await q`select id from invoice where payment_id=${payments[0].id}`).length === 1, "Preview preserves a single invoice record");
   const reminded = async (id:string) => (await (await request("/api/reminders",cookies[0])).json()).items.some((item:{id:string})=>item.id.startsWith(`invoice:${id}:`));
   ok(await reminded(id),"Saved invoice remains a confirmation reminder");
   const op=(id:string,operation:string,revision=1,cookie=cookies[0])=>post(`/api/invoices/${id}`,{op:operation,confirmed:true,revision},cookie);
@@ -335,6 +362,10 @@ try {
   const download=await request(`/api/invoices/${id}/pdf`,cookies[0]);ok(download.ok,"Owner PDF download");
   ok(createHash("sha256").update(Buffer.from(await download.arrayBuffer())).digest("hex")===createHash("sha256").update(attached).digest("hex"),"Stored PDF exactly matches Gmail attachment");
   ok((await request(`/api/invoices/${id}/pdf`,cookies[1])).status!==200,"Foreign PDF denied");
+  await q`update invoice set storage_key=null where id=${id} and talent_id=${artist.talentId}`;
+  try { ok((await request(`/api/invoices/${id}/pdf`,cookies[0])).status===409, "Missing frozen PDF cannot silently regenerate a different attachment"); }
+  finally { await q`update invoice set storage_key=${saved.storage_key} where id=${id} and talent_id=${artist.talentId}`; }
+
   ok((await op(id,"createDraft")).status!==200,"Repeated create blocked");
   ok((await post("/api/invoices",{...input,id,revision:1})).status!==200,"Exported invoice immutable");
   ok((await post("/api/invoices",{...input,id,revision:1,taxReview,paymentBasis:{amount:1000,taxRate:0,taxIncluded:false}})).status!==200,"Exported Gmail draft rejects tax changes");

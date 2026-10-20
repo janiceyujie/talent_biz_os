@@ -773,7 +773,8 @@
       "title": "名稱相近",
       "payment": "有一筆待收 {value}",
       "earlier": "這個合作案已有 {value} 的訊息",
-      "thread": "同一封信件串"
+      "thread": "同一封信件串",
+      "chosen": "在 Gmail 選的"
     },
     "newProject": "新合作案",
     "otherProject": "其他合作案",
@@ -1361,7 +1362,11 @@
     "groupServices": "連結的服務",
     "aiShort": "邀約分析與擬稿由 AI 處理，結果都要經過你確認才會保存。",
     "ownerOnly": "只有工作區擁有者可以修改",
-    "replyInvalid": "請輸入 0 到 {max} 之間的整數"
+    "replyInvalid": "請輸入 0 到 {max} 之間的整數",
+    "addonNone": "還沒有連結任何 Gmail 帳號。在 Gmail 打開外掛，按「連結 Talent Biz OS」。",
+    "addonUnlink": "解除連結",
+    "addonUnlinkLabel": "解除連結 {email}",
+    "addonUnlinked": "已解除連結 {email}"
   },
   "editor": {
     "titleNew": "新增{kind, select, project {合作案} contact {藝人與合作方} calendar {行程／待辦} payment {內帳紀錄} template {回覆範本} other {回覆草稿}}",
@@ -1593,9 +1598,11 @@
       "account_not_linked": "這個電子郵件已經有帳號，但還沒完成驗證。請點確認信中的連結，或用密碼登入。",
       "account_already_linked_to_different_user": "這個 Google 帳號已連結到另一個帳號。",
       "email_not_found": "Google 沒有提供電子郵件，無法用它登入。",
-      "generic": "Google 登入沒有完成，請再試一次。"
+      "generic": "Google 登入沒有完成，請再試一次。",
+      "signup_disabled": "這個 Google 帳號沒有 Talent Biz OS 帳號。請用你平常使用的帳號登入。"
     },
-    "or": "或"
+    "or": "或",
+    "addonSignIn": "請用你平常使用的 Talent Biz OS 帳號登入，以連結 Gmail 外掛。"
   },
   "errors": {
     "invalid": "資料格式不正確。",
@@ -1665,13 +1672,16 @@
     "clientCantBeRemoved": "這是合作案的主要客戶；請先把另一家公司設為主要客戶，再移除它。",
     "clientRequired": "請填寫客戶（公司）。",
     "gmailNotConnected": "尚未連結 Gmail。",
-    "noticeCurrency": "目前只能記錄新台幣款項。"
+    "noticeCurrency": "目前只能記錄新台幣款項。",
+    "addonLinkExpired": "這個連結已過期或已使用過。請在 Gmail 打開外掛，再按一次「連結 Talent Biz OS」。"
   },
   "emails": {
     "resetSubject": "重設 Talent Biz OS 密碼",
     "resetBody": "請點擊以下連結重設密碼（1 小時內有效）：\n\n{url}\n\n如果你沒有要求重設密碼，請忽略這封信。",
     "verifySubject": "確認你的 Talent Biz OS 電子郵件",
-    "verifyBody": "請點擊以下連結確認你的電子郵件（1 小時內有效）：\n\n{url}"
+    "verifyBody": "請點擊以下連結確認你的電子郵件（1 小時內有效）：\n\n{url}",
+    "addonLinkedSubject": "有一個 Gmail 帳號連結到你的 Talent Biz OS 帳號",
+    "addonLinkedBody": "Gmail 帳號 {gmail} 現在可以用 Gmail 外掛把郵件送到你的 Talent Biz OS 帳號。\n\n如果這不是你做的，請到設定的「連結的服務」解除連結。"
   },
   "meta": {
     "description": "藝人與創作者的商務營運系統"
@@ -1955,5 +1965,44 @@
     "keep": "只標記，保留這些項目",
     "cancelDeclined": "標記為已婉拒，並取消這些項目",
     "cancelCancelled": "標記為已取消，並取消這些項目"
+  },
+  "addon": {
+    "title": "Talent Biz OS",
+    "connectIntro": "把一串郵件送進 Talent Biz OS，並指定是哪個合作案。只會讀取你送出的郵件串。",
+    "connect": "連結 Talent Biz OS",
+    "confirmLink": "要把這個 Gmail 帳號（{gmail}）連結到 Talent Biz OS 帳號 {person} 嗎？之後從這裡送出的郵件會進到那個帳號。",
+    "confirm": "連結",
+    "cancel": "取消",
+    "finishSetup": "請先完成 Talent Biz OS 的設定，再回來送出郵件。",
+    "openApp": "在 Talent Biz OS 打開",
+    "openAnEmail": "打開一封郵件，就能把整串郵件送進 Talent Biz OS。",
+    "linkedAs": "已連結到 {email}",
+    "changeAccount": "更換帳號",
+    "filedUnder": "已歸到 {project}",
+    "waiting": "{count} 封在進件分類等待確認",
+    "dismissed": "{count} 封已在進件分類略過",
+    "noticeOnlyMailbox": "這看起來是付款通知。付款通知只能透過連接的信箱匯入，只會保留金額和付款人，不會保留信件內容。",
+    "newInThread": "這串郵件有 {count} 封新郵件",
+    "sendHeading": "送到進件分類",
+    "artist": "藝人",
+    "project": "合作案",
+    "decideInIntake": "到進件分類再決定",
+    "wholeThread": "會送出整串郵件（{count} 封）和附件。",
+    "send": "送到 Talent Biz OS",
+    "sendNew": "送出 {count} 封新郵件",
+    "sent": "已送出 {count} 封郵件到進件分類。",
+    "sentConfirmProject": "到 Talent Biz OS 確認細節，就會歸到 {project}。",
+    "sentConfirm": "到 Talent Biz OS 選擇合作案並確認細節。",
+    "projectGone": "這個合作案已封存或不存在。請重新打開郵件，選擇其他合作案。",
+    "failed": "讀取這封郵件時出了問題。請關閉後重新打開。"
+  },
+  "addonLink": {
+    "title": "連結 Gmail 外掛",
+    "confirm": "要把 Gmail 帳號 {gmail} 連結到你的 Talent Biz OS 帳號 {person} 嗎？之後用外掛從那個 Gmail 帳號送出的郵件，都會進到這個帳號。",
+    "link": "連結",
+    "notYou": "不是你要的帳號嗎？請登出，再用另一個帳號登入。",
+    "done": "快完成了：回到 Gmail，在外掛裡按「連結」就完成了。這個視窗可以關閉。",
+    "finishSetup": "完成工作區設定",
+    "expired": "這個連結已過期或已使用過。請在 Gmail 打開外掛，再按一次「連結 Talent Biz OS」。"
   }
 }

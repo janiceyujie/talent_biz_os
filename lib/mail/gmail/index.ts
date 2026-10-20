@@ -82,3 +82,20 @@ export function gmailProvider(accessToken: string): MailProvider {
     getAttachment: async (messageId, attachmentId) => Buffer.from((await api.attachment(messageId, attachmentId)).data, "base64url"),
   };
 }
+
+/**
+ * The open conversation, read through the Gmail add-on: the person's token plus
+ * the open message's, which reach only that thread, and only while the add-on runs.
+ */
+export function gmailAddonReader(userToken: string, messageToken: string) {
+  const api = gmailApi(userToken, { "X-Goog-Gmail-Access-Token": messageToken });
+  return {
+    /** The thread an email is in. */
+    threadOf: async (messageId: string) => (await api.metadata(messageId)).threadId,
+    /** The thread's messages without their bodies, oldest first: enough to tell what is in already. */
+    threadHeads: async (threadId: string) => ((await api.thread(threadId, "metadata", ["From", "Message-ID"])).messages ?? []).map(readMessage),
+    /** Every message of the thread, read for bringing in, oldest first. */
+    thread: async (threadId: string) => ((await api.thread(threadId, "full")).messages ?? []).map(readMessage),
+    getAttachment: async (messageId: string, attachmentId: string) => Buffer.from((await api.attachment(messageId, attachmentId)).data, "base64url"),
+  };
+}

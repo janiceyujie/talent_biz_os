@@ -12,8 +12,10 @@ import { readPreferences } from "@/lib/preferences";
 import { pairKey } from "@/lib/domain/organizations";
 import { summaryOf } from "./projects";
 import { changeMark } from "./changes";
-import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, gmailAddonLink, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
+import { addonAvailable } from "@/lib/addon/request";
+import { isEmailChannel } from "@/lib/mail/channel";
 import { mailConfigured } from "@/lib/mail/connect";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
@@ -100,6 +102,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     .select({
       id: mailConnection.id,
       accountEmail: mailConnection.accountEmail,
+      accountSubject: mailConnection.accountSubject,
       status: mailConnection.status,
       failure: mailConnection.failure,
       historyMode: mailConnection.historyMode,
@@ -163,6 +166,18 @@ export const getAppData = cache(async (): Promise<AppData> => {
         .where(inArray(messageAnalysis.messageId, messageRows.map((m) => m.id)))
         .orderBy(desc(messageAnalysis.createdAt))
     : [];
+  // The address of each mailbox email came from, for Open in Gmail: the connected one's, or a Gmail add-on link's.
+  const subjects = [...new Set(messageRows.flatMap((m) => (m.mailboxSubject ? [m.mailboxSubject] : [])))];
+  const linkRows = subjects.length
+    ? await db.select({ subject: gmailAddonLink.googleSubject, email: gmailAddonLink.googleEmail }).from(gmailAddonLink).where(inArray(gmailAddonLink.googleSubject, subjects))
+    : [];
+  const mailboxEmail = new Map(linkRows.map((l) => [l.subject, l.email]));
+  const addonLinks = await db
+    .select({ id: gmailAddonLink.id, googleEmail: gmailAddonLink.googleEmail, lastUsedAt: gmailAddonLink.lastUsedAt })
+    .from(gmailAddonLink)
+    .where(eq(gmailAddonLink.personId, person.personId))
+    .orderBy(asc(gmailAddonLink.createdAt));
+  if (mailbox) mailboxEmail.set(mailbox.accountSubject, mailbox.accountEmail);
   const fileRows = messageRows.length
     ? await db
         .select({ id: file.id, messageId: file.messageId, contentType: file.contentType, filename: file.filename, sizeBytes: file.sizeBytes })
@@ -303,6 +318,10 @@ export const getAppData = cache(async (): Promise<AppData> => {
         : null,
       senderRules,
     },
+    gmailAddon: {
+      available: addonAvailable(),
+      links: addonLinks.map((l) => ({ id: l.id, email: l.googleEmail, lastUsedAt: l.lastUsedAt?.toISOString() ?? null })),
+    },
     signIn: {
       password: accountRows.some((a) => a.providerId === "credential"),
       googleAccountId: accountRows.find((a) => a.providerId === "google")?.id ?? null,
@@ -385,14 +404,16 @@ export const getAppData = cache(async (): Promise<AppData> => {
         status: m.status,
         failure: m.failure,
         projectId: m.projectId,
+        chosenProjectId: m.chosenProjectId,
         analysis: a ? { ...upgradeAnalysis(a.analysis), modelVersion: a.modelVersion, promptVersion: a.promptVersion } : null,
         files: fileRows
           .filter((f) => f.messageId === m.id)
           .map((f) => ({ id: f.id, contentType: f.contentType, filename: f.filename ?? "", sizeBytes: f.sizeBytes })),
         gmail:
-          m.channel === "gmail" && m.externalRef
+          isEmailChannel(m.channel) && m.externalRef
             ? {
                 gmailId: m.externalRef,
+                accountEmail: (m.mailboxSubject && mailboxEmail.get(m.mailboxSubject)) || "",
                 threadId: m.providerThreadId ?? "",
                 sent: m.direction === "sent",
                 recipients: m.recipients ?? "",

@@ -169,6 +169,8 @@ Decided in [0013](decisions/0013-connected-gmail-mailbox.md) (what's read and ke
 
 ### Gmail add-on
 
+Design: [Gmail add-on](design/gmail-addon.md), which supersedes the details below where they differ (it sends the whole thread, and links a Gmail account to a person instead of keeping an `inbound_grant`).
+
 - A Google Workspace Add-on registers a contextual card in Gmail. While a person has a message open, the card shows a button to send it in.
 - Clicking it calls our HTTP endpoint with the open message's id and an authorization scoped to that message only — not the mailbox.
 - Our backend calls the Gmail API with that authorization to fetch the one message — body and attachments — and hands it to the same pipeline an upload would go through.
@@ -393,7 +395,7 @@ erDiagram
 | `mail_connection` | One connected mailbox for a talent: the Google account, the encrypted refresh token and wrapped data key, sync cursor, status ([decision 0016](decisions/0016-mailbox-tokens-and-key-management.md)) | Built (connect, Sync now, bringing work in, disconnect with the keep-filed choice) |
 | `mail_decision` | The relevance decision for each email the check saw, ids only ([decision 0013](decisions/0013-connected-gmail-mailbox.md)) | Built (rules and thread memory; the model step to come) |
 | `mail_sender_rule` | An artist's "always" or "never" for a sender or domain | Built |
-| `inbound_grant` | Authorization from the Gmail add-on | After the connected mailbox |
+| `inbound_grant` | Authorization from the Gmail add-on; replaced by `gmail_addon_link` in [Gmail add-on](design/gmail-addon.md#data) | After the connected mailbox |
 
 **M1–M5** are the MVP build milestones (the 階段 in the internal timeline). **Phase 2** and **Later** remain the post-MVP scope tags used under [Functionality](#functionality).
 
@@ -603,7 +605,7 @@ create table message (
   body_text      text,                              -- the message's text: pasted text, an email's plain-text body
   received_at    timestamptz not null,
   origin_hint    text,                              -- model's guess for uploads: 'instagram', 'sms'...; never trusted
-  dedup_key      text not null,                     -- gmail_addon: the Message-ID header
+  dedup_key      text not null,                     -- gmail, gmail_addon: gmail:{Google account}:{Gmail id} (design/google-ids.md)
                                                     -- upload: sha256 of the files' bytes, in order
                                                     -- forwarded_email: sha256(unwrapped original sender + sent time + body)
                                                     -- paste: sha256(text)
@@ -900,7 +902,7 @@ The pipeline already creates the seam this would use: ingestion, classification,
 
 ## Open questions
 
-- **Add-on review requirements.** Confirm the current scope tier and review process for a Gmail contextual add-on before building it.
+- **Add-on review requirements.** Confirm the current scope tier and review process for a Gmail contextual add-on before building it; the prototype step in [Gmail add-on](design/gmail-addon.md#publishing).
 - **Matching threshold.** What similarity score proposes a link versus starts a new project — needs real messages to set, not a guess.
 - **Diffing nested fields.** A changed date or fee is a simple field diff. A changed list — one more tour date added, one deliverable removed from a brand deal — needs its own diff strategy.
 - **Vertical schema fields.** Can't finalize the influencer or model extension schema without real sample deals from each — same research dependency as the extraction schema itself.

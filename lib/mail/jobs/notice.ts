@@ -97,6 +97,7 @@ export async function bringNotice(d: Decision, c: Connection, mail: MailProvider
         notice: fields,
         externalRef: d.providerMessageId,
         connectionId: c.id,
+        mailboxSubject: c.accountSubject,
         providerThreadId: d.providerThreadId,
         relevance: d.outcome === "unsure" ? "unsure" : "sure",
         // Who sent the notice (the bank), for the card and a "never" rule; not what it says.

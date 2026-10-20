@@ -14,6 +14,9 @@ const realGoogle =
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         prompt: "select_account" as const, // let people pick which Google account, not silently reuse one
+        // A new person only where sign-up is offered (requestSignUp): linking the Gmail add-on
+        // signs in without it, so a mailbox account never becomes an empty new person.
+        disableImplicitSignUp: true,
         // Sign-in goes through Google's redirect only; we don't accept bare ID tokens (no One Tap).
         disableIdTokenSignIn: true,
       }
@@ -30,6 +33,7 @@ const testGoogle =
     ? {
         clientId: "test-stub",
         clientSecret: "test-stub",
+        disableImplicitSignUp: true,
         verifyIdToken: async (token: string) => {
           const [header] = token.split(".");
           return JSON.parse(Buffer.from(header, "base64url").toString()).alg === "none";

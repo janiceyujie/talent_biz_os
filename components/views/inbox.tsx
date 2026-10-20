@@ -267,8 +267,8 @@ function MessageDetail({ message, headingRef }: { message: InboxMessage; heading
   const data = useAppData();
   const filedOn = message.projectId ? data.projects.find((p) => p.id === message.projectId) : undefined;
   const gmailUrl =
-    message.gmail && data.gmail.connection
-      ? `https://mail.google.com/mail/?${new URLSearchParams({ authuser: data.gmail.connection.accountEmail })}#all/${message.gmail.gmailId}`
+    message.gmail?.accountEmail
+      ? `https://mail.google.com/mail/?${new URLSearchParams({ authuser: message.gmail.accountEmail })}#all/${message.gmail.gmailId}`
       : null;
 
   if (message.notice) return <NoticeDetail message={message} notice={message.notice} headingRef={headingRef} gmailUrl={gmailUrl} />;

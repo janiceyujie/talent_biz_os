@@ -445,6 +445,13 @@ describe("email threads (decision 0013)", () => {
     assert.equal(top.projectId, "p2");
     assert.equal(top.reasons[0].kind, "thread");
   });
+  test("the project picked in the Gmail add-on comes first, even over the thread's", () => {
+    const other = project({ id: "p2", title: "Lumora 春季合作", counterparty: "Lumora", counterpartyId: null });
+    const c = ctx({ projects: [project(), other], thread: { projectId: "p1", replied: false, newer: false }, chosenProjectId: "p2" });
+    const [top] = suggestTargets(analysis(), c);
+    assert.equal(top.projectId, "p2");
+    assert.equal(top.reasons[0].kind, "chosen");
+  });
   test("a sender not on the project is proposed: linked when already a contact, created otherwise", () => {
     const sender = { name: "Lin Mei", email: "lin@blueroom.example" };
     const created = one(proposeChanges(analysis(), project(), ctx({ sender })).changes, "contact");

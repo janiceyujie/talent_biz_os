@@ -36,12 +36,15 @@ export async function disconnectMailbox(connectionId: string, { lastAttempt, kee
   await db.delete(mailConnection).where(eq(mailConnection.id, connectionId));
 }
 
-/** Delete the messages this mailbox brought in, with their files in storage; "filed" keeps those filed under a project. */
+/**
+ * Delete the messages this mailbox brought in, with their files in storage; "filed" keeps those filed under a project.
+ * Email the person sent in with the Gmail add-on stays: it isn't linked to the connection.
+ */
 async function removeBroughtIn(connectionId: string, keep: "filed" | "none") {
   const doomed = await db
     .select({ id: message.id })
     .from(message)
-    .where(and(eq(message.connectionId, connectionId), keep === "filed" ? isNull(message.projectId) : undefined));
+    .where(and(eq(message.connectionId, connectionId), eq(message.channel, "gmail"), keep === "filed" ? isNull(message.projectId) : undefined));
   for (let i = 0; i < doomed.length; i += 500) {
     const ids = doomed.slice(i, i + 500).map((m) => m.id);
     const keys = await db.select({ key: file.storageKey }).from(file).where(inArray(file.messageId, ids));

@@ -5,6 +5,7 @@ import { file, message, messageAnalysis, project, talent } from "@/lib/db/schema
 import { dateInZone } from "@/lib/domain/dates";
 import { isSigned } from "@/lib/domain/phases";
 import { toLocale, type Locale } from "@/lib/i18n/config";
+import { isEmailChannel } from "@/lib/mail/channel";
 import { dropBroughtIn } from "@/lib/mail/not-work";
 import { readBytes } from "@/lib/storage";
 import { notWork, proposesNothing, upgradeAnalysis, type MessageAnalysis } from "./analysis";
@@ -17,7 +18,8 @@ import { ModelError } from "./model";
 /**
  * Analyze one message and store a new analysis version. Marks the message analyzed, or error with the reason.
  * Runs as a queued job, so it may run twice: a message no longer pending was already handled.
- * An email brought in from Gmail that the analysis finds isn't work loses its body and files at once (decision 0013).
+ * An email the connected mailbox brought in that the analysis finds isn't work loses its body and files at once
+ * (decision 0013); one the person sent in with the Gmail add-on is theirs to dismiss.
  */
 export async function analyzeMessage(messageId: string, outputLocale: Locale) {
   const [row] = await db
@@ -30,7 +32,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
       kind: message.kind,
       direction: message.direction,
       recipients: message.recipients,
-      connectionId: message.connectionId,
+      mailboxSubject: message.mailboxSubject,
       threadId: message.providerThreadId,
       sender: message.sender,
       subject: message.subject,
@@ -60,7 +62,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
     const files = await Promise.all(
       stored.map(async (f, i) => ({ name: f.filename ?? `file-${i + 1}`, mimeType: f.contentType, data: await readBytes(f.storageKey) })),
     );
-    const gmail = row.channel === "gmail";
+    const gmail = isEmailChannel(row.channel);
     const sent = row.direction === "sent";
     // An email's sender and subject are part of what it says: who's asking, and about what.
     // For the person's own reply, whom it went to.
@@ -99,7 +101,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
         .where(and(eq(message.id, messageId), eq(message.status, "pending")));
     });
     // The person's own reply is kept even when it says little: it's their side of the thread.
-    if (gmail && !sent && notWork(analysis)) await dropBroughtIn(row.talentId, messageId, "analysis");
+    if (row.channel === "gmail" && !sent && notWork(analysis)) await dropBroughtIn(row.talentId, messageId, "analysis");
     if (sent) await fileWithThread(messageId, row, analysis);
   } catch (e) {
     // The code is shown to the person in their language (inbox.failure.*); details go to the log.
@@ -130,10 +132,10 @@ export async function markAnalysisFailed(messageId: string) {
  */
 async function fileWithThread(
   messageId: string,
-  row: { talentId: string; connectionId: string | null; threadId: string | null },
+  row: { talentId: string; mailboxSubject: string | null; threadId: string | null },
   analysis: Parameters<typeof proposesNothing>[0],
 ) {
-  if (!row.connectionId || !row.threadId) return;
+  if (!row.mailboxSubject || !row.threadId) return;
   const [filed] = await db
     .select({ projectId: message.projectId, stage: project.stage })
     .from(message)
@@ -141,7 +143,7 @@ async function fileWithThread(
     .where(
       and(
         eq(message.talentId, row.talentId),
-        eq(message.connectionId, row.connectionId),
+        eq(message.mailboxSubject, row.mailboxSubject),
         eq(message.providerThreadId, row.threadId),
         eq(message.status, "confirmed"),
         isNotNull(message.projectId),
@@ -169,16 +171,16 @@ const clip = (text: string, max: number) => stripInvisible(text).text.replace(/\
  */
 async function threadNotes(
   messageId: string,
-  row: { talentId: string; connectionId: string | null; threadId: string | null; receivedAt: Date; timeZone: string },
+  row: { talentId: string; mailboxSubject: string | null; threadId: string | null; receivedAt: Date; timeZone: string },
 ): Promise<ThreadNote[]> {
-  if (!row.connectionId || !row.threadId) return [];
+  if (!row.mailboxSubject || !row.threadId) return [];
   const earlier = await db
     .select({ id: message.id, receivedAt: message.receivedAt, direction: message.direction, sender: message.sender })
     .from(message)
     .where(
       and(
         eq(message.talentId, row.talentId),
-        eq(message.connectionId, row.connectionId),
+        eq(message.mailboxSubject, row.mailboxSubject),
         eq(message.providerThreadId, row.threadId),
         eq(message.kind, "message"),
         ne(message.id, messageId),

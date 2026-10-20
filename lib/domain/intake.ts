@@ -28,6 +28,8 @@ export type IntakeContext = {
    * person has replied since, and whether the other side wrote again (the reply to-do follows the latest).
    */
   thread: { projectId: string | null; replied: boolean; newer: boolean };
+  /** The project the person picked when sending it in (the Gmail add-on): ahead of every other sign. */
+  chosenProjectId?: string | null;
   /** The person's own reply, read as their side of the deal. */
   sent: boolean;
   /** An email's sender as its header states it, for proposing them as a contact. */
@@ -60,6 +62,7 @@ export function intakeContext(data: AppData, m: InboxMessage): IntakeContext {
       replied: thread.some((x) => x.gmail?.sent && x.receivedAt > m.receivedAt),
       newer: thread.some((x) => !x.gmail?.sent && !x.notice && x.receivedAt > m.receivedAt),
     },
+    chosenProjectId: m.chosenProjectId,
     sent: !!m.gmail?.sent,
     sender:
       m.gmail && !m.gmail.sent && address.includes("@")
@@ -84,6 +87,7 @@ export function filedMessages(
 // Target: which project is this?
 
 export type TargetReason =
+  | { kind: "chosen"; value: string } // the person picked it when sending the message in (the Gmail add-on)
   | { kind: "thread"; value: string } // a message in the same email thread is filed on the project
   | { kind: "contact"; value: string } // same email, company, or name
   | { kind: "earlier"; value: string } // an earlier message from the same sender is filed on the project
@@ -147,7 +151,13 @@ export function suggestTargets(a: MessageAnalysis, ctx: IntakeContext): TargetSu
     const reasons: TargetReason[] = [];
     let score = 0;
 
-    // The same email thread outweighs every other sign (decision 0013).
+    // The person's own pick outweighs anything inferred.
+    if (ctx.chosenProjectId === project.id) {
+      score += 20;
+      reasons.push({ kind: "chosen", value: "" });
+    }
+
+    // The same email thread outweighs every other sign the system infers (decision 0013).
     if (ctx.thread.projectId === project.id) {
       score += 10;
       reasons.push({ kind: "thread", value: "" });

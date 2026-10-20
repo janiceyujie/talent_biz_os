@@ -508,13 +508,16 @@ export const message = pgTable(
       .notNull()
       .references(() => talent.id, { onDelete: "cascade" }),
     projectId: uuid().references(() => project.id, { onDelete: "set null" }), // null until confirmed
-    submittedBy: uuid().references(() => person.id), // who sent it in; for Gmail, who connected the mailbox
+    submittedBy: uuid().references(() => person.id), // who sent it in; for the connected mailbox, who connected it
     channel: text({ enum: messageChannels }).notNull(),
     kind: text({ enum: messageKinds }).notNull().default("message"),
     notice: jsonb().$type<NoticeFields>(), // a payment notice's fields; null for every other message
     externalRef: text(), // Gmail message id, when channel = gmail or gmail_addon
     // A connected mailbox's email (decision 0013). Kept, unlinked, if the mailbox is disconnected and filed mail kept.
     connectionId: uuid().references((): AnyPgColumn => mailConnection.id, { onDelete: "set null" }),
+    // The Google account (`sub`) of the mailbox an email is from, by either channel. Gmail's message
+    // and thread ids mean something only within it (docs/design/google-ids.md); kept after a disconnect.
+    mailboxSubject: text(),
     providerThreadId: text(),
     headerMessageId: text(), // Message-ID, In-Reply-To, References: for threading
     inReplyTo: text(),
@@ -529,6 +532,9 @@ export const message = pgTable(
     skippedAttachments: jsonb().$type<SkippedAttachment[]>(),
     receivedAt: timestamp({ withTimezone: true }).notNull(),
     bodyText: text(), // the message's text: pasted text, an email's plain-text body
+    // The project the person picked when sending it in (the Gmail add-on), before any analysis:
+    // the review's target, ahead of suggestions. Filing still sets project_id.
+    chosenProjectId: uuid().references((): AnyPgColumn => project.id, { onDelete: "set null" }),
     dedupKey: text().notNull(), // paste: sha256 of the normalized text
     status: text({ enum: messageStatuses }).notNull().default("pending"),
     failure: text(), // why the last analysis failed, for the person to see
@@ -540,6 +546,7 @@ export const message = pgTable(
     index("message_talent_status_idx").on(t.talentId, t.status),
     index("message_project_idx").on(t.projectId),
     index("message_connection_thread_idx").on(t.connectionId, t.providerThreadId),
+    index("message_mailbox_thread_idx").on(t.talentId, t.mailboxSubject, t.providerThreadId),
     check("message_channel_check", oneOf(t.channel, messageChannels)),
     check("message_direction_check", oneOf(t.direction, messageDirections)),
     check("message_relevance_check", oneOf(t.relevance, messageRelevance)),
@@ -983,6 +990,42 @@ export const mailSenderRule = pgTable(
     check("mail_sender_rule_kind_check", oneOf(t.kind, mailSenderRuleKinds)),
     check("mail_sender_rule_verdict_check", oneOf(t.verdict, mailSenderVerdicts)),
   ],
+).enableRLS();
+
+// A Gmail account linked to a person for the Gmail add-on (docs/design/gmail-addon.md):
+// with it open in Gmail, they send a conversation in. One person at a time per
+// account; a person may link several. Holds no token: Google sends short-lived
+// ones with each add-on request. Never a way to sign in.
+export const gmailAddonLink = pgTable(
+  "gmail_addon_link",
+  {
+    id: id(),
+    personId: uuid()
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    googleSubject: text().notNull().unique("gmail_addon_link_google_subject_unique"), // the Gmail account's `sub`
+    googleEmail: text().notNull(), // shown, and Open in Gmail's authuser; refreshed on each use
+    lastTalentId: uuid().references(() => talent.id, { onDelete: "set null" }), // the artist sent to last: the picker's default
+    lastUsedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("gmail_addon_link_person_idx").on(t.personId)],
+).enableRLS();
+
+// Linking, in two halves (docs/design/gmail-addon.md): the person signs in and
+// confirms on our site (`person_id` set), then confirms again in the card, which
+// only that Gmail account can do. Only the token's SHA-256 is stored.
+export const gmailAddonLinkRequest = pgTable(
+  "gmail_addon_link_request",
+  {
+    tokenHash: text().primaryKey(),
+    googleSubject: text().notNull(),
+    googleEmail: text().notNull(),
+    personId: uuid().references(() => person.id, { onDelete: "cascade" }), // set when confirmed on our site
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("gmail_addon_link_request_subject_idx").on(t.googleSubject)],
 ).enableRLS();
 
 // Background worker -----------------------------------------------------------------

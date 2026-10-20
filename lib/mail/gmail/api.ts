@@ -38,14 +38,18 @@ async function pace(token: string) {
 
 const rateLimited = (status: number, reason: string) => status === 429 || (status === 403 && /rateLimitExceeded/i.test(reason));
 
-async function call<T>(token: string, path: string, body?: unknown): Promise<T> {
+// The Gmail add-on reads with the person's token plus one for the open message
+// (X-Goog-Gmail-Access-Token), both short-lived (docs/design/gmail-addon.md).
+type Extra = Record<string, string>;
+
+async function call<T>(token: string, path: string, body?: unknown, extra: Extra = {}): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     await pace(token);
     let res: Response;
     try {
       res = await fetch(`${base()}/users/me${path}`, {
         method: body === undefined ? "GET" : "POST",
-        headers: { authorization: `Bearer ${token}`, ...(body === undefined ? {} : { "content-type": "application/json" }) },
+        headers: { ...extra, authorization: `Bearer ${token}`, ...(body === undefined ? {} : { "content-type": "application/json" }) },
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: AbortSignal.timeout(15_000),
       });
@@ -78,8 +82,15 @@ export type GmailMetadata = {
   payload?: { headers?: GmailHeader[] };
 };
 
-export function gmailApi(token: string) {
+export function gmailApi(token: string, extra: Extra = {}) {
+  const get = <T>(path: string) => call<T>(token, path, undefined, extra);
   return {
+    /** One thread: its message ids only (`minimal`), some headers (`metadata`), or every message in full. */
+    thread: (id: string, format: "minimal" | "metadata" | "full", headers: string[] = []) => {
+      const q = new URLSearchParams({ format });
+      for (const h of headers) q.append("metadataHeaders", h);
+      return get<{ id: string; messages?: GmailFullMessage[] }>(`/threads/${encodeURIComponent(id)}?${q}`);
+    },
     profile: () => call<{ emailAddress: string; historyId: string }>(token, "/profile"),
     /** One page of the change list since a history id; 404 when that id is too old to use. */
     history: (startHistoryId: string, pageToken?: string) =>

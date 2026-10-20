@@ -223,11 +223,13 @@ export type InboxMessage = {
   status: "pending" | "analyzed" | "confirmed" | "dismissed" | "error" | "history"; // history: kept for reference, analyzed when opened
   failure: string | null;
   projectId: string | null;
+  chosenProjectId: string | null; // picked when sent in with the Gmail add-on: the review's target
   analysis: (MessageAnalysis & { modelVersion: string; promptVersion: string }) | null;
   files: { id: string; contentType: string; filename: string; sizeBytes: number }[]; // screenshots, photos, PDFs, in order
-  // An email brought in from the connected mailbox (decision 0013); null otherwise.
+  // An email, from the connected mailbox (decision 0013) or the Gmail add-on; null otherwise.
   gmail: {
     gmailId: string;
+    accountEmail: string; // the mailbox it's in, for Open in Gmail; "" when no longer known
     threadId: string;
     sent: boolean; // the person's own reply
     recipients: string; // whom their reply went to, as the To line states it
@@ -346,6 +348,8 @@ export type AppData = {
     } | null;
     senderRules: GmailSenderRule[]; // the artist's own "always" and "never"
   };
+  // The Gmail accounts this person linked to the Gmail add-on (docs/design/gmail-addon.md); `available` = set up here.
+  gmailAddon: { available: boolean; links: { id: string; email: string; lastUsedAt: string | null }[] };
   // This person's sign-in methods; googleAccountId is our auth_account row id (what unlinking takes).
   signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };
   // The AI service's name when it may keep what's sent (e.g. a free tier) — shown as a notice; null otherwise.

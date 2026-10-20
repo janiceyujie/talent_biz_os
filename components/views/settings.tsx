@@ -1,6 +1,5 @@
 "use client";
 
-import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
@@ -13,6 +12,7 @@ import { RolePortrait } from "@/components/role/role-portrait";
 import { SignOutButton } from "@/components/sign-out-button";
 import { setReplyWithinDays } from "@/lib/actions/intake";
 import { CalendarFeedSettings } from "./calendar-feed-settings";
+import { GmailAddonSettings } from "./gmail-addon-settings";
 import { GmailSettings } from "./gmail-settings";
 import { GoogleCalendarSettings } from "./google-calendar-settings";
 import { SettingsGroup, SettingsRow } from "./settings-row";
@@ -71,9 +71,7 @@ export function SettingsView() {
         <GoogleCalendarSettings onNotice={setToast} />
         <CalendarFeedSettings />
         <GmailSettings onNotice={setToast} />
-        <SettingsRow icon={<Mail size={20} />} label={t("gmailTitle")} hint={[t("gmailBody")]}>
-          <span className="mock-chip">{t("comingSoon")}</span>
-        </SettingsRow>
+        <GmailAddonSettings onNotice={setToast} />
       </SettingsGroup>
 
       <SettingsGroup title={t("aiTitle")} hint={[t("aiBody")]}>

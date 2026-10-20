@@ -12,6 +12,7 @@ import { stripQuoted } from "../clean";
 import { gmailProvider } from "../gmail";
 import { chooseAttachments, FETCH_LIMITS } from "../attachments";
 import type { AttachmentRef } from "../gmail/parts";
+import { gmailDedupKey } from "../dedup";
 import { senderCheck } from "../sender-auth";
 import { bringNotice, pathFor } from "./notice";
 
@@ -19,11 +20,9 @@ import { bringNotice, pathFor } from "./notice";
 // as work, or Not sure, into Intake (a bank or payment-app notice: ./notice.ts). Its text (quoted history stripped) becomes
 // a message, its PDFs and images become files, and the analysis is queued, all
 // in one transaction. Safe to run twice: the message's dedup key is the
-// mailbox and the Gmail id.
+// mailbox's Google account and the Gmail id (../dedup.ts).
 
 const keyFor = (talentId: string, fileId: string) => `files/${talentId}/${fileId}`;
-export const gmailDedupKey = (connectionId: string, gmailId: string) => `gmail:${connectionId}:${gmailId}`;
-
 /** Queue bringing in every email of this mailbox decided as work or Not sure that isn't in yet. */
 export async function queueFetching(connectionId: string) {
   const waiting = await db
@@ -53,7 +52,7 @@ export async function fetchDecision(decisionId: string) {
     // A bank or payment-app notice takes the restricted path: fields only, never the body or files.
     const path = await pathFor(d, c, mail);
     if (path === "wait") return;
-    if (path === "notice") return await bringNotice(d, c, mail, gmailDedupKey(c.id, d.providerMessageId));
+    if (path === "notice") return await bringNotice(d, c, mail, gmailDedupKey(c.accountSubject, d.providerMessageId));
     read = await mail.getMessage(d.providerMessageId);
   } catch (e) {
     if (e instanceof MailAccessLost) return markReconnectNeeded(c.id);
@@ -92,6 +91,7 @@ export async function fetchDecision(decisionId: string) {
           channel: "gmail",
           externalRef: read.id,
           connectionId: c.id,
+          mailboxSubject: c.accountSubject,
           providerThreadId: read.threadId,
           direction: sent ? "sent" : "received",
           recipients: sent ? read.to || null : null,
@@ -105,7 +105,7 @@ export async function fetchDecision(decisionId: string) {
           skippedAttachments: skipped.length ? skipped : null,
           receivedAt: read.receivedAt,
           bodyText: stripQuoted(read.text),
-          dedupKey: gmailDedupKey(c.id, read.id),
+          dedupKey: gmailDedupKey(c.accountSubject, read.id),
           ...(history ? { status: "history" as const } : {}),
         })
         .onConflictDoNothing({ target: [message.talentId, message.dedupKey] })
@@ -126,25 +126,7 @@ export async function fetchDecision(decisionId: string) {
           })),
         );
       await tx.update(mailDecision).set({ messageId: created.id }).where(eq(mailDecision.id, d.id));
-      // Replying answers what came before it in the thread: its reply to-dos are done (Undo on the reply reopens them).
-      if (sent) {
-        const earlier = tx
-          .select({ id: message.id })
-          .from(message)
-          .where(
-            and(
-              eq(message.talentId, c.talentId),
-              eq(message.connectionId, c.id),
-              eq(message.providerThreadId, read.threadId),
-              eq(message.direction, "received"),
-              lt(message.receivedAt, read.receivedAt),
-            ),
-          );
-        await tx
-          .update(todo)
-          .set({ status: "done", completedAt: new Date(), completedByMessageId: created.id })
-          .where(and(eq(todo.talentId, c.talentId), eq(todo.type, "reply"), eq(todo.status, "open"), inArray(todo.messageId, earlier)));
-      }
+      if (sent) await completeReplied(tx, { talentId: c.talentId, mailboxSubject: c.accountSubject, threadId: read.threadId, receivedAt: read.receivedAt, replyId: created.id });
       // From your history: analyzed only when the person opens it (openFromHistory).
       if (!history)
         await queue.enqueue(
@@ -160,7 +142,7 @@ export async function fetchDecision(decisionId: string) {
       const [existing] = await db
         .select({ id: message.id })
         .from(message)
-        .where(and(eq(message.talentId, c.talentId), eq(message.dedupKey, gmailDedupKey(c.id, read.id))));
+        .where(and(eq(message.talentId, c.talentId), eq(message.dedupKey, gmailDedupKey(c.accountSubject, read.id))));
       if (existing) await db.update(mailDecision).set({ messageId: existing.id }).where(eq(mailDecision.id, d.id));
     }
   } catch (e) {
@@ -169,6 +151,31 @@ export async function fetchDecision(decisionId: string) {
     console.error("mail.fetch failed", d.id, (e as Error)?.name, (e as { status?: number })?.status ?? "");
     throw e;
   }
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Replying answers what came before it in the thread: its reply to-dos are done (Undo on the reply reopens them). */
+export async function completeReplied(
+  tx: Tx,
+  r: { talentId: string; mailboxSubject: string; threadId: string; receivedAt: Date; replyId: string },
+) {
+  const earlier = tx
+    .select({ id: message.id })
+    .from(message)
+    .where(
+      and(
+        eq(message.talentId, r.talentId),
+        eq(message.mailboxSubject, r.mailboxSubject),
+        eq(message.providerThreadId, r.threadId),
+        eq(message.direction, "received"),
+        lt(message.receivedAt, r.receivedAt),
+      ),
+    );
+  await tx
+    .update(todo)
+    .set({ status: "done", completedAt: new Date(), completedByMessageId: r.replyId })
+    .where(and(eq(todo.talentId, r.talentId), eq(todo.type, "reply"), eq(todo.status, "open"), inArray(todo.messageId, earlier)));
 }
 
 /** A thread with nothing newer than this is history, when the first read of the past brought it in. */

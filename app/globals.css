@@ -4135,6 +4135,25 @@ p.gmail-skipped {
   padding: 0 14px;
   white-space: nowrap;
 }
+.addon-links {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.addon-links li {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+.addon-links .secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .settings-input {
   width: 280px;
 }

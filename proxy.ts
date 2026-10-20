@@ -11,7 +11,10 @@ export function proxy(request: NextRequest) {
   const onAuthPage = authPages.includes(pathname);
 
   if (!signedIn && !onAuthPage) {
-    return NextResponse.redirect(new URL("/sign-in", request.url));
+    const to = new URL("/sign-in", request.url);
+    // Linking the Gmail add-on comes back after signing in (docs/design/gmail-addon.md).
+    if (pathname.startsWith("/addon/")) to.searchParams.set("next", pathname + request.nextUrl.search);
+    return NextResponse.redirect(to);
   }
   if (signedIn && onAuthPage && pathname !== "/reset-password") {
     return NextResponse.redirect(new URL("/", request.url));

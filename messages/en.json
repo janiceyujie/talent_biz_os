@@ -773,7 +773,8 @@
       "title": "Similar title",
       "payment": "An expected payment of {value}",
       "earlier": "Has an earlier message from {value}",
-      "thread": "Same email thread"
+      "thread": "Same email thread",
+      "chosen": "Picked in Gmail"
     },
     "newProject": "New project",
     "otherProject": "Another project",
@@ -1361,7 +1362,11 @@
     "groupServices": "Connected services",
     "aiShort": "Offers are analyzed and replies drafted by AI; nothing is saved until you confirm it.",
     "ownerOnly": "Only the workspace owner can change this",
-    "replyInvalid": "Enter a whole number from 0 to {max}"
+    "replyInvalid": "Enter a whole number from 0 to {max}",
+    "addonNone": "No Gmail account linked yet. Open the add-on in Gmail and press Connect.",
+    "addonUnlink": "Unlink",
+    "addonUnlinkLabel": "Unlink {email}",
+    "addonUnlinked": "{email} is no longer linked"
   },
   "editor": {
     "titleNew": "New {kind, select, project {project} contact {artist / partner} calendar {event / to-do} payment {ledger entry} template {reply template} other {reply draft}}",
@@ -1593,9 +1598,11 @@
       "account_not_linked": "An account with this email already exists, but its email isn't verified yet. Use the link in the confirmation email, or sign in with your password.",
       "account_already_linked_to_different_user": "This Google account is already linked to a different account.",
       "email_not_found": "Google didn't share an email address, so we can't sign you in with it.",
-      "generic": "Google sign-in didn't finish. Please try again."
+      "generic": "Google sign-in didn't finish. Please try again.",
+      "signup_disabled": "This Google account doesn't have a Talent Biz OS account. Sign in with the account you usually use."
     },
-    "or": "or"
+    "or": "or",
+    "addonSignIn": "Sign in with the account you already use for Talent Biz OS to link the Gmail add-on."
   },
   "errors": {
     "invalid": "That data isn't in a valid format.",
@@ -1665,13 +1672,16 @@
     "clientCantBeRemoved": "This is the project's client. Make another organization the client first, then remove it.",
     "clientRequired": "Enter the client organization.",
     "gmailNotConnected": "Gmail isn't connected.",
-    "noticeCurrency": "Only NT$ payments can be recorded for now."
+    "noticeCurrency": "Only NT$ payments can be recorded for now.",
+    "addonLinkExpired": "This link has expired or was already used. Open the add-on in Gmail and press Connect again."
   },
   "emails": {
     "resetSubject": "Reset your Talent Biz OS password",
     "resetBody": "Click this link to reset your password (valid for 1 hour):\n\n{url}\n\nIf you didn't ask to reset your password, you can ignore this email.",
     "verifySubject": "Confirm your Talent Biz OS email",
-    "verifyBody": "Click this link to confirm your email (valid for 1 hour):\n\n{url}"
+    "verifyBody": "Click this link to confirm your email (valid for 1 hour):\n\n{url}",
+    "addonLinkedSubject": "A Gmail account was linked to your Talent Biz OS account",
+    "addonLinkedBody": "The Gmail account {gmail} can now send emails to your Talent Biz OS account with the Gmail add-on.\n\nIf you didn't do this, unlink it in Settings, under Connected services."
   },
   "meta": {
     "description": "The business side of an independent career."
@@ -1955,5 +1965,44 @@
     "keep": "Only mark it, keep these",
     "cancelDeclined": "Mark as declined and cancel these",
     "cancelCancelled": "Mark as cancelled and cancel these"
+  },
+  "addon": {
+    "title": "Talent Biz OS",
+    "connectIntro": "Send an email conversation to Talent Biz OS, and say which project it's for. Only the conversations you send are read.",
+    "connect": "Connect to Talent Biz OS",
+    "confirmLink": "Link this Gmail account ({gmail}) to the Talent Biz OS account {person}? Emails you send from here will go to that account.",
+    "confirm": "Link",
+    "cancel": "Cancel",
+    "finishSetup": "Finish setting up Talent Biz OS first, then come back to send emails in.",
+    "openApp": "Open in Talent Biz OS",
+    "openAnEmail": "Open an email to send its conversation to Talent Biz OS.",
+    "linkedAs": "Linked to {email}",
+    "changeAccount": "Change account",
+    "filedUnder": "Filed under {project}",
+    "waiting": "{count, plural, one {# email waiting} other {# emails waiting}} for review in Intake",
+    "dismissed": "{count, plural, one {# email} other {# emails}} dismissed in Intake",
+    "noticeOnlyMailbox": "This looks like a payment notice. Payment notices come in through the connected mailbox only, which keeps just the amount and payer, never the email.",
+    "newInThread": "{count, plural, one {# new email} other {# new emails}} in this conversation",
+    "sendHeading": "Send to Intake",
+    "artist": "Artist",
+    "project": "Project",
+    "decideInIntake": "Decide in Intake",
+    "wholeThread": "The whole conversation is sent ({count, plural, one {# email} other {# emails}}), with its attachments.",
+    "send": "Send to Talent Biz OS",
+    "sendNew": "Send the {count, plural, one {new one} other {# new ones}}",
+    "sent": "Sent {count, plural, one {# email} other {# emails}} to Intake.",
+    "sentConfirmProject": "Confirm the details in Talent Biz OS to file them under {project}.",
+    "sentConfirm": "Pick a project and confirm the details in Talent Biz OS.",
+    "projectGone": "That project is archived or gone. Open the email again to pick another.",
+    "failed": "Something went wrong reading this email. Close it and open it again."
+  },
+  "addonLink": {
+    "title": "Link the Gmail add-on",
+    "confirm": "Link the Gmail account {gmail} to your Talent Biz OS account {person}? Emails sent with the add-on from that Gmail account will come to this account.",
+    "link": "Link",
+    "notYou": "Not the account you meant? Sign out and sign in with the other one.",
+    "done": "Almost done: go back to Gmail and press Link in the add-on to finish. You can close this window.",
+    "finishSetup": "Finish setting up your workspace",
+    "expired": "This link has expired or was already used. Open the add-on in Gmail and press Connect again."
   }
 }

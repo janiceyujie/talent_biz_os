@@ -6,7 +6,7 @@ import { useState } from "react";
 import { buttonClass, Field, FormMessage, useAuthErrorMessage } from "@/components/form";
 import { authClient } from "@/lib/auth/client";
 
-export function SignInForm() {
+export function SignInForm({ next = "/" }: { next?: string }) {
   const router = useRouter();
   const t = useTranslations("auth");
   const authErrorMessage = useAuthErrorMessage();
@@ -27,7 +27,7 @@ export function SignInForm() {
       setPending(false);
       return;
     }
-    router.push("/");
+    router.push(next);
     router.refresh();
   }
 

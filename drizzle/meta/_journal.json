@@ -267,6 +267,13 @@
       "when": 1792468158406,
       "tag": "0037_calendar_series_projects",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792526439002,
+      "tag": "0038_gmail_addon",
+      "breakpoints": true
     }
   ]
 }

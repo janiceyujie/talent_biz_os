@@ -52,7 +52,7 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 |---|---|
 | `talent_id`, `connected_by` (person) | Whose account it feeds, who connected it |
 | `provider` | `gmail` (provider-neutral table, as `calendar_connection` is) |
-| `account_email`, `account_subject` | The Google account: its address and Google user id |
+| `account_email`, `account_subject` | The Google account: its address and Google user id (every id we keep: [Google ids in Intake](google-ids.md)) |
 | `scopes` | What was granted |
 | `refresh_token_ciphertext`, `refresh_token_nonce`, `refresh_token_tag` | AES-256-GCM (decision 0016) |
 | `data_key_wrapped`, `key_id` | The data key wrapped by the KMS master key, and which key and version |
@@ -72,7 +72,7 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 
 **`mail_sender_rule`**: an artist's "always" or "never" for a sender or domain (not a free mailbox provider's), created only by their action. Per talent, so it outlives a reconnect.
 
-**`message`, new columns** (built): channel `gmail` added; `connection_id` (set null when a disconnect keeps filed mail); `provider_thread_id`; `header_message_id`, `in_reply_to`, `references` (for threading); `direction` (`received` or `sent`); `relevance` (`sure` or `unsure`); `sender` and `subject`; `skipped_attachments` (names of attachments not fetched). `submitted_by` is nullable: for Gmail it's whoever connected the mailbox. `external_ref` keeps the Gmail message id; `dedup_key` for Gmail is `gmail:<connection>:<message id>`. `body_text` holds only the email's new text: Open in Gmail shows the rest.
+**`message`, new columns** (built): channel `gmail` added; `connection_id` (set null when a disconnect keeps filed mail); `provider_thread_id`; `header_message_id`, `in_reply_to`, `references` (for threading); `direction` (`received` or `sent`); `relevance` (`sure` or `unsure`); `sender` and `subject`; `skipped_attachments` (names of attachments not fetched). `submitted_by` is nullable: for Gmail it's whoever connected the mailbox. `external_ref` keeps the Gmail message id; `mailbox_subject` the mailbox's Google account, which scopes it and the thread id; `dedup_key` for Gmail is `gmail:<Google account>:<message id>`, shared with the Gmail add-on (migration 0038, [Google ids](google-ids.md)). `body_text` holds only the email's new text: Open in Gmail shows the rest.
 
 **Payment notices** (built): a `message` with `kind` `payment_notice` keeps its fields in `notice` (amount, currency, date, payer, last four digits, and the payment it was recorded on); a check constraint refuses `body_text` on one, it has no files, and it's never analyzed. One left unhandled is deleted 30 days after it came in (the decision stays, `not_work` by `expired`).
 

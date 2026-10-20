@@ -1,5 +1,7 @@
 # Four-branch review order — 2026-10-20
 
+> Historical allocation. The later UI split adds a fifth branch; use `docs/testing/ui-branch-split-2026-10-20.md` for the current review order and complete-version branch.
+
 Sensitive areas: existing database migration lineage and account-scoped applicant preferences.
 
 ## Review and merge order

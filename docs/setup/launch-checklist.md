@@ -42,7 +42,7 @@ Do this **once**, as late as possible (right before creating the production data
 - [ ] A domain, verified in Search Console; home page, privacy policy, and terms on it; a shared support email (Google Group or Workspace) on the consent screen.
 - [ ] Publish sign-in (basic scopes, no review).
 - [ ] Google verification for the calendar scopes, with a demo video ([google-calendar.md](google-calendar.md), "Before real users"). Add them to the production consent screen once it passes, so sign-in isn't held up.
-- [ ] Calendar change notifications and sync tokens replacing polling (decision 0009, phase 2).
+- [ ] Google Calendar change notices ([calendar-two-way](../design/calendar-two-way.md), branch `calendar-webhooks`): `POST /api/calendar/notify` on the production HTTPS address, checking each channel's token; a watch on every connection's own calendar and each chosen calendar, renewed by syncs before it ends and stopped on disconnect; `calendar.reconcile` slowed from 5 to 30 minutes as the safety net, since Google doesn't promise delivery and stores nothing while we're down. Check by hand: an event moved in Google shows here within seconds.
 - [ ] The consent screen moved from Testing to In production before anyone besides the builder connects Gmail (Testing expires refresh tokens after 7 days).
 - [ ] Google verification for `gmail.readonly`, then the CASA security assessment ([decision 0013](../decisions/0013-connected-gmail-mailbox.md)); until both pass, at most 100 users.
 - [ ] Pub/Sub topic with publish rights for Gmail, and the worker's pull subscription, its settings on the worker (required: the worker refuses to start in production without them).

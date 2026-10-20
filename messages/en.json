@@ -973,7 +973,8 @@
       "arrives": "Arrives {when}",
       "noArrival": "Arrival not recorded",
       "seat": "Seat {seat}"
-    }
+    },
+    "onlyNoProject": "Only events not in a project ({count})"
   },
   "planner": {
     "views": "Calendar views",
@@ -1038,7 +1039,9 @@
     "fromGoogle": "From Google · {calendar}",
     "untitled": "(No title)",
     "create": "Create",
-    "zone": "Times are in {zone}"
+    "zone": "Times are in {zone}",
+    "noProject": "Not in a project",
+    "addToProject": "Add to a project"
   },
   "calendarFeed": {
     "title": "Subscription link",
@@ -1075,7 +1078,7 @@
   },
   "googleCalendar": {
     "calendarName": "Talent Biz OS · {talent}",
-    "calendarDescription": "Events created and synced by Talent Biz OS. Change them in Talent Biz OS; edits made here are overwritten on the next sync.",
+    "calendarDescription": "Events created by Talent Biz OS. Change them here or in Talent Biz OS: both stay up to date.",
     "title": "Google Calendar",
     "notConfigured": "Google isn't set up in this environment.",
     "needGoogle": "Connect your Google account under “Sign in with Google” above first",
@@ -1107,8 +1110,8 @@
     "chooseNone": "This Google account has no other calendars.",
     "chooseSave": "Save",
     "saving": "Saving…",
-    "sendTitle": "Send to Google",
-    "sendTo": "Your events → the “Talent Biz OS” calendar in Google",
+    "sendTitle": "Sync with Google",
+    "sendTo": "Your events ⇄ the “Talent Biz OS” calendar in Google. A change on either side updates the other.",
     "importNone": "None chosen",
     "aboutSend": "Send to Google: confirmed events go into a dedicated “Talent Biz OS” calendar in your Google account, updated as soon as you save. This app only creates and changes that calendar; it sends the title, time, place, and project. To-dos and payments aren’t sent.",
     "aboutShow": "Show here: the Google calendars you tick appear read-only in the calendar here, visible only to you, so clashes with personal plans show. This app reads only the calendars you tick.",
@@ -1118,7 +1121,8 @@
     "syncFailed": "Last sync failed",
     "manage": "Manage",
     "done": "Done",
-    "syncedJustNow": "Synced just now"
+    "syncedJustNow": "Synced just now",
+    "notesMarker": "── Notes (synced with Talent Biz OS) ──"
   },
   "gmail": {
     "title": "Gmail",
@@ -1912,5 +1916,13 @@
       "distinctTitle": "Marked as different from",
       "undo": "Undo"
     }
+  },
+  "projectPicker": {
+    "title": "Add to a project",
+    "search": "Search projects",
+    "suggested": "Suggested",
+    "none": "No signed projects yet. An event can be added to a project once it's signed.",
+    "noMatch": "No projects match.",
+    "added": "Added to {project}."
   }
 }

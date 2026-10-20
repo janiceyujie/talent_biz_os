@@ -1,4 +1,5 @@
 import type { CronItem } from "graphile-worker";
+import { appEnv } from "@/lib/app-env";
 import { pushConfigured } from "@/lib/mail/pubsub";
 import { jobAttempts } from "@/lib/queue/jobs";
 
@@ -16,6 +17,15 @@ export function schedule(): CronItem[] {
       match: pushConfigured() ? "*/15 * * * *" : "*/2 * * * *",
       identifier: "mail.reconcile",
       options: { maxAttempts: jobAttempts["mail.reconcile"] },
+    },
+    // Google Calendar read back without anyone on the Calendar screen (docs/design/calendar-two-way.md).
+    // Every 5 minutes until Google's change notices work after deploy; then a 30-minute safety net.
+    // Every minute in development, where there are no notices and a person is waiting to see a change.
+    {
+      task: "calendar.reconcile",
+      match: appEnv() === "development" ? "* * * * *" : "*/5 * * * *",
+      identifier: "calendar.reconcile",
+      options: { maxAttempts: jobAttempts["calendar.reconcile"] },
     },
     // 03:30 in Taipei, when little else runs.
     { task: "mail.cleanup", match: "30 19 * * *", identifier: "mail.cleanup", options: { maxAttempts: jobAttempts["mail.cleanup"] } },

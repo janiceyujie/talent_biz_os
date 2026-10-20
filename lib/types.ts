@@ -133,6 +133,8 @@ export type CalendarItem = {
   timeZone: string;
   location: string;
   projectId: string | null;
+  /** Added in Google Calendar without a project: the one it most likely belongs to (decision 0017). */
+  suggestedProjectId: string | null;
   notes: string;
   done: boolean;
   archived: boolean;

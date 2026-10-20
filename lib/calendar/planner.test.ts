@@ -35,6 +35,7 @@ const cal = (over: Partial<CalendarItem> = {}): CalendarItem => ({
   timeZone: "Asia/Taipei",
   location: "",
   projectId: null,
+  suggestedProjectId: null,
   notes: "",
   done: false,
   archived: false,

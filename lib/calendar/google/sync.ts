@@ -10,14 +10,18 @@ import { calendarSyncKey, calendarSyncQueue } from "@/lib/queue/jobs";
 import { feedEvents } from "../feed";
 import { googleCalendar, GoogleCalendarError } from "./api";
 import { planSync, toGoogleEvent } from "./plan";
+import { readBack } from "./read-back";
+import { fieldsOfOurs } from "./two-way";
 
-// Phase 1 of decision 0009: our events, pushed to a dedicated calendar in the
-// person's Google account. A sync compares what belongs there with what was
-// pushed (plan.ts) and makes the difference. One sync per connection at a time
-// (a transaction-scoped advisory lock); a change arriving mid-sync sets
-// `dirty`, and the running sync goes around again. It runs as a job in the
-// worker (calendar.sync, decision 0014), which retries what Google or the
-// network failed on; Sync now still runs it in the request, to show the result.
+// Our events and a dedicated calendar in the person's Google account, both ways
+// (decision 0009, phase 1; decision 0017). A sync first reads what changed in
+// Google and brings it in (read-back.ts), then compares what belongs there with
+// what was pushed (plan.ts) and makes the difference. One sync per connection
+// at a time (a transaction-scoped advisory lock); a change arriving mid-sync
+// sets `dirty`, and the running sync goes around again. It runs as a job in the
+// worker (calendar.sync, decision 0014), every few minutes and after every
+// change here, and retries what Google or the network failed on; Sync now
+// still runs it in the request, to show the result.
 
 export { CALENDAR_SCOPE } from "./scope";
 
@@ -58,37 +62,89 @@ export async function runCalendarSync(connectionId: string, attempt: number) {
  * again later may help.
  */
 export async function syncConnection(connectionId: string): Promise<{ failure: SyncFailure; retry: boolean } | null> {
-  return db.transaction(async (tx) => {
+  const { result, others } = await db.transaction(async (tx) => {
     const [{ locked }] = (await tx.execute(sql`select pg_try_advisory_xact_lock(hashtext(${connectionId})) as locked`)) as unknown as {
       locked: boolean;
     }[];
-    if (!locked) return null; // another sync is running; it will see `dirty`
-    for (let pass = 0; pass < 5; pass++) {
-      const [c] = await tx.select().from(calendarConnection).where(eq(calendarConnection.id, connectionId));
-      if (!c || c.status !== "connected" || !c.dirty) return null;
-      await tx.update(calendarConnection).set({ dirty: false }).where(eq(calendarConnection.id, c.id));
-      try {
-        await pushOnce(tx, c);
-        await tx.update(calendarConnection).set({ lastSyncedAt: new Date(), lastError: null }).where(eq(calendarConnection.id, c.id));
-      } catch (e) {
-        const failure: SyncFailure =
-          e instanceof AccessLost || (e instanceof GoogleCalendarError && e.authLost) ? "auth" : e instanceof GoogleCalendarError && e.status ? "google" : "network";
-        // Still behind Google, so stay dirty. Lost access needs the person; the network,
-        // Google being down, or its "slow down" are tried again later (runCalendarSync).
-        await tx
-          .update(calendarConnection)
-          .set({ dirty: true, lastError: failure, ...(failure === "auth" ? { status: "needs_reconnect" as const } : {}) })
-          .where(eq(calendarConnection.id, c.id));
-        console.error("calendar sync failed", { connectionId, failure, message: e instanceof Error ? e.message : String(e) });
-        const status = e instanceof GoogleCalendarError ? e.status : 0;
-        return { failure, retry: failure === "network" || (failure === "google" && (status === 429 || status >= 500)) };
-      }
-    }
-    return null;
+    if (!locked) return { result: null, others: [] }; // another sync is running; it will see `dirty`
+    const read = await readGoogle(tx, connectionId);
+    if (read.failure) return { result: read.failure, others: [] };
+    return { result: await pushPasses(tx, connectionId), others: read.others };
   });
+  // Brought in from Google: every other connection's copy follows (each on its own queue).
+  for (const id of others) await queueCalendarSync(id);
+  return result;
+}
+
+/**
+ * Google's changes first (decision 0017). Lost access stops the sync; anything else is logged and
+ * the push still runs, so a read Google refuses never holds up ours. When something changed here,
+ * every connection of the talent becomes dirty: this one pushes the merge, the others follow.
+ */
+async function readGoogle(tx: Tx, connectionId: string): Promise<{ failure?: { failure: SyncFailure; retry: boolean }; others: string[] }> {
+  const [c] = await tx.select().from(calendarConnection).where(eq(calendarConnection.id, connectionId));
+  if (!c || c.status !== "connected" || !c.externalCalendarId) return { others: [] };
+  try {
+    const { changed, push } = await readBack(tx, c, googleCalendar(await accessToken(c)));
+    if (push && !changed) await tx.update(calendarConnection).set({ dirty: true }).where(eq(calendarConnection.id, c.id));
+    if (!changed) return { others: [] };
+    const rows = await tx
+      .update(calendarConnection)
+      .set({ dirty: true })
+      .where(and(eq(calendarConnection.talentId, c.talentId), eq(calendarConnection.status, "connected")))
+      .returning({ id: calendarConnection.id });
+    return { others: rows.map((r) => r.id).filter((id) => id !== c.id) };
+  } catch (e) {
+    if (e instanceof AccessLost || (e instanceof GoogleCalendarError && (e.authLost || e.scopeMissing))) {
+      await tx.update(calendarConnection).set({ lastError: "auth", status: "needs_reconnect" }).where(eq(calendarConnection.id, c.id));
+      return { failure: { failure: "auth", retry: false }, others: [] };
+    }
+    console.error("calendar read failed", { connectionId, status: e instanceof GoogleCalendarError ? e.status : (e as Error)?.name });
+    return { others: [] };
+  }
+}
+
+/** Push until nothing here is dirty, at most a few passes. */
+async function pushPasses(tx: Tx, connectionId: string): Promise<{ failure: SyncFailure; retry: boolean } | null> {
+  for (let pass = 0; pass < 5; pass++) {
+    const [c] = await tx.select().from(calendarConnection).where(eq(calendarConnection.id, connectionId));
+    if (!c || c.status !== "connected" || !c.dirty) return null;
+    await tx.update(calendarConnection).set({ dirty: false }).where(eq(calendarConnection.id, c.id));
+    try {
+      await pushOnce(tx, c);
+      await tx.update(calendarConnection).set({ lastSyncedAt: new Date(), lastError: null }).where(eq(calendarConnection.id, c.id));
+    } catch (e) {
+      const failure: SyncFailure =
+        e instanceof AccessLost || (e instanceof GoogleCalendarError && e.authLost) ? "auth" : e instanceof GoogleCalendarError && e.status ? "google" : "network";
+      // Still behind Google, so stay dirty. Lost access needs the person; the network,
+      // Google being down, or its "slow down" are tried again later (runCalendarSync).
+      await tx
+        .update(calendarConnection)
+        .set({ dirty: true, lastError: failure, ...(failure === "auth" ? { status: "needs_reconnect" as const } : {}) })
+        .where(eq(calendarConnection.id, c.id));
+      console.error("calendar sync failed", { connectionId, failure, message: e instanceof Error ? e.message : String(e) });
+      const status = e instanceof GoogleCalendarError ? e.status : 0;
+      return { failure, retry: failure === "network" || (failure === "google" && (status === 429 || status >= 500)) };
+    }
+  }
+  return null;
 }
 
 class AccessLost extends Error {}
+
+/**
+ * calendar.reconcile, every few minutes: a sync for every connected connection with none waiting,
+ * so Google's changes are read without anyone opening the Calendar screen. A waiting one is left
+ * alone: replacing it would cut short a failed push's retry schedule.
+ */
+export async function reconcileCalendars() {
+  const rows = (await db.execute(sql`
+    select c.id from calendar_connection c
+    where c.status = 'connected'
+      and not exists (select 1 from graphile_worker.jobs j where j.key = ${calendarSyncKey("")} || c.id::text and j.attempts < j.max_attempts)
+  `)) as unknown as { id: string }[];
+  for (const r of rows) await queueCalendarSync(r.id);
+}
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Connection = typeof calendarConnection.$inferSelect;
@@ -113,42 +169,45 @@ async function pushOnce(tx: Tx, c: Connection) {
     .where(eq(person.id, c.personId));
 
   // The dedicated calendar: create it on the first sync, and again if the person deleted it in Google.
+  // Its description says changes go both ways; one made when it went one way is brought up to date.
+  const t = await translator(toLocale(locale), "googleCalendar");
   let calendarId = c.externalCalendarId;
   if (calendarId) {
     try {
-      await google.getCalendar(calendarId);
+      const cal = await google.getCalendar(calendarId);
+      if (cal.description !== t("calendarDescription")) await google.updateCalendar(calendarId, { description: t("calendarDescription") });
     } catch (e) {
       if (!(e instanceof GoogleCalendarError && e.gone)) throw e;
       calendarId = null;
     }
   }
   if (!calendarId) {
-    const t = await translator(toLocale(locale), "googleCalendar");
     calendarId = (await google.createCalendar({ summary: t("calendarName", { talent: name }), description: t("calendarDescription"), timeZone })).id;
     await tx.update(calendarConnection).set({ externalCalendarId: calendarId }).where(eq(calendarConnection.id, c.id));
     await tx.delete(calendarEventSync).where(eq(calendarEventSync.connectionId, c.id)); // nothing is in the new calendar yet
   }
 
-  const events = await feedEvents(c.talentId, locale);
+  const events = await feedEvents(c.talentId, locale, undefined, tx);
+  const marker = t("notesMarker");
   const synced = await tx.select().from(calendarEventSync).where(eq(calendarEventSync.connectionId, c.id));
   const plan = planSync(events, synced);
 
   for (const e of plan.create) {
-    const made = await google.insertEvent(calendarId, toGoogleEvent(e));
-    await tx.insert(calendarEventSync).values({ connectionId: c.id, eventId: e.id, externalEventId: made.id, etag: made.etag, syncedAt: e.updatedAt });
+    const made = await google.insertEvent(calendarId, toGoogleEvent(e, marker));
+    await tx.insert(calendarEventSync).values({ connectionId: c.id, eventId: e.id, externalEventId: made.id, etag: made.etag, syncedAt: e.updatedAt, pushed: fieldsOfOurs(e) });
   }
   for (const { event: e, synced: s } of plan.update) {
     let made;
     try {
-      made = await google.updateEvent(calendarId, s.externalEventId, toGoogleEvent(e));
+      made = await google.updateEvent(calendarId, s.externalEventId, toGoogleEvent(e, marker));
     } catch (err) {
       // Deleted in Google: our calendar is ours to write (decision 0009), so it comes back.
       if (!(err instanceof GoogleCalendarError && err.gone)) throw err;
-      made = await google.insertEvent(calendarId, toGoogleEvent(e));
+      made = await google.insertEvent(calendarId, toGoogleEvent(e, marker));
     }
     await tx
       .update(calendarEventSync)
-      .set({ externalEventId: made.id, etag: made.etag, syncedAt: e.updatedAt })
+      .set({ externalEventId: made.id, etag: made.etag, syncedAt: e.updatedAt, pushed: fieldsOfOurs(e) })
       .where(eq(calendarEventSync.id, s.id));
   }
   for (const s of plan.remove) {

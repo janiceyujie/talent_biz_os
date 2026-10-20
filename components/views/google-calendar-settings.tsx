@@ -63,19 +63,20 @@ export function GoogleCalendarSettings({ onNotice }: { onNotice: (text: string) 
     startTransition(async () => {
       setManaging(false);
       const result = await listGoogleCalendars();
-      if ("error" in result) setFailed(result.error);
+      if ("grant" in result) await requestRead();
+      else if ("error" in result) setFailed(result.error);
       else setChoosing(result.calendars);
     });
-  const askToRead = () =>
-    startTransition(async () => {
-      await authClient.linkSocial({
-        provider: "google",
-        scopes: [CALENDAR_SCOPE, ...IMPORT_SCOPES],
-        callbackURL: "/settings?calendar=import",
-        errorCallbackURL: "/settings",
-        additionalParams: { access_type: "offline", prompt: "select_account consent" },
-      });
+  // include_granted_scopes: Google's token then carries everything granted before, not only what's asked now.
+  const requestRead = () =>
+    authClient.linkSocial({
+      provider: "google",
+      scopes: [CALENDAR_SCOPE, ...IMPORT_SCOPES],
+      callbackURL: "/settings?calendar=import",
+      errorCallbackURL: "/settings",
+      additionalParams: { access_type: "offline", prompt: "select_account consent", include_granted_scopes: "true" },
     });
+  const askToRead = () => startTransition(async () => void (await requestRead()));
 
   // Back from granting read access: show the calendars to choose from, once.
   const choosingOnce = useRef(false);
@@ -97,15 +98,17 @@ export function GoogleCalendarSettings({ onNotice }: { onNotice: (text: string) 
     return () => clearInterval(timer);
   }, [waiting, router]);
 
+  // Connecting, or reconnecting: asks again for reading too when it was granted before, so a
+  // reconnect never leaves a token that can push but not read the chosen calendars.
   const connect = () =>
     startTransition(async () => {
       await authClient.linkSocial({
         provider: "google",
-        scopes: [CALENDAR_SCOPE],
+        scopes: importGranted || importing.length ? [CALENDAR_SCOPE, ...IMPORT_SCOPES] : [CALENDAR_SCOPE],
         callbackURL: "/settings?calendar=connected",
         errorCallbackURL: "/settings",
         // A refresh token, so syncing works without the person present.
-        additionalParams: { access_type: "offline", prompt: "select_account consent" },
+        additionalParams: { access_type: "offline", prompt: "select_account consent", include_granted_scopes: "true" },
       });
     });
 

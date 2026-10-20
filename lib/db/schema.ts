@@ -24,6 +24,7 @@ import {
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
 import { historyModes } from "../mail/history";
+import type { SyncFields } from "@/lib/calendar/google/two-way";
 import type { NoticeFields } from "../mail/payment-notice/fields";
 import { mailKinds } from "../mail/relevance/prompt";
 import { senderChecks } from "../mail/sender-auth";
@@ -462,6 +463,10 @@ export const calendarEvent = pgTable(
     status: text({ enum: calendarEventStatuses }).notNull().default("confirmed"),
     notes: text(),
     archivedAt: timestamp({ withTimezone: true }),
+    // Deleted in Google Calendar (decision 0017): gone from every screen, deleted for good 30 days later.
+    deletedInGoogleAt: timestamp({ withTimezone: true }),
+    // Added in Google: the project it most likely belongs to, offered first in Add to a project.
+    suggestedProjectId: uuid().references(() => project.id, { onDelete: "set null" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -769,6 +774,7 @@ export const calendarConnection = pgTable(
     lastError: text(), // a failure code, for the settings card
     lastSyncedAt: timestamp({ withTimezone: true }),
     dirty: boolean().notNull().default(true),
+    syncToken: text(), // where reading our calendar back continues (Google's nextSyncToken); null = read it all
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -793,6 +799,7 @@ export const calendarEventSync = pgTable(
     externalEventId: text().notNull(),
     etag: text(),
     syncedAt: timestamp({ withTimezone: true }).notNull(), // our event's updated_at when last pushed
+    pushed: jsonb().$type<SyncFields>(), // the shared fields as last pushed or read: the merge's base (decision 0017)
   },
   (t) => [
     unique("calendar_event_sync_connection_event").on(t.connectionId, t.eventId),
@@ -814,6 +821,9 @@ export const calendarImportSource = pgTable(
     name: text().notNull(),
     color: text(), // Google's background colour for the calendar, as #rrggbb
     lastImportedAt: timestamp({ withTimezone: true }),
+    syncToken: text(), // tells whether the calendar changed since the last read; null = not known yet
+    // Our own Talent Biz OS calendar's repeating events, read-only like a chosen calendar (decision 0017).
+    own: boolean().notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [unique("calendar_import_source_connection_calendar").on(t.connectionId, t.externalCalendarId)],

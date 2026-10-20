@@ -60,11 +60,11 @@ flowchart LR
   K <-->|history, metadata, full email, watch| GM
   GM -->|change notices| PS
   K -->|pull, acknowledge| PS
-  K -->|our events out| GC
+  K <-->|our events out, Google's changes in| GC
   K -->|"score, read, analyze"| AN
   K -.->|only when the primary can't answer| OA
   K -.-> DEV
-  W -->|"Sync now, the Calendar screen's reads"| GC
+  W -->|Sync now| GC
 ```
 
 What lives where:
@@ -139,7 +139,7 @@ flowchart LR
   end
 
   subgraph Producers["Who queues work"]
-    C["Worker: schedule<br/>reconcile every 15 min (2 without push)<br/>cleanup daily, 03:30 Taipei"]
+    C["Worker: schedule<br/>reconcile every 15 min (2 without push)<br/>calendar reconcile every 5 min<br/>cleanup daily, 03:30 Taipei"]
     P["Worker: Pub/Sub notice"]
     A2["Web: Connect, Check now"]
     A3["Web: Disconnect"]
@@ -264,23 +264,27 @@ sequenceDiagram
 
 ## Google Calendar: today and later
 
-Two directions, and neither uses Pub/Sub. Calendar's change notices are calls to a public HTTPS address, which we'll have only once deployed ([decision 0009](decisions/0009-google-calendar-sync.md)).
+Our events and a dedicated calendar in the person's Google account go both ways ([decision 0017](decisions/0017-two-way-google-calendar.md), design: [calendar-two-way](design/calendar-two-way.md)), and the person's own calendars are shown here read-only. None of it uses Pub/Sub: Calendar's change notices are calls to a public HTTPS address, which we'll have only once deployed, so until then the worker asks every 5 minutes.
 
 ### Today
 
 ```mermaid
 flowchart LR
-  subgraph Out["Ours → Google (phase 1)"]
-    E["An event saved, archived,<br/>or deleted here"] -->|"calendar.sync<br/>(bursts merge into one)"| CS["Compare and push the difference<br/>(the worker; the request on Sync now)"]
-    SN["Sync now"] -->|in the request| CS
-    CS --> DC["A dedicated calendar in<br/>the person's Google account"]
-    CS -.->|"failed: retry after 1 min, 5 min,<br/>30 min, 2 h, then every 6 h"| CS
+  subgraph Both["Ours ⇄ the Talent Biz OS calendar in Google"]
+    E["An event saved, archived,<br/>or deleted here"] -->|"calendar.sync<br/>(bursts merge into one)"| CS["calendar.sync, one per connection at a time"]
+    REC["Worker: calendar.reconcile<br/>every 5 min, whether or not<br/>anyone has the app open"] --> CS
+    SN["Sync now (in the request)"] --> CS
+    CS --> RB["1. Read Google's changes<br/>since the sync token"]
+    RB --> AP["Edits merged by field ·<br/>added → an event, not in a project ·<br/>deleted → hidden, gone after 30 days ·<br/>repeating → read-only"]
+    AP --> PU["2. Push ours: create, update, remove"]
+    PU --> DC["The dedicated calendar"]
+    PU -.->|"failed: retry after 1 min, 5 min,<br/>30 min, 2 h, then every 6 h"| CS
   end
 
-  subgraph In["Google → ours (phase 2)"]
-    OPEN["Calendar screen open:<br/>on opening, then every 3 min<br/>(each calendar at most every 2 min)"] --> RD["Web: re-read a window,<br/>a month back to six months ahead"]
-    SN2["Sync now"] --> RD
-    RD --> EE["external_event<br/>(read-only, this person only)"]
+  subgraph In["The person's chosen calendars → ours (read-only)"]
+    CS --> CHK["3. Changed since<br/>each calendar's token?"]
+    CHK -->|"changed, or a day old"| RD["Re-read a window,<br/>a month back to six months ahead"]
+    RD --> EE["external_event<br/>(this person only)"]
   end
 
   subgraph Feed["The subscription link (phase 0)"]
@@ -288,10 +292,12 @@ flowchart LR
   end
 ```
 
-The current limits:
+What to know:
 
-- Changes made in Google show here only while someone has the Calendar screen open.
-- An event edited or deleted in Google, on our dedicated calendar, is put back by the next push.
+- **Nothing is shown about a sync on screen.** A change on either side just appears on the other. Out of sight, the merge keeps both sides' fields, every change is recorded in `audit_log`, and a deleted event is kept 30 days, so a history or Restore can come later.
+- **What comes back from Google:** title, date, time, end, and time zone; the location where it's a single field (shows, meetings); notes, from below the description's notes line. A travel route, a stay's hotel, and the description's lines above the notes stay ours: an edit to them in Google is put back by the next push.
+- **Every connected teammate has their own copy.** A change in anyone's copy comes here, and the others' copies follow at their next sync.
+- **A sync token can't be limited to a date window** (Google's rule), so for the chosen calendars it only says *whether* something changed. The window is re-read then, or once a day as it moves on.
 
 ### A push, step by step
 
@@ -316,13 +322,15 @@ sequenceDiagram
     BA->>OT: refresh token → new access token (1 hour)
   end
   BA-->>K: access token (401 here: needs reconnect)
-  K->>GC: GET /calendars/{id}: our calendar still there?
+  K->>GC: GET /events?syncToken=…: what changed in Google since the last read
+  K->>DB: merge edits, add events added there, hide events deleted there (read-back.ts)
+  K->>GC: GET /calendars/{id}: our calendar still there? (its description kept up to date)
   opt missing, or the first sync
     K->>GC: POST /calendars: create "<talent>"
   end
   K->>DB: our confirmed events vs calendar_event_sync
   K->>GC: POST /events (new), PUT /events/{id} (changed), DELETE /events/{id} (removed)
-  K->>DB: record each mapping, clear dirty, set last synced
+  K->>DB: record each mapping and what was pushed, clear dirty, set last synced
 ```
 
 How we talk to Google: plain HTTPS to its REST API (`lib/calendar/google/api.ts`), no SDK, each call with `Authorization: Bearer <access token>` and a 15-second timeout. Better Auth keeps the refresh token encrypted (`BETTER_AUTH_SECRET`) and refreshes the access token when it's about to expire.
@@ -330,7 +338,8 @@ How we talk to Google: plain HTTPS to its REST API (`lib/calendar/google/api.ts`
 | Call | What for | Phase |
 |---|---|---|
 | `POST /calendars` | create our dedicated calendar | 1 |
-| `GET /calendars/{id}` | check it still exists, on every push | 1 |
+| `GET /calendars/{id}`, `PATCH /calendars/{id}` | check it still exists on every push, and keep its description up to date | 1 |
+| `GET /calendars/{id}/events?syncToken=…` | what changed in a calendar since the last read: ours read back in full, a chosen one's only to tell whether it changed | 0017 |
 | `POST /calendars/{id}/events` | add an event | 1 |
 | `PUT /calendars/{id}/events/{eventId}` | replace a changed event (recreated with `POST` if deleted in Google) | 1 |
 | `DELETE /calendars/{id}/events/{eventId}` | remove an event deleted, archived, or unconfirmed here | 1 |
@@ -341,28 +350,18 @@ How we talk to Google: plain HTTPS to its REST API (`lib/calendar/google/api.ts`
 
 What Google's answer means: 401 is lost access (the connection asks to reconnect); 404 or 410 is a calendar or event gone in Google (recreated); 429, 5xx, or no answer is temporary (retried on the schedule above); anything else waits for the next change or Sync now. Each Google event carries our event's id as a private property, so it can always be traced back. In tests, `GOOGLE_CALENDAR_API_URL` points at a fake Google.
 
-### Why it isn't two-way yet
-
-Two separate gaps; only one of them is about a public address.
-
-| What | Today | What it waits for |
-|---|---|---|
-| The person's own Google calendars shown here (Google → ours, read-only) | Works, by polling while the Calendar screen is open | A public HTTPS address (after deploy) only lets Google tell us about changes instead of us asking. |
-| Edits made in Google to our events coming back (true two-way) | Not built: the next push puts our version back | A product decision, not the network: what an edit in Google means for project data, asked before changing it. Phase 3, only if people turn out to edit project events in Google ([decision 0009](decisions/0009-google-calendar-sync.md)). |
-
 ### Later, once deployed
 
 ```mermaid
 flowchart LR
   GC["Google Calendar"] -->|"change notice<br/>(a watch channel, renewed about weekly)"| HK["Web: a public webhook"]
-  HK -->|queue a read| K["Worker"]
+  HK -->|queue calendar.sync| K["Worker"]
   K -->|"sync token: only what changed"| GC
   K --> EE["external_event"]
   EE -.->|the change check| UI["Any open screen"]
 ```
 
-- **Phase 2, finished:** Google tells us when a chosen calendar changes. The worker reads only what changed, using Google's sync token, in the background, whether or not anyone has the screen open.
-- **Phase 3, only if people edit project events in Google:** edits made there come back here, and ask before changing project data.
+- **Change notices** (`calendar-webhooks`, with or after `deploy-render`): Google tells us when our calendar or a chosen one changes, and the same `calendar.sync` runs within seconds. The 5-minute reconcile becomes a 30-minute safety net, since Google doesn't promise delivery and stores nothing while we're down.
 
 ## Recovery paths
 
@@ -394,5 +393,5 @@ flowchart LR
 | Screen change check | 10 s, and on returning to the tab |
 | Intake during Check now or sorting | 3 s |
 | Calendar push retries | 1 min, 5 min, 30 min, 2 h, then 6 h |
-| Calendar import while open | every 3 min (each calendar at most every 2 min) |
-| Cleanup | daily at 03:30 Taipei: skipped mail after 90 days, payment notices after 30, given-up jobs after 14 |
+| Google Calendar read back (our calendar and the chosen ones) | every 5 min (`calendar.reconcile`; every minute in development); a chosen calendar's window re-read when it changed, or daily |
+| Cleanup | daily at 03:30 Taipei: skipped mail after 90 days, payment notices and events deleted in Google after 30, given-up jobs after 14 |

@@ -466,3 +466,61 @@
     display: none;
   }
 }
+
+/* An event not in any project (decision 0017): one quiet mark, and Add to a project. */
+.no-project {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 1px 8px;
+  border: 1px dashed #9aa8a1;
+  border-radius: 999px;
+  background: var(--surface);
+  color: #53635c;
+  font-size: 0.75rem;
+}
+.no-project-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.project-picker input {
+  width: 100%;
+  margin-bottom: 6px;
+}
+.project-picker ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 50dvh;
+  overflow-y: auto;
+}
+.project-picker button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-size: 0.875rem;
+}
+.project-picker button:hover,
+.project-picker button.is-suggested {
+  background: var(--accent-soft);
+}
+.project-picker small {
+  color: var(--muted);
+}
+.project-picker em {
+  color: var(--accent);
+  font-size: 0.6875rem;
+  font-style: normal;
+  font-weight: 700;
+  white-space: nowrap;
+}

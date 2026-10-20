@@ -89,7 +89,10 @@ Decided 2026-10-02. MVP: `zh-TW` and `en`; built so more languages are a file, n
 ## Deferred decisions
 
 - **Job queue and hosting (decided 2026-10-10).** Graphile Worker in our Postgres, and Render in Singapore for the web service and the worker; the options weighed are in [decision 0014](decisions/0014-hosting-and-job-queue.md).
-- **Embeddings (M4).** Claude has no embeddings API; Anthropic points to Voyage AI. Any provider works since vectors are stored in pgvector.
+- **Embeddings (M4).** Planned, with what we collect meanwhile and when to start, in [design/embeddings.md](design/embeddings.md). Per artist only: Google's Limited Use rules allow a model trained on Gmail data only as that user's personalized model. Claude has no embeddings API; Anthropic points to Voyage AI. First choice is OpenAI's embedding models instead: OpenAI is already the backup model provider ([decision 0015](decisions/0015-production-model-providers.md)), so it brings no new vendor, key, or data terms. Any provider works since vectors are stored in pgvector, and switching means computing them again. Before real mail goes in:
+  - check OpenAI's retention for this use against the rule for real mail (`AI_PROVIDER_KEEPS_DATA`);
+  - vectors made from Gmail content are Gmail data under Google's Limited Use policy: used only for the feature, and deleted with the mailbox's other data on disconnect;
+  - compute them only for mail brought in, never for Filtered out, whose body is never read.
 
 ## Leaving Supabase later
 

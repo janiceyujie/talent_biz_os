@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const serviceCategories = ["livePerformance", "influencerSponsorship", "videoProduction", "photography", "modeling", "podcastSponsorship", "musicLicensing", "digitalDownloads", "merchandise", "consulting", "management", "mixed"] as const;
+export const serviceCategories = ["livePerformance", "ticketAdmissions", "influencerSponsorship", "videoProduction", "photography", "modeling", "podcastSponsorship", "musicLicensing", "digitalDownloads", "merchandise", "consulting", "management", "mixed"] as const;
 export const taxContextInput = z.object({
   state: z.string().regex(/^[A-Z]{2}$/),
   sellerState: z.string().regex(/^[A-Z]{2}$/),
@@ -13,6 +13,7 @@ export const taxContextInput = z.object({
   jurisdictionId: z.uuid().optional(),
   jurisdictionConfirmed: z.boolean(),
   standardSaleConfirmed: z.boolean(),
+  merchandiseScope: z.enum(["ordinaryInPerson", "other"]).optional(),
 }).strict();
 export type TaxContext = z.infer<typeof taxContextInput>;
 export type RateEvidence = {
@@ -23,7 +24,7 @@ export type RuleEvidence = {
   id: string; state: string; category: string; delivery: string; treatment: string;
   status: string; validFrom: string; validThrough: string; sourceUrl: string; contentHash: string;
 };
-export type TaxReason = "crossState" | "jurisdiction" | "collection" | "exemption" | "scope" | "rule" | "rate" | "date" | "stale";
+export type TaxReason = "crossState" | "jurisdiction" | "collection" | "exemption" | "scope" | "admissions" | "rule" | "rate" | "date" | "stale";
 export type TaxResolution = { status: "review"; reason: TaxReason } | {
   status: "ready"; treatment: "taxable" | "nonTaxable"; rate: number; source: string;
   ruleId: string; ruleHash: string; rateId?: string; rateName?: string; batchHash?: string;
@@ -35,6 +36,9 @@ export function resolveTax(context: TaxContext, rules: RuleEvidence[], rate: Rat
   if (!context.jurisdictionConfirmed) return review("jurisdiction");
   if (context.collection !== "registered") return review("collection");
   if (context.exemption !== "none") return review("exemption");
+  // Ticket admission and amusement taxes are separate from a performer's service fee.
+  if (context.category === "ticketAdmissions") return review("admissions");
+  if (context.category === "merchandise" && (context.merchandiseScope !== "ordinaryInPerson" || context.delivery !== "physical")) return review("scope");
   if (!context.standardSaleConfirmed || context.category === "mixed" || context.delivery === "mixed") return review("scope");
   const matches = rules.filter(r => r.status === "reviewed" && r.state === context.state && r.category === context.category && r.delivery === context.delivery
     && r.validFrom <= context.saleOn && r.validThrough >= context.saleOn && r.validThrough >= now);

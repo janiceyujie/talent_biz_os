@@ -30,7 +30,7 @@ test("manager briefing uses selected artists with labels and never falls back to
  const {portfolioReminderData}=await import("./briefing");
  const {notifications}=await import("./notifications");
  const own={talent:{timeZone:"UTC"},calendar:[{title:"Private owner event"}],payments:[{label:"Private owner payment"}],projects:[],notificationState:{},preview:true,previewDate:"2026-10-07"} as unknown as import("@/lib/types").AppData;
- const events=["Alpha","Beta","Gamma"].map((name,i)=>({id:`00000000-0000-4000-8000-00000000000${i}`,artistId:name,artistName:name,title:"Rehearsal",source:"event" as const,kind:"meeting" as const,date:"2026-10-17",time:"18:00",timeZone:"UTC",location:"",projectId:null,notes:"",done:false,archived:false,travel:null,endDate:"",endTime:""}));
+ const events=["Alpha","Beta","Gamma"].map((name,i)=>({id:`00000000-0000-4000-8000-00000000000${i}`,artistId:name,artistName:name,title:"Rehearsal",source:"event" as const,kind:"meeting" as const,date:"2026-10-17",time:"18:00",timeZone:"UTC",location:"",projectId:null,suggestedProjectId:null,notes:"",done:false,archived:false,travel:null,endDate:"",endTime:""}));
  const workspace={artists:[],selectedIds:["Alpha","Beta","Gamma"],calendar:events,payments:[],projects:[],limited:false};
  const all=portfolioReminderData(own,workspace);
  assert.deepEqual(notifications(all,now,true).map(n=>n.title).sort(),["Alpha · Rehearsal","Beta · Rehearsal","Gamma · Rehearsal"]);

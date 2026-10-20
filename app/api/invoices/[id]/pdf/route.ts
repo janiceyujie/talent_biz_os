@@ -3,7 +3,6 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { invoice } from "@/lib/db/schema";
 import { readBytes } from "@/lib/storage";
-import { getInvoice } from "@/lib/invoices/service";
 import { renderInvoicePdf } from "@/lib/invoices/pdf";
 import {
   invoiceIdentity,
@@ -20,18 +19,18 @@ export async function GET(
   if (!z.uuid().safeParse(id).success)
     return invoiceJson({ error: "notFound" }, 404);
   try {
-    const row = await getInvoice(who.talentId, id);
-    if (!row) return invoiceJson({ error: "notFound" }, 404);
-    const [stored] = await db
-      .select({ key: invoice.storageKey })
+    // Read snapshot, revision and attachment key together; an edit cannot mix versions.
+    const [row] = await db
+      .select()
       .from(invoice)
       .where(and(eq(invoice.id, id), eq(invoice.talentId, who.talentId)));
+    if (!row) return invoiceJson({ error: "notFound" }, 404);
     const frozen = ["sent", "sending", "delivery_unknown", "draft_creating", "gmail_draft", "draft_unknown", "draft_missing"].includes(row.status);
-    if (row.status === "sending" && !stored.key)
+    if (frozen && !row.storageKey)
       return invoiceJson({ error: "changed" }, 409);
     const bytes =
-      frozen && stored.key
-        ? await readBytes(stored.key)
+      frozen && row.storageKey
+        ? await readBytes(row.storageKey)
         : await renderInvoicePdf(row, true);
     return new Response(new Uint8Array(bytes), {
       headers: {

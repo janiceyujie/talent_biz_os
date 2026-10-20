@@ -37,3 +37,19 @@ test("invalid dates, unknown categories and injected fields cannot enter tax con
  assert.equal(taxContextInput.safeParse(context).success,true);
  for(const patch of [{saleOn:"2026-02-30"},{category:"anything"},{jurisdictionId:"not-a-uuid"},{rate:0},{location:""}])assert.equal(taxContextInput.safeParse({...context,...patch}).success,false);
 });
+
+test("ordinary merchandise needs its specific retail confirmation and a combined rate", () => {
+ const merchandise = {...context,category:"merchandise" as const,merchandiseScope:"ordinaryInPerson" as const};
+ const merchRule = {...rule,category:"merchandise"};
+ assert.equal(resolveTax(merchandise,[merchRule],rate,today).status,"ready");
+ for (const patch of [{merchandiseScope:undefined},{merchandiseScope:"other" as const},{delivery:"electronic" as const},{delivery:"inPerson" as const},{standardSaleConfirmed:false}]) {
+  assert.equal(resolveTax({...merchandise,...patch},[merchRule],rate,today).status,"review");
+ }
+ assert.equal(resolveTax(merchandise,[merchRule],{...rate,kind:"component"},today).status,"review");
+ assert.equal(resolveTax({...merchandise,state:"NY",sellerState:"NY"},[merchRule],rate,today).status,"review");
+});
+test("admission revenue cannot inherit a performer or merchandise rule, even an accidental zero rule", () => {
+ const result=resolveTax({...context,category:"ticketAdmissions"},[{...rule,category:"ticketAdmissions",treatment:"nonTaxable"}],undefined,today);
+ assert.deepEqual(result,{status:"review",reason:"admissions"});
+ assert.equal(resolveTax({...context,category:"livePerformance"},[{...rule,category:"merchandise"}],rate,today).status,"review");
+});

@@ -8,7 +8,7 @@ import { TravelSummary } from "@/components/app/travel-summary";
 import { YourTime } from "@/components/app/your-time";
 import { calendarPoints, pointKind, type CalendarPoint } from "@/lib/calendar/points";
 import { dateInZone } from "@/lib/domain/dates";
-import { isSigned } from "@/lib/domain/phases";
+import { isOpenStage } from "@/lib/domain/phases";
 import type { ProjectSummary } from "@/lib/types";
 
 const icon = (p: CalendarPoint) => {
@@ -30,7 +30,7 @@ export function TravelItinerary({ project, edit }: { project: ProjectSummary; ed
       (c) => c.projectId === project.id && !c.archived && ["travel", "accommodation", "performance"].includes(c.kind),
     ),
   ).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`) || a.key.localeCompare(b.key));
-  const canAdd = !project.archived && isSigned(project.stage);
+  const canAdd = !project.archived && isOpenStage(project.stage); // decision 0018
   const add = (kind: "travel" | "accommodation") =>
     edit({
       kind: "calendar",

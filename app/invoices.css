@@ -97,7 +97,8 @@
   gap: 1rem;
 }
 .invoice-form .invoice-check,
-.invoice-review .invoice-check {
+.invoice-review .invoice-check,
+.invoice-taiwan-setup .invoice-check {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
@@ -257,3 +258,8 @@
 .invoice-postal-field { display: flex; align-items: end; gap: 0.5rem; min-width: 0; }
 .invoice-postal-field > label { flex: 1; min-width: 0; }
 .invoice-postal-field > .info-hint { flex: 0 0 auto; margin-bottom: 0.75rem; }
+
+.invoice-taiwan-setup fieldset { border: 0; padding: 0; margin: 1rem 0 0; min-width: 0; display: grid; gap: 1rem; }
+.invoice-taiwan-setup .invoice-check { align-items: flex-start; }
+.invoice-taiwan-setup .invoice-check input { flex-shrink: 0; margin-top: .2em; }
+.invoice-taiwan-setup ul { padding-inline-start: 1.2rem; overflow-wrap: anywhere; }

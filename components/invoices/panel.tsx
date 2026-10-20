@@ -18,6 +18,7 @@ import type {
 } from "@/lib/invoices/types";
 import { InvoiceEditor } from "./editor";
 import { InvoiceReview } from "./review";
+import { TaiwanInvoiceSetup } from "./taiwan-setup";
 import { invoiceRequest } from "./request";
 
 export function InvoicePanel({ projectId, requestedPaymentId, onDismiss }: { projectId?: string; requestedPaymentId?: string; onDismiss?: () => void }) {
@@ -110,9 +111,15 @@ export function InvoicePanel({ projectId, requestedPaymentId, onDismiss }: { pro
     let active = true;
     queueMicrotask(() => { if (active) {setOpen(true);setLoading(true);setError("");} });
     Promise.all([invoiceRequest<string[]>("/api/invoices/payment-availability",{paymentIds:[linkedPayment]}),invoiceRequest<InvoiceDefaults | null>("/api/invoices/defaults")])
-      .then(([available,billing]) => {
+      .then(async ([available,billing]) => {
         if (!active) return;
-        if (!available.includes(linkedPayment)) {setError(t("error"));return;}
+        if (!available.includes(linkedPayment)) {
+          const existing = await invoiceRequest<InvoiceDetail | null>(`/api/invoices/payment/${linkedPayment}`);
+          if (!active) return;
+          if (!existing) { setError(t("errors.payment")); return; }
+          handledPayment.current = requestKey;
+          setDefaults(billing || undefined); setCreating(false); setRow(existing); return;
+        }
         handledPayment.current = requestKey;
         setDefaults(billing || undefined);setAvailablePayments(available);setInitialPaymentId(linkedPayment);setCreating(true);
       }).catch(() => {if(active)setError(t("error"));}).finally(() => {if(active)setLoading(false);});
@@ -178,6 +185,7 @@ export function InvoicePanel({ projectId, requestedPaymentId, onDismiss }: { pro
               {t("refresh")}
             </button>
           </div>
+          <TaiwanInvoiceSetup disabled={!!data.preview} />
           <div className="invoice-filters" role="group" aria-label={t("filterLabel")}>
             <button type="button" className="text-button" aria-pressed={!readyOnly} onClick={() => setReviewFilter(false)}>{t("filterAll")}</button>
             <button type="button" className="text-button" aria-pressed={readyOnly} onClick={() => setReviewFilter(true)}>{t("filterReview")}</button>

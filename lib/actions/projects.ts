@@ -1,11 +1,13 @@
 "use server";
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, notInArray } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { auditLog, contact, organization, payment, project } from "@/lib/db/schema";
+import { auditLog, calendarEvent, contact, organization, payment, project, talent as talentTable, todo } from "@/lib/db/schema";
+import { requestCalendarSync } from "@/lib/calendar/google/sync";
+import { dateInZone } from "@/lib/domain/dates";
 import { organizationNamed, setClient } from "@/lib/data/organizations";
 import { projectTypeKeys } from "@/lib/project-types";
 import { supportedCurrencies } from "@/lib/domain/money";
@@ -158,10 +160,74 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
   return failure;
 }
 
-export async function setProjectStage(id: string, stage: Stage): Promise<string | null> {
+// Talking about the deal goes on after it ends (declining politely, say); the rest of its plan doesn't.
+const COMMUNICATION_TODOS = ["reply", "follow_up"] as const;
+
+/** What's still open on a deal, as the lost-deal question lists it (decision 0018). */
+export type OpenDealItems = {
+  payments: { label: string; amount: number; currency: string; dueDate: string | null }[];
+  todos: { title: string; dueDate: string | null }[];
+  events: { title: string; date: string; time: string | null }[];
+};
+
+/** Open items on a deal: money still expected, its plan's to-dos, and events still ahead. */
+async function openItems(tx: Pick<typeof db, "select">, talentId: string, projectId: string, today: string) {
+  const [payments, todos, events] = await Promise.all([
+    tx
+      .select()
+      .from(payment)
+      .where(and(eq(payment.talentId, talentId), eq(payment.projectId, projectId), eq(payment.status, "expected"), isNull(payment.voidedAt))),
+    tx
+      .select({ id: todo.id, title: todo.title, dueDate: todo.dueDate })
+      .from(todo)
+      .where(and(eq(todo.talentId, talentId), eq(todo.projectId, projectId), eq(todo.status, "open"), notInArray(todo.type, [...COMMUNICATION_TODOS]))),
+    tx
+      .select({ id: calendarEvent.id, title: calendarEvent.title, date: calendarEvent.startDate, time: calendarEvent.startTime })
+      .from(calendarEvent)
+      .where(
+        and(
+          eq(calendarEvent.talentId, talentId),
+          eq(calendarEvent.projectId, projectId),
+          eq(calendarEvent.status, "confirmed"),
+          isNull(calendarEvent.archivedAt),
+          isNull(calendarEvent.deletedInGoogleAt),
+          gte(calendarEvent.startDate, today),
+        ),
+      ),
+  ]);
+  return { payments: payments.filter(p => paymentBalance(p).remaining > 0 && paymentBalance(p).cash === 0 && paymentBalance(p).withheld === 0), todos, events };
+}
+
+const todayFor = async (talentId: string) => {
+  const [row] = await db.select({ timeZone: talentTable.timeZone }).from(talentTable).where(eq(talentTable.id, talentId));
+  return dateInZone(row?.timeZone ?? "Asia/Taipei");
+};
+
+/** Before marking a deal declined or cancelled: what's still open on it, to ask about (decision 0018). */
+export async function openDealItems(id: string): Promise<OpenDealItems | null> {
+  const { talent } = await requireTalent();
+  if (!z.uuid().safeParse(id).success) return null;
+  const [owned] = await db.select({ id: project.id }).from(project).where(and(eq(project.id, id), eq(project.talentId, talent.id)));
+  if (!owned) return null;
+  const { payments, todos, events } = await openItems(db, talent.id, id, await todayFor(talent.id));
+  return {
+    payments: payments.map((p) => ({ label: p.label, amount: paymentBalance(p).remaining, currency: p.currency, dueDate: p.dueOn })),
+    todos: todos.map(({ title, dueDate }) => ({ title, dueDate })),
+    events: events.map(({ title, date, time }) => ({ title, date, time: time ? time.slice(0, 5) : null })),
+  };
+}
+
+/**
+ * Move a project to a stage. Marking it declined or cancelled with `cancelOpen` also cancels what
+ * was still open on it (decision 0018): money still expected, its plan's to-dos, and events still
+ * ahead, which then leave Google Calendar too. Money that moved and past events stay.
+ */
+export async function setProjectStage(id: string, stage: Stage, { cancelOpen = false } = {}): Promise<string | null> {
   const { person, talent } = await requireTalent();
   const fail = await errorText();
   if (!z.uuid().safeParse(id).success || !stages.includes(stage)) return fail("invalid");
+  const today = await todayFor(talent.id);
+  let eventsCancelled = false;
   const failure = await db.transaction(async (tx) => {
     const [existing] = await tx
       .select({ stage: project.stage })
@@ -175,8 +241,17 @@ export async function setProjectStage(id: string, stage: Stage): Promise<string 
     if (existing.stage === stage) return null;
     await tx.update(project).set({ stage }).where(and(eq(project.id, id), eq(project.talentId, talent.id)));
     await logStageChange(tx, talent.id, person.personId, id, existing.stage, stage);
+    if (cancelOpen && (stage === "declined" || stage === "cancelled")) {
+      const open = await openItems(tx, talent.id, id, today);
+      if (open.payments.length) await tx.update(payment).set({ status: "cancelled" }).where(inArray(payment.id, open.payments.map((p) => p.id)));
+      if (open.todos.length) await tx.update(todo).set({ status: "dismissed" }).where(inArray(todo.id, open.todos.map((t) => t.id)));
+      if (open.events.length) await tx.update(calendarEvent).set({ status: "cancelled" }).where(inArray(calendarEvent.id, open.events.map((e) => e.id)));
+      eventsCancelled = open.events.length > 0;
+    }
     return null;
   });
+  // Cancelled events aren't pushed any more, so the next sync removes them from Google Calendar.
+  if (!failure && eventsCancelled) await requestCalendarSync(talent.id);
   if (!failure) refresh();
   return failure;
 }

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { useState, useTransition, type RefObject } from "react";
+import { type RefObject, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { InfoHint } from "@/components/app/info-hint";
 import { markNotWork, recordNoticePayment } from "@/lib/actions/mail";
 import { receiptHistory } from "@/lib/domain/payment-receipts";
-import { isSigned } from "@/lib/domain/phases";
+import { isOpenStage } from "@/lib/domain/phases";
+import { countedPayments } from "@/lib/domain/workflow";
 import { useMoney } from "@/lib/i18n/format";
 import type { NoticeFields } from "@/lib/mail/payment-notice/fields";
 import { expectedTotal, matchNotice, openIncome, type NoticeMatch } from "@/lib/mail/payment-notice/match";
@@ -29,7 +30,8 @@ export function useNoticeMatch(notice: NoticeFields | null): NoticeMatch {
     const people = data.projectPeople.filter((x) => x.projectId === project.id).flatMap((x) => contactName.get(x.contactId) ?? []);
     return [project.counterparty, ...people].filter(Boolean);
   };
-  return matchNotice(notice, data.payments, namesFor);
+  // A notice settles expected money on signed work, or with no project (decision 0018).
+  return matchNotice(notice, countedPayments(data.payments, data.projects), namesFor);
 }
 
 /** "Project · label" for a payment, as the card and the list row name it. */
@@ -58,7 +60,6 @@ type Choice = { kind: "match" } | { kind: "payment"; id: string } | { kind: "new
 export function NoticeDetail({
   message,
   notice,
-  headingRef,
   gmailUrl,
 }: {
   message: InboxMessage;
@@ -84,8 +85,8 @@ export function NoticeDetail({
 
   const amount = money(notice.amount, notice.currency);
   const twd = notice.currency === "TWD";
-  const others = openIncome(data.payments, notice.currency).filter((p) => p.id !== match?.payment.id);
-  const signed = data.projects.filter((p) => !p.archived && isSigned(p.stage) && p.currency === notice.currency);
+  const others = openIncome(countedPayments(data.payments, data.projects), notice.currency).filter((p) => p.id !== match?.payment.id);
+  const signed = data.projects.filter((p) => !p.archived && isOpenStage(p.stage) && p.currency === notice.currency);
   const recorded = notice.paymentId ? data.payments.find((p) => p.id === notice.paymentId) : undefined;
   const day = (iso: string) => format.dateTime(new Date(`${iso}T12:00:00Z`), { year: "numeric", month: "numeric", day: "numeric", weekday: "short", timeZone: "UTC" });
   const target =
@@ -104,7 +105,7 @@ export function NoticeDetail({
   return (
     <>
       <header className="review-head">
-        <h2 ref={headingRef} tabIndex={-1}>
+        <h2 tabIndex={-1}>
           {t("title", { amount })}
         </h2>
         <em className={`message-status status-${message.status}`}>{tInbox(`status.${message.status}`)}</em>
@@ -220,7 +221,7 @@ export function NoticeDetail({
                       ) : (
                         <small className="muted">{t("noProjects")}</small>
                       ))}{" "}
-                    {choice.kind === "new" && !!signed.length && <InfoHint notes={[t("signedOnly")]} />}
+                    {choice.kind === "new" && !!signed.length && <InfoHint notes={[t("openOnly")]} />}
                   </span>
                 </label>
               </div>

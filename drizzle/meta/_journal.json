@@ -250,15 +250,36 @@
     {
       "idx": 35,
       "version": "7",
-      "when": 1792385452965,
-      "tag": "0035_workspace_foundation",
+      "when": 1792451985065,
+      "tag": "0035_calendar_sync_tokens",
       "breakpoints": true
     },
     {
       "idx": 36,
       "version": "7",
-      "when": 1792385658981,
-      "tag": "0036_invoice_settlement",
+      "when": 1792453918205,
+      "tag": "0036_calendar_two_way",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792468158406,
+      "tag": "0037_calendar_series_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792513124821,
+      "tag": "0038_condemned_ironclad",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792513463266,
+      "tag": "0039_ordinary_blacklash",
       "breakpoints": true
     }
   ]

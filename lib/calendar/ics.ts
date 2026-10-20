@@ -12,6 +12,11 @@ export type IcsEvent = {
   end?: { date: string; time: string; timeZone: string } | null;
   location?: string | null;
   description?: string | null;
+  // For Google Calendar, which keeps the notes apart (lib/calendar/google/two-way.ts): the event's
+  // kind, its own notes, and the other lines of the description.
+  kind?: string;
+  notes?: string | null;
+  info?: string[];
   updatedAt: Date;
 };
 

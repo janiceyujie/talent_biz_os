@@ -122,7 +122,7 @@ Subjects, snippets, bodies, and tokens never go into logs, traces, or error repo
 - **The add-on first** (the earlier plan). The smallest permission and no background reading, but the person must act on every email. Kept, after this.
 - **Forwarding first.** No Google review, any provider; rewritten headers and no thread id make matching weaker.
 - **An unsure card showing only sender, subject, and snippet, with the body fetched on "yes".** Reads the least; rejected for now in favor of fewer clicks.
-- **An embedding classifier from day one.** Cheaper per email, but needs labelled data we don't have yet; it can run in shadow mode once Not work and This was work labels accumulate.
+- **An embedding classifier from day one.** Cheaper per email, but needs labelled data we don't have yet; it can run in shadow mode once Not work and This was work labels accumulate. Per artist only: Google's Limited Use rules allow a model trained on Gmail data only as that user's personalized model, never one shared across artists. The plan, and when to start: [design/embeddings.md](../design/embeddings.md).
 - **Storing sender and subject for skipped mail** (for statistics and debugging). It builds a record of who writes to the artist; the live Filtered out view covers the need.
 - **Leaving bank notices out.** Safest, but "was I paid?" is one of the questions this product answers.
 - **The Kafka and separate-services design** in the original pipeline design doc. Sized for 500,000 users; see [decision 0014](0014-hosting-and-job-queue.md).

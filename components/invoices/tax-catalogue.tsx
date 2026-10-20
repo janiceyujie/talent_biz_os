@@ -42,7 +42,7 @@ export function TaxCatalogueLookup({ state, location, saleOn, initial, disabled,
           <option value="">{tax("choose")}</option>{usStates.map(s => <option key={s} value={s}>{s} · {tax(`states.${s}`)}</option>)}
         </select></label>
         <DateTimeInput kind="date" label={t("saleOn")} today={new Date().toISOString().slice(0, 10)} value={context.saleOn} onChange={saleOn => { change({ saleOn, jurisdictionId: undefined, jurisdictionConfirmed: false }); setLocalities(null); }} />
-        <label>{t("category")}<select value={context.category} onChange={e => change({ category: e.target.value as TaxContext["category"], standardSaleConfirmed: false })}>
+        <label>{t("category")}<select value={context.category} onChange={e => change({ category: e.target.value as TaxContext["category"], standardSaleConfirmed: false, merchandiseScope: undefined })}>
           {serviceCategories.map(c => <option key={c} value={c}>{t(`categories.${c}`)}</option>)}
         </select></label>
         <label>{t("delivery")}<select value={context.delivery} onChange={e => change({ delivery: e.target.value as TaxContext["delivery"], standardSaleConfirmed: false })}>
@@ -84,6 +84,9 @@ export function TaxCatalogueLookup({ state, location, saleOn, initial, disabled,
         {localities.coverage?.boundaryIndexUrl && <a className="text-button" href={localities.coverage.boundaryIndexUrl} target="_blank" rel="noreferrer">{t(localities.coverage.coverage === "officialReference" ? "references.localSource" : "verifyAddress")}</a>}
       </>}
       <label className="invoice-check"><input type="checkbox" checked={context.jurisdictionConfirmed} onChange={e => change({ jurisdictionConfirmed: e.target.checked })} />{t("jurisdictionConfirmed")}</label>
+      {context.category === "merchandise" && <label className="invoice-check"><input type="checkbox" checked={context.standardSaleConfirmed && context.merchandiseScope === "ordinaryInPerson"} onChange={e => change({ standardSaleConfirmed: e.target.checked, merchandiseScope: e.target.checked ? "ordinaryInPerson" : undefined })}/>{t("merchandiseConditions")}</label>}
+      {context.category === "livePerformance" && <p className="notice">{t("performanceScope")}</p>}
+      {context.category === "ticketAdmissions" && <p className="notice">{t("reasons.admissions")}</p>}
       {context.category === "photography" && <label className="invoice-check"><input type="checkbox" checked={context.standardSaleConfirmed} onChange={e => change({ standardSaleConfirmed: e.target.checked })} />{t(context.delivery === "electronic" ? "digitalConditions" : "physicalConditions")}</label>}
       <button type="button" className="secondary" disabled={!state || !location || !context.saleOn || !context.sellerState} onClick={async () => {
         setBusy(true); setError(false); setResult(null);

@@ -13,6 +13,7 @@ import { AssistantDock } from "./assistant-dock";
 import { WorkspaceSearch } from "./workspace-search";
 import { AccountMenu } from "./account-menu";
 import { Companion } from "./companion";
+import { LiveRefresh } from "./live-refresh";
 import { NotificationList, useNotifications } from "./notifications";
 import { ReminderProvider } from "./reminder-feed";
 import "@/app/briefing.css";
@@ -260,6 +261,7 @@ function ShellContent({ children }: { children: ReactNode }) {
           <NotificationList open={open} />
         </Modal>
       )}
+      <LiveRefresh />
       <AssistantDock hidden={mobile || showNotifications || showSearch} />
 
     </div>

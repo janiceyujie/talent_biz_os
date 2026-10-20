@@ -11,6 +11,7 @@ import { invoiceState, invoiceErrorKey, validInvoiceReceiptDate } from "@/lib/in
 import type { InvoiceDetail } from "@/lib/invoices/types";
 import { billingDocumentKind } from "@/lib/invoices/document";
 import { InvoiceDocumentNotice } from "./document-notice";
+import { TaiwanInvoiceSetup } from "./taiwan-setup";
 import { invoiceRequest } from "./request";
 export function InvoiceReview({
   row,
@@ -132,6 +133,7 @@ export function InvoiceReview({
           >
             {t("pdf")}
           </a>
+          <InfoHint label={t("pdf")} notes={[t("pdfLifecycle"), t("pdfFrozen")]} />
           {editable && (
             <button className="secondary" disabled={busy} onClick={onEdit}>
               {t("edit")}
@@ -152,6 +154,7 @@ export function InvoiceReview({
             </dl>
             <p className="invoice-email-body">{s.body}</p>
           </details>
+        {billingDocumentKind(s) === "tw_payment_request" && <TaiwanInvoiceSetup />}
         {row.gmail?.mode === "local" && <p className="notice">{t("localDraft")}</p>}
         {editable && (
           <>

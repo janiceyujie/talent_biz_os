@@ -10,3 +10,12 @@ test("manager finance sums cents exactly and does not add tax twice to tax-inclu
   assert.equal(managerFinance([{...row,amount:.1,taxRate:0},{...row,amount:.2,taxRate:0}])[0].receivable,.3);
   assert.equal(managerFinance([{...row,amount:105,taxIncluded:true}])[0].receivable,105);
 });
+
+test("manager finance excludes unsigned plans but retains actual cash and unpaid balances",()=>{
+  const plan={...row,projectId:"deal",projectStage:"negotiating" as const,taxRate:0};
+  assert.equal(managerFinance([plan])[0].receivable,0);
+  assert.equal(managerFinance([{...plan,projectStage:"signed"}])[0].receivable,100);
+  const receipt={id:"r",cash:40,withheld:10,date:"2026-10-20"};
+  const result=managerFinance([{...plan,projectStage:"cancelled",receipts:[receipt]}])[0];
+  assert.equal(result.received,40);assert.equal(result.receivable,50);
+});

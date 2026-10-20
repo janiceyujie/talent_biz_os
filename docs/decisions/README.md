@@ -25,12 +25,12 @@ When a choice is easy to get wrong later, was argued over, or trades something a
 | [0001](0001-sign-in-methods-and-account-linking.md) | Sign-in methods and account linking | Accepted |
 | [0002](0002-archive-void-cancel-delete.md) | Archive, void, cancel, and delete are four different things | Accepted |
 | [0003](0003-scheduled-times-as-local-time-plus-zone.md) | Scheduled times are stored as local time plus zone, not UTC | Accepted |
-| [0004](0004-execution-work-needs-a-signed-project.md) | Execution work attaches only to signed projects | Accepted |
+| [0004](0004-execution-work-needs-a-signed-project.md) | Execution work attaches only to signed projects | Superseded by 0018 |
 | [0005](0005-language-neutral-template-placeholders.md) | Reply-template placeholders are stored language-neutral | Accepted |
 | [0006](0006-model-provider.md) | Model calls go through one provider seam; a free model during development | Accepted; production providers in 0015 |
 | [0007](0007-untrusted-message-content.md) | Message content is untrusted: layered protection against prompt injection and fraud | Accepted |
 | [0008](0008-ai-operations.md) | Running the AI features: testing, prompts, paid models, and usage limits | Accepted |
-| [0009](0009-google-calendar-sync.md) | Syncing with Google Calendar: phases, permission, ownership, storage | Accepted |
+| [0009](0009-google-calendar-sync.md) | Syncing with Google Calendar: phases, permission, ownership, storage | Accepted; two-way editing in 0017 |
 | [0010](0010-per-person-preferences.md) | Per-person settings in a key–value table | Accepted |
 | [0011](0011-pages-fetch-what-they-show.md) | Pages fetch what they show; the layout carries only what every page needs | Accepted |
 | [0012](0012-companies-and-their-roles-on-projects.md) | Companies, their people, and their roles on projects | Accepted |
@@ -40,3 +40,5 @@ When a choice is easy to get wrong later, was argued over, or trades something a
 | [0016](0016-mailbox-tokens-and-key-management.md) | Mailbox tokens: envelope encryption with Cloud KMS | Accepted |
 
 | [0024](0024-gmail-invoice-drafts.md) | Optional Gmail invoice drafts; owners send in Gmail | Accepted locally; pilot pending |
+| [0017](0017-two-way-google-calendar.md) | Two-way Google Calendar: edits made in Google come back | Accepted |
+| [0018](0018-anything-on-an-open-deal.md) | Anything can go on an open deal; only signed work counts | Accepted |

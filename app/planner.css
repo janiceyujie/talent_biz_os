@@ -524,3 +524,249 @@
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* The Calendar screen's Google Calendar sync line, with its ⟳ (decision 0017). */
+.planner-google-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+.planner-google-status.is-warning {
+  color: #8a5a00;
+}
+.planner-google-status .icon-button {
+  min-height: 28px;
+  min-width: 28px;
+}
+.planner-google-status .spinning {
+  animation: spin 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .planner-google-status .spinning {
+    animation: none;
+  }
+}
+
+/* The month view (components/views/calendar.tsx): each day lists its items, like Google Calendar. */
+/* Its chips and day numbers are compact on purpose, not the planner's 44px touch buttons; phones tap the whole day. */
+.planner .month-grid button {
+  min-height: 0;
+}
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.month-weekday {
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  text-align: center;
+}
+.month-day {
+  min-width: 0;
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 6px 8px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.month-day:nth-child(7n) {
+  border-right: 0;
+}
+.month-day.is-outside {
+  background: #f7f8f7;
+}
+.month-day.is-outside .month-day-number {
+  color: var(--muted);
+}
+.month-day-number {
+  width: 26px;
+  height: 26px;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.month-day-number:hover {
+  background: var(--accent-soft);
+}
+.month-day.is-today .month-day-number {
+  background: var(--accent);
+  color: #fff;
+}
+.month-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.month-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 0;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.month-chip-time {
+  flex: none;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.month-chip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.month-chip.is-event {
+  background: var(--accent-soft);
+}
+.month-chip.is-event.is-all-day {
+  background: var(--accent);
+  color: #fff;
+}
+.month-chip.is-todo::before {
+  content: "";
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #77867f;
+  border-radius: 3px;
+}
+.month-chip.is-todo.is-done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.month-chip.is-google {
+  background: #eef1f8;
+}
+.month-chip.is-google::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #7b8bb8;
+}
+.month-chip.is-unfiled {
+  padding: 1px 5px;
+  border: 1px dashed #9aa8a1;
+  background: var(--surface);
+  color: var(--ink);
+}
+.month-more {
+  min-height: 0;
+  padding: 1px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: left;
+}
+.month-more:hover {
+  color: var(--ink);
+}
+/* Phones: titles don't fit, so a dot per item; the day opens its panel. */
+.month-dots {
+  display: none;
+}
+@media (max-width: 600px) {
+  .month-day {
+    min-height: 58px;
+    padding: 4px;
+  }
+  .month-items {
+    display: none;
+  }
+  .month-dots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    min-height: 0;
+    padding: 0 2px;
+    border: 0;
+    background: transparent;
+  }
+  .month-dots i {
+    display: block;
+    width: 6px;
+    height: 6px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--accent);
+  }
+  .month-dots i.is-google {
+    background: #7b8bb8;
+  }
+  .month-dots i.is-todo {
+    width: 4px;
+    height: 4px;
+    border: 1.5px solid #77867f;
+    background: transparent;
+  }
+}
+/* A day's panel. */
+.day-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.day-items li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  align-items: start;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+.day-items li:last-child {
+  border-bottom: 0;
+}
+.day-items li > small,
+.day-items li > :not(button, input, span, a, small) {
+  grid-column: 2;
+  color: var(--muted);
+}
+.day-item-dot {
+  width: 8px;
+  height: 8px;
+  margin: 7px 0 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.day-item-dot.is-google {
+  background: #7b8bb8;
+}
+.day-item-actions {
+  grid-column: 3;
+  grid-row: 1 / span 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: 0.8125rem;
+}

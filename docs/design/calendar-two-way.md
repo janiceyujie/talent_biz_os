@@ -16,11 +16,11 @@ This design reads our calendar back and brings what changed in Google into our e
 |---|---|---|
 | 1 | An event edited or deleted in Google | **The edit appears here. The delete removes it from every screen here.** Nothing asks, and nothing is shown. |
 | 2 | Changed in both places before they sync | **Merged silently, field by field**, so both people's changes survive: a field changed on one side takes that side's value, and a field changed on both takes the most recent. Nothing is shown. |
-| 3 | Which fields come back | **Title, date, time, end, and time zone; the location where it's a single field** (shows, meetings); **notes**, from below a marked line in the description. Composed fields stay ours: a travel route, a stay's hotel and address, and the description's project, operator, and seat lines. A change to one of those in Google is replaced by ours at the next sync, as today. |
+| 3 | Which fields come back | **Title, date, time, and end; the location where it's a single field** (shows, meetings); **notes**, from below a marked line in the description. Times come back as the same moment, in the event's own zone; a new event from Google takes the workspace's zone. Google's screen attaches the viewer's zone (the Google account's) to what it saves, so that zone is never taken. Composed fields stay ours: a travel route, a stay's hotel and address, and the description's project, operator, and seat lines. A change to one of those in Google is replaced by ours at the next sync, as today. |
 | 4 | An event added in Google to our calendar | **It appears here right away, without a project**, marked simply as not in a project, and can be added to one from the Calendar screen. |
 | 5 | How quickly Google's changes come back | **Every 5 minutes from the worker now; Google's change notices once deployed**, with a 30-minute read as the safety net. |
 | 6 | An end for shows and meetings | **An end changed in Google comes back for every event.** Every kind can already have an end here (the planner and the event form; an ordinary event's end is in its start zone). With none, it goes to Google as one hour. |
-| 7 | A repeating event added in Google | **Shown read-only**, like the person's other Google calendars: every occurrence in the window, edited in Google, not added to a project. To add one to a project, create it here as a project event. |
+| 7 | A repeating event added in Google | **Shown read-only**, like the person's other Google calendars: every occurrence in the window, edited in Google. **It can be added to a project as a whole series** (a weekly rehearsal for a show): every occurrence then shows the project. Unfiled, each occurrence carries "Not in a project" with Add to a project. Only for series in our own Talent Biz OS calendar; the person's other calendars stay personal (decision 0009). |
 | 8 | Adding an event to a project | **All the talent's open projects, with the matched one first**, marked "Suggested", when one is clear. The match runs in code: an invited address matching a contact on exactly one project first, then exactly one project whose name, counterparty, or organization is in the title. Otherwise none: no guessing by date. Worked out when the event comes in from Google (with who was invited) and stored; for an event without a project made here, a name in its title. No reason text. Invited addresses are read for this match only, never stored. |
 
 Out of sight, and kept so that Restore or a history can be added later:
@@ -81,7 +81,8 @@ The merge compares three versions of each synced field:
 Every applied change is recorded in `audit_log`, and nothing is shown.
 
 - **A composed field changed in Google** (a travel route, a hotel, the lines above the notes marker) is never applied. The push puts ours back.
-- **Times:** Google's start and end are read back as wall time plus a zone, as we store them (decision 0003). A time Google gives only with an offset is converted into the event's existing zone. A date with no time is all-day.
+- **Times:** Google's start and end are read back as the same moment, as wall time in the event's own zone (decision 0003: a Tokyo show stays a Tokyo show), or in the workspace's zone for an event added in Google. The zone Google's screen attached (the viewer's) is never taken. A time without an offset is wall time in the zone Google names beside it. A date with no time is all-day.
+- **Ends:** the end Google gives is kept. A timed event without an end lasts an hour, as we push it, so an end of exactly that hour and no end count as the same.
 - **Notes:** the description is laid out as below. Only the text under the marked line comes back. The line is written in the person's language and recognized in either.
 
 ```
@@ -99,6 +100,8 @@ Bring the in-ear monitors
 |---|---|
 | `calendar_connection` | `sync_token`: where reading our calendar continues. Later, for change notices: `channel_id`, `channel_resource_id`, `channel_expires_at`. |
 | `calendar_import_source` | `sync_token`: for each chosen calendar, only to tell cheaply *whether* it changed: Google doesn't allow a sync token together with a date window. The window is re-read when it changed, or once a day as it moves on. An `own` flag for one row per connection: our own calendar's repeating events, stored in `external_event` like a chosen calendar's, and shown read-only the same way. |
+| `external_event` | `series_id`: for our own calendar's occurrences, the series they belong to (Google's `recurringEventId`). |
+| `calendar_series_project` (new) | A series in our own calendar added to a project, by connection and series: every occurrence shows the project. |
 | `calendar_event_sync` | `pushed` (jsonb): the synced fields as last written or read: the merge's base. "Newer" compares Google's `updated`, read with each change, against our `updated_at`. |
 | `calendar_event` | `deleted_in_google_at`: hidden from every screen while set. Deleted for good 30 days later. `suggested_project_id`: the project an event added in Google most likely belongs to. |
 | `audit_log` | New actions, recorded and not shown for now: `calendar_event.changed_in_google`, `.added_in_google`, `.deleted_in_google`, each with `{ connectionId, fields: { name: { from, to } } }`, the actor being the connection's person. |

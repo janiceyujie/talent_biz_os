@@ -16,6 +16,7 @@ const google = (over: Partial<ExternalEvent> = {}): ExternalEvent => ({
   timeZone: "Asia/Taipei",
   location: "",
   link: "",
+  series: null,
   ...over,
 });
 

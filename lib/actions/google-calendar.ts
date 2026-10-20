@@ -5,11 +5,12 @@ import { z } from "zod";
 import { refresh } from "next/cache";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { authAccount, calendarConnection, calendarImportSource } from "@/lib/db/schema";
+import { authAccount, calendarConnection, calendarImportSource, calendarSeriesProject, externalEvent } from "@/lib/db/schema";
 import { googleCalendar, GoogleCalendarError, revokeGoogleToken } from "@/lib/calendar/google/api";
 import { importConnection } from "@/lib/calendar/google/import";
 import { CALENDAR_SCOPE, hasScopes, IMPORT_SCOPES } from "@/lib/calendar/google/scope";
 import { accessToken, queueCalendarSync, syncConnection } from "@/lib/calendar/google/sync";
+import { checkProjectLink } from "./project-link";
 import { errorText } from "./validation";
 
 // Connecting, syncing, and disconnecting Google Calendar (decision 0009).
@@ -108,6 +109,25 @@ async function myConnection() {
 
 export type GoogleCalendarChoice = { id: string; name: string; color: string | null; selected: boolean };
 
+/** How recently a sync counts as current: opening the Calendar screen again within it syncs nothing. */
+const FRESH_MS = 60_000;
+
+/**
+ * The Calendar screen's own sync: on its own when the screen opens or comes back into view, skipped
+ * when the last one is under a minute old, and only re-reading chosen calendars that changed; its ⟳
+ * (`force`) does what Settings' Sync now does, re-reading every chosen calendar too.
+ */
+export async function syncMyGoogleCalendar({ force = false } = {}): Promise<string | null> {
+  const fail = await errorText();
+  const c = await myConnection();
+  if (!c || c.status !== "connected") return null;
+  if (!force && c.lastSyncedAt && Date.now() - c.lastSyncedAt.getTime() < FRESH_MS) return null;
+  const result = await syncConnection(c.id);
+  await importConnection(c.id, { force });
+  refresh();
+  return result ? fail(result.failure === "auth" ? "calendarNotConnected" : "calendarUnreachable") : null;
+}
+
 /**
  * The person's Google calendars to choose from (not our own Talent Biz OS calendar). `grant`: the
  * token can't read calendars after all (a reconnect that asked for less), so ask Google again.
@@ -164,6 +184,35 @@ export async function saveGoogleCalendarChoice(calendars: z.input<typeof choice>
       .values({ connectionId: c.id, externalCalendarId: x.id, name: x.name, color: x.color })
       .onConflictDoUpdate({ target: [calendarImportSource.connectionId, calendarImportSource.externalCalendarId], set: { name: x.name, color: x.color } });
   await importConnection(c.id, { force: true });
+  refresh();
+  return null;
+}
+
+/**
+ * Add a repeating event in our own Talent Biz OS calendar to a project, as a whole (decision 0017):
+ * every occurrence shows on it; the series stays read-only, edited in Google. The same project
+ * check as any other link (project-link.ts).
+ */
+export async function fileGoogleSeries(seriesId: string, projectId: string): Promise<string | null> {
+  const { talent } = await requireTalent();
+  const fail = await errorText();
+  if (!z.string().min(1).max(1024).safeParse(seriesId).success || !z.uuid().safeParse(projectId).success) return fail("invalid");
+  const c = await myConnection();
+  if (!c) return fail("calendarNotConnected");
+  // Only a series read from this person's own Talent Biz OS calendar.
+  const [seen] = await db
+    .select({ id: externalEvent.id })
+    .from(externalEvent)
+    .innerJoin(calendarImportSource, eq(calendarImportSource.id, externalEvent.sourceId))
+    .where(and(eq(calendarImportSource.connectionId, c.id), eq(calendarImportSource.own, true), eq(externalEvent.seriesId, seriesId)))
+    .limit(1);
+  if (!seen) return fail("eventNotFound");
+  const linkError = await checkProjectLink(talent.id, projectId);
+  if (linkError) return fail(linkError);
+  await db
+    .insert(calendarSeriesProject)
+    .values({ talentId: talent.id, connectionId: c.id, seriesId, projectId })
+    .onConflictDoUpdate({ target: [calendarSeriesProject.connectionId, calendarSeriesProject.seriesId], set: { projectId } });
   refresh();
   return null;
 }

@@ -6,6 +6,7 @@ import { useAppData } from "@/components/app/app-data";
 import { Modal } from "@/components/app/modal";
 import { calendarRecord } from "@/components/app/record-editor";
 import { saveCalendarItem } from "@/lib/actions/calendar";
+import { fileGoogleSeries } from "@/lib/actions/google-calendar";
 import { suggestProject } from "@/lib/calendar/google/two-way";
 import { isOpenStage } from "@/lib/domain/phases";
 import type { CalendarItem } from "@/lib/types";
@@ -15,7 +16,19 @@ import type { CalendarItem } from "@/lib/types";
  * going, decision 0018), the likely one first and marked Suggested when it's clear. No reason is
  * given; ignoring the suggestion is fine.
  */
-export function ProjectPicker({ item, onClose, onDone }: { item: CalendarItem; onClose: () => void; onDone?: (message: string) => void }) {
+export function ProjectPicker({
+  title,
+  suggestedProjectId = null,
+  onPick,
+  onClose,
+  onDone,
+}: {
+  title: string; // the event's: a project named in it is suggested
+  suggestedProjectId?: string | null;
+  onPick: (projectId: string) => Promise<string | null>; // saves the choice; an error message, or null
+  onClose: () => void;
+  onDone?: (message: string) => void;
+}) {
   const data = useAppData();
   const t = useTranslations("projectPicker");
   const [query, setQuery] = useState("");
@@ -24,18 +37,18 @@ export function ProjectPicker({ item, onClose, onDone }: { item: CalendarItem; o
   const open = data.projects.filter((p) => !p.archived && isOpenStage(p.stage));
   // Worked out when it came from Google (with who was invited); otherwise a name in its title.
   const suggested =
-    (item.suggestedProjectId && open.some((p) => p.id === item.suggestedProjectId) ? item.suggestedProjectId : null) ??
-    suggestProject({ title: item.title }, open.map((p) => ({ id: p.id, names: [p.title, p.counterparty] })));
+    (suggestedProjectId && open.some((p) => p.id === suggestedProjectId) ? suggestedProjectId : null) ??
+    suggestProject({ title }, open.map((p) => ({ id: p.id, names: [p.title, p.counterparty] })));
   const q = query.trim().toLowerCase();
   const list = open
     .filter((p) => !q || `${p.title} ${p.counterparty}`.toLowerCase().includes(q))
     .sort((a, b) => Number(b.id === suggested) - Number(a.id === suggested));
 
-  const pick = (projectId: string, title: string) =>
+  const pick = (projectId: string, project: string) =>
     startTransition(async () => {
-      const failure = await saveCalendarItem({ ...calendarRecord(item), projectId });
+      const failure = await onPick(projectId);
       if (failure) return setError(failure);
-      onDone?.(t("added", { project: title }));
+      onDone?.(t("added", { project }));
       onClose();
     });
 
@@ -69,4 +82,22 @@ export function ProjectPicker({ item, onClose, onDone }: { item: CalendarItem; o
       )}
     </Modal>
   );
+}
+
+/** Add to a project, for one of our events without one. */
+export function EventProjectPicker({ item, onClose, onDone }: { item: CalendarItem; onClose: () => void; onDone?: (message: string) => void }) {
+  return (
+    <ProjectPicker
+      title={item.title}
+      suggestedProjectId={item.suggestedProjectId}
+      onPick={(projectId) => saveCalendarItem({ ...calendarRecord(item), projectId })}
+      onClose={onClose}
+      onDone={onDone}
+    />
+  );
+}
+
+/** Add to a project, for a repeating event in our own Talent Biz OS calendar: the whole series (decision 0017). */
+export function SeriesProjectPicker({ seriesId, title, onClose, onDone }: { seriesId: string; title: string; onClose: () => void; onDone?: (message: string) => void }) {
+  return <ProjectPicker title={title} onPick={(projectId) => fileGoogleSeries(seriesId, projectId)} onClose={onClose} onDone={onDone} />;
 }

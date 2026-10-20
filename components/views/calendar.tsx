@@ -1,12 +1,13 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useOptimistic, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
-import { ProjectPicker } from "@/components/app/project-picker";
+import { Modal } from "@/components/app/modal";
+import { EventProjectPicker, SeriesProjectPicker } from "@/components/app/project-picker";
 import { calendarRecord, RecordEditor, type Editor } from "@/components/app/record-editor";
 import { TravelSummary } from "@/components/app/travel-summary";
-import { YourTime } from "@/components/app/your-time";
 import { calendarPoints, externalPoints, pointKind, type CalendarPoint, type ExternalPoint } from "@/lib/calendar/points";
 import { archiveCalendarItem, setTodoDone } from "@/lib/actions/calendar";
 import { dateInZone } from "@/lib/domain/dates";
@@ -19,209 +20,328 @@ const weekdays = (locale: string) =>
     new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2024, 0, 7 + i))),
   );
 
-// Calendar events and to-dos in one month view. Each item shows in its own
-// local date and time zone; cross-zone items aren't converted to one timeline.
-export function CalendarView({ initialDay = "", hideAdd = false }: { initialDay?: string; hideAdd?: boolean }) {
+// The month at a glance, like Google Calendar's: each day lists its items (all-day ones first,
+// then timed ones, then to-dos), a few at most with "+N more". A day opens a panel with
+// everything on it and the actions: completing a to-do, archiving, adding to a project. Each
+// item sits on its own local date and shows its own local time (decision 0003); Google events
+// are read-only, opened in Google. Phones show dots instead of titles.
+const VISIBLE_PER_DAY = 3;
+
+type Point = CalendarPoint | ExternalPoint;
+const isGoogle = (p: Point): p is ExternalPoint => "event" in p;
+
+/** Order within a day: all-day events first, then by time, then to-dos without a time. */
+const rank = (p: Point) => (isGoogle(p) ? (p.time ? 1 : 0) : p.item.source === "todo" ? (p.time ? 1 : 2) : p.time ? 1 : 0);
+const byDay = (a: Point, b: Point) => rank(a) - rank(b) || a.time.localeCompare(b.time) || a.key.localeCompare(b.key);
+
+/** What the month shows, one at a time: the four that make sense together. "unfiled": events not in a project (decision 0017). */
+export type MonthShow = "open" | "done" | "unfiled" | "archived";
+
+/** The month's ‹ › and Today, for the Calendar screen's header row. */
+export function MonthNav({ month, onMonth }: { month: string; onMonth: (month: string) => void }) {
   const data = useAppData();
   const t = useTranslations("calendar");
-  const tp = useTranslations("planner");
-  const labels = useLabels();
+  const locale = useLocale();
+  const first = new Date(`${month}-01T12:00:00Z`);
+  const move = (n: number) => {
+    const d = new Date(first);
+    d.setUTCMonth(d.getUTCMonth() + n);
+    onMonth(d.toISOString().slice(0, 7));
+  };
+  return (
+    <div className="planner-date-nav">
+      <button className="secondary" aria-label={t("prevMonth")} onClick={() => move(-1)}>
+        <ChevronLeft size={18} aria-hidden="true" />
+      </button>
+      <strong className="planner-month-label">{new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", timeZone: "UTC" }).format(first)}</strong>
+      <button className="secondary" aria-label={t("nextMonth")} onClick={() => move(1)}>
+        <ChevronRight size={18} aria-hidden="true" />
+      </button>
+      <button className="secondary" onClick={() => onMonth(dateInZone(data.talent.timeZone).slice(0, 7))}>
+        {t("today")}
+      </button>
+    </div>
+  );
+}
+
+/** Show: current, with completed to-dos, not in a project, or archived. */
+export function MonthShowSelect({ show, onShow }: { show: MonthShow; onShow: (show: MonthShow) => void }) {
+  const t = useTranslations("calendar");
+  return (
+    <select className="planner-view-select" aria-label={t("show")} value={show} onChange={(e) => onShow(e.target.value as MonthShow)}>
+      <option value="open">{t("showOpen")}</option>
+      <option value="done">{t("showDone")}</option>
+      <option value="unfiled">{t("showUnfiled")}</option>
+      <option value="archived">{t("archivedOnly")}</option>
+    </select>
+  );
+}
+
+/** The month itself; its ‹ › and Show sit in the Calendar screen's header (planner.tsx). */
+export function CalendarView({ month, show, initialDay = "", onOpenWeek }: { month: string; show: MonthShow; initialDay?: string; onOpenWeek?: (date: string) => void }) {
+  const data = useAppData();
+  const t = useTranslations("calendar");
   const locale = useLocale();
   const today = dateInZone(data.talent.timeZone);
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [month, setMonth] = useState((initialDay || today).slice(0, 7));
-  const [day, setDay] = useState(initialDay);
-  const [showDone, setShowDone] = useState(false);
-  const [archived, setArchived] = useState(false);
-  const [unfiled, setUnfiled] = useState(false); // only events not in a project (decision 0017)
+  const [day, setDay] = useState(initialDay); // the day whose panel is open
   const [filing, setFiling] = useState<CalendarItem | null>(null);
+  const [filingSeries, setFilingSeries] = useState<ExternalPoint | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const run = (action: () => Promise<string | null>) => startTransition(async () => setError(await action()));
   // Ticking a to-do shows immediately; the server's answer replaces it.
   const [calendar, markDone] = useOptimistic(data.calendar, (state, change: { id: string; done: boolean }) =>
     state.map((c) => (c.id === change.id ? { ...c, done: change.done } : c)),
   );
-  const start = new Date(`${month}-01T12:00:00Z`);
-  const pad = start.getUTCDay();
-  const count = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)).getUTCDate();
+  const first = new Date(`${month}-01T12:00:00Z`);
+  const plus = (days: number) => new Date(first.getTime() + days * 86_400_000).toISOString().slice(0, 10);
+  // Whole weeks, Sunday first: the days before and after the month fill its first and last week.
+  const lead = first.getUTCDay();
+  const length = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+  const cells = Array.from({ length: Math.ceil((lead + length) / 7) * 7 }, (_, i) => plus(i - lead));
   // Each marker sits on its own local date: a stay can start in one month and end in the next.
   const points = calendarPoints(calendar);
   // The person's Google events (decision 0009, phase 2): read-only, never archived or done.
   const google = externalPoints(data.externalEvents);
-  const shown = (p: { date: string }) => p.date.startsWith(month) && (!day || p.date === day);
   const noProject = (c: CalendarItem) => c.source === "event" && !c.projectId && !c.archived;
-  const unfiledCount = new Set(points.filter((p) => noProject(p.item) && shown(p)).map((p) => p.item.id)).size;
-  const items: (CalendarPoint | ExternalPoint)[] = [
-    ...points.filter((p) => p.item.archived === archived && (showDone || !p.item.done) && shown(p) && (!unfiled || noProject(p.item))),
-    ...(archived || unfiled ? [] : google.filter(shown)),
-  ].sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`) || a.key.localeCompare(b.key));
-  const move = (n: number) => {
-    const d = new Date(start);
-    d.setUTCMonth(d.getUTCMonth() + n);
-    setMonth(d.toISOString().slice(0, 7));
-    setDay("");
+  const unfiledSeries = (p: ExternalPoint) => !!p.event.series && !p.event.series.projectId;
+  const inMonth = (p: { date: string }) => p.date.startsWith(month);
+  const shown: Point[] =
+    show === "archived"
+      ? points.filter((p) => p.item.archived)
+      : show === "unfiled"
+        ? [...points.filter((p) => noProject(p.item)), ...google.filter(unfiledSeries)]
+        : [...points.filter((p) => !p.item.archived && (show === "done" || !p.item.done)), ...google];
+  const on = (date: string) => shown.filter((p) => p.date === date).sort(byDay);
+  // A Google event opens in Google; a series in our own calendar opens its day, to add it to a project.
+  const open = (p: Point) => {
+    if (!isGoogle(p)) return setEditor({ kind: "calendar", item: calendarRecord(p.item) });
+    if (p.event.series) return setDay(p.date);
+    if (p.event.link) window.open(p.event.link, "_blank", "noopener");
   };
+  const toggleDone = (c: CalendarItem, done: boolean) =>
+    startTransition(async () => {
+      markDone({ id: c.id, done });
+      setError(await setTodoDone(c.id, done));
+    });
 
   return (
     <>
-      <div className="toolbar wrap">
-        <button className="secondary" aria-label={t("prevMonth")} onClick={() => move(-1)}>
-          ←
-        </button>
-        <strong>{month}</strong>
-        <button className="secondary" aria-label={t("nextMonth")} onClick={() => move(1)}>
-          →
-        </button>
-        <button
-          className="secondary"
-          onClick={() => {
-            setMonth(today.slice(0, 7));
-            setDay(today);
-          }}
-        >
-          {t("today")}
-        </button>
-        <button className="secondary" onClick={() => setDay("")}>
-          {t("wholeMonth")}
-        </button>
-        {!hideAdd && (
-          <button className="primary" onClick={() => setEditor({ kind: "calendar", item: day ? { date: day } : undefined })}>
-            {t("new")}
-          </button>
-        )}
-        <label className="check-line">
-          <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} />
-          {t("showDone")}
-        </label>
-        <label className="check-line">
-          <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
-          {t("archivedOnly")}
-        </label>
-        <label className="check-line">
-          <input type="checkbox" checked={unfiled} onChange={(e) => setUnfiled(e.target.checked)} />
-          {t("onlyNoProject", { count: unfiledCount })}
-        </label>
-      </div>
-      <p className="muted">{t("note")}</p>
       {error && (
         <p className="notice error" role="alert">
           {error}
         </p>
       )}
-      <div className="surface calendar-grid">
+      <div className="month-grid" role="grid" aria-label={t("monthLabel")}>
         {weekdays(locale).map((d) => (
-          <small key={d}>{d}</small>
+          <small key={d} className="month-weekday">
+            {d}
+          </small>
         ))}
-        {Array.from({ length: pad }, (_, i) => (
-          <div key={`pad${i}`} />
-        ))}
-        {Array.from({ length: count }, (_, i) => {
-          const date = `${month}-${String(i + 1).padStart(2, "0")}`;
-          const n =
-            points.filter((p) => !p.item.archived && !p.item.done && p.date === date).length + google.filter((p) => p.date === date).length;
+        {cells.map((date) => {
+          const items = on(date);
+          const hidden = items.length - VISIBLE_PER_DAY;
           return (
-            <button
-              className={`${date === day ? "selected" : ""} ${date === today ? "today" : ""}`}
-              key={date}
-              onClick={() => setDay(date)}
-            >
-              <strong>{i + 1}</strong>
-              {!!n && <span>{t("count", { count: n })}</span>}
-            </button>
+            <div key={date} role="gridcell" className={`month-day ${inMonth({ date }) ? "" : "is-outside"} ${date === today ? "is-today" : ""}`}>
+              <button className="month-day-number" aria-label={t("openDay", { date })} onClick={() => setDay(date)}>
+                {Number(date.slice(8))}
+              </button>
+              <div className="month-items">
+                {items.slice(0, hidden > 0 ? VISIBLE_PER_DAY - 1 : VISIBLE_PER_DAY).map((p) => (
+                  <Chip key={p.key} point={p} noProject={!isGoogle(p) ? noProject(p.item) : unfiledSeries(p)} onOpen={() => open(p)} />
+                ))}
+                {hidden > 0 && (
+                  <button className="month-more" onClick={() => setDay(date)}>
+                    {t("more", { count: hidden + 1 })}
+                  </button>
+                )}
+              </div>
+              {/* Phones: a dot per item, in its colour; the day opens the panel. */}
+              <button className="month-dots" aria-label={t("openDay", { date })} onClick={() => setDay(date)}>
+                {items.slice(0, 6).map((p) => (
+                  <i key={p.key} className={isGoogle(p) ? "is-google" : p.item.source === "todo" ? "is-todo" : "is-event"} />
+                ))}
+              </button>
+            </div>
           );
         })}
       </div>
-      <section className="surface padded section-gap">
-        <h2>{t("itemsFor", { period: day || month })}</h2>
+      {day && (
+        <DayPanel
+          date={day}
+          items={on(day)}
+          pending={pending}
+          noProject={noProject}
+          unfiledSeries={unfiledSeries}
+          onClose={() => setDay("")}
+          onOpen={(p) => {
+            setDay("");
+            open(p);
+          }}
+          onDone={toggleDone}
+          onArchive={(c) => startTransition(async () => setError(await archiveCalendarItem(c.id, c.source, !c.archived)))}
+          onFile={(c) => setFiling(c)}
+          onFileSeries={(p) => setFilingSeries(p)}
+          onAdd={() => setEditor({ kind: "calendar", item: { date: day } })}
+          onOpenWeek={onOpenWeek && (() => onOpenWeek(day))}
+        />
+      )}
+      {filing && <EventProjectPicker item={filing} onClose={() => setFiling(null)} />}
+      {filingSeries?.event.series && (
+        <SeriesProjectPicker seriesId={filingSeries.event.series.id} title={filingSeries.event.title} onClose={() => setFilingSeries(null)} />
+      )}
+      {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
+    </>
+  );
+}
+
+/** How an item looks: an event, an all-day one, a to-do, a Google event; dashed when not in a project. */
+function chipClass(p: Point, noProject: boolean) {
+  if (isGoogle(p)) return `month-chip is-google ${p.time ? "" : "is-all-day"} ${noProject ? "is-unfiled" : ""}`;
+  const c = p.item;
+  if (c.source === "todo") return `month-chip is-todo ${c.done ? "is-done" : ""}`;
+  return `month-chip is-event ${p.time ? "" : "is-all-day"} ${noProject ? "is-unfiled" : ""}`;
+}
+
+/** One item in a day: its time, and its title (a travel or stay marker says which end it is). */
+function Chip({ point: p, noProject, onOpen }: { point: Point; noProject: boolean; onOpen: () => void }) {
+  const t = useTranslations("calendar");
+  const title = isGoogle(p) ? p.event.title : p.item.title;
+  const marker = isGoogle(p) ? null : pointKind(p);
+  return (
+    <button className={chipClass(p, noProject)} onClick={onOpen} title={title}>
+      {p.time && <span className="month-chip-time">{p.time}</span>}
+      <span className="month-chip-title">
+        {marker ? `${t(`point.${marker}`)} · ` : ""}
+        {title}
+      </span>
+    </button>
+  );
+}
+
+/** A day's panel: everything on it, with what the list below the month used to offer. */
+function DayPanel({
+  date,
+  items,
+  pending,
+  noProject,
+  unfiledSeries,
+  onClose,
+  onOpen,
+  onDone,
+  onArchive,
+  onFile,
+  onFileSeries,
+  onAdd,
+  onOpenWeek,
+}: {
+  date: string;
+  items: Point[];
+  pending: boolean;
+  noProject: (c: CalendarItem) => boolean;
+  unfiledSeries: (p: ExternalPoint) => boolean;
+  onClose: () => void;
+  onOpen: (p: Point) => void;
+  onDone: (c: CalendarItem, done: boolean) => void;
+  onArchive: (c: CalendarItem) => void;
+  onFile: (c: CalendarItem) => void;
+  onFileSeries: (p: ExternalPoint) => void;
+  onAdd: () => void;
+  onOpenWeek?: () => void;
+}) {
+  const t = useTranslations("calendar");
+  const tp = useTranslations("planner");
+  const labels = useLabels();
+  const data = useAppData();
+  const format = useFormatter();
+  const projectTitle = (id: string | null) => (id ? data.projects.find((x) => x.id === id)?.title || t("notFound") : "");
+  const heading = format.dateTime(new Date(`${date}T12:00:00Z`), { month: "long", day: "numeric", weekday: "short", timeZone: "UTC" });
+  const zone = (p: Point) => (p.timeZone !== data.talent.timeZone ? ` · ${p.timeZone}` : "");
+  return (
+    <Modal title={heading} onClose={onClose} narrow>
+      {!items.length && <p className="muted">{t("emptyDay")}</p>}
+      <ul className="day-items">
         {items.map((p) => {
-          if ("event" in p) return <GoogleRow key={`google:${p.key}`} point={p} label={tp("fromGoogle", { calendar: p.event.calendar })} />;
+          if (isGoogle(p)) {
+            const g = p.event;
+            const filedTo = g.series?.projectId ? projectTitle(g.series.projectId) : "";
+            return (
+              <li key={p.key}>
+                <span className="day-item-dot is-google" aria-hidden="true" />
+                <button className="text-button left" onClick={() => onOpen(p)}>
+                  {p.time && `${p.time} `}
+                  {g.title}
+                </button>
+                <small>
+                  {tp("fromGoogle", { calendar: g.calendar })}
+                  {zone(p)}
+                  {filedTo && ` · ${t("project", { title: filedTo })}`}
+                </small>
+                <span className="day-item-actions">
+                  {g.series && (
+                    <button className="text-button" onClick={() => onFileSeries(p)}>
+                      {unfiledSeries(p) ? tp("addToProject") : tp("changeProject")}
+                    </button>
+                  )}
+                  {g.link && (
+                    <a className="text-button" href={g.link} target="_blank" rel="noopener noreferrer">
+                      {tp("openInGoogle")}
+                    </a>
+                  )}
+                </span>
+              </li>
+            );
+          }
           const c = p.item;
           const marker = pointKind(p);
           return (
-            <article className="event-row" key={p.key}>
+            <li key={p.key}>
               {c.source === "todo" ? (
-                <input
-                  type="checkbox"
-                  aria-label={t("complete", { title: c.title })}
-                  checked={c.done}
-                  disabled={pending || c.archived}
-                  onChange={(e) => {
-                    const done = e.target.checked;
-                    startTransition(async () => {
-                      markDone({ id: c.id, done });
-                      setError(await setTodoDone(c.id, done));
-                    });
-                  }}
-                />
+                <input type="checkbox" aria-label={t("complete", { title: c.title })} checked={c.done} disabled={pending || c.archived} onChange={(e) => onDone(c, e.target.checked)} />
               ) : (
-                <span aria-hidden="true" />
+                <span className="day-item-dot" aria-hidden="true" />
               )}
-              <div>
-                <button className="text-button left" onClick={() => setEditor({ kind: "calendar", item: calendarRecord(c) })}>
-                  <strong>{c.title}</strong>
-                </button>
-                <small>
-                  {p.date} {p.time || t("noTime")} · {p.timeZone} · {labels.calendarKind(c.kind)}
-                  {marker && ` · ${t(`point.${marker}`)}`}
-                </small>
-                <YourTime date={p.date} time={p.time} timeZone={p.timeZone} />
-                {c.travel ? (
-                  <TravelSummary item={c} />
-                ) : (
-                  <p>
-                    {c.location}
-                    {c.notes ? ` · ${c.notes}` : ""}
-                  </p>
-                )}
-                {c.projectId && (
-                  <small>{t("project", { title: data.projects.find((x) => x.id === c.projectId)?.title || t("notFound") })}</small>
-                )}
+              <button className="text-button left" onClick={() => onOpen(p)}>
+                {p.time && `${p.time} `}
+                {marker ? `${t(`point.${marker}`)} · ` : ""}
+                {c.title}
+              </button>
+              <small>
+                {labels.calendarKind(c.kind)}
+                {zone(p)}
+                {c.projectId ? ` · ${projectTitle(c.projectId)}` : ""}
+                {noProject(c) ? ` · ${tp("noProject")}` : ""}
+              </small>
+              {c.travel && <TravelSummary item={c} />}
+              <span className="day-item-actions">
                 {noProject(c) && (
-                  <p className="no-project-line">
-                    <span className="no-project">{tp("noProject")}</span>
-                    <button className="text-button" onClick={() => setFiling(c)}>
-                      {tp("addToProject")}
-                    </button>
-                  </p>
+                  <button className="text-button" onClick={() => onFile(c)}>
+                    {tp("addToProject")}
+                  </button>
                 )}
                 {c.source === "event" && !c.archived && !p.end && (
                   <a className="text-button" href={`/api/calendar/events/${c.id}`} download>
                     {t("downloadIcs")}
                   </a>
                 )}
-              </div>
-              <button className="text-button" disabled={pending} onClick={() => run(() => archiveCalendarItem(c.id, c.source, !c.archived))}>
-                {c.archived ? t("restore") : t("archive")}
-              </button>
-            </article>
+                <button className="text-button" disabled={pending} onClick={() => onArchive(c)}>
+                  {c.archived ? t("restore") : t("archive")}
+                </button>
+              </span>
+            </li>
           );
         })}
-        {!items.length && <p className="empty">{t("empty")}</p>}
-      </section>
-      {filing && <ProjectPicker item={filing} onClose={() => setFiling(null)} />}
-      {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
-    </>
-  );
-}
-
-/** A Google event: read-only here, opens in Google. */
-function GoogleRow({ point: p, label }: { point: ExternalPoint; label: string }) {
-  const t = useTranslations("calendar");
-  const g = p.event;
-  return (
-    <article className="event-row is-external" style={g.color ? { borderLeftColor: g.color } : undefined}>
-      <span aria-hidden="true" />
-      <div>
-        <a className="text-button left" href={g.link} target="_blank" rel="noopener noreferrer">
-          <strong>{g.title}</strong>
-        </a>
-        <small>
-          {p.date} {p.time || t("noTime")} · {p.timeZone} · {label}
-        </small>
-        <YourTime date={p.date} time={p.time} timeZone={p.timeZone} />
-        {g.location && <p>{g.location}</p>}
-      </div>
-    </article>
+      </ul>
+      <footer className="modal-actions">
+        {onOpenWeek && (
+          <button className="secondary" onClick={onOpenWeek}>
+            {t("openInWeek")}
+          </button>
+        )}
+        <button className="primary" onClick={onAdd}>
+          {t("addOnDay")}
+        </button>
+      </footer>
+    </Modal>
   );
 }

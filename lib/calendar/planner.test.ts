@@ -125,8 +125,8 @@ describe("planItems", () => {
 
   test("the person's Google events: read-only, at the talent's time, all-day ones on each day they cover", () => {
     const externalEvents = [
-      { id: "g1", calendar: "Personal", color: "#7986cb", title: "牙醫", date: "2026-10-07", time: "10:00", endDate: "2026-10-07", endTime: "11:00", timeZone: "Asia/Tokyo", location: "", link: "https://calendar.google.com/x" },
-      { id: "g2", calendar: "Personal", color: null, title: "旅行", date: "2026-10-10", time: "", endDate: "2026-10-12", endTime: "", timeZone: "Asia/Taipei", location: "", link: "" },
+      { id: "g1", calendar: "Personal", color: "#7986cb", title: "牙醫", date: "2026-10-07", time: "10:00", endDate: "2026-10-07", endTime: "11:00", timeZone: "Asia/Tokyo", location: "", link: "https://calendar.google.com/x", series: null },
+      { id: "g2", calendar: "Personal", color: null, title: "旅行", date: "2026-10-10", time: "", endDate: "2026-10-12", endTime: "", timeZone: "Asia/Taipei", location: "", link: "", series: null },
     ];
     const items = planItems({ ...data([]), externalEvents });
     const dentist = items.find((i) => i.id === "google:g1")!;

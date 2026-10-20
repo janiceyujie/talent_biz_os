@@ -8,6 +8,7 @@ import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { InfoHint } from "@/components/app/info-hint";
 import { Modal } from "@/components/app/modal";
 import {
   connectGoogleCalendar,
@@ -176,7 +177,9 @@ export function GoogleCalendarSettings({ onNotice }: { onNotice: (text: string) 
           {/* The two directions, named by what they do (decision 0009). */}
           <dl className="calendar-flows">
             <dt>{t("sendTitle")}</dt>
-            <dd>{t("sendTo")}</dd>
+            <dd>
+              {t("sendTo")} <InfoHint notes={[t("sendNote")]} />
+            </dd>
             <dt>{t("importTitle")}</dt>
             <dd className="google-import">
               {importing.length > 0 ? (

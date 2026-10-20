@@ -5,6 +5,15 @@ import { useTranslations } from "next-intl";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 const SCREEN_MARGIN = 16; // px kept clear of the window's right edge
+const BOX_MARGIN = 8; // px kept clear of the edges of a box that clips it (a dialog)
+
+/** The nearest ancestor that clips what overflows it (a dialog scrolls, so it clips), if any. */
+function clippingBox(el: HTMLElement) {
+  for (let node = el.parentElement; node; node = node.parentElement) {
+    if (getComputedStyle(node).overflowX !== "visible") return node.getBoundingClientRect();
+  }
+  return null;
+}
 
 /**
  * An ⓘ beside a title, with that section's explanation behind it: shown on
@@ -25,13 +34,20 @@ export function InfoHint({ notes, above = false, bulleted = false }: { notes: st
     setOpen(false);
     setPeek(false);
   };
-  // Keep it on screen: shift left when it would run past the right edge (a title near the right, or a phone).
+  // Keep it in view: within the window, and within a box that would clip it (a dialog). Narrower
+  // when the box is, then shifted left when it would run past the right edge.
   useLayoutEffect(() => {
     const el = body.current;
     if (!shown || !el) return;
     el.style.removeProperty("--shift");
-    const over = el.getBoundingClientRect().right - (window.innerWidth - SCREEN_MARGIN);
-    if (over > 0) el.style.setProperty("--shift", `${-over}px`);
+    el.style.removeProperty("max-width");
+    const box = clippingBox(el);
+    const left = box ? box.left + BOX_MARGIN : SCREEN_MARGIN;
+    const right = Math.min(window.innerWidth - SCREEN_MARGIN, box ? box.right - BOX_MARGIN : Infinity);
+    if (el.getBoundingClientRect().width > right - left) el.style.maxWidth = `${right - left}px`;
+    const rect = el.getBoundingClientRect();
+    const over = rect.right - right;
+    if (over > 0) el.style.setProperty("--shift", `${-Math.min(over, rect.left - left)}px`);
   }, [shown]);
   useEffect(() => {
     if (!open) return;

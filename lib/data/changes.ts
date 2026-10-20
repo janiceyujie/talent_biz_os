@@ -29,6 +29,7 @@ const tables = [
   ["membership", "created_at"],
   ["preference", "updated_at"],
   ["calendar_connection", "updated_at"],
+  ["calendar_series_project", "created_at"],
 ] as const;
 
 /** A fingerprint of everything this person's screens show for this talent; equal marks mean nothing changed. */

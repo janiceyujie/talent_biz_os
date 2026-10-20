@@ -69,7 +69,14 @@ export async function syncConnection(connectionId: string): Promise<{ failure: S
     if (!locked) return { result: null, others: [] }; // another sync is running; it will see `dirty`
     const read = await readGoogle(tx, connectionId);
     if (read.failure) return { result: read.failure, others: [] };
-    return { result: await pushPasses(tx, connectionId), others: read.others };
+    const pushed = await pushPasses(tx, connectionId);
+    // Read and, if needed, pushed: in line with Google now, as the Calendar screen's "synced 1 min ago" says.
+    if (!pushed)
+      await tx
+        .update(calendarConnection)
+        .set({ lastSyncedAt: new Date(), lastError: null })
+        .where(and(eq(calendarConnection.id, connectionId), eq(calendarConnection.status, "connected")));
+    return { result: pushed, others: read.others };
   });
   // Brought in from Google: every other connection's copy follows (each on its own queue).
   for (const id of others) await queueCalendarSync(id);

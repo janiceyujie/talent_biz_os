@@ -293,6 +293,8 @@ export type ExternalEvent = {
   timeZone: string;
   location: string;
   link: string; // opens the event in Google Calendar
+  /** An occurrence of a repeating event in our own Talent Biz OS calendar (decision 0017): the series can be added to a project as a whole. */
+  series: { id: string; projectId: string | null } | null;
 };
 
 export type AppData = {

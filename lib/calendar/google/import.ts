@@ -78,7 +78,8 @@ export async function importConnection(connectionId: string, { force = false } =
     const items = source.own ? listed.items.filter((g) => g.recurringEventId && !g.extendedProperties?.private?.talentBizOsId) : listed.items;
     const rows = items.flatMap((g) => {
       const e = fromGoogleEvent(g, listed.timeZone);
-      return e ? [{ ...e, sourceId: source.id }] : [];
+      // Our own calendar's occurrences keep their series, so a series can be added to a project.
+      return e ? [{ ...e, sourceId: source.id, seriesId: source.own ? (g.recurringEventId ?? null) : null }] : [];
     });
     // Replace this calendar's events in one step; one import per calendar at a time.
     await db.transaction(async (tx) => {

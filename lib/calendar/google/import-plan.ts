@@ -75,16 +75,18 @@ function at(dateTime: string, written: string, zone = written) {
  * (falling back to its calendar's); an all-day event's end is the last day
  * it covers (Google's end date is the day after).
  */
-export function fromGoogleEvent(g: GoogleEvent, calendarZone: string): ImportedEvent | null {
+export function fromGoogleEvent(g: GoogleEvent, calendarZone: string, into?: string): ImportedEvent | null {
   if (g.status === "cancelled" || !g.start) return null;
   const base = { externalEventId: g.id, title: (g.summary ?? "").slice(0, 300), location: g.location?.slice(0, 500) || null, htmlLink: g.htmlLink ?? null };
   if (g.start.date) {
     const last = g.end?.date ? previousDay(g.end.date) : g.start.date;
-    return { ...base, startDate: g.start.date, startTime: null, endDate: last > g.start.date ? last : null, endTime: null, timeZone: calendarZone };
+    return { ...base, startDate: g.start.date, startTime: null, endDate: last > g.start.date ? last : null, endTime: null, timeZone: into ?? calendarZone };
   }
   if (!g.start.dateTime) return null;
   const zone = [g.start.timeZone, calendarZone, "UTC"].find((z) => z && isZone(z))!;
-  const start = at(g.start.dateTime, zone);
-  const end = g.end?.dateTime ? at(g.end.dateTime, g.end.timeZone && isZone(g.end.timeZone) && !hasOffset(g.end.dateTime) ? g.end.timeZone : zone, zone) : null;
-  return { ...base, startDate: start.date, startTime: start.time, endDate: end?.date ?? null, endTime: end?.time ?? null, timeZone: zone };
+  // `into`: the same moment, as wall time in that zone (two-way sync keeps an event in its own zone).
+  const out = into && isZone(into) ? into : zone;
+  const start = at(g.start.dateTime, zone, out);
+  const end = g.end?.dateTime ? at(g.end.dateTime, g.end.timeZone && isZone(g.end.timeZone) && !hasOffset(g.end.dateTime) ? g.end.timeZone : zone, out) : null;
+  return { ...base, startDate: start.date, startTime: start.time, endDate: end?.date ?? null, endTime: end?.time ?? null, timeZone: out };
 }

@@ -66,19 +66,16 @@ export const infoFrom = (description: string | undefined, markers: string[]) => 
 };
 
 /**
- * A Google event read back into our shared fields, or null without a usable start. `zone` is the
- * fallback for a time Google gives with only an offset: the event's own zone. An hour-long event
- * is "no end recorded", as we push one. A field left undefined is unknown: it isn't merged.
+ * A Google event read back into our shared fields, or null without a usable start, as wall time in
+ * `zone`: the event's own zone, or the workspace's for one added in Google. Google's screen attaches
+ * the viewer's zone to what it saves, so that zone never replaces ours; the moment is the same.
+ * A field left undefined is unknown: it isn't merged.
  */
 export function fieldsOfTheirs(g: GoogleEvent, zone: string, markers: string[]): Partial<SyncFields> | null {
-  const read = fromGoogleEvent({ ...g, status: undefined }, zone);
+  const read = fromGoogleEvent({ ...g, status: undefined }, zone, zone);
   if (!read) return null;
   const time = read.startTime;
-  let end: SyncFields["end"] = null;
-  if (time && read.endDate && read.endTime) {
-    const hour = plusMinutes(read.startDate, time, DEFAULT_DURATION_MINUTES);
-    end = hour.date === read.endDate && hour.time === read.endTime ? null : { date: read.endDate, time: read.endTime };
-  }
+  const end: SyncFields["end"] = time && read.endDate && read.endTime ? { date: read.endDate, time: read.endTime } : null;
   const notes = notesFrom(g.description, markers);
   return {
     ...(read.title ? { title: read.title } : {}), // an emptied title isn't taken
@@ -94,6 +91,15 @@ export function fieldsOfTheirs(g: GoogleEvent, zone: string, markers: string[]):
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
 /**
+ * A timed event without an end lasts an hour, as we push it: an end recorded as that hour is the
+ * same as none. Two without an end are the same, wherever their starts are.
+ */
+const endOf = (f: Partial<SyncFields>) =>
+  f.end ?? (f.time && f.date ? plusMinutes(f.date, f.time, DEFAULT_DURATION_MINUTES) : null);
+const sameField = (k: SyncKey, a: Partial<SyncFields>, b: Partial<SyncFields>) =>
+  k !== "end" ? same(a[k], b[k]) : (!a.end && !b.end) || same(endOf(a), endOf(b));
+
+/**
  * Merge field by field against what we last pushed (`base`). A field changed only in Google is
  * applied here; changed only here, it's pushed; changed on both sides, the newer wins. Returns the
  * fields to set here.
@@ -102,16 +108,15 @@ export function mergeFields(keys: SyncKey[], base: SyncFields, ours: SyncFields,
   const apply: Partial<SyncFields> = {};
   for (const k of keys) {
     if (!(k in theirs)) continue;
-    const t = theirs[k];
-    if (same(t, base[k]) || same(t, ours[k])) continue;
-    if (same(ours[k], base[k]) || theirsNewer) (apply as Record<SyncKey, unknown>)[k] = t;
+    if (sameField(k, theirs, base) || sameField(k, theirs, ours)) continue;
+    if (sameField(k, ours, base) || theirsNewer) (apply as Record<SyncKey, unknown>)[k] = theirs[k];
   }
   return apply;
 }
 
 /** Whether ours has changes of its own since the last push, on top of what's applied from Google. */
 export const changedHere = (keys: SyncKey[], base: SyncFields, ours: SyncFields, applied: Partial<SyncFields>) =>
-  keys.some((k) => !(k in applied) && !same(ours[k], base[k]));
+  keys.some((k) => !(k in applied) && !sameField(k, ours, base));
 
 /** The description we write in Google: our lines, the notes line, then the notes. */
 export const googleDescription = (info: string[], notes: string | null | undefined, marker: string) =>

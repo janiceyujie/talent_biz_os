@@ -846,8 +846,30 @@ export const externalEvent = pgTable(
     timeZone: text().notNull(),
     location: text(),
     htmlLink: text(), // opens the event in Google Calendar
+    seriesId: text(), // our own calendar's repeating events: the series an occurrence belongs to (Google's recurringEventId)
   },
   (t) => [unique("external_event_source_event").on(t.sourceId, t.externalEventId), index("external_event_source_start_idx").on(t.sourceId, t.startDate)],
+).enableRLS();
+
+// A repeating event made in our own Talent Biz OS calendar, added to a project as a whole (decision
+// 0017): every occurrence shows on it. The series stays read-only here, edited in Google.
+export const calendarSeriesProject = pgTable(
+  "calendar_series_project",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    connectionId: uuid()
+      .notNull()
+      .references(() => calendarConnection.id, { onDelete: "cascade" }),
+    seriesId: text().notNull(), // Google's id for the repeating event
+    projectId: uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [unique("calendar_series_project_connection_series").on(t.connectionId, t.seriesId)],
 ).enableRLS();
 
 // A connected mailbox (decision 0013): one per talent for now, any Google

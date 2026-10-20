@@ -1,0 +1,59 @@
+// What may go on a deal, and what counts, at each stage (decision 0018). Run: npm test
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
+import type { Payment, Stage } from "@/lib/types";
+import { isOpenStage, isSigned } from "./phases";
+import { countedPayments, summarize } from "./workflow";
+
+const payment = (over: Partial<Payment> = {}): Payment =>
+  ({
+    id: "x", projectId: null, projectType: "gig", direction: "in", installment: "regular", label: "", amount: 1000, currency: "TWD",
+    taxRate: 0, taxIncluded: true, recordedDate: "2026-10-01", dueDate: null, status: "expected", settledAmount: null,
+    settledDate: null, invoiceRef: "", notes: "", voided: false, ...over,
+  }) as Payment;
+const projects = [
+  { id: "offer", stage: "offer" as Stage },
+  { id: "signed", stage: "signed" as Stage },
+];
+
+describe("isOpenStage", () => {
+  test("anything may be added before or after signing, not once a deal is declined or cancelled", () => {
+    for (const s of ["offer", "negotiating", "signed", "in_progress", "collecting_payment", "closed"] as Stage[]) assert.equal(isOpenStage(s), true, s);
+    for (const s of ["declined", "cancelled"] as Stage[]) assert.equal(isOpenStage(s), false, s);
+  });
+  test("signed is still execution or settlement", () => {
+    assert.deepEqual((["offer", "signed", "closed", "declined"] as Stage[]).map(isSigned), [false, true, true, false]);
+  });
+});
+
+describe("countedPayments", () => {
+  test("money still expected counts only for signed work or no project", () => {
+    const got = countedPayments(
+      [payment({ id: "a", projectId: "offer" }), payment({ id: "b", projectId: "signed" }), payment({ id: "c" })],
+      projects,
+    );
+    assert.deepEqual(got.map((p) => p.id), ["b", "c"]);
+  });
+  test("money that moved counts whatever the stage: a deposit, a pitch's travel", () => {
+    const got = countedPayments(
+      [payment({ id: "deposit", projectId: "offer", status: "settled", settledDate: "2026-10-02" }), payment({ id: "travel", projectId: "offer", direction: "out", status: "settled", settledDate: "2026-10-02" })],
+      projects,
+    );
+    assert.deepEqual(got.map((p) => p.id), ["deposit", "travel"]);
+  });
+});
+
+describe("summarize", () => {
+  test("receivable leaves out a deal still being negotiated; received keeps its deposit", () => {
+    const s = summarize({
+      payments: [
+        payment({ amount: 80000, projectId: "offer", dueDate: "2026-11-01" }),
+        payment({ amount: 30000, projectId: "signed", dueDate: "2026-11-01" }),
+        payment({ amount: 5000, projectId: "offer", status: "settled", settledDate: "2026-10-05" }),
+      ],
+      projects,
+    });
+    assert.equal(s.receivable, 30000);
+    assert.equal(s.received, 5000);
+  });
+});

@@ -444,7 +444,7 @@ const stageChange = (project: Project, to: Stage, ticked: boolean, asStated = ""
   project.stage === to ? [] : [{ id: "stage", kind: "stage", ticked, asStated, from: project.stage, to }];
 
 function paymentChanges(a: MessageAnalysis, project: Project, ctx: IntakeContext): Change[] {
-  if (!isSigned(project.stage)) return []; // payments attach only to signed projects (decision 0004)
+  if (!isSigned(project.stage)) return []; // the intake proposes payments only for signed work (decision 0018)
   const out: Change[] = [];
   const expected = expectedIncome(project, ctx.payments);
   const amount = statedAmount(a);

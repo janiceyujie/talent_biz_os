@@ -48,7 +48,7 @@ export type Project = {
   updatedAt: string; // ISO instant of the last change (any edit, including stage)
 };
 
-/** A date kept on a project before it's signed, or one that isn't a calendar event (decision 0004). */
+/** A date kept on a project before it's signed, or one that isn't a calendar event (the intake's rule, decision 0018). */
 export type ProjectDate = { what: string; date: string; time: string; timeZone: string };
 
 /**

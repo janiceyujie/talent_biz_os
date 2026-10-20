@@ -10,7 +10,7 @@ import { ContactPicker, type ContactValue } from "@/components/app/contact-picke
 import { Modal } from "@/components/app/modal";
 import { addOrganizationPerson, archiveOrganization, removeOrganizationPerson, saveOrganization } from "@/lib/actions/organizations";
 import type { OrganizationProject } from "@/lib/data/organizations";
-import { paymentCash, paymentTotal } from "@/lib/domain/workflow";
+import { countedPayments, paymentCash, paymentTotal } from "@/lib/domain/workflow";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { DealCard } from "./deal-card";
@@ -39,7 +39,8 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
   if (!org) return <p className="notice">{t("missing")}</p>;
   const people = data.contacts.filter((c) => c.organizationId === id);
   const clientOf = new Set(projects.filter((p) => p.primary).map((p) => p.projectId));
-  const payments = data.payments.filter((p) => p.projectId && clientOf.has(p.projectId) && p.direction === "in" && !p.voided && p.status !== "cancelled");
+  // Expected money only from signed deals (decision 0018); what was received, always.
+  const payments = countedPayments(data.payments, data.projects).filter((p) => p.projectId && clientOf.has(p.projectId) && p.direction === "in" && !p.voided && p.status !== "cancelled");
   const received = payments.reduce((n, p) => n + paymentCash(p), 0);
   const outstanding = payments.filter((p) => p.status === "expected").reduce((n, p) => n + paymentTotal(p), 0);
   const titleOf = (projectId: string | null) => projects.find((p) => p.projectId === projectId)?.title ?? "";

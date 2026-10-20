@@ -4832,3 +4832,30 @@ p.gmail-skipped {
 .customize-move .icon-button:disabled {
   opacity: 0.3;
 }
+
+/* What's still open on a deal being marked declined or cancelled (decision 0018). */
+.lost-deal-items {
+  list-style: none;
+  margin: 10px 0 14px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.lost-deal-items li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.lost-deal-items li:last-child {
+  border-bottom: 0;
+}
+.lost-deal-items .kind {
+  font-weight: 600;
+}
+.lost-deal-items small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}

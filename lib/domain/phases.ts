@@ -22,7 +22,10 @@ export const phaseOf = (stage: Stage): Phase => phaseByStage[stage];
 export const mainStages: Stage[] = ["offer", "negotiating", "signed", "in_progress", "collecting_payment", "closed"];
 
 /**
- * Signed work (execution or settlement phase). Only signed projects take new
- * linked events, execution to-dos, and payments.
+ * Signed work (execution or settlement phase). Only signed work counts in
+ * expected money and reminders (decision 0018); anything may be added before.
  */
 export const isSigned = (stage: Stage) => phaseOf(stage) === "execution" || phaseOf(stage) === "settlement";
+
+/** Still going: not declined or cancelled. What new events, to-dos, and payments may go on (decision 0018). */
+export const isOpenStage = (stage: Stage) => phaseOf(stage) !== "ended";

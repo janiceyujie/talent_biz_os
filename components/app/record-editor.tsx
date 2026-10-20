@@ -12,7 +12,7 @@ import { saveProject } from "@/lib/actions/projects";
 import { saveTemplate } from "@/lib/actions/templates";
 import { localeNames, locales, toLocale } from "@/lib/i18n/config";
 import { placeholderKeys, placeholderName, toDisplay } from "@/lib/templates/placeholders";
-import { isSigned } from "@/lib/domain/phases";
+import { isOpenStage } from "@/lib/domain/phases";
 import { placeSuggestions } from "@/lib/calendar/places";
 import {
   calendarKinds,
@@ -267,10 +267,10 @@ export function RecordEditor({
       {field("projectId", t("field.project"), "text", false, [
         ["", t("unlinked")],
         ...data$.projects
-          .filter((p) => (!p.archived && isSigned(p.stage)) || p.id === data.projectId)
+          .filter((p) => (!p.archived && isOpenStage(p.stage)) || p.id === data.projectId)
           .map((p) => [p.id, p.title] as const),
       ])}
-      <small className="muted">{t("signedOnly")}</small>
+      <small className="muted">{t("openOnly")}</small>
     </div>
   );
 

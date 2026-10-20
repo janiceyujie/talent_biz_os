@@ -115,6 +115,7 @@ describe("monthIncome", () => {
           payment({ amount: 300, direction: "out", settledDate: "2026-10-03" }),
           payment({ amount: 700, voided: true, settledDate: "2026-10-03" }),
         ],
+        projects: [],
       },
       TODAY,
     );

@@ -154,7 +154,7 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
 
   const t = await getTranslations("intake");
   const signedAfter = isSigned(finalStage);
-  // Payments and their to-dos were proposed only for signed work (decision 0004); a cancellation fee keeps that link.
+  // Payments and their to-dos are proposed only for signed work (decision 0018); a cancellation fee keeps that link.
   const failure = await db.transaction(async (tx) => {
     const filed = await tx
       .update(message)

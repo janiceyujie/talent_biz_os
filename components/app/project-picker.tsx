@@ -7,13 +7,13 @@ import { Modal } from "@/components/app/modal";
 import { calendarRecord } from "@/components/app/record-editor";
 import { saveCalendarItem } from "@/lib/actions/calendar";
 import { suggestProject } from "@/lib/calendar/google/two-way";
-import { isSigned } from "@/lib/domain/phases";
+import { isOpenStage } from "@/lib/domain/phases";
 import type { CalendarItem } from "@/lib/types";
 
 /**
- * Add to a project, for an event without one (decision 0017): every project it may go on (signed,
- * not archived, decision 0004), the likely one first and marked Suggested when it's clear. No reason
- * is given; ignoring the suggestion is fine.
+ * Add to a project, for an event without one (decision 0017): every project it may go on (still
+ * going, decision 0018), the likely one first and marked Suggested when it's clear. No reason is
+ * given; ignoring the suggestion is fine.
  */
 export function ProjectPicker({ item, onClose, onDone }: { item: CalendarItem; onClose: () => void; onDone?: (message: string) => void }) {
   const data = useAppData();
@@ -21,7 +21,7 @@ export function ProjectPicker({ item, onClose, onDone }: { item: CalendarItem; o
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const open = data.projects.filter((p) => !p.archived && isSigned(p.stage));
+  const open = data.projects.filter((p) => !p.archived && isOpenStage(p.stage));
   // Worked out when it came from Google (with who was invited); otherwise a name in its title.
   const suggested =
     (item.suggestedProjectId && open.some((p) => p.id === item.suggestedProjectId) ? item.suggestedProjectId : null) ??

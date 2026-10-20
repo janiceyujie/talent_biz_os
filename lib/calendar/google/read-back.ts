@@ -15,7 +15,7 @@ import {
   projectOrganization,
   talent,
 } from "@/lib/db/schema";
-import { isSigned } from "@/lib/domain/phases";
+import { isOpenStage } from "@/lib/domain/phases";
 import { locales, toLocale } from "@/lib/i18n/config";
 import { translator } from "@/lib/i18n/translator";
 import { feedEvents } from "../feed";
@@ -79,9 +79,9 @@ const record = (tx: Tx, c: Connection, action: string, eventId: string, details:
 const diff = (from: SyncFields, to: Partial<SyncFields>) =>
   Object.fromEntries(Object.entries(to).map(([k, v]) => [k, { from: from[k as keyof SyncFields], to: v }]));
 
-/** The projects an added event may be suggested for (signed, not archived), with their names and people's addresses. */
+/** The projects an added event may be suggested for (still going, decision 0018), with their names and people's addresses. */
 async function suggestionTargets(tx: Tx, talentId: string) {
-  const rows = (await tx.select().from(project).where(and(eq(project.talentId, talentId), isNull(project.archivedAt)))).filter((p) => isSigned(p.stage));
+  const rows = (await tx.select().from(project).where(and(eq(project.talentId, talentId), isNull(project.archivedAt)))).filter((p) => isOpenStage(p.stage));
   if (!rows.length) return [];
   const ids = rows.map((p) => p.id);
   const people = await tx

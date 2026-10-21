@@ -45,7 +45,7 @@ Render already deploys without downtime, for the web service and the worker alik
 
 - **Browser and server**: a page from the previous deploy reloads instead of calling Server Functions that no longer exist. Each build carries the commit as `NEXT_DEPLOYMENT_ID` (Render passes `RENDER_GIT_COMMIT` to the Dockerfile).
 - **Code and database**: migrations run before the new code, while the old still serves, so every schema change keeps the running version working: add before remove, rename in steps.
-- **Web and worker**: the old worker can pick up a job queued by the new web service. A change to a job's payload (`lib/queue/jobs.ts`) adds optional fields first, ships, and only then makes them required; payloads are strict, so the old worker fails a job with a field it doesn't know, and it's retried.
+- **Old worker and new jobs**: for about a minute after the new worker is live, the old one still takes jobs, and its strict payload schemas fail any shape they don't know, even one with an extra optional field. So a job's payload never changes once shipped: a new shape is a new job name (`message.analyze.v2`), which the old worker never takes. `lib/queue/payloads.json` records every shipped shape and the tests hold each name to it; the old name's handler stays until its jobs drain, and the pre-deploy step refuses to deploy a version that would leave queued jobs without a handler.
 - **Running work**: the web service finishes its requests within the default 30 seconds; the worker's running jobs within 5 minutes (`maxShutdownDelaySeconds`), and a job cut off is retried.
 
 ## Database connections

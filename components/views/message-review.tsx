@@ -11,7 +11,8 @@ import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { applyMessage, createProjectFromMessage, fileThread, type NewProjectInput } from "@/lib/actions/intake";
 import { initialEdit, intakeContext, keptFields, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext, type TargetReason } from "@/lib/domain/intake";
 import { projectTypes, type ProjectType } from "@/lib/project-types";
-import { useMoney } from "@/lib/i18n/format";
+import { supportedCurrencies, type Currency } from "@/lib/domain/money";
+import { useCurrencyName, useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import type { InboxMessage, Project, ProjectSummary, Stage, TermChange } from "@/lib/types";
 
@@ -107,7 +108,7 @@ function ThreadBatch({ message, projectId }: { message: InboxMessage; projectId:
 function Reason({ reason }: { reason: TargetReason }) {
   const t = useTranslations("intake");
   const money = useMoney();
-  const value = reason.kind === "payment" ? money(reason.value) : reason.value;
+  const value = reason.kind === "payment" ? money(reason.value, reason.currency) : reason.value;
   return <span>{t(`reason.${reason.kind}`, { value })}</span>;
 }
 
@@ -242,7 +243,7 @@ function ChangeRow({
       label = t("change.fee");
       body = (
         <>
-          {from(c.from === null ? null : money(c.from))} →{" "}
+          {from(c.from === null ? null : money(c.from, c.currency))} →{" "}
           <input className="change-edit" type="number" min={0} aria-label={label} value={String(edit.to ?? "")} onChange={(e) => onEdit({ to: Number(e.target.value) })} />
           {c.taxIncluded !== null && <span className="muted"> {c.taxIncluded ? t("taxIncluded") : t("taxExcluded")}</span>}
         </>
@@ -288,10 +289,11 @@ function ChangeRow({
       const amount = Number(edit.amount ?? 0);
       body = (
         <>
-          {from(t("expected", { amount: money(c.expected) }))} → {t("received")}{" "}
+          {from(t("expected", { amount: money(c.expected, c.currency) }))} → {t("received")}{" "}
           <input className="change-edit" type="number" min={0} aria-label={t("amount")} value={String(edit.amount ?? "")} onChange={(e) => onEdit({ amount: Number(e.target.value) })} /> · {t("settledOn")}{" "}
           <input className="change-edit" type="date" aria-label={t("settledOn")} value={String(edit.settledOn ?? "")} onChange={(e) => onEdit({ settledOn: e.target.value })} />
-          {amount > 0 && amount < c.expected && <span className="change-hint">{t("shortfall", { amount: money(c.expected - amount) })}</span>}
+          {amount > 0 && amount < c.expected && <span className="change-hint">{t("shortfall", { amount: money(c.expected - amount, c.currency) })}</span>}
+          {c.statedIn && c.currency && <span className="change-hint">{t("otherCurrency", { stated: c.statedIn, currency: c.currency })}</span>}
         </>
       );
       break;
@@ -300,7 +302,7 @@ function ChangeRow({
       label = c.label === "received" ? t("change.newPaymentReceived") : t("change.newPaymentCancellationFee");
       body = (
         <>
-          <input className="change-edit" type="number" min={0} aria-label={t("amount")} value={String(edit.amount ?? "")} onChange={(e) => onEdit({ amount: Number(e.target.value) })} />{" "}
+          {c.currency} <input className="change-edit" type="number" min={0} aria-label={t("amount")} value={String(edit.amount ?? "")} onChange={(e) => onEdit({ amount: Number(e.target.value) })} />{" "}
           <input className="change-edit" type="date" aria-label={t("settledOn")} value={String(edit.date ?? "")} onChange={(e) => onEdit({ date: e.target.value })} />
         </>
       );
@@ -322,7 +324,7 @@ function ChangeRow({
       body = (
         <>
           {c.status === "signed" && <strong>{t("contractSigned")}</strong>}
-          <TermDiff diff={c.diff} against={c.against} same={c.same} type={project.type} />
+          <TermDiff diff={c.diff} against={c.against} same={c.same} type={project.type} currency={project.currency} />
         </>
       );
       break;
@@ -370,6 +372,7 @@ function ChangeRow({
 function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; analysis: Analysis; ctx: IntakeContext }) {
   const t = useTranslations("intake");
   const tEditor = useTranslations("editor");
+  const currencyName = useCurrencyName();
   const tInbox = useTranslations("inbox");
   const labels = useLabels();
   const fallbackTitle = message.body.trim().split("\n")[0]?.slice(0, 80) || message.files[0]?.filename || "";
@@ -427,6 +430,7 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
         project: {
           ...project,
           quotedAmount: project.quotedAmount === "" ? null : Number(project.quotedAmount),
+          currency: project.currency,
           taxRate: Number(project.taxRate),
           fields: Object.fromEntries(fieldKeys.map((k) => [k, project.fields[k] ?? ""])),
           dates: project.dates.filter((d) => d.date),
@@ -470,7 +474,17 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
           <div className="form-grid">
             <label>
               {tEditor("field.amount")}
-              <input type="number" min={0} value={project.quotedAmount} onChange={(e) => set({ quotedAmount: e.target.value })} />
+              <input type="number" min={0} step={project.currency === "JPY" ? "1" : "0.01"} value={project.quotedAmount} onChange={(e) => set({ quotedAmount: e.target.value })} />
+            </label>
+            <label>
+              {tEditor("field.currency")}
+              <select value={project.currency} onChange={(e) => set({ currency: e.target.value as Currency })}>
+                {supportedCurrencies.map((c) => (
+                  <option key={c} value={c}>
+                    {c} · {currencyName(c)}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               {tEditor("field.taxRate")}
@@ -581,9 +595,9 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
 }
 
 /** How a contract differs from the previous version, or where a first contract conflicts with what was agreed. */
-export function TermDiff({ diff, against, same, type }: { diff: TermChange[]; against: "version" | "project"; same: boolean; type: ProjectType }) {
+export function TermDiff({ diff, against, same, type, currency }: { diff: TermChange[]; against: "version" | "project"; same: boolean; type: ProjectType; currency: Currency }) {
   const t = useTranslations("intake");
-  const describe = useDescribeTerm(type);
+  const describe = useDescribeTerm(type, currency);
   if (same) return <span className="change-hint">{t("contractSame")}</span>;
   if (!diff.length) return <span className="muted">{against === "project" ? t("contractMatches") : t("contractNoDiff")}</span>;
   return (
@@ -598,15 +612,15 @@ export function TermDiff({ diff, against, same, type }: { diff: TermChange[]; ag
   );
 }
 
-/** The label, then old → new: "Fee $30,000 → $35,000", or "Set length 60 min → (removed)". */
-export function useDescribeTerm(type: ProjectType) {
+/** The label, then old → new: "Fee $30,000 → $35,000", or "Set length 60 min → (removed)". A fee is in the project's currency. */
+export function useDescribeTerm(type: ProjectType, currency: Currency) {
   const t = useTranslations("intake");
   const labels = useLabels();
   const money = useMoney();
   return (d: TermChange) => {
     const [kind, rest] = d.key.includes(":") ? [d.key.slice(0, d.key.indexOf(":")), d.key.slice(d.key.indexOf(":") + 1)] : [d.key, ""];
     const value = (v: string) =>
-      !v ? t("removed") : kind === "fee" ? money(Number(v)) : kind === "taxIncluded" ? (v === "yes" ? t("taxIncluded") : t("taxExcluded")) : v;
+      !v ? t("removed") : kind === "fee" ? money(Number(v), currency) : kind === "taxIncluded" ? (v === "yes" ? t("taxIncluded") : t("taxExcluded")) : v;
     const label =
       kind === "field" ? labels.detailField(type, rest) : kind === "date" ? rest || t("change.date") : t(`term.${kind as "fee" | "taxIncluded" | "paymentTerms" | "keyTerms"}`);
     return d.before ? `${label} ${value(d.before)} → ${value(d.after)}` : `${label} ${t("added")} ${value(d.after)}`;

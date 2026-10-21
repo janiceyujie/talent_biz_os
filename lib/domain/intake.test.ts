@@ -182,7 +182,13 @@ describe("suggestTargets", () => {
   test("a payment notice matches an expected payment of that amount", () => {
     const c = ctx({ contacts: [], projects: [project({ counterpartyId: null, counterparty: "X", stage: "collecting_payment" })], payments: [payment()] });
     const a = analysis({ intent: "payment", counterparty: { name: "", company: "", email: "", phone: "" }, details: { amountDue: { value: "NT$19,950", asStated: "" } } });
-    assert.deepEqual(suggestTargets(a, c)[0]?.reasons.find((r) => r.kind === "payment"), { kind: "payment", value: 21000 });
+    assert.deepEqual(suggestTargets(a, c)[0]?.reasons.find((r) => r.kind === "payment"), { kind: "payment", value: 21000, currency: "TWD" });
+  });
+
+  test("an amount in another currency doesn't match a payment of the same number", () => {
+    const c = ctx({ contacts: [], projects: [project({ counterpartyId: null, counterparty: "X", stage: "collecting_payment" })], payments: [payment()] });
+    const a = analysis({ intent: "payment", counterparty: { name: "", company: "", email: "", phone: "" }, details: { amountDue: { value: "US$21,000", asStated: "" } } });
+    assert.equal(suggestTargets(a, c)[0]?.reasons.find((r) => r.kind === "payment"), undefined);
   });
 });
 
@@ -281,6 +287,28 @@ describe("proposeChanges", () => {
     assert.deepEqual(byKind(changes, "field").map((c) => c.kind === "field" && c.key), ["setLength"]);
   });
 
+  test("in a USD project, a fee with no currency stated is read in USD; one in TWD isn't proposed", () => {
+    const usd = project({ currency: "USD", quotedAmount: 1000 });
+    const unstated = proposeChanges(analysis({ intent: "confirmation", money: { amount: 1200, currency: "", taxIncluded: null, asStated: "1,200" } }), usd, ctx());
+    assert.deepEqual([one(unstated.changes, "fee").to, one(unstated.changes, "fee").currency], [1200, "USD"]);
+    const twd = proposeChanges(analysis({ intent: "confirmation", money: { amount: 36000, currency: "TWD", taxIncluded: null, asStated: "NT$36,000" } }), usd, ctx());
+    assert.equal(twd.changes.some((c) => c.kind === "fee"), false);
+  });
+
+  test("payment sent in another currency: the payment is offered unticked at its own total, saying which currency the message named", () => {
+    const a = analysis({ intent: "payment", details: { paymentStatus: { value: "paid", asStated: "" }, amountDue: { value: "US$650", asStated: "" } } });
+    const { changes } = proposeChanges(a, project({ stage: "collecting_payment" }), ctx({ payments: [payment()] }));
+    const settle = one(changes, "settlePayment");
+    assert.deepEqual([settle.ticked, settle.amount, settle.currency, settle.statedIn], [false, 21000, "TWD", "USD"]);
+    assert.equal(one(changes, "stage").ticked, false);
+  });
+
+  test("payment sent with nothing expected: a new payment in the stated currency", () => {
+    const a = analysis({ intent: "payment", details: { paymentStatus: { value: "paid", asStated: "" }, amountDue: { value: "HK$5,000", asStated: "" } } });
+    const pay = one(proposeChanges(a, project({ stage: "collecting_payment" }), ctx()).changes, "newPayment");
+    assert.deepEqual([pay.amount, pay.currency], [5000, "HKD"]);
+  });
+
   test("payment sent: the one expected payment is settled with the shortfall, and the project closes", () => {
     const a = analysis({ intent: "payment", details: { paymentStatus: { value: "已匯出", asStated: "" }, amountDue: { value: "NT$19,950", asStated: "尾款 NT$19,950" } } });
     const { changes } = proposeChanges(a, project({ stage: "collecting_payment" }), ctx({ payments: [payment()] }));
@@ -359,12 +387,22 @@ describe("proposeNewProject", () => {
     assert.equal(p.project.quotedAmount, 30000);
   });
 
-  test("creates a contact from the sender when none matches; a foreign amount isn't the quote", () => {
+  test("creates a contact from the sender when none matches; a fee in a recorded currency is the quote, in that currency", () => {
     const a = analysis({ counterparty: { name: "Ken", company: "Tokyo Live", email: "", phone: "" }, money: { amount: 200000, currency: "JPY", taxIncluded: null, asStated: "" } });
     const p = proposeNewProject(a, "", ctx({ contacts: [] }));
     assert.deepEqual(p.contact, { create: { name: "Ken", company: "Tokyo Live", email: "", phone: "" } });
-    assert.equal(p.project.quotedAmount, null);
-    assert.deepEqual(p.foreignAmount, { amount: 200000, currency: "JPY" });
+    assert.deepEqual([p.project.quotedAmount, p.project.currency, p.foreignAmount], [200000, "JPY", null]);
+  });
+
+  test("a fee in a currency we don't record isn't the quote; it goes in the notes", () => {
+    const p = proposeNewProject(analysis({ money: { amount: 5000, currency: "CNY", taxIncluded: null, asStated: "" } }), "", ctx());
+    assert.deepEqual([p.project.quotedAmount, p.project.currency], [null, "TWD"]);
+    assert.deepEqual(p.foreignAmount, { amount: 5000, currency: "CNY" });
+  });
+
+  test("a fee with no currency stated is taken as TWD", () => {
+    const p = proposeNewProject(analysis({ money: { amount: 30000, currency: "", taxIncluded: null, asStated: "30,000" } }), "", ctx());
+    assert.deepEqual([p.project.quotedAmount, p.project.currency], [30000, "TWD"]);
   });
 });
 

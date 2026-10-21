@@ -18,7 +18,7 @@ import { getProject } from "@/lib/data/projects";
 import { db } from "@/lib/db";
 import { auditLog, calendarEvent, contact, contract, message, messageAnalysis, payment, person as personTable, project, projectContact, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
-import type { Currency } from "@/lib/domain/money";
+import { supportedCurrencies, type Currency } from "@/lib/domain/money";
 import { initialEdit, intakeContext, keptFields, proposeChanges, withField, type Change, type ChangeRecord, type IntakeContext } from "@/lib/domain/intake";
 import { isSigned } from "@/lib/domain/phases";
 import { paymentTotal } from "@/lib/domain/workflow";
@@ -152,6 +152,8 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
   const today = dateInZone(timeZone);
   if (ticked.some((c) => (c.kind === "settlePayment" && c.settledOn > today) || (c.kind === "newPayment" && c.date > today)))
     return fail("settledDateFuture");
+  if (ticked.some((c) => (c.kind === "settlePayment" || c.kind === "newPayment") && c.currency === "JPY" && !Number.isInteger(c.amount)))
+    return fail("amountWholeYen");
 
   const t = await getTranslations("intake");
   const signedAfter = isSigned(finalStage);
@@ -239,6 +241,7 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
             direction: "in",
             label: t(`payment.${c.label}`, { title: target.title }).slice(0, 200),
             amount: c.amount,
+            currency: c.currency ?? target.currency,
             taxIncluded: true,
             recordedOn: c.date,
             status: settled ? "settled" : "expected",
@@ -381,6 +384,7 @@ const newProjectInput = z.object({
     type: z.enum(projectTypeKeys, "typeRequired"),
     counterparty: optional(200),
     quotedAmount: z.number().min(0).max(1e10).multipleOf(0.01).nullable(),
+    currency: z.enum(supportedCurrencies),
     taxRate: z.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
     taxIncluded: z.boolean(),
     fields: z.record(z.string(), z.string().trim().max(1000)),
@@ -420,6 +424,7 @@ export async function createProjectFromMessage(raw: NewProjectInput): Promise<{ 
   }
   const input = parsed.data;
   const p = input.project;
+  if (p.currency === "JPY" && p.quotedAmount !== null && !Number.isInteger(p.quotedAmount)) return { error: fail("amountWholeYen") };
   // Only the type's own fields are kept; a field from another type would have no label or home.
   const allowed = new Set(keptFields(p.type));
   let details: ProjectDetails = { dates: p.dates, toConfirm: input.toConfirm };
@@ -469,6 +474,7 @@ export async function createProjectFromMessage(raw: NewProjectInput): Promise<{ 
         type: p.type,
         stage: "offer",
         quotedAmount: p.quotedAmount,
+        quoteCurrency: p.currency,
         taxRate: p.taxRate,
         taxIncluded: p.taxIncluded,
         details,

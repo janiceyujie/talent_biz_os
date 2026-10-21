@@ -7,6 +7,7 @@
  */
 export const supportedCurrencies = ["TWD", "HKD", "USD", "JPY", "EUR", "GBP"] as const;
 export type Currency = (typeof supportedCurrencies)[number];
+export const isCurrency = (code: string): code is Currency => (supportedCurrencies as readonly string[]).includes(code);
 
 /** Currency for display in a UI locale: TWD reads "$21,000.00" in zh-TW, "NT$21,000.00" in en. */
 export const money = (n: number, locale: string, currency = "TWD") =>

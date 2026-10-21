@@ -841,6 +841,7 @@
       "checkFields": "Check the details: client, fee, dates, notes"
     },
     "earlierDate": "An earlier message gave this date, but the project doesn't have it yet; applying adds it.",
+    "otherCurrency": "The message states {stated}; this payment is in {currency}. Enter what arrived, in {currency}.",
     "contractSigned": "Signed",
     "contractSame": "Same as the previous version, likely a duplicate; unticked, it's kept as an attachment only.",
     "contractMatches": "No conflicts with the terms agreed so far.",

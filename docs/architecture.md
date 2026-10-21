@@ -473,6 +473,7 @@ There's no "awaiting signature" stage — many gigs never have a written contrac
 - Nothing converts, so currencies are never added together. Totals are one figure per currency (`totalsByCurrency`): Today's money and income, a client's and a partner's totals. Finance shows one currency at a time, picked at the top; its summary, insights, revenue mix, and CSV follow the pick.
 - A project's settlement (quoted, billed, received) counts only payments in the project's currency. Income in another currency is listed apart ("In other currencies"), since it can't be set against the quote.
 - A bank notice settles only an expected payment in the notice's currency, and money it records goes in at the notice's currency.
+- The intake reads an amount in the currency the message names, or in the project's when it names none (`lib/domain/intake.ts`). A new project takes the message's currency, or TWD; one outside the six stays in its notes. On an existing project, a fee in another currency isn't proposed, and an amount is matched only against payments in its own currency. A payment message in another currency still offers the payment, unticked, at its own total, for the person to enter what arrived.
 
 **Later: conversion.** Totals in a default currency, so a deal with income in two currencies and Finance across currencies can show one figure. The design, to be settled in a decision record first:
 

@@ -13,6 +13,7 @@ import { ANALYSIS_POLL_MS, PasteDialog } from "@/components/app/paste-dialog";
 import { FileText, MailWarning, TriangleAlert } from "lucide-react";
 import { markNotWork, markSureWork, reopenReplies } from "@/lib/actions/mail";
 import { dismissMessage, openFromHistory, reanalyzeMessage } from "@/lib/actions/messages";
+import { isCurrency } from "@/lib/domain/money";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { detailFieldKeys, type AssumptionTopic } from "@/lib/ai/analysis";
@@ -531,7 +532,7 @@ function Terms({ analysis: a }: { analysis: Analysis }) {
   const money = useMoney();
   const fee =
     a.money.amount && a.money.amount > 0
-      ? `${a.money.currency === "TWD" || !a.money.currency ? money(a.money.amount) : `${a.money.currency} ${a.money.amount}`}${
+      ? `${!a.money.currency || isCurrency(a.money.currency) ? money(a.money.amount, a.money.currency || "TWD") : `${a.money.currency} ${a.money.amount}`}${
           a.money.taxIncluded === null ? "" : ` (${a.money.taxIncluded ? tInbox("taxIncluded") : tInbox("taxExcluded")})`
         }`
       : a.money.asStated;
@@ -658,7 +659,7 @@ function AnalysisView({ analysis: a }: { analysis: Analysis }) {
   const fee =
     a.money.amount === null
       ? ""
-      : `${a.money.currency === "TWD" || !a.money.currency ? money(a.money.amount) : `${a.money.currency} ${a.money.amount}`}${
+      : `${!a.money.currency || isCurrency(a.money.currency) ? money(a.money.amount, a.money.currency || "TWD") : `${a.money.currency} ${a.money.amount}`}${
           a.money.taxIncluded === null ? "" : ` (${a.money.taxIncluded ? t("taxIncluded") : t("taxExcluded")})`
         }`;
   // [label, value, the words it came from, which assumptions belong under it]

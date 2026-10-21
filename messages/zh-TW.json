@@ -841,6 +841,7 @@
       "checkFields": "確認細節：合作方、金額、日期、備註"
     },
     "earlierDate": "先前的訊息提過這個日期，但合作案上還沒記；套用後會記在合作案上。",
+    "otherCurrency": "訊息寫的是 {stated}，這筆款項以 {currency} 記錄；請填入實際收到的 {currency} 金額。",
     "contractSigned": "已簽署",
     "contractSame": "和前一版內容相同，可能是重複的檔案；不勾選就只當作附件。",
     "contractMatches": "和目前談定的條件沒有衝突。",

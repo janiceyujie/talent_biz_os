@@ -63,6 +63,14 @@ export const jobAttempts: Record<JobName, number> = {
   "opportunities.refresh": 3,
 };
 
+/**
+ * Jobs that hold a lot in memory: an analysis sends up to 12 MB of files to the
+ * model inline, and bringing an email in reads its attachments. The worker runs
+ * them in a pool of their own with fewer at a time (WORKER_HEAVY_CONCURRENCY),
+ * so a burst of them can't exhaust its memory or hold up syncs (worker/index.ts).
+ */
+export const heavyJobs: readonly JobName[] = ["message.analyze", "mail.fetch"];
+
 /** The key that makes a second "analyze this message" replace a waiting one instead of queueing twice. */
 export const analyzeJobKey = (messageId: string) => `message.analyze:${messageId}`;
 

@@ -39,6 +39,19 @@ Each environment needs its own of each of these (launch checklist, sections 3 an
 - **Networking isolation** keeps staging and production from reaching each other's private services; **protection** on production blocks destructive actions by anyone but workspace admins.
 - **The worker gets 5 minutes to stop** (`maxShutdownDelaySeconds: 300`) so running jobs finish; a job that's cut off anyway is retried (decision 0014's notes).
 
+## Database connections
+
+Through Supabase's session-mode pooler, every open connection holds one of the database's connections for as long as it's open, so the services' pools have to fit within the pooler's pool size (Supabase dashboard: Database Settings, "Connection pooling"). Per environment:
+
+| Who | Connections | Set by |
+|---|---|---|
+| Web service (`lib/db`) | up to 10 | postgres.js default |
+| Worker, the jobs' own queries (`lib/db`) | up to 10 | postgres.js default |
+| Worker, the job queue (both pools) | up to 6 | `WORKER_PG_POOL` |
+| Migrations (pre-deploy, while it runs) | 1–2 | |
+
+That's up to about 28. Check the pool size is at least 30 before the first deploy, and raise it if not (Supabase advises at most 80% of the database's max connections). Running a second web instance or worker adds its share again.
+
 ## Adding a setting
 
 A new non-secret setting shared by both services goes in the environment's group in `render.yaml`. A new secret goes under each service that reads it, as `sync: false`, then gets its value in the dashboard. Add it to `.env.example` too.

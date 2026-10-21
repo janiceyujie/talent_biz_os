@@ -7,6 +7,7 @@ What has to happen before the first production deploy and before real users. Eac
 - [x] Hosting and job queue, together: Render in Singapore and Graphile Worker ([decision 0014](../decisions/0014-hosting-and-job-queue.md)).
 - [ ] Supabase on the Pro plan (backups, no idle pausing) before the first person besides the builder connects Gmail.
 - [x] `Dockerfile` and `render.yaml`; the worker on the session-mode pooler ([render.md](render.md)).
+- [ ] Supabase's pooler pool size checked against the connection budget ([render.md](render.md), "Database connections"), for staging and production.
 - [ ] The web service on the transaction-mode pooler: `lib/db` turns off prepared statements first (both use the session-mode pooler until then).
 - [ ] Staging and production as separate Render services and Supabase projects, each with its own Google project, KMS key, bucket, and Pub/Sub ([decision 0025](../decisions/0025-environments-and-deployment.md)).
 - [ ] Deploy workflows: `main` to staging, a `vX.Y.Z` release to production, each running migrate → worker → web → smoke check; Render auto-deploy off; a tag ruleset so only the builder creates `v*` tags.

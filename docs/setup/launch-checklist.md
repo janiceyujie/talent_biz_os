@@ -7,6 +7,10 @@ What has to happen before the first production deploy and before real users. Eac
 - [x] Hosting and job queue, together: Render in Singapore and Graphile Worker ([decision 0014](../decisions/0014-hosting-and-job-queue.md)).
 - [ ] Supabase on the Pro plan (backups, no idle pausing) before the first person besides the builder connects Gmail.
 - [ ] `Dockerfile` and `render.yaml`; the worker on the session-mode pooler.
+- [ ] Staging and production as separate Render services and Supabase projects, each with its own Google project, KMS key, bucket, and Pub/Sub ([decision 0021](../decisions/0021-environments-and-deployment.md)).
+- [ ] Deploy workflows: `main` to staging, a `vX.Y.Z` release to production, each running migrate → worker → web → smoke check; Render auto-deploy off; a tag ruleset so only the builder creates `v*` tags.
+- [ ] Secrets in one Render Environment Group per environment; GitHub holds only the Render API key and service ids.
+- [ ] CI: migrations applied to an empty Postgres, Dependabot, CodeQL, and secret scanning with push protection.
 - [x] Move message analysis off `after()` to the queue (decision 0008).
 - [x] Move Google Calendar sync off `after()` to the queue (decision 0009); `lib/calendar/google/sync.ts` first needs its `next/*` imports moved out (decision 0014).
 - [x] Retry failed Google Calendar pushes from the queue, waiting longer after each failure (e.g. 1 min, 5 min, 30 min, 2 h, then every 6 h). Retry network errors, Google being down, and Google's "slow down"; not lost access (the person reconnects) or a request Google rejects (it would fail the same way). Until then a failed push stays pending and goes on the next change or 立即同步.
@@ -61,5 +65,6 @@ From [decision 0008](../decisions/0008-ai-operations.md):
 ## 6. Operations
 
 - [ ] Database backups, and a restore tried once.
-- [ ] Error reporting and logs somewhere you'll see them.
+- [ ] Error reporting and logs somewhere you'll see them: JSON logs through `lib/log`, Sentry through `lib/errors` with scrubbing and its test, alerts by email and phone push ([decision 0022](../decisions/0022-logging-and-error-reporting.md)).
+- [ ] A staff-only Support page (lookup by email, a metadata-only timeline, each lookup audited), the `staff` table, and error codes on error screens ([decision 0022](../decisions/0022-logging-and-error-reporting.md)).
 - [ ] A way to delete an account and everything in it, on request (privacy policy).

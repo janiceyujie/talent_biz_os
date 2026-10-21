@@ -359,7 +359,7 @@
       "status": "Status",
       "due": "Due",
       "invoice": "Invoice",
-      "filename": "talent-ledger-TWD.csv"
+      "filename": "talent-ledger-{currency}.csv"
     },
     "edit": "Edit",
     "restore": "Restore",
@@ -581,6 +581,7 @@
     "received": "Received",
     "outstanding": "Outstanding",
     "shortfall": "Received short",
+    "otherCurrencies": "In other currencies",
     "createPlan": "Create deposit and balance",
     "closingCheck": "Before closing",
     "warn": {
@@ -1623,6 +1624,7 @@
     "contactNotFound": "Contact not found.",
     "amountNegative": "Amounts can't be negative.",
     "amountDecimals": "Amounts can have at most two decimal places.",
+    "amountWholeYen": "Amounts in yen are whole numbers.",
     "entryNameRequired": "Enter an entry name.",
     "taxRateRange": "The tax rate must be between 0 and 100%.",
     "settledDateRequired": "Received or paid entries need the date settled.",

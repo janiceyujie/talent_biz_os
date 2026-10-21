@@ -236,6 +236,7 @@ export async function recordNoticePayment(messageId: string, target: { paymentId
               eq(payment.talentId, talent.id),
               eq(payment.direction, "in"),
               eq(payment.status, "expected"),
+              eq(payment.currency, n.currency), // the settled amount is in the notice's currency
               isNull(payment.voidedAt),
             ),
           )
@@ -250,6 +251,7 @@ export async function recordNoticePayment(messageId: string, target: { paymentId
             direction: "in",
             label: n.payer ? t("newLabelFrom", { payer: n.payer }) : t("newLabel"),
             amount: n.amount,
+            currency: n.currency,
             taxIncluded: true,
             recordedOn: today,
             status: "settled",

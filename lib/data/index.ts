@@ -15,6 +15,7 @@ import { changeMark } from "./changes";
 import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { mailConfigured } from "@/lib/mail/connect";
+import type { Currency } from "@/lib/domain/money";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
 import { calendarKinds, type AppData, type CalendarItem, type CalendarKind, type TravelDetails } from "@/lib/types";
@@ -340,7 +341,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       installment: p.installment,
       label: p.label,
       amount: p.amount,
-      currency: "TWD",
+      currency: p.currency as Currency,
       taxRate: p.taxRate,
       taxIncluded: p.taxIncluded,
       recordedDate: p.recordedOn,

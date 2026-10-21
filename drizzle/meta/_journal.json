@@ -267,6 +267,13 @@
       "when": 1792468158406,
       "tag": "0037_calendar_series_projects",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792552362845,
+      "tag": "0038_record_six_currencies",
+      "breakpoints": true
     }
   ]
 }

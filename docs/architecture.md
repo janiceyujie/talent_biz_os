@@ -94,8 +94,8 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - Void (作廢) a mistaken or duplicate payment entry: it drops out of every total and chart but stays viewable and restorable — **MVP**. Payments have no archive: past months need no hiding, they're just a date filter.
 - Finance views: money still to pay, the last six months of cash in and out, overdue-income aging, and signed-contract totals — **MVP**.
 - Subscription plans and billing for the product itself — **Later**. Kept entirely separate from a talent's project payments.
-- Amounts in TWD only — **MVP**. Each amount still carries its currency.
-- Multiple currencies, with a per-user default currency the dashboard converts into — **Later**. See [Multi-currency](#multi-currency-later).
+- Amounts in TWD, HKD, USD, JPY, EUR, or GBP — **MVP**. A project has its own currency; its payments may be in any of them. Totals are shown per currency, side by side. See [Multi-currency](#multi-currency).
+- A default currency the totals convert into, at recorded exchange rates — **Later**. See [Multi-currency](#multi-currency).
 - A running record of which counterparties pay late and by how much — **Later**. Needs enough payment history per counterparty to be meaningful.
 
 ### Analytics and insights
@@ -465,15 +465,21 @@ There's no "awaiting signature" stage — many gigs never have a written contrac
 
 **Money.** One `payment` table for both directions, so income and expenses share project and cross-project summaries. A payment usually belongs to a project but doesn't have to (a general expense such as gear). Each payment, and the project's quote, stores the amount as entered, a tax rate, and whether the amount includes tax; net, tax, and total are computed in minor units so net + tax always equals total. A quote can be split into a deposit and a balance in one transaction (the balance absorbs rounding), and is refused if the project already has income rows. The settlement check compares quoted, billed (income rows), and received (settled) per project. The agreed amount and the settled amount are separate columns — withholding tax and 二代健保 often make the received amount smaller, and that gap should show. "Overdue" is computed (due date past, still expected), never stored. Amounts are `numeric`, never floating point. Payment dates (recorded, due, settled) are `date`s — calendar days in the talent's time zone, not instants. A payment without a project counts as 其他 in per-type summaries. Cash summaries use the settled amount: received counts what actually arrived, by settled date; outstanding counts expected rows, by recorded date.
 
-#### Multi-currency (Later)
+#### Multi-currency
 
-The MVP is TWD only, enforced by a check constraint, but every `payment` row already stores its own `currency`, so no existing data changes when this ships. The design:
+**Now.** Amounts are recorded in one of six currencies (`supportedCurrencies`, `lib/domain/money.ts`: TWD, HKD, USD, JPY, EUR, GBP), enforced by a check constraint on `project.quote_currency` and `payment.currency`. JPY amounts are whole yen; the rest have two decimals.
 
-- `person.default_currency` — the currency the dashboard shows totals in.
-- An `exchange_rate` table (date, from, to, rate, source), filled daily from a rates provider.
-- Settled amounts convert at the rate on their settled date, so past totals never shift. Expected amounts convert at the latest rate and are labeled as estimates.
+- A project's currency is the one its quote is in. A payment on it starts in that currency but may be in any; the server doesn't require them to match.
+- Nothing converts, so currencies are never added together. Totals are one figure per currency (`totalsByCurrency`): Today's money and income, a client's and a partner's totals. Finance shows one currency at a time, picked at the top; its summary, insights, revenue mix, and CSV follow the pick.
+- A project's settlement (quoted, billed, received) counts only payments in the project's currency. Income in another currency is listed apart ("In other currencies"), since it can't be set against the quote.
+- A bank notice settles only an expected payment in the notice's currency, and money it records goes in at the notice's currency.
+
+**Later: conversion.** Totals in a default currency, so a deal with income in two currencies and Finance across currencies can show one figure. The design, to be settled in a decision record first:
+
+- A default currency per workspace — the one cross-project totals show in. Each project's totals convert into the project's currency.
+- An `exchange_rate` table (date, from, to, rate, source), filled daily from a rates provider. The source is still open.
+- Settled amounts convert at the rate on their settled date, so past totals never shift; optionally the amount that actually arrived, when the person enters it. Expected amounts convert at the latest rate and are labeled as estimates.
 - Original amount and currency are always shown alongside the converted figure.
-- Drop the TWD-only check when this ships.
 
 ### Conventions
 
@@ -580,7 +586,7 @@ create table project (
                      check (stage in ('offer','negotiating','signed','in_progress',
                                       'collecting_payment','closed','declined','cancelled')),
   quoted_amount    numeric(12,2),                 -- as entered; see tax_included
-  quote_currency   char(3) not null default 'TWD' check (quote_currency = 'TWD'),
+  quote_currency   char(3) not null default 'TWD', -- one of supportedCurrencies; see Multi-currency
   tax_rate         numeric(5,2) not null default 0 check (tax_rate between 0 and 100),
   tax_included     boolean not null default false,
   details          jsonb not null default '{}',   -- type fields, dates kept before signing, to-confirm list (lib/types ProjectDetails)
@@ -729,8 +735,7 @@ create table payment (
                        check (installment in ('regular','deposit','balance')),
   label              text not null,                 -- '訂金', 'train to Tainan'
   amount             numeric(12,2) not null check (amount >= 0),   -- as entered; see tax_included
-  currency           char(3) not null default 'TWD'
-                       check (currency = 'TWD'),    -- MVP: TWD only; see Multi-currency
+  currency           char(3) not null default 'TWD', -- one of supportedCurrencies; see Multi-currency
   tax_rate           numeric(5,2) not null default 0 check (tax_rate between 0 and 100),
   tax_included       boolean not null default false,
   recorded_on        date not null,                 -- 登錄日期; calendar days, in the talent's time zone

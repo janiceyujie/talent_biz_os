@@ -7,8 +7,8 @@ import { FinanceInsights } from "./finance-insights";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { voidPayment } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
-import { quote, supportedCurrencies } from "@/lib/domain/money";
-import { useMoney } from "@/lib/i18n/format";
+import { quote, supportedCurrencies, type Currency } from "@/lib/domain/money";
+import { useCurrencyName, useMoney } from "@/lib/i18n/format";
 import { paymentCash, paymentDate, paymentTotal, summarize } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
 import type { AppData } from "@/lib/types";
@@ -25,12 +25,12 @@ export function Metric({ label, value, note, tone = "plain" }: { label: string; 
 
 const donutColors = ["var(--lime)", "var(--orange)", "var(--blue)", "var(--violet)", "#80887c"];
 
-export function Revenue({ data, from = "", to = "9999-12-31" }: { data: AppData; from?: string; to?: string }) {
+export function Revenue({ data, from = "", to = "9999-12-31", currency = "TWD" }: { data: AppData; from?: string; to?: string; currency?: Currency }) {
   const t = useTranslations("finance");
   const tEyebrow = useTranslations("eyebrow");
   const labels = useLabels();
   const money = useMoney();
-  const s = summarize(data, from, to);
+  const s = summarize(data, from, to, currency);
   let pos = 0;
   const gradient = s.split
     .map((part, i) => {
@@ -51,11 +51,11 @@ export function Revenue({ data, from = "", to = "9999-12-31" }: { data: AppData;
         <div
           className="donut"
           role="img"
-          aria-label={t("revenueAria", { amount: money(s.received) })}
+          aria-label={t("revenueAria", { amount: money(s.received, currency) })}
           style={{ background: s.received ? `conic-gradient(${gradient})` : "var(--line)" }}
         >
           <div>
-            <strong>{money(s.received)}</strong>
+            <strong>{money(s.received, currency)}</strong>
             <span>{t("revenueCaption")}</span>
           </div>
         </div>
@@ -65,7 +65,7 @@ export function Revenue({ data, from = "", to = "9999-12-31" }: { data: AppData;
               <i style={{ background: donutColors[i] }} />
               <span>{labels.projectType(v.type)}</span>
               <strong>{s.received ? Math.round((v.amount / s.received) * 100) : 0}%</strong>
-              <small>{money(v.amount)}</small>
+              <small>{money(v.amount, currency)}</small>
             </div>
           ))}
         </div>
@@ -96,6 +96,9 @@ export function FinanceView() {
   const tEyebrow = useTranslations("eyebrow");
   const labels = useLabels();
   const money = useMoney();
+  const currencyName = useCurrencyName();
+  // Totals are per currency (no conversion yet); the ledger and every figure follow this choice.
+  const [currency, setCurrency] = useState<Currency>("TWD");
   const [editor, setEditor] = useState<Editor | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -106,10 +109,10 @@ export function FinanceView() {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const today = dateInZone(data.talent.timeZone);
-  const s = summarize(data, from, to || "9999-12-31");
-  const q = quote(Math.max(0, base || 0), Math.max(0, Math.min(100, rate || 0)), included);
+  const s = summarize(data, from, to || "9999-12-31", currency);
+  const q = quote(Math.max(0, base || 0), Math.max(0, Math.min(100, rate || 0)), included, currency);
   const rows = showVoided
-    ? data.payments.filter((p) => p.voided && paymentDate(p) >= from && paymentDate(p) <= (to || "9999-12-31"))
+    ? data.payments.filter((p) => p.voided && p.currency === currency && paymentDate(p) >= from && paymentDate(p) <= (to || "9999-12-31"))
     : s.rows;
 
   function exportCsv() {
@@ -136,7 +139,7 @@ export function FinanceView() {
         ];
       }),
     ];
-    download("﻿" + table.map((row) => row.map(csvCell).join(",")).join("\r\n"), t("csv.filename"));
+    download("﻿" + table.map((row) => row.map(csvCell).join(",")).join("\r\n"), t("csv.filename", { currency }));
   }
 
   return (
@@ -144,9 +147,11 @@ export function FinanceView() {
       <div className="toolbar wrap">
         <label>
           {t("currency")}
-          <select value="TWD" disabled>
+          <select value={currency} onChange={(e) => setCurrency(e.target.value as Currency)}>
             {supportedCurrencies.map((c) => (
-              <option key={c}>{c}</option>
+              <option key={c} value={c}>
+                {c} · {currencyName(c)}
+              </option>
             ))}
           </select>
         </label>
@@ -164,15 +169,15 @@ export function FinanceView() {
       </div>
       {/* One summary: net cash leads, the four flows support it. */}
       <section className="finance-summary" aria-label={t("summaryLabel")}>
-        <Metric label={t("metricNet")} value={money(s.received - s.paid)} note={t("metricNetNote")} tone="dark" />
-        <Metric label={t("metricReceived")} value={money(s.received)} note={t("metricReceivedNote")} />
-        <Metric label={t("metricReceivable")} value={money(s.receivable)} note={t("metricReceivableNote")} />
-        <Metric label={t("metricPaid")} value={money(s.paid)} note={t("metricPaidNote")} />
-        <Metric label={t("metricPayable")} value={money(s.payable)} note={t("metricPayableNote")} />
+        <Metric label={t("metricNet")} value={money(s.received - s.paid, currency)} note={t("metricNetNote")} tone="dark" />
+        <Metric label={t("metricReceived")} value={money(s.received, currency)} note={t("metricReceivedNote")} />
+        <Metric label={t("metricReceivable")} value={money(s.receivable, currency)} note={t("metricReceivableNote")} />
+        <Metric label={t("metricPaid")} value={money(s.paid, currency)} note={t("metricPaidNote")} />
+        <Metric label={t("metricPayable")} value={money(s.payable, currency)} note={t("metricPayableNote")} />
       </section>
-      <FinanceInsights />
+      <FinanceInsights currency={currency} />
       <div className="finance-grid">
-        <Revenue data={data} from={from} to={to || "9999-12-31"} />
+        <Revenue data={data} from={from} to={to || "9999-12-31"} currency={currency} />
         <section className="surface tax-card">
           <div className="section-header">
             <div>
@@ -182,7 +187,7 @@ export function FinanceView() {
           </div>
           <label>
             {t("quoteAmount")}
-            <input type="number" min="0" step="0.01" value={base} onChange={(e) => setBase(Number(e.target.value))} />
+            <input type="number" min="0" step={currency === "JPY" ? "1" : "0.01"} value={base} onChange={(e) => setBase(Number(e.target.value))} />
           </label>
           <label>
             {t("taxRate")}
@@ -204,14 +209,14 @@ export function FinanceView() {
             ].map(([l, v]) => (
               <div key={String(l)}>
                 <dt>{l}</dt>
-                <dd>{money(Number(v))}</dd>
+                <dd>{money(Number(v), currency)}</dd>
               </div>
             ))}
           </dl>
           <button
             className="secondary full"
             onClick={() =>
-              setEditor({ kind: "payment", item: { label: t("quoteRecordLabel"), amount: base, taxRate: rate, taxIncluded: included } })
+              setEditor({ kind: "payment", item: { label: t("quoteRecordLabel"), amount: base, currency, taxRate: rate, taxIncluded: included } })
             }
           >
             {t("useInLedger")}
@@ -224,7 +229,7 @@ export function FinanceView() {
             <span>{tEyebrow("ledger")}</span>
             <h2>{t("ledgerTitle")}</h2>
           </div>
-          <button className="primary" onClick={() => setEditor({ kind: "payment" })}>{t("newEntry")}</button>
+          <button className="primary" onClick={() => setEditor({ kind: "payment", item: { currency } })}>{t("newEntry")}</button>
         </div>
         <label className="check-line">
           <input type="checkbox" checked={showVoided} onChange={(e) => setShowVoided(e.target.checked)} />
@@ -270,7 +275,7 @@ export function FinanceView() {
                     {money(paymentTotal(p), p.currency)}
                     {p.status === "settled" && paymentCash(p) !== paymentTotal(p) && (
                       <small>
-                        {t("settledGap", { direction: p.direction, cash: money(paymentCash(p)), gap: money(paymentTotal(p) - paymentCash(p)) })}
+                        {t("settledGap", { direction: p.direction, cash: money(paymentCash(p), p.currency), gap: money(paymentTotal(p) - paymentCash(p), p.currency) })}
                       </small>
                     )}
                   </td>

@@ -8,7 +8,7 @@ import { outstandingMoney } from "@/lib/overview/money";
 import type { OverviewContext } from "../context";
 import { Widget } from "../widget";
 
-/** Money: money still expected — overdue first; zero rows left out; says so when nothing is open. */
+/** Money: money still expected — overdue first, one line per currency; zero rows left out; says so when nothing is open. */
 export function MoneyWidget({ ctx: { data, today } }: { ctx: OverviewContext }) {
   const t = useTranslations("today");
   const money = useMoney();
@@ -32,16 +32,18 @@ export function MoneyWidget({ ctx: { data, today } }: { ctx: OverviewContext }) 
         ),
       }}
     >
-      {rows.every(([, amount]) => !amount) && <p className="empty">{t("moneyNone")}</p>}
+      {rows.every(([, totals]) => !totals.some((x) => x.amount > 0)) && <p className="empty">{t("moneyNone")}</p>}
       <dl className="widget-figures">
-        {rows
-          .filter(([, amount]) => amount > 0)
-          .map(([key, amount]) => (
-            <div key={key} className={key === "moneyOverdue" ? "is-overdue" : undefined}>
-              <dt>{t(key)}</dt>
-              <dd>{money(amount)}</dd>
-            </div>
-          ))}
+        {rows.flatMap(([key, totals]) =>
+          totals
+            .filter((x) => x.amount > 0)
+            .map((x) => (
+              <div key={`${key}-${x.currency}`} className={key === "moneyOverdue" ? "is-overdue" : undefined}>
+                <dt>{t(key)}</dt>
+                <dd>{money(x.amount, x.currency)}</dd>
+              </div>
+            )),
+        )}
       </dl>
     </Widget>
   );

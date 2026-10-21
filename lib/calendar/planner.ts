@@ -4,6 +4,7 @@
 // Adapted from the prototype's planner model (talent-business-os-prototype,
 // src/components/planner/model.ts), on real data instead of a demo scenario.
 import { wallTimeToUtc } from "@/lib/domain/dates";
+import type { Currency } from "@/lib/domain/money";
 import { isSigned } from "@/lib/domain/phases";
 import { paymentTotal } from "@/lib/domain/workflow";
 import type { AppData, CalendarKind } from "@/lib/types";
@@ -32,7 +33,7 @@ export type PlanItem = {
   done: boolean;
   /** Shown when the item can't sit on the timeline as stated (another zone, multi-day). */
   note: string;
-  amount: number | null; // payment due dates
+  amount: { value: number; currency: Currency } | null; // payment due dates; negative when paid out
   /**
    * From the person's Google calendars (decision 0009, phase 2): read-only. `series`: a repeating event
    * in our own Talent Biz OS calendar, which can be added to a project as a whole (decision 0017).
@@ -240,7 +241,7 @@ export function planItems(data: Pick<AppData, "calendar" | "payments" | "project
       client: p?.counterparty ?? "",
       done: false,
       note: "",
-      amount: paymentTotal(pay) * (pay.direction === "out" ? -1 : 1),
+      amount: { value: paymentTotal(pay) * (pay.direction === "out" ? -1 : 1), currency: pay.currency },
       external: null,
     });
   }

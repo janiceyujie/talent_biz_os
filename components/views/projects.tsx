@@ -135,7 +135,7 @@ export function ProjectsView() {
   const active = linked ?? visible[0];
   const quoteText = (p: ProjectSummary) => {
     const total = projectQuoteTotal(p);
-    return total === null ? t("quoteNotSet") : money(total);
+    return total === null ? t("quoteNotSet") : money(total, p.currency);
   };
   // Near the end of the list, the next page: watched in the list's own scroll area on wide screens, the page on narrow ones.
   const panel = useRef<HTMLElement>(null);

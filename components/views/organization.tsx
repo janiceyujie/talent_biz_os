@@ -11,7 +11,8 @@ import { Modal } from "@/components/app/modal";
 import { addOrganizationPerson, archiveOrganization, removeOrganizationPerson, saveOrganization } from "@/lib/actions/organizations";
 import type { OrganizationProject } from "@/lib/data/organizations";
 import { countedPayments, paymentCash, paymentTotal } from "@/lib/domain/workflow";
-import { useMoney } from "@/lib/i18n/format";
+import { totalsByCurrency } from "@/lib/domain/money";
+import { useMoney, useMoneyTotals } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { DealCard } from "./deal-card";
 import { DistinctFrom } from "./organization-duplicates";
@@ -28,6 +29,7 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
   const tContacts = useTranslations("contacts");
   const labels = useLabels();
   const money = useMoney();
+  const moneyTotals = useMoneyTotals();
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [leaving, setLeaving] = useState<{ id: string; name: string } | null>(null);
@@ -41,8 +43,8 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
   const clientOf = new Set(projects.filter((p) => p.primary).map((p) => p.projectId));
   // Expected money only from signed deals (decision 0018); what was received, always.
   const payments = countedPayments(data.payments, data.projects).filter((p) => p.projectId && clientOf.has(p.projectId) && p.direction === "in" && !p.voided && p.status !== "cancelled");
-  const received = payments.reduce((n, p) => n + paymentCash(p), 0);
-  const outstanding = payments.filter((p) => p.status === "expected").reduce((n, p) => n + paymentTotal(p), 0);
+  const received = totalsByCurrency(payments, paymentCash);
+  const outstanding = totalsByCurrency(payments.filter((p) => p.status === "expected"), paymentTotal);
   const titleOf = (projectId: string | null) => projects.find((p) => p.projectId === projectId)?.title ?? "";
 
   return (
@@ -152,11 +154,11 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
             <dl className="deal-facts">
               <div>
                 <dt>{t("received")}</dt>
-                <dd>{money(received)}</dd>
+                <dd>{moneyTotals(received)}</dd>
               </div>
               <div>
                 <dt>{t("outstanding")}</dt>
-                <dd className={outstanding > 0 ? "owed" : ""}>{money(outstanding)}</dd>
+                <dd className={outstanding.length ? "owed" : ""}>{moneyTotals(outstanding)}</dd>
               </div>
             </dl>
             {payments.length > 0 && (
@@ -166,7 +168,7 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
                     <span>{p.label}</span>
                     <small>{titleOf(p.projectId)}</small>
                     <small>{labels.paymentStatus(p)}</small>
-                    <strong>{money(paymentTotal(p))}</strong>
+                    <strong>{money(paymentTotal(p), p.currency)}</strong>
                   </li>
                 ))}
               </ul>

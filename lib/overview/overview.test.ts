@@ -114,12 +114,20 @@ describe("monthIncome", () => {
           payment({ amount: 9999, status: "expected", settledDate: null }),
           payment({ amount: 300, direction: "out", settledDate: "2026-10-03" }),
           payment({ amount: 700, voided: true, settledDate: "2026-10-03" }),
+          payment({ amount: 80, currency: "USD", settledDate: "2026-09-12" }),
         ],
         projects: [],
       },
       TODAY,
     );
-    assert.deepEqual(got, { thisMonth: 1450, lastMonth: 2000 });
+    assert.deepEqual(got, [
+      { currency: "TWD", thisMonth: 1450, lastMonth: 2000 },
+      { currency: "USD", thisMonth: 0, lastMonth: 80 },
+    ]);
+  });
+
+  test("with nothing received in either month, one zero row in TWD", () => {
+    assert.deepEqual(monthIncome({ payments: [], projects: [] }, TODAY), [{ currency: "TWD", thisMonth: 0, lastMonth: 0 }]);
   });
 });
 
@@ -133,9 +141,16 @@ describe("outstandingMoney", () => {
         payment({ amount: 500, status: "expected", direction: "out", dueDate: "2026-10-08", settledDate: null }),
         payment({ amount: 4000, status: "settled" }),
         payment({ amount: 800, status: "expected", voided: true, dueDate: "2026-10-01", settledDate: null }),
+        payment({ amount: 300, currency: "HKD", status: "expected", dueDate: "2026-10-03", settledDate: null }),
       ],
       TODAY,
     );
-    assert.deepEqual(got, { overdue: 9000, thisWeek: 1000, toReceive: 31000, toPay: 500 });
+    // Currencies are never added together: one total each, TWD first.
+    assert.deepEqual(got, {
+      overdue: [{ currency: "TWD", amount: 9000 }, { currency: "HKD", amount: 300 }],
+      thisWeek: [{ currency: "TWD", amount: 1000 }],
+      toReceive: [{ currency: "TWD", amount: 31000 }, { currency: "HKD", amount: 300 }],
+      toPay: [{ currency: "TWD", amount: 500 }],
+    });
   });
 });

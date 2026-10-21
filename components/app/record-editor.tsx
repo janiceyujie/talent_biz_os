@@ -13,6 +13,8 @@ import { saveTemplate } from "@/lib/actions/templates";
 import { localeNames, locales, toLocale } from "@/lib/i18n/config";
 import { placeholderKeys, placeholderName, toDisplay } from "@/lib/templates/placeholders";
 import { isOpenStage } from "@/lib/domain/phases";
+import { supportedCurrencies } from "@/lib/domain/money";
+import { useCurrencyName } from "@/lib/i18n/format";
 import { placeSuggestions } from "@/lib/calendar/places";
 import {
   calendarKinds,
@@ -71,6 +73,8 @@ const savers: Partial<Record<EditorKind, Saver>> = {
 
 // Kinds stored as to-dos; the rest are calendar events. Kept in step with lib/actions/calendar.
 const todoKinds: readonly string[] = ["todo", "deliverable", "payment"];
+// Amount fields: whole numbers only in JPY.
+const moneyFields = new Set(["amount", "quotedAmount", "settledAmount"]);
 
 /**
  * One add/edit dialog for every record kind. Saving goes through the kind's
@@ -205,6 +209,10 @@ export function RecordEditor({
       ...d,
       [key]: value,
       ...(key === "status" ? { settledDate: value === "settled" ? d.settledDate || today : "" } : {}),
+      // A payment put on a deal starts in the deal's currency; it can still be changed.
+      ...(key === "projectId" && value && kind === "payment"
+        ? { currency: data$.projects.find((p) => p.id === value)?.currency ?? d.currency }
+        : {}),
       // An arrival or check-out usually happens in the same zone; start from it.
       ...(key === "endDate" && value ? { endTimeZone: d.endTimeZone || d.timeZone } : {}),
       // A trip's arrival or a stay's check-out isn't another kind's end time: drop it on switching.
@@ -212,6 +220,9 @@ export function RecordEditor({
         ? { endDate: "", endTime: "", endTimeZone: "" }
         : {}),
     }));
+
+  const currencyName = useCurrencyName();
+  const currencyOptions = supportedCurrencies.map((c) => [c, `${c} · ${currencyName(c)}`] as const);
 
   function field(key: string, label: string, type = "text", required = false, options?: Option[], list?: string) {
     return (
@@ -244,7 +255,7 @@ export function RecordEditor({
             data-field={key}
             type={type}
             required={required}
-            step={type === "number" ? "0.01" : undefined}
+            step={type === "number" ? (data.currency === "JPY" && moneyFields.has(key) ? "1" : "0.01") : undefined}
             min={type === "number" ? 0 : undefined}
             max={key === "taxRate" ? 100 : undefined}
             maxLength={200}
@@ -279,7 +290,7 @@ export function RecordEditor({
       <legend>{legend}</legend>
       <div className="form-grid">
         {field(amountKey, amountLabel, "number", amountRequired)}
-        {field("currency", t("field.currency"), "text", true, [["TWD", "TWD"]])}
+        {field("currency", t("field.currency"), "text", true, currencyOptions)}
         {field("taxRate", t("field.taxRate"), "number", true)}
         {field("taxIncluded", t("field.taxIncluded"), "checkbox")}
       </div>

@@ -8,6 +8,7 @@ import type { MessageAnalysis } from "@/lib/ai/analysis";
 import type { NoticeFields } from "@/lib/mail/payment-notice/fields";
 import type { ChangeRecord } from "@/lib/domain/intake";
 import type { ProjectType } from "@/lib/project-types";
+import type { Currency } from "@/lib/domain/money";
 
 export const stages = [
   "offer",
@@ -38,7 +39,7 @@ export type Project = {
   type: ProjectType;
   stage: Stage;
   quotedAmount: number | null; // null = quote not set (not decided yet), not zero
-  currency: "TWD";
+  currency: Currency;
   taxRate: number;
   taxIncluded: boolean;
   details: ProjectDetails;
@@ -168,7 +169,7 @@ export type Payment = {
   installment: "regular" | "deposit" | "balance";
   label: string;
   amount: number;
-  currency: "TWD";
+  currency: Currency;
   taxRate: number;
   taxIncluded: boolean;
   recordedDate: string; // recorded on

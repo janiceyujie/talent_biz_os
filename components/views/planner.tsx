@@ -577,7 +577,7 @@ export function EventCard({
         {!compact && item.project && <span>{item.project}</span>}
         {!compact && !item.projectId && (item.ref.source === "event" || !!item.external?.series) && <span className="no-project">{t("noProject")}</span>}
         {!compact && item.client && <span className="planner-event-meta">{item.client}</span>}
-        {item.amount !== null && <span className="planner-event-meta">{money(Math.abs(item.amount))}</span>}
+        {item.amount !== null && <span className="planner-event-meta">{money(Math.abs(item.amount.value), item.amount.currency)}</span>}
         {clash && <span className="planner-conflict">{t("conflict")}</span>}
         {item.note && <span className="planner-event-meta">{t("stated", { when: item.note })}</span>}
       </button>

@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { auditLog, calendarEvent, contact, organization, payment, project, talent as talentTable, todo } from "@/lib/db/schema";
 import { requestCalendarSync } from "@/lib/calendar/google/sync";
 import { dateInZone } from "@/lib/domain/dates";
-import { quote } from "@/lib/domain/money";
+import { quote, supportedCurrencies } from "@/lib/domain/money";
 import { phaseOf } from "@/lib/domain/phases";
 import { organizationNamed, setClient } from "@/lib/data/organizations";
 import { projectTypeKeys } from "@/lib/project-types";
@@ -46,6 +46,8 @@ const projectInput = z
       ])
       .optional()
       .transform((v) => (v === "" || v === undefined ? null : v)),
+    // The deal's own currency: what its quote is in. Its payments may be in any currency.
+    currency: z.enum(supportedCurrencies),
     taxRate: z.coerce.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
     taxIncluded: z.boolean(),
     deliverables: optionalText,
@@ -54,7 +56,8 @@ const projectInput = z
     contractNotes: optionalText,
     notes: optionalText,
   })
-  .refine((p) => p.organizationId || p.organizationName || p.counterparty, { message: "clientRequired" });
+  .refine((p) => p.organizationId || p.organizationName || p.counterparty, { message: "clientRequired" })
+  .refine((p) => p.currency !== "JPY" || p.quotedAmount === null || Number.isInteger(p.quotedAmount), { message: "amountWholeYen" });
 
 /** Create or update a project. Returns an error message, or null on success. */
 export async function saveProject(data: Record<string, unknown>): Promise<string | null> {
@@ -80,6 +83,7 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
     type: input.type,
     stage: input.stage,
     quotedAmount: input.quotedAmount,
+    quoteCurrency: input.currency,
     taxRate: input.taxRate,
     taxIncluded: input.taxIncluded,
     details: {
@@ -200,7 +204,7 @@ export async function openDealItems(id: string): Promise<OpenDealItems | null> {
   if (!owned) return null;
   const { payments, todos, events } = await openItems(db, talent.id, id, await todayFor(talent.id));
   return {
-    payments: payments.map((p) => ({ label: p.label, amount: quote(p.amount, p.taxRate, p.taxIncluded).total, currency: p.currency, dueDate: p.dueDate })),
+    payments: payments.map((p) => ({ label: p.label, amount: quote(p.amount, p.taxRate, p.taxIncluded, p.currency).total, currency: p.currency, dueDate: p.dueDate })),
     todos: todos.map(({ title, dueDate }) => ({ title, dueDate })),
     events: events.map(({ title, date, time }) => ({ title, date, time: time ? time.slice(0, 5) : null })),
   };

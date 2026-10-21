@@ -359,7 +359,7 @@
       "status": "狀態",
       "due": "付款期限",
       "invoice": "發票",
-      "filename": "內帳-TWD.csv"
+      "filename": "內帳-{currency}.csv"
     },
     "edit": "編輯",
     "restore": "還原",
@@ -581,6 +581,7 @@
     "received": "已收款",
     "outstanding": "待收款",
     "shortfall": "實收差額",
+    "otherCurrencies": "其他幣別",
     "createPlan": "建立訂金與尾款",
     "closingCheck": "結案前檢查",
     "warn": {
@@ -1623,6 +1624,7 @@
     "contactNotFound": "找不到這位聯絡人。",
     "amountNegative": "金額不能是負數。",
     "amountDecimals": "金額最多兩位小數。",
+    "amountWholeYen": "日圓金額須為整數。",
     "entryNameRequired": "請填寫紀錄名稱。",
     "taxRateRange": "稅率需介於 0–100%。",
     "settledDateRequired": "已收／已付的紀錄需要實際收付日期。",

@@ -8,7 +8,7 @@ import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { payment, project, talent } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
-import { quote, SplitError, splitPayments } from "@/lib/domain/money";
+import { quote, SplitError, splitPayments, supportedCurrencies } from "@/lib/domain/money";
 import { isOpenStage } from "@/lib/domain/phases";
 import { checkProjectLink } from "./project-link";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
@@ -33,6 +33,7 @@ const paymentInput = z
     direction: z.enum(["in", "out"]),
     installment: z.enum(["regular", "deposit", "balance"]),
     amount: money,
+    currency: z.enum(supportedCurrencies),
     taxRate: z.coerce.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
     taxIncluded: z.boolean(),
     recordedDate: day,
@@ -45,6 +46,9 @@ const paymentInput = z
   })
   .refine((p) => p.status !== "settled" || p.settledDate, {
     message: "settledDateRequired",
+  })
+  .refine((p) => p.currency !== "JPY" || (Number.isInteger(p.amount) && (p.settledAmount === null || Number.isInteger(p.settledAmount))), {
+    message: "amountWholeYen",
   });
 
 async function today(talentId: string) {
@@ -79,6 +83,7 @@ export async function savePayment(data: Record<string, unknown>): Promise<string
     direction: input.direction,
     installment: input.installment,
     amount: input.amount,
+    currency: input.currency,
     taxRate: input.taxRate,
     taxIncluded: input.taxIncluded,
     recordedOn: input.recordedDate,
@@ -170,7 +175,7 @@ export async function createPaymentPlan(data: Record<string, unknown>): Promise<
 
     let split: ReturnType<typeof splitPayments>;
     try {
-      split = splitPayments(quote(p.quotedAmount, p.taxRate, p.taxIncluded).total, percent);
+      split = splitPayments(quote(p.quotedAmount, p.taxRate, p.taxIncluded, p.quoteCurrency).total, percent, p.quoteCurrency);
     } catch (e) {
       if (e instanceof SplitError) return fail(e.code);
       throw e;
@@ -179,6 +184,7 @@ export async function createPaymentPlan(data: Record<string, unknown>): Promise<
       talentId: current.id,
       projectId,
       direction: "in" as const,
+      currency: p.quoteCurrency, // the plan bills the quote, in its currency
       taxRate: p.taxRate,
       taxIncluded: true, // the split parts are tax-inclusive amounts
       recordedOn,

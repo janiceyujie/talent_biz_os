@@ -18,6 +18,7 @@ import { getProject } from "@/lib/data/projects";
 import { db } from "@/lib/db";
 import { auditLog, calendarEvent, contact, contract, message, messageAnalysis, payment, person as personTable, project, projectContact, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
+import type { Currency } from "@/lib/domain/money";
 import { initialEdit, intakeContext, keptFields, proposeChanges, withField, type Change, type ChangeRecord, type IntakeContext } from "@/lib/domain/intake";
 import { isSigned } from "@/lib/domain/phases";
 import { paymentTotal } from "@/lib/domain/workflow";
@@ -218,7 +219,7 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
             .where(and(eq(payment.id, c.paymentId), eq(payment.talentId, talent.id), eq(payment.projectId, target.id), eq(payment.status, "expected")))
             .for("update");
           if (!p) return fail("proposalChanged");
-          const total = paymentTotal({ ...p, currency: "TWD" });
+          const total = paymentTotal({ ...p, currency: p.currency as Currency });
           await tx
             .update(payment)
             .set({

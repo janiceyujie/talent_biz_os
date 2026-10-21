@@ -977,6 +977,8 @@ export const mailDecision = pgTable(
     kind: text({ enum: mailKinds }), // what the model says it looks like: our label, nothing from the email
     classifierVersion: text().notNull(), // the rules version, and the model step's prompt and model when it decided
     messageId: uuid().references(() => message.id, { onDelete: "set null" }), // the message it became, once brought in
+    // Why bringing it in failed after every retry: a code, never mail content. Cleared when it's queued again.
+    fetchFailure: text(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

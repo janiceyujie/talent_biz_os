@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
@@ -160,6 +160,29 @@ export async function markWasWork(decisionId: string): Promise<string | null> {
     return !!d;
   });
   if (!found) return fail("invalid");
+  refresh();
+  return null;
+}
+
+/** Try again, on an email in Waiting that couldn't be brought in: it's queued once more. */
+export async function retryFetch(decisionId: string): Promise<string | null> {
+  const { talent } = await requireTalent();
+  const fail = await errorText();
+  if (!z.uuid().safeParse(decisionId).success) return fail("invalid");
+  const [d] = await db
+    .select({ id: mailDecision.id, connectionId: mailDecision.connectionId })
+    .from(mailDecision)
+    .where(
+      and(
+        eq(mailDecision.id, decisionId),
+        eq(mailDecision.talentId, talent.id),
+        inArray(mailDecision.outcome, ["work", "unsure"]),
+        isNull(mailDecision.messageId),
+        isNotNull(mailDecision.fetchFailure),
+      ),
+    );
+  if (!d) return fail("invalid");
+  await queueFetch(d.connectionId, d.id);
   refresh();
   return null;
 }

@@ -31,6 +31,7 @@ export async function listMailDecisions(talentId: string, view: GmailMailView, o
       decidedBy: mailDecision.decidedBy,
       score: mailDecision.score,
       kind: mailDecision.kind,
+      fetchFailure: mailDecision.fetchFailure,
     })
     .from(mailDecision)
     // Brought in already: it's in Messages instead.
@@ -55,6 +56,7 @@ export async function listMailDecisions(talentId: string, view: GmailMailView, o
       decidedBy: r.decidedBy,
       score: r.score,
       kind: r.kind,
+      fetchFailed: !!r.fetchFailure,
       from: found.get(r.gmailId)?.from ?? null, // null: deleted in Gmail since, or not readable right now
       subject: found.get(r.gmailId)?.subject ?? null,
     })),

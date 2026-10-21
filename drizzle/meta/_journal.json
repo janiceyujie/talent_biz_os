@@ -302,6 +302,13 @@
       "when": 1792557738193,
       "tag": "0042_record_too_large",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792558233376,
+      "tag": "0043_record_fetch_failures",
+      "breakpoints": true
     }
   ]
 }

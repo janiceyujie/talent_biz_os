@@ -399,6 +399,7 @@ export type GmailMailItem = {
   decidedBy: string | null; // a rule id (lib/mail/relevance/rules.ts), "model", "person", "gone", or "too_large"; null while pending
   score: number | null; // the model's, 0 to 1
   kind: string | null; // what the model says it looks like (lib/mail/relevance/prompt.ts)
+  fetchFailed: boolean; // bringing it in failed after every retry; Try again queues it once more
   from: { address: string; name: string } | null; // read live from Gmail; null when it couldn't be
   subject: string | null;
 };

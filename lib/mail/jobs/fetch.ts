@@ -4,7 +4,7 @@ import { and, eq, inArray, isNull, lt, max } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { file, mailConnection, mailDecision, message, person, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
-import { queue, type EnqueueOptions } from "@/lib/queue";
+import { queue } from "@/lib/queue";
 import { analysisQueue, analyzeJobKey, fetchJobKey, fetchQueue } from "@/lib/queue/jobs";
 import { removeObjects, writeBytes } from "@/lib/storage";
 import { accessToken, MailAccessLost, markReconnectNeeded } from "../access";
@@ -33,8 +33,17 @@ export async function queueFetching(connectionId: string) {
   for (const d of waiting) await queueFetch(connectionId, d.id);
 }
 
-export const queueFetch = (connectionId: string, decisionId: string, tx?: EnqueueOptions["tx"]) =>
-  queue.enqueue("mail.fetch", { decisionId }, { tx, queueName: fetchQueue(connectionId), jobKey: fetchJobKey(decisionId) });
+/** Bring an email in, in the background; a failure recorded by an earlier try is cleared. */
+export async function queueFetch(connectionId: string, decisionId: string, tx?: Parameters<Parameters<typeof db.transaction>[0]>[0]) {
+  await (tx ?? db).update(mailDecision).set({ fetchFailure: null }).where(eq(mailDecision.id, decisionId));
+  await queue.enqueue("mail.fetch", { decisionId }, { tx, queueName: fetchQueue(connectionId), jobKey: fetchJobKey(decisionId) });
+}
+
+/** The last try failed: say so in Waiting, with a code that names the cause and nothing from the email. */
+export async function markFetchFailed(decisionId: string, e: unknown) {
+  const code = e instanceof GmailError ? `gmail_${e.status}` : e instanceof Error ? e.name.slice(0, 40) : "unexpected";
+  await db.update(mailDecision).set({ fetchFailure: code }).where(and(eq(mailDecision.id, decisionId), isNull(mailDecision.messageId)));
+}
 
 export async function fetchDecision(decisionId: string) {
   const [row] = await db

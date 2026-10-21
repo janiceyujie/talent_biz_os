@@ -9,6 +9,9 @@
 #   and later syncs leave them alone. Their values never go in this file.
 # - The worker is a private service: the web service reaches it on the private network
 #   for Intake's live mailbox questions (worker/http.ts), and nothing else can.
+# - The worker runs the bundled dist/worker.cjs (npm run build:worker). Its heap is capped
+#   at 384 MB of the starter plan's 512 MB, so Node collects garbage before Render
+#   kills it for memory; raise both together.
 # - Both services connect through Supabase's session-mode pooler (port 5432). The web
 #   service can't use transaction mode (6543) until lib/db turns off prepared statements.
 
@@ -79,8 +82,8 @@ projects:
             plan: starter
             branch: main
             autoDeployTrigger: "off"
-            dockerCommand: node_modules/.bin/tsx --conditions=react-server worker/index.ts
-            preDeployCommand: npm run db:migrate
+            dockerCommand: node --conditions=react-server --enable-source-maps --max-old-space-size=384 dist/worker.cjs
+            preDeployCommand: node dist/migrate.mjs
             # Running jobs finish before it stops; a job is capped at 10 minutes (worker/tasks.ts).
             maxShutdownDelaySeconds: 300
             envVars:
@@ -187,8 +190,8 @@ projects:
             plan: starter
             branch: main
             autoDeployTrigger: "off"
-            dockerCommand: node_modules/.bin/tsx --conditions=react-server worker/index.ts
-            preDeployCommand: npm run db:migrate
+            dockerCommand: node --conditions=react-server --enable-source-maps --max-old-space-size=384 dist/worker.cjs
+            preDeployCommand: node dist/migrate.mjs
             maxShutdownDelaySeconds: 300
             envVars:
               - fromGroup: taloox-production

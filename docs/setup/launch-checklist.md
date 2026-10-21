@@ -6,7 +6,8 @@ What has to happen before the first production deploy and before real users. Eac
 
 - [x] Hosting and job queue, together: Render in Singapore and Graphile Worker ([decision 0014](../decisions/0014-hosting-and-job-queue.md)).
 - [ ] Supabase on the Pro plan (backups, no idle pausing) before the first person besides the builder connects Gmail.
-- [ ] `Dockerfile` and `render.yaml`; the worker on the session-mode pooler.
+- [x] `Dockerfile` and `render.yaml`; the worker on the session-mode pooler ([render.md](render.md)).
+- [ ] The web service on the transaction-mode pooler: `lib/db` turns off prepared statements first (both use the session-mode pooler until then).
 - [ ] Staging and production as separate Render services and Supabase projects, each with its own Google project, KMS key, bucket, and Pub/Sub ([decision 0025](../decisions/0025-environments-and-deployment.md)).
 - [ ] Deploy workflows: `main` to staging, a `vX.Y.Z` release to production, each running migrate → worker → web → smoke check; Render auto-deploy off; a tag ruleset so only the builder creates `v*` tags.
 - [ ] Secrets on each Render service as `sync: false`, non-secret settings in each environment's group; GitHub holds only the Render API key and service ids.
@@ -67,6 +68,7 @@ From [decision 0008](../decisions/0008-ai-operations.md):
 - [ ] `AI_ALERT_EMAIL` set, so a tripped spending cap reaches someone.
 - [ ] `OPS_ALERT_EMAIL` set, so a failed or changed opportunity source reaches someone.
 - [ ] Pause and resume tried once on the deployed web service and worker: with `AI_PAUSED=1`, paste a made-up message and see it wait as Paused; unset it and see the message analyzed within about 5 minutes. Then set `AI_DAILY_SPEND_CAP_USD` below the day's spend and see the alert email arrive. (Done locally for PR #28; the deployed run checks the real worker and mail provider.)
+- [ ] Evals in CI: a job that runs `npm run eval:extraction` and `eval:relevance` on pull requests touching `lib/ai/`, with a capped paid key and made-up cases only, and posts the scores. Then keep `evals/` out of the image (exclude the eval scripts from `tsconfig.json`, type-check them in that job).
 
 ## 6. Operations
 

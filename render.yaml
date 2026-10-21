@@ -1,0 +1,230 @@
+# Render Blueprint: staging and production, each a web service and a worker built from
+# the one Dockerfile, in Singapore (docs/decisions/0014-hosting-and-job-queue.md).
+# Setting it up and filling in the secrets: docs/setup/render.md.
+#
+# - Nothing deploys on its own (autoDeployTrigger: off). A GitHub Actions workflow
+#   deploys an exact commit: the worker first, whose pre-deploy command migrates the
+#   database, then the web service once the worker is live.
+# - Secrets are `sync: false`: Render asks for each when the Blueprint is first applied
+#   and later syncs leave them alone. Their values never go in this file.
+# - The worker is a private service: the web service reaches it on the private network
+#   for Intake's live mailbox questions (worker/http.ts), and nothing else can.
+# - Both services connect through Supabase's session-mode pooler (port 5432). The web
+#   service can't use transaction mode (6543) until lib/db turns off prepared statements.
+
+projects:
+  - name: taloox
+    environments:
+      - name: staging
+        networking:
+          isolation: enabled
+        envVarGroups:
+          - name: taloox-staging
+            envVars:
+              - key: AI_PRIMARY
+                value: anthropic
+              - key: AI_BACKUP
+                value: openai
+              - key: STORAGE_BUCKET
+                value: talent-files
+              # Shared by web and worker for the worker's private endpoint.
+              - key: WORKER_SECRET
+                generateValue: true
+        services:
+          - type: web
+            name: taloox-web-staging
+            runtime: docker
+            region: singapore
+            plan: starter
+            branch: main
+            autoDeployTrigger: "off"
+            healthCheckPath: /api/health
+            envVars:
+              - fromGroup: taloox-staging
+              - key: WORKER_URL
+                fromService:
+                  type: pserv
+                  name: taloox-worker-staging
+                  property: hostport
+              - key: DATABASE_URL
+                sync: false
+              - key: BETTER_AUTH_SECRET
+                sync: false
+              - key: BETTER_AUTH_URL
+                sync: false
+              - key: GOOGLE_CLIENT_ID
+                sync: false
+              - key: GOOGLE_CLIENT_SECRET
+                sync: false
+              - key: SMTP_URL
+                sync: false
+              - key: EMAIL_FROM
+                sync: false
+              - key: STORAGE_S3_ENDPOINT
+                sync: false
+              - key: STORAGE_S3_REGION
+                sync: false
+              - key: STORAGE_S3_ACCESS_KEY_ID
+                sync: false
+              - key: STORAGE_S3_SECRET_ACCESS_KEY
+                sync: false
+              - key: ANTHROPIC_API_KEY
+                sync: false
+              - key: OPENAI_API_KEY
+                sync: false
+          - type: pserv
+            name: taloox-worker-staging
+            runtime: docker
+            region: singapore
+            plan: starter
+            branch: main
+            autoDeployTrigger: "off"
+            dockerCommand: node_modules/.bin/tsx --conditions=react-server worker/index.ts
+            preDeployCommand: npm run db:migrate
+            # Running jobs finish before it stops; a job is capped at 10 minutes (worker/tasks.ts).
+            maxShutdownDelaySeconds: 300
+            envVars:
+              - fromGroup: taloox-staging
+              - key: WORKER_HTTP_HOST
+                value: 0.0.0.0
+              - key: WORKER_HTTP_PORT
+                value: "3001"
+              - key: DATABASE_URL
+                sync: false
+              - key: BETTER_AUTH_SECRET
+                sync: false
+              - key: BETTER_AUTH_URL
+                sync: false
+              - key: GOOGLE_CLIENT_ID
+                sync: false
+              - key: GOOGLE_CLIENT_SECRET
+                sync: false
+              - key: SMTP_URL
+                sync: false
+              - key: EMAIL_FROM
+                sync: false
+              - key: STORAGE_S3_ENDPOINT
+                sync: false
+              - key: STORAGE_S3_REGION
+                sync: false
+              - key: STORAGE_S3_ACCESS_KEY_ID
+                sync: false
+              - key: STORAGE_S3_SECRET_ACCESS_KEY
+                sync: false
+              - key: ANTHROPIC_API_KEY
+                sync: false
+              - key: OPENAI_API_KEY
+                sync: false
+              - key: PUBSUB_TOPIC
+                sync: false
+              - key: PUBSUB_SUBSCRIPTION
+                sync: false
+              - key: GCP_PUBSUB_CREDENTIALS
+                sync: false
+
+      - name: production
+        networking:
+          isolation: enabled
+        permissions:
+          protection: enabled
+        envVarGroups:
+          - name: taloox-production
+            envVars:
+              - key: AI_PRIMARY
+                value: anthropic
+              - key: AI_BACKUP
+                value: openai
+              - key: STORAGE_BUCKET
+                value: talent-files
+              - key: WORKER_SECRET
+                generateValue: true
+        services:
+          - type: web
+            name: taloox-web
+            runtime: docker
+            region: singapore
+            plan: starter
+            branch: main
+            autoDeployTrigger: "off"
+            healthCheckPath: /api/health
+            envVars:
+              - fromGroup: taloox-production
+              - key: WORKER_URL
+                fromService:
+                  type: pserv
+                  name: taloox-worker
+                  property: hostport
+              - key: DATABASE_URL
+                sync: false
+              - key: BETTER_AUTH_SECRET
+                sync: false
+              - key: BETTER_AUTH_URL
+                sync: false
+              - key: GOOGLE_CLIENT_ID
+                sync: false
+              - key: GOOGLE_CLIENT_SECRET
+                sync: false
+              - key: SMTP_URL
+                sync: false
+              - key: EMAIL_FROM
+                sync: false
+              - key: STORAGE_S3_ENDPOINT
+                sync: false
+              - key: STORAGE_S3_REGION
+                sync: false
+              - key: STORAGE_S3_ACCESS_KEY_ID
+                sync: false
+              - key: STORAGE_S3_SECRET_ACCESS_KEY
+                sync: false
+              - key: ANTHROPIC_API_KEY
+                sync: false
+              - key: OPENAI_API_KEY
+                sync: false
+          - type: pserv
+            name: taloox-worker
+            runtime: docker
+            region: singapore
+            plan: starter
+            branch: main
+            autoDeployTrigger: "off"
+            dockerCommand: node_modules/.bin/tsx --conditions=react-server worker/index.ts
+            preDeployCommand: npm run db:migrate
+            maxShutdownDelaySeconds: 300
+            envVars:
+              - fromGroup: taloox-production
+              - key: WORKER_HTTP_HOST
+                value: 0.0.0.0
+              - key: WORKER_HTTP_PORT
+                value: "3001"
+              - key: DATABASE_URL
+                sync: false
+              - key: BETTER_AUTH_SECRET
+                sync: false
+              - key: BETTER_AUTH_URL
+                sync: false
+              - key: GOOGLE_CLIENT_ID
+                sync: false
+              - key: GOOGLE_CLIENT_SECRET
+                sync: false
+              - key: SMTP_URL
+                sync: false
+              - key: EMAIL_FROM
+                sync: false
+              - key: STORAGE_S3_ENDPOINT
+                sync: false
+              - key: STORAGE_S3_REGION
+                sync: false
+              - key: STORAGE_S3_ACCESS_KEY_ID
+                sync: false
+              - key: STORAGE_S3_SECRET_ACCESS_KEY
+                sync: false
+              - key: ANTHROPIC_API_KEY
+                sync: false
+              - key: OPENAI_API_KEY
+                sync: false
+              - key: PUBSUB_TOPIC
+                sync: false
+              - key: PUBSUB_SUBSCRIPTION
+                sync: false
+              - key: GCP_PUBSUB_CREDENTIALS
+                sync: false

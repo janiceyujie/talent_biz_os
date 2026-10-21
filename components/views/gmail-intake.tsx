@@ -279,7 +279,8 @@ function GmailMailDetail({
         )}
       </dl>
       <div className="row-actions section-gap">
-        {view === "skipped" && (
+        {/* One too large to bring in would only be refused again: the reason says to paste what matters instead. */}
+        {view === "skipped" && item.decidedBy !== "too_large" && (
           <button
             className="primary"
             disabled={pending}

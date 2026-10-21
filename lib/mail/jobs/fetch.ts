@@ -9,7 +9,7 @@ import { analysisQueue, analyzeJobKey, fetchJobKey, fetchQueue } from "@/lib/que
 import { removeObjects, writeBytes } from "@/lib/storage";
 import { accessToken, MailAccessLost, markReconnectNeeded } from "../access";
 import { stripQuoted } from "../clean";
-import { gmailProvider } from "../gmail";
+import { GmailError, gmailProvider } from "../gmail";
 import { chooseAttachments, FETCH_LIMITS } from "../attachments";
 import type { AttachmentRef } from "../gmail/parts";
 import { senderCheck } from "../sender-auth";
@@ -57,6 +57,11 @@ export async function fetchDecision(decisionId: string) {
     read = await mail.getMessage(d.providerMessageId);
   } catch (e) {
     if (e instanceof MailAccessLost) return markReconnectNeeded(c.id);
+    // Too large to read: retrying won't shrink it. Filtered out, saying why, so it's opened in Gmail instead.
+    if (e instanceof GmailError && e.reason === "response_too_large") {
+      await db.update(mailDecision).set({ outcome: "skipped", decidedBy: "too_large" }).where(eq(mailDecision.id, d.id));
+      return;
+    }
     throw e;
   }
   if (!read) {
@@ -69,9 +74,15 @@ export async function fetchDecision(decisionId: string) {
   const stored: { id: string; key: string; a: AttachmentRef; size: number }[] = [];
   try {
     for (const a of fetch) {
-      const bytes = a.attachmentId ? await mail.getAttachment(read.id, a.attachmentId) : Buffer.from(a.data ?? "", "base64url");
+      // One larger than Gmail's listed size said is listed, not fetched, rather than failing the whole email.
+      const bytes = a.attachmentId
+        ? await mail.getAttachment(read.id, a.attachmentId).catch((e) => {
+            if (e instanceof GmailError && e.reason === "response_too_large") return Buffer.alloc(0);
+            throw e;
+          })
+        : Buffer.from(a.data ?? "", "base64url");
       if (!bytes.length || bytes.length > FETCH_LIMITS.fileBytes) {
-        skipped.push({ filename: a.filename, mimeType: a.mimeType, sizeBytes: bytes.length });
+        skipped.push({ filename: a.filename, mimeType: a.mimeType, sizeBytes: bytes.length || a.size });
         continue;
       }
       const id = randomUUID();

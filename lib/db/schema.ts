@@ -955,7 +955,8 @@ export const mailDecisionOutcomes = ["work", "skipped", "pending", "unsure", "no
 // Who decided: a rule (lib/mail/relevance/rules.ts), the model, the person with
 // a sender rule, `gone` when the email was deleted in Gmail before the model saw it, or
 // `expired` when a payment notice was left unhandled for 30 days.
-export const mailDecisionDeciders = [...ruleIds, "model", "analysis", "person", "gone", "expired"] as const;
+// "too_large": its text and markup are past what's read of a message (lib/mail/gmail/limits.ts), so it can't be brought in.
+export const mailDecisionDeciders = [...ruleIds, "model", "analysis", "person", "gone", "expired", "too_large"] as const;
 
 export const mailDecision = pgTable(
   "mail_decision",

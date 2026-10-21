@@ -396,7 +396,7 @@ export type GmailMailItem = {
   gmailId: string;
   receivedAt: string;
   outcome: "work" | "skipped" | "pending" | "unsure" | "not_work";
-  decidedBy: string | null; // a rule id (lib/mail/relevance/rules.ts), "model", "person", or "gone"; null while pending
+  decidedBy: string | null; // a rule id (lib/mail/relevance/rules.ts), "model", "person", "gone", or "too_large"; null while pending
   score: number | null; // the model's, 0 to 1
   kind: string | null; // what the model says it looks like (lib/mail/relevance/prompt.ts)
   from: { address: string; name: string } | null; // read live from Gmail; null when it couldn't be

@@ -1244,6 +1244,7 @@
       "pending": "No rule matched. A later check will decide.",
       "model": "The model",
       "gone": "Deleted in Gmail before it was checked",
+      "too_large": "Too large to bring in: its text and formatting are over 10 MB. Open it in Gmail and paste what matters into Intake.",
       "analysis": "The analysis found it isn't work"
     },
     "peekError": {

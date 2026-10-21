@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { InboxMessage } from "@/lib/types";
+import type { OpenedMessage } from "@/lib/types";
 
 // The last version seen of each message: shown while a newer one loads, so a
 // refresh (an analysis landing, a save) doesn't blank the reader for a moment.
-const latest = new Map<string, InboxMessage>();
+const latest = new Map<string, OpenedMessage>();
 const LATEST_MAX = 30;
 
 /**
@@ -14,7 +14,7 @@ const LATEST_MAX = 30;
  * fetched again.
  */
 export function useInboxDetail(id: string, revision: unknown) {
-  const [state, setState] = useState<{ id: string; revision: unknown; message: InboxMessage | null; failed: boolean }>({
+  const [state, setState] = useState<{ id: string; revision: unknown; message: OpenedMessage | null; failed: boolean }>({
     id: "",
     revision: null,
     message: null,
@@ -25,7 +25,7 @@ export function useInboxDetail(id: string, revision: unknown) {
     if (!id) return;
     const abort = new AbortController();
     fetch(`/api/inbox/${id}`, { signal: abort.signal })
-      .then((r) => (r.ok ? (r.json() as Promise<InboxMessage>) : Promise.reject(r.status)))
+      .then((r) => (r.ok ? (r.json() as Promise<OpenedMessage>) : Promise.reject(r.status)))
       .then((message) => {
         latest.delete(id);
         latest.set(id, message);

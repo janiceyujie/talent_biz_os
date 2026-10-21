@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { db } from "@/lib/db";
 import { file, message, messageAnalysis, todo } from "@/lib/db/schema";
@@ -12,8 +12,6 @@ import type { InboxMessage, InboxOverview, InboxPage, InboxSummary } from "@/lib
 
 /** Messages waiting for review that Today lists; it says how many more there are. */
 export const REVIEW_SHOWN = 10;
-/** Filed messages a proposal compares the sender and dates with, newest first (as the layout's 200 newest did). */
-const FILED_COMPARED = 200;
 
 // The newest analysis's title, summary, and whether it raised a flag, in one lookup per row.
 // Written out in full: in a one-table query Drizzle leaves columns unqualified.
@@ -128,7 +126,7 @@ export async function inboxOverview(talentId: string): Promise<InboxOverview> {
   };
 }
 
-/** One message in full, as its review needs it: the analysis, files, its email thread, and filed messages to match with. */
+/** One message in full, as its review needs it: the analysis, files, and its email thread. Its suggestions: lib/data/suggestions.ts. */
 export async function inboxDetail(talentId: string, id: string): Promise<InboxMessage | null> {
   const [m] = await db.select().from(message).where(and(eq(message.id, id), eq(message.talentId, talentId)));
   if (!m) return null;
@@ -136,7 +134,7 @@ export async function inboxDetail(talentId: string, id: string): Promise<InboxMe
     m.connectionId && m.providerThreadId
       ? and(eq(message.talentId, talentId), eq(message.connectionId, m.connectionId), eq(message.providerThreadId, m.providerThreadId), ne(message.id, id))
       : null;
-  const [[analysis], files, completed, thread, filed] = await Promise.all([
+  const [[analysis], files, completed, thread] = await Promise.all([
     // Analyses are versioned; the newest wins.
     db.select().from(messageAnalysis).where(eq(messageAnalysis.messageId, id)).orderBy(desc(messageAnalysis.createdAt)).limit(1),
     db
@@ -152,33 +150,6 @@ export async function inboxDetail(talentId: string, id: string): Promise<InboxMe
           .from(message)
           .where(sameThread)
       : [],
-    // Earlier filed messages' sender and dates, from each one's newest analysis.
-    db
-      .selectDistinctOn([message.id], {
-        projectId: message.projectId,
-        counterparty: sql<InboxMessage["filed"][number]["counterparty"]>`${messageAnalysis.analysis} -> 'counterparty'`,
-        dates: sql<{ what: string; date: string; time: string; timeZone: string }[]>`coalesce(${messageAnalysis.analysis} -> 'dates', '[]'::jsonb)`,
-      })
-      .from(message)
-      .innerJoin(messageAnalysis, eq(messageAnalysis.messageId, message.id))
-      .where(
-        and(
-          eq(message.talentId, talentId),
-          eq(message.status, "confirmed"),
-          isNotNull(message.projectId),
-          ne(message.id, id),
-          inArray(
-            message.id,
-            db
-              .select({ id: message.id })
-              .from(message)
-              .where(and(eq(message.talentId, talentId), eq(message.status, "confirmed"), isNotNull(message.projectId)))
-              .orderBy(desc(message.receivedAt))
-              .limit(FILED_COMPARED),
-          ),
-        ),
-      )
-      .orderBy(message.id, desc(messageAnalysis.createdAt)),
   ]);
 
   const later = thread.filter((x) => x.receivedAt > m.receivedAt);
@@ -220,10 +191,5 @@ export async function inboxDetail(talentId: string, id: string): Promise<InboxMe
         .sort((x, y) => x.receivedAt.getTime() - y.receivedAt.getTime())
         .map((x) => x.id),
     },
-    filed: filed.map((f) => ({
-      projectId: f.projectId!,
-      counterparty: f.counterparty ?? { name: "", company: "", email: "" },
-      dates: f.dates.filter((d) => d.date).map((d) => ({ what: d.what, date: d.date, time: d.time, timeZone: d.timeZone })),
-    })),
   };
 }

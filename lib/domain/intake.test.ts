@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { MessageAnalysis } from "@/lib/ai/analysis";
 import type { CalendarItem, Contact, ContractTerms, Payment, Project } from "@/lib/types";
-import { diffTerms, parseAmount, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext } from "./intake";
+import { diffTerms, parseAmount, preselect, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext } from "./intake";
 
 const analysis = (over: Partial<MessageAnalysis> = {}): MessageAnalysis => ({
   intent: "inquiry",
@@ -112,7 +112,8 @@ const ctx = (over: Partial<IntakeContext> = {}): IntakeContext => ({
   calendar: [],
   receivedOn: "2026-10-04",
   replyWithinDays: 2,
-  filed: [],
+  correspondents: [],
+  earlierDates: {},
   contracts: [],
   projectPeople: [],
   thread: { projectId: null, replied: false, newer: false },
@@ -141,17 +142,45 @@ describe("suggestTargets", () => {
     assert.equal(suggestTargets(analysis({ counterparty: { name: "", company: "Blue Room", email: "", phone: "" } }), c)[0]?.projectId, "p1");
   });
 
-  test("an earlier message from the same sender filed on the project counts, with its dates", () => {
-    // The project was renamed and has no contact; its first message came from Blue Room on 11/14.
+  test("a sender who corresponds on the project counts as much as its contact, without being one", () => {
+    // The project was renamed and has no contact; Maya has written there before (decision 0019).
     const c = ctx({
       contacts: [],
       projects: [project({ title: "abc", counterparty: "abcd", counterpartyId: null })],
-      filed: [{ projectId: "p1", counterparty: { name: "Blue Room", company: "Blue Room", email: "" }, dates: [{ what: "演出日期", date: "2026-11-14", time: "", timeZone: "" }] }],
+      correspondents: [{ projectId: "p1", lastAt: "2026-09-01T00:00:00Z" }],
     });
-    const [s] = suggestTargets(analysis({ intent: "negotiation", counterparty: { name: "Maya", company: "Blue Room", email: "", phone: "" } }), c);
-    assert.deepEqual(s?.reasons[0], { kind: "earlier", value: "Blue Room" });
-    const byDate = suggestTargets(analysis({ counterparty: { name: "", company: "", email: "", phone: "" }, dates: [date("2026-11-14")] }), c)[0];
-    assert.ok(byDate?.reasons.some((r) => r.kind === "date"));
+    const [s] = suggestTargets(analysis({ intent: "negotiation" }), c);
+    assert.deepEqual([s?.score, s?.reasons[0]], [5, { kind: "earlier", value: "maya@blueroom.example" }]);
+  });
+
+  test("who it's from counts once: a contact who also corresponds there isn't counted twice", () => {
+    const c = ctx({ correspondents: [{ projectId: "p1", lastAt: "2026-09-01T00:00:00Z" }] });
+    const [s] = suggestTargets(analysis({ title: "x" }), c);
+    assert.deepEqual([s.score, s.reasons.map((r) => r.kind)], [5, ["contact"]]);
+  });
+
+  test("a long-term partner's projects tie on who; the one they last wrote on comes first, and none is ticked", () => {
+    const projects = [project({ id: "old", title: "a" }), project({ id: "recent", title: "b" }), project({ id: "older", title: "c" })];
+    const correspondents = [
+      { projectId: "old", lastAt: "2026-05-01T00:00:00Z" },
+      { projectId: "recent", lastAt: "2026-10-01T00:00:00Z" },
+      { projectId: "older", lastAt: "2026-01-01T00:00:00Z" },
+    ];
+    const got = suggestTargets(analysis({ title: "x" }), ctx({ projects, correspondents }));
+    assert.deepEqual(got.map((s) => [s.projectId, s.score]), [["recent", 5], ["old", 5], ["older", 5]]);
+    assert.equal(preselect(got), null);
+  });
+
+  test("a date tells a long-term partner's projects apart, and the one it matches is ticked", () => {
+    const projects = [project({ id: "a", title: "a" }), project({ id: "b", title: "b", details: { dates: [{ what: "", date: "2026-11-14", time: "", timeZone: "" }] } })];
+    const got = suggestTargets(analysis({ title: "x", dates: [date("2026-11-14")] }), ctx({ projects }));
+    assert.deepEqual(got.map((s) => [s.projectId, s.score]), [["b", 8], ["a", 5]]);
+    assert.equal(preselect(got), "b");
+  });
+
+  test("the only suggestion is ticked; none, nothing is", () => {
+    assert.equal(preselect([{ projectId: "p1", score: 3, reasons: [], lastAt: "" }]), "p1");
+    assert.equal(preselect([]), null);
   });
 
   test("a similar title alone isn't enough", () => {
@@ -249,12 +278,12 @@ describe("proposeChanges", () => {
   });
 
   test("a date an earlier message gave is the one being confirmed, though the project doesn't keep it", () => {
-    const filed = [{ projectId: "p1", counterparty: { name: "", company: "Blue Room", email: "" }, dates: [{ what: "演出日期", date: "2026-11-14", time: "", timeZone: "" }] }];
+    const earlierDates = { p1: [{ what: "演出日期", date: "2026-11-14", time: "", timeZone: "" }] };
     const a = analysis({ intent: "confirmation", dates: [date("2026-11-14", "20:00", "演出")] });
-    const d = one(proposeChanges(a, project(), ctx({ filed })).changes, "date");
+    const d = one(proposeChanges(a, project(), ctx({ earlierDates })).changes, "date");
     assert.deepEqual([d.from?.date, d.to.time, d.earlier, d.index, d.ticked], ["2026-11-14", "20:00", true, null, true]);
     // A second inquiry with the same date still offers to keep it on the project.
-    const again = proposeChanges(analysis({ dates: [date("2026-11-14")] }), project(), ctx({ filed })).changes;
+    const again = proposeChanges(analysis({ dates: [date("2026-11-14")] }), project(), ctx({ earlierDates })).changes;
     assert.equal(one(again, "date").earlier, true);
   });
 

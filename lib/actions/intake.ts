@@ -13,7 +13,9 @@ import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { requestCalendarSync } from "@/lib/calendar/google/sync";
 import { requireTalent } from "@/lib/auth";
 import { getAppData } from "@/lib/data";
+import { recordCorrespondents } from "@/lib/data/correspondents";
 import { inboxDetail } from "@/lib/data/inbox";
+import { getProjectDetail } from "@/lib/data/project-detail";
 import { organizationNamed, setClient } from "@/lib/data/organizations";
 import { getProject } from "@/lib/data/projects";
 import { db } from "@/lib/db";
@@ -125,9 +127,10 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
   if (!row || row.status !== "analyzed") return fail("messageNotFound");
 
   const timeZone = data.talent.timeZone;
-  const listed = await inboxDetail(talent.id, input.messageId);
+  const [listed, detail] = await Promise.all([inboxDetail(talent.id, input.messageId), getProjectDetail(talent.id, target.id)]);
   if (!listed) return fail("messageNotFound");
-  const ctx: IntakeContext = { ...intakeContext(data, listed), receivedOn: receivedOn(row.receivedAt, timeZone) };
+  const earlierDates = { [target.id]: detail?.earlierDates ?? [] }; // as the review screen had them, with the project's detail
+  const ctx: IntakeContext = { ...intakeContext(data, listed, { earlierDates }), receivedOn: receivedOn(row.receivedAt, timeZone) };
   const { changes, question } = proposeChanges(upgradeAnalysis(row.analysis), target, ctx);
   if (defaults) {
     if (question) return "skipped";
@@ -171,6 +174,7 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
       .where(and(eq(message.id, input.messageId), eq(message.talentId, talent.id), eq(message.status, "analyzed")))
       .returning({ id: message.id });
     if (!filed.length) return fail("messageNotFound");
+    await recordCorrespondents(tx, talent.id, target.id, input.messageId);
     const [current] = await tx
       .select({ details: project.details, stage: project.stage })
       .from(project)
@@ -501,6 +505,7 @@ export async function createProjectFromMessage(raw: NewProjectInput): Promise<{ 
         .set({ organizationId: client.id })
         .where(and(eq(contact.id, counterpartyId), isNull(contact.organizationId)));
     await tx.update(message).set({ projectId: created.id, status: "confirmed" }).where(eq(message.id, input.messageId));
+    await recordCorrespondents(tx, talent.id, created.id, input.messageId);
     if (input.replyBy)
       await tx.insert(todo).values({
         talentId: talent.id,

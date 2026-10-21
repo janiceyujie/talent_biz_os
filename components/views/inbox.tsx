@@ -21,7 +21,7 @@ import { useLabels } from "@/lib/i18n/labels";
 import { detailFieldKeys, type AssumptionTopic } from "@/lib/ai/analysis";
 import { isFailureCode } from "@/lib/ai/errors";
 import { weekdayMismatchOf } from "@/lib/ai/safety";
-import type { InboxMessage, InboxPage, InboxSummary } from "@/lib/types";
+import type { InboxMessage, InboxPage, InboxSummary, OpenedMessage } from "@/lib/types";
 import { GmailMail, GmailSync, IntakeTabs, type IntakeTab } from "./gmail-intake";
 import { MessageReview } from "./message-review";
 import { NoticeDetail, NoticeRowLine } from "./payment-notice";
@@ -333,7 +333,7 @@ function StatusChip({ status }: { status: InboxMessage["status"] }) {
 }
 
 
-function MessageDetail({ message }: { message: InboxMessage }) {
+function MessageDetail({ message }: { message: OpenedMessage }) {
   const t = useTranslations("inbox");
   const labels = useLabels();
   const tGmail = useTranslations("gmail");

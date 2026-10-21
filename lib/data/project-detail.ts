@@ -4,7 +4,7 @@ import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { db } from "@/lib/db";
 import { auditLog, message, messageAnalysis, project, projectContact, projectOrganization, todo } from "@/lib/db/schema";
 import type { ChangeRecord } from "@/lib/domain/intake";
-import type { ProjectDetail, Stage } from "@/lib/types";
+import type { ProjectDate, ProjectDetail, Stage } from "@/lib/types";
 
 type AppliedDetails = { created?: boolean; applied?: unknown[]; left?: unknown[]; stage?: { from: Stage; to: Stage } | null };
 /** Entries written before items were recorded in full stored only ids; those show as a filed message. */
@@ -76,8 +76,14 @@ export async function getProjectDetail(talentId: string, projectId: string): Pro
   const appliedByMessage = new Map<string, AppliedDetails>();
   for (const r of appliedRows) if (!appliedByMessage.has(r.targetId)) appliedByMessage.set(r.targetId, r.details as AppliedDetails);
 
+  const earlierDates = new Map<string, ProjectDate>();
+  for (const m of confirmed)
+    for (const d of (latestAnalysis.get(m.id) && upgradeAnalysis(latestAnalysis.get(m.id)!.analysis).dates) || [])
+      if (d.date && !earlierDates.has(`${d.date} ${d.time}`)) earlierDates.set(`${d.date} ${d.time}`, { what: d.what, date: d.date, time: d.time, timeZone: d.timeZone });
+
   return {
     projectId,
+    earlierDates: [...earlierDates.values()],
     details: owned.details,
     notes: owned.notes ?? "",
     people: people.map((p) => ({ contactId: p.contactId, label: p.label ?? "" })),

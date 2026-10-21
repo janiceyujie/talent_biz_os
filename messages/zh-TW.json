@@ -772,6 +772,7 @@
   },
   "intake": {
     "targetHeading": "歸入合作案",
+    "pickOne": "有幾個合作案都可能符合，請選這則訊息屬於哪一個。",
     "suggested": "建議",
     "reason": {
       "contact": "同一聯絡人：{value}",

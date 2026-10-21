@@ -19,8 +19,13 @@ export type IntakeContext = {
   receivedOn: string;
   /** The person's default for answering a message with no stated reply-by date. */
   replyWithinDays: number;
-  /** Messages already filed on projects: who sent them and the dates they gave. */
-  filed: FiledMessage[];
+  /**
+   * The projects this message's sender corresponds on (decision 0019), and when they last
+   * wrote there: matching reads these, not past messages.
+   */
+  correspondents: { projectId: string; lastAt: string }[];
+  /** Dates earlier messages on a project gave that it doesn't keep, by project: loaded with the project chosen. */
+  earlierDates: Record<string, ProjectDate[]>;
   contracts: Contract[];
   /** Who is on each project besides its main contact. */
   projectPeople: { projectId: string; contactId: string }[];
@@ -35,14 +40,16 @@ export type IntakeContext = {
   sender: { name: string; email: string } | null;
 };
 
-export type FiledMessage = {
-  projectId: string;
-  counterparty: { name: string; company: string; email: string };
-  dates: ProjectDate[];
-};
-
-/** What a proposal for this message knows, built the same way on the review screen and on the server. */
-export function intakeContext(data: AppData, m: InboxMessage): IntakeContext {
+/**
+ * What a proposal for this message knows, built the same way on the review screen and on the server.
+ * The sender's correspondents come from the server (lib/data/correspondents.ts); a chosen project's
+ * earlier dates, from its detail.
+ */
+export function intakeContext(
+  data: AppData,
+  m: InboxMessage,
+  { correspondents = [], earlierDates = {} }: Partial<Pick<IntakeContext, "correspondents" | "earlierDates">> = {},
+): IntakeContext {
   const address = m.gmail?.sender.match(/<([^<>]+)>\s*$/)?.[1] ?? m.gmail?.sender ?? "";
   return {
     projects: data.projects,
@@ -51,7 +58,8 @@ export function intakeContext(data: AppData, m: InboxMessage): IntakeContext {
     calendar: data.calendar,
     receivedOn: dateInZone(data.talent.timeZone, 0, new Date(m.receivedAt)),
     replyWithinDays: data.person.replyWithinDays,
-    filed: m.filed,
+    correspondents,
+    earlierDates,
     contracts: data.contracts,
     projectPeople: data.projectPeople,
     thread: { projectId: m.thread.projectId, replied: m.thread.replied, newer: m.thread.newer },
@@ -69,13 +77,14 @@ export function intakeContext(data: AppData, m: InboxMessage): IntakeContext {
 export type TargetReason =
   | { kind: "thread"; value: string } // a message in the same email thread is filed on the project
   | { kind: "contact"; value: string } // same email, company, or name
-  | { kind: "earlier"; value: string } // an earlier message from the same sender is filed on the project
+  | { kind: "earlier"; value: string } // the sender corresponds on the project: an earlier message of theirs is filed there
   | { kind: "date"; value: string } // a date the project already has
   | { kind: "detail"; value: string } // same venue, event, brand, campaign…
   | { kind: "title"; value: string }
   | { kind: "payment"; value: number; currency: Currency }; // the total of an expected payment the amount matches
 
-export type TargetSuggestion = { projectId: string; score: number; reasons: TargetReason[] };
+/** `lastAt`: when the sender last wrote on the project, "" when they haven't. */
+export type TargetSuggestion = { projectId: string; score: number; reasons: TargetReason[]; lastAt: string };
 
 const norm = (s: string) => s.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
 const same = (a: string, b: string) => !!a && !!b && norm(a) === norm(b);
@@ -136,36 +145,24 @@ export function suggestTargets(a: MessageAnalysis, ctx: IntakeContext): TargetSu
       reasons.push({ kind: "thread", value: "" });
     }
 
+    // Who it's from, counted once: the project's contact by email, the sender corresponding on the
+    // project (decision 0019), or else a matching name or company.
     const contact = ctx.contacts.find((c) => c.id === project.counterpartyId);
+    const corresponds = ctx.correspondents.find((c) => c.projectId === project.id);
+    const names = [project.counterparty, contact?.name ?? "", contact?.company ?? ""];
+    const byName = [who.company, who.name].find((n) => names.some((m) => same(m, n) || (n.length >= 4 && overlaps(m, n))));
     if (contact && same(contact.email, who.email)) {
       score += 5;
       reasons.push({ kind: "contact", value: contact.email });
-    } else {
-      const names = [project.counterparty, contact?.name ?? "", contact?.company ?? ""];
-      const hit = [who.company, who.name].find((n) => names.some((m) => same(m, n) || (n.length >= 4 && overlaps(m, n))));
-      if (hit) {
-        score += 3;
-        reasons.push({ kind: "contact", value: hit });
-      }
+    } else if (corresponds) {
+      score += 5;
+      reasons.push({ kind: "earlier", value: ctx.sender?.email || who.email });
+    } else if (byName) {
+      score += 3;
+      reasons.push({ kind: "contact", value: byName });
     }
 
-    // Messages already filed here: the same sender is as good a sign as a linked contact.
-    const earlier = ctx.filed.filter((f) => f.projectId === project.id);
-    if (!reasons.length) {
-      const byEmail = earlier.find((f) => same(f.counterparty.email, who.email));
-      const byName = [who.company, who.name].find((n) =>
-        earlier.some((f) => [f.counterparty.company, f.counterparty.name].some((m) => same(m, n) || (n.length >= 4 && overlaps(m, n)))),
-      );
-      if (byEmail) {
-        score += 5;
-        reasons.push({ kind: "earlier", value: who.email });
-      } else if (byName) {
-        score += 3;
-        reasons.push({ kind: "earlier", value: byName });
-      }
-    }
-
-    const projectDates = new Set([...datesOf(project, ctx.calendar), ...earlier.flatMap((f) => f.dates.map((d) => d.date))]);
+    const projectDates = new Set(datesOf(project, ctx.calendar));
     const date = a.dates.find((d) => d.date && projectDates.has(d.date));
     if (date) {
       score += 3;
@@ -198,9 +195,20 @@ export function suggestTargets(a: MessageAnalysis, ctx: IntakeContext): TargetSu
 
     // A finished project still takes a late payment notice, but rarely anything else.
     if (ended(project.stage) && a.intent !== "payment") score -= 2;
-    if (score >= 3) out.push({ projectId: project.id, score, reasons });
+    if (score >= 3) out.push({ projectId: project.id, score, reasons, lastAt: corresponds?.lastAt ?? "" });
   }
-  return out.sort((x, y) => y.score - x.score);
+  // Equal points: the project the sender last wrote on first. Recency orders; it never adds points.
+  return out.sort((x, y) => y.score - x.score || y.lastAt.localeCompare(x.lastAt));
+}
+
+/** A clear lead over the next suggestion: one more piece of evidence (decision 0019). */
+export const CLEAR_LEAD = 3;
+
+/** The suggestion to tick: the only one, or one that clearly leads; otherwise none, and the person picks. */
+export function preselect(suggestions: TargetSuggestion[]): string | null {
+  const [first, second] = suggestions;
+  if (!first) return null;
+  return !second || first.score - second.score >= CLEAR_LEAD ? first.projectId : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -379,9 +387,7 @@ function dateChanges(a: MessageAnalysis, project: Project, ctx: IntakeContext, t
     ...kept.map((d, index) => ({ date: d, eventId: null, index, earlier: false })),
   ];
   // Dates that earlier messages on this project gave but the project doesn't keep (e.g. it predates kept dates).
-  const fromMessages: Known[] = ctx.filed
-    .filter((f) => f.projectId === project.id)
-    .flatMap((f) => f.dates)
+  const fromMessages: Known[] = (ctx.earlierDates[project.id] ?? [])
     .filter((d, i, all) => !onProject.some((e) => e.date.date === d.date) && all.findIndex((x) => x.date === d.date && x.time === d.time) === i)
     .map((d) => ({ date: d, eventId: null, index: null, earlier: true }));
   const existing = [...onProject, ...fromMessages];

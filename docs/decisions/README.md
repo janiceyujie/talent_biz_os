@@ -40,3 +40,4 @@ When a choice is easy to get wrong later, was argued over, or trades something a
 | [0016](0016-mailbox-tokens-and-key-management.md) | Mailbox tokens: envelope encryption with Cloud KMS | Accepted |
 | [0017](0017-two-way-google-calendar.md) | Two-way Google Calendar: edits made in Google come back | Accepted |
 | [0018](0018-anything-on-an-open-deal.md) | Anything can go on an open deal; only signed work counts | Accepted |
+| [0019](0019-match-messages-by-relationships.md) | Match a message to its project through who it's from, not through past messages | Accepted |

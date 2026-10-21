@@ -9,24 +9,25 @@ import { useAppData } from "@/components/app/app-data";
 import { InfoHint } from "@/components/app/info-hint";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { applyMessage, createProjectFromMessage, fileThread, type NewProjectInput } from "@/lib/actions/intake";
-import { initialEdit, intakeContext, keptFields, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext, type TargetReason } from "@/lib/domain/intake";
+import { initialEdit, intakeContext, keptFields, preselect, proposeChanges, proposeNewProject, type Change, type IntakeContext, type TargetReason } from "@/lib/domain/intake";
 import { projectTypes, type ProjectType } from "@/lib/project-types";
 import { supportedCurrencies, type Currency } from "@/lib/domain/money";
 import { useCurrencyName, useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
-import type { InboxMessage, Project, ProjectSummary, Stage, TermChange } from "@/lib/types";
+import type { InboxMessage, OpenedMessage, Project, ProjectSummary, Stage, TermChange } from "@/lib/types";
 
 type Analysis = NonNullable<InboxMessage["analysis"]>;
 type Edit = Record<string, unknown>;
 
-export function MessageReview({ message }: { message: InboxMessage }) {
+export function MessageReview({ message }: { message: OpenedMessage }) {
   const data = useAppData();
   const t = useTranslations("intake");
   const tInbox = useTranslations("inbox");
   const a = message.analysis!;
   const ctx = useMemo<IntakeContext>(() => intakeContext(data, message), [data, message]);
-  const suggestions = useMemo(() => suggestTargets(a, ctx).slice(0, 3), [a, ctx]);
-  const [target, setTarget] = useState<string>(suggestions[0]?.projectId ?? "new");
+  // Scored on the server (decision 0019). Ticked only when one clearly leads; with several close, the person picks.
+  const suggestions = message.suggestions;
+  const [target, setTarget] = useState<string>(() => preselect(suggestions) ?? (suggestions.length ? "" : "new"));
   const [other, setOther] = useState("");
   const live = data.projects.filter((p) => !p.archived);
   const chosen = target === "other" ? live.find((p) => p.id === other) : live.find((p) => p.id === target);
@@ -34,6 +35,7 @@ export function MessageReview({ message }: { message: InboxMessage }) {
   return (
     <section className="message-review" aria-label={t("targetHeading")}>
       <h3>{t("targetHeading")}</h3>
+      {target === "" && <p className="muted">{t("pickOne")}</p>}
       <div className="target-options" role="radiogroup" aria-label={t("targetHeading")}>
         {suggestions.map((s) => {
           const p = live.find((x) => x.id === s.projectId)!;
@@ -115,7 +117,9 @@ function Reason({ reason }: { reason: TargetReason }) {
 function ChangesFor({ project, ...rest }: { message: InboxMessage; analysis: Analysis; project: ProjectSummary; ctx: IntakeContext }) {
   const tProjects = useTranslations("projects");
   const { detail, failed } = useProjectDetail(project);
-  if (detail) return <Changes {...rest} project={withDetail(project, detail)} />;
+  // Dates its earlier messages gave come with the project's detail.
+  const ctx = useMemo(() => detail && { ...rest.ctx, earlierDates: { [project.id]: detail.earlierDates } }, [detail, rest.ctx, project.id]);
+  if (detail && ctx) return <Changes {...rest} ctx={ctx} project={withDetail(project, detail)} />;
   return <p className={failed ? "notice error" : "muted"}>{tProjects(failed ? "detailFailed" : "loading")}</p>;
 }
 

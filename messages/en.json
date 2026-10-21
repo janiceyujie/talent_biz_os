@@ -772,6 +772,7 @@
   },
   "intake": {
     "targetHeading": "File under a project",
+    "pickOne": "Several projects fit. Pick the one this message is about.",
     "suggested": "Suggested",
     "reason": {
       "contact": "Same contact: {value}",

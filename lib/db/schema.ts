@@ -325,6 +325,34 @@ export const projectContact = pgTable(
   (t) => [unique("project_contact_project_contact").on(t.projectId, t.contactId), index("project_contact_project_idx").on(t.projectId)],
 ).enableRLS();
 
+// Who the person corresponds with on a project (decision 0019): the other side
+// of each message filed on it — a received email's sender, the recipients of
+// the person's own reply, the email a pasted message gives — whether or not
+// they were added as a contact. Matching a new message reads it by email.
+// `lastAt`: when they last wrote (or were written to), which orders projects
+// that tie. Kept when contacts change; removed with the project.
+export const projectCorrespondent = pgTable(
+  "project_correspondent",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    projectId: uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    email: text().notNull(), // lowercased
+    name: text().notNull().default(""), // as the message last gave it
+    lastAt: timestamp({ withTimezone: true }).notNull(),
+    messageCount: integer().notNull().default(1),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("project_correspondent_project_email").on(t.projectId, t.email),
+    index("project_correspondent_talent_email_idx").on(t.talentId, t.email),
+  ],
+).enableRLS();
+
 // Who confirmed or changed what, and when.
 // Per-person read and snooze state of derived notifications. Notifications
 // themselves are computed on read, never stored; their ids are stable

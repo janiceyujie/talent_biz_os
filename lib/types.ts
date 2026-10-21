@@ -6,7 +6,7 @@ import type { Locale } from "@/lib/i18n/config";
 import type { Appearance, Role } from "@/lib/roles";
 import type { MessageAnalysis } from "@/lib/ai/analysis";
 import type { NoticeFields } from "@/lib/mail/payment-notice/fields";
-import type { ChangeRecord, FiledMessage } from "@/lib/domain/intake";
+import type { ChangeRecord, TargetSuggestion } from "@/lib/domain/intake";
 import type { ListPage } from "@/lib/domain/list-page";
 import type { ProjectType } from "@/lib/project-types";
 import type { Currency } from "@/lib/domain/money";
@@ -247,9 +247,10 @@ export type InboxMessage = {
    * person replied or the other side wrote again since, and the others still waiting for review.
    */
   thread: { projectId: string | null; replied: boolean; newer: boolean; waiting: string[] };
-  /** Earlier filed messages' senders and dates, which the proposal matches against. */
-  filed: FiledMessage[];
 };
+
+/** A message as Intake opens it (app/api/inbox/[id]): with the projects it most likely belongs to, best first, scored on the server (decision 0019). */
+export type OpenedMessage = InboxMessage & { suggestions: TargetSuggestion[] };
 
 /** A message as Intake's list and Today show it (lib/data/inbox.ts); the full one loads when it's opened. */
 export type InboxSummary = Pick<InboxMessage, "id" | "channel" | "status" | "projectId" | "receivedAt" | "notice"> & {
@@ -283,6 +284,8 @@ export type ProjectDetail = {
   organizations: { organizationId: string; role: string; primary: boolean }[];
   offerText: string; // the earliest message filed under it
   timeline: TimelineEntry[]; // newest first
+  /** Dates the messages filed under it gave, each once: a proposal compares a new message's dates with these too. */
+  earlierDates: ProjectDate[];
 };
 
 /** One message on a project's timeline, with what applying it changed (audit_log `message.applied`). */

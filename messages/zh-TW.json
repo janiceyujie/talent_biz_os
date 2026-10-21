@@ -1973,5 +1973,22 @@
     "keep": "只標記，保留這些項目",
     "cancelDeclined": "標記為已婉拒，並取消這些項目",
     "cancelCancelled": "標記為已取消，並取消這些項目"
+  },
+  "dateTimeInput": {
+    "datePlaceholder": "YYYY/MM/DD",
+    "timePlaceholder": "HH:mm",
+    "dateHint": "可輸入 20261012 或 2026/10/12；方向鍵移動，Enter 選取。",
+    "timeHint": "可輸入 930 或 1530，分鐘可自由設定。",
+    "invalidDate": "請輸入有效日期，例如 20261012 或 2026/10/12。",
+    "invalidTime": "請輸入有效時間，例如 930 或 15:30。",
+    "required": "請填寫此欄位。",
+    "openDate": "選擇日期：{label}",
+    "openTime": "選擇時間：{label}",
+    "chooseTime": "選擇時間",
+    "previousMonth": "上個月",
+    "nextMonth": "下個月",
+    "today": "今天",
+    "clear": "清除",
+    "close": "關閉"
   }
 }

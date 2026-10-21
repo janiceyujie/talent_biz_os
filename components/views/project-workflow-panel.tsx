@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { DateTimeInput } from "@/components/app/date-time-input";
 import { Modal } from "@/components/app/modal";
 import { DealCard } from "./deal-card";
 import { toRecord, type Editor } from "@/components/app/record-editor";
@@ -206,14 +207,8 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
                 onChange={(e) => setPercent(Number(e.target.value))}
               />
             </label>
-            <label>
-              {t("depositDue")}
-              <input type="date" required value={depositDue} onChange={(e) => setDepositDue(e.target.value)} />
-            </label>
-            <label>
-              {t("balanceDue")}
-              <input type="date" required min={depositDue} value={balanceDue} onChange={(e) => setBalanceDue(e.target.value)} />
-            </label>
+            <DateTimeInput kind="date" required label={t("depositDue")} value={depositDue} today={today} onChange={setDepositDue} />
+            <DateTimeInput kind="date" required min={depositDue} label={t("balanceDue")} value={balanceDue} today={today} onChange={setBalanceDue} />
             {preview ? (
               <p>
                 {t("planPreview", { deposit: money(preview.deposit, project.currency), balance: money(preview.balance, project.currency), total: money(preview.total, project.currency) })}

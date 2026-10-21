@@ -6,6 +6,7 @@
 import { useTranslations } from "next-intl";
 import { useMemo, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { DateTimeInput } from "@/components/app/date-time-input";
 import { InfoHint } from "@/components/app/info-hint";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { applyMessage, createProjectFromMessage, fileThread, type NewProjectInput } from "@/lib/actions/intake";
@@ -13,6 +14,7 @@ import { initialEdit, intakeContext, keptFields, preselect, proposeChanges, prop
 import { projectTypes, type ProjectType } from "@/lib/project-types";
 import { supportedCurrencies, type Currency } from "@/lib/domain/money";
 import { useCurrencyName, useMoney } from "@/lib/i18n/format";
+import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
 import type { InboxMessage, OpenedMessage, Project, ProjectSummary, Stage, TermChange } from "@/lib/types";
 
@@ -234,6 +236,7 @@ function ChangeRow({
   const labels = useLabels();
   const money = useMoney();
   const data = useAppData();
+  const today = dateInZone(data.talent.timeZone); // where a date's calendar opens when it has none
   const id = `change-${c.id}`;
   const empty = <span className="muted">{t("empty")}</span>;
   const from = (v: string | null) => (v ? <s className="change-from">{v}</s> : empty);
@@ -271,8 +274,8 @@ function ChangeRow({
       body = (
         <>
           <span>{c.to.what}</span> {was && <>{from(was)} → </>}
-          <input className="change-edit" type="date" aria-label={label} value={String(edit.date ?? "")} onChange={(e) => onEdit({ date: e.target.value })} />{" "}
-          <input className="change-edit" type="time" aria-label={`${label} ${t("change.date")}`} value={String(edit.time ?? "")} onChange={(e) => onEdit({ time: e.target.value })} />
+          <DateTimeInput className="inline" kind="date" hideLabel label={label} value={String(edit.date ?? "")} today={today} onChange={(v) => onEdit({ date: v })} />{" "}
+          <DateTimeInput className="inline" kind="time" hideLabel label={`${label} ${t("change.date")}`} value={String(edit.time ?? "")} today={today} onChange={(v) => onEdit({ time: v })} />
           {(c.asEvent || (signing && !c.eventId)) && <span className="muted"> · {t("asEvent")}</span>}
           {c.earlier && <span className="change-hint">{t("earlierDate")}</span>}
         </>
@@ -294,7 +297,7 @@ function ChangeRow({
         <>
           {from(t("expected", { amount: money(c.expected, c.currency) }))} → {t("received")}{" "}
           <input className="change-edit" type="number" min={0} aria-label={t("amount")} value={String(edit.amount ?? "")} onChange={(e) => onEdit({ amount: Number(e.target.value) })} /> · {t("settledOn")}{" "}
-          <input className="change-edit" type="date" aria-label={t("settledOn")} value={String(edit.settledOn ?? "")} onChange={(e) => onEdit({ settledOn: e.target.value })} />
+          <DateTimeInput className="inline" kind="date" hideLabel label={t("settledOn")} value={String(edit.settledOn ?? "")} today={today} onChange={(v) => onEdit({ settledOn: v })} />
           {amount > 0 && amount < c.expected && <span className="change-hint">{t("shortfall", { amount: money(c.expected - amount, c.currency) })}</span>}
           {c.statedIn && c.currency && <span className="change-hint">{t("otherCurrency", { stated: c.statedIn, currency: c.currency })}</span>}
         </>
@@ -306,7 +309,7 @@ function ChangeRow({
       body = (
         <>
           {c.currency} <input className="change-edit" type="number" min={0} aria-label={t("amount")} value={String(edit.amount ?? "")} onChange={(e) => onEdit({ amount: Number(e.target.value) })} />{" "}
-          <input className="change-edit" type="date" aria-label={t("settledOn")} value={String(edit.date ?? "")} onChange={(e) => onEdit({ date: e.target.value })} />
+          <DateTimeInput className="inline" kind="date" hideLabel label={t("settledOn")} value={String(edit.date ?? "")} today={today} onChange={(v) => onEdit({ date: v })} />
         </>
       );
       break;
@@ -318,7 +321,8 @@ function ChangeRow({
       label = t(c.purpose === "reply" ? "change.todoReply" : c.purpose === "awaitContract" ? "change.todoAwaitContract" : "change.todoSendInvoice");
       body = (
         <>
-          {t("dueBy")} <input className="change-edit" type="date" aria-label={`${label} ${t("dueBy")}`} value={String(edit.dueDate ?? "")} onChange={(e) => onEdit({ dueDate: e.target.value })} />
+          {t("dueBy")}{" "}
+          <DateTimeInput className="inline" kind="date" hideLabel label={`${label} ${t("dueBy")}`} value={String(edit.dueDate ?? "")} today={today} onChange={(v) => onEdit({ dueDate: v })} />
         </>
       );
       break;
@@ -511,8 +515,8 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
             {project.dates.map((d, i) => (
               <div key={i} className="new-date">
                 <input aria-label={t("new.dateWhat")} placeholder={t("new.dateWhat")} value={d.what} onChange={(e) => setDate(i, { what: e.target.value })} />
-                <input type="date" aria-label={tEditor("field.date")} value={d.date} onChange={(e) => setDate(i, { date: e.target.value })} />
-                <input type="time" aria-label={tEditor("field.time")} value={d.time} onChange={(e) => setDate(i, { time: e.target.value })} />
+                <DateTimeInput className="inline" kind="date" hideLabel label={tEditor("field.date")} value={d.date} today={ctx.receivedOn} onChange={(v) => setDate(i, { date: v })} />
+                <DateTimeInput className="inline" kind="time" hideLabel label={tEditor("field.time")} value={d.time} today={ctx.receivedOn} onChange={(v) => setDate(i, { time: v })} />
                 <button type="button" className="text-button" onClick={() => set({ dates: project.dates.filter((_, j) => j !== i) })}>
                   {t("new.removeDate")}
                 </button>
@@ -567,7 +571,8 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
           <label htmlFor="new-reply" className="change-label">
             {t("change.todoReply")}
           </label>{" "}
-          {t("dueBy")} <input className="change-edit" type="date" aria-label={`${t("change.todoReply")} ${t("dueBy")}`} value={replyBy} onChange={(e) => setReplyBy(e.target.value)} />
+          {t("dueBy")}{" "}
+          <DateTimeInput className="inline" kind="date" hideLabel label={`${t("change.todoReply")} ${t("dueBy")}`} value={replyBy} today={ctx.receivedOn} onChange={setReplyBy} />
           {a.replyByStated && <span className="stated">「{a.replyByStated}」</span>}
         </div>
       </div>

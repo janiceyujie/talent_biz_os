@@ -1973,5 +1973,22 @@
     "keep": "Only mark it, keep these",
     "cancelDeclined": "Mark as declined and cancel these",
     "cancelCancelled": "Mark as cancelled and cancel these"
+  },
+  "dateTimeInput": {
+    "datePlaceholder": "YYYY/MM/DD",
+    "timePlaceholder": "HH:mm",
+    "dateHint": "Type 20261012 or 2026/10/12. Arrow keys move; Enter picks.",
+    "timeHint": "Type 930 or 1530; any minute works.",
+    "invalidDate": "Enter a real date, for example 20261012 or 2026/10/12.",
+    "invalidTime": "Enter a time, for example 930 or 15:30.",
+    "required": "This field is required.",
+    "openDate": "Choose date: {label}",
+    "openTime": "Choose time: {label}",
+    "chooseTime": "Choose time",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "today": "Today",
+    "clear": "Clear",
+    "close": "Close"
   }
 }

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { DateTimeInput } from "@/components/app/date-time-input";
 import { FinanceInsights } from "./finance-insights";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { voidPayment } from "@/lib/actions/payments";
@@ -155,14 +156,8 @@ export function FinanceView() {
             ))}
           </select>
         </label>
-        <label>
-          {t("from")}
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        </label>
-        <label>
-          {t("to")}
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-        </label>
+        <DateTimeInput kind="date" label={t("from")} value={from} onChange={setFrom} today={today} />
+        <DateTimeInput kind="date" label={t("to")} value={to} onChange={setTo} today={today} />
         <button className="secondary" onClick={exportCsv}>
           {t("exportCsv")}
         </button>

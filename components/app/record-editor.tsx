@@ -30,6 +30,7 @@ import { useAppData } from "./app-data";
 import { ContactPicker, type NewContact } from "./contact-picker";
 import { OrganizationPicker } from "./organization-picker";
 import { TimeZonePicker } from "./time-zone-picker";
+import { DateTimeInput } from "./date-time-input";
 import { Modal } from "./modal";
 
 export type RecordData = Record<string, string | number | boolean>;
@@ -225,6 +226,10 @@ export function RecordEditor({
   const currencyOptions = supportedCurrencies.map((c) => [c, `${c} · ${currencyName(c)}`] as const);
 
   function field(key: string, label: string, type = "text", required = false, options?: Option[], list?: string) {
+    if (type === "date" || type === "time")
+      return (
+        <DateTimeInput key={key} kind={type} label={label} field={key} required={required} today={today} value={String(data[key] ?? "")} onChange={(v) => change(key, v)} />
+      );
     return (
       <label key={key}>
         {label}

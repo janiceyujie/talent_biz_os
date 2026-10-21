@@ -1,0 +1,171 @@
+{
+  "scenario": "model",
+  "role": "model",
+  "kind": "contract",
+  "locale": "en",
+  "title": "Model Booking and Image Use Agreement",
+  "blocks": [
+    {
+      "type": "paragraph",
+      "text": "Parties"
+    },
+    {
+      "type": "paragraph",
+      "text": "Client [legal name] (referred to as Party A)",
+      "align": "right"
+    },
+    {
+      "type": "paragraph",
+      "text": "Model [legal name] (referred to as Party B)",
+      "align": "right"
+    },
+    {
+      "type": "paragraph",
+      "text": "The parties agree to the following terms governing the engagement described below."
+    },
+    {
+      "type": "heading",
+      "text": "Article 1 Scope of Engagement"
+    },
+    {
+      "type": "numbered",
+      "items": [
+        "Shoot [date, location and call time], working hours [hours], fitting [details], wardrobe and styling [details], deliverables [stills and video]. Overtime [rate and billing unit]. Any sensitive content must be specifically agreed before the shoot; changes require consent."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Article 2 Term and Schedule"
+    },
+    {
+      "type": "numbered",
+      "items": [
+        "Shoot, fitting and working hours follow Article 1. Image use has a separate term under Article 6; completing the shoot does not extend that term."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Article 3 Performance Review and Acceptance"
+    },
+    {
+      "type": "numbered",
+      "items": [
+        "Confirm [attendance, working hours, agreed shoot content and duties] through contacts [names]. Selection, retouching and sensitive-content approval procedures: [terms]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Article 4 Fees"
+    },
+    {
+      "type": "numbered",
+      "items": [
+        "Pricing method [fixed fee / per item / commission / other], with calculation basis [details].",
+        "Fee excluding tax [amount and currency]; tax rate or treatment [details]; tax [amount]; total including tax [amount].",
+        "Additional expenses require prior written approval. Items, limits and supporting records: [terms]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Article 5 Payment Method",
+      "pageBreak": true
+    },
+    {
+      "type": "numbered",
+      "items": [
+        "Payer [Party A / Party B / other], payee [name]. Deposit or first installment [amount and date]; balance or recurring settlement [calculation, conditions and deadline].",
+        "Payment by [bank transfer / other]. Invoicing, withholding and transfer fees: [agreed allocation].",
+        "Raise invoice disputes in writing within [days]; pay undisputed sums on time. For overdue payment, allow [days] after written notice before pausing work; agree any late fee and revised schedule in writing, subject to applicable law."
+      ]
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Bank and branch [details]   Bank or routing code [details]",
+        "Account holder [name]   Account number [details]"
+      ],
+      "indent": true
+    },
+    {
+      "type": "heading",
+      "text": "Article 6 Image Use and Restrictions"
+    },
+    {
+      "type": "numbered",
+      "items": [
+        "Image use is limited to [client, campaign, media, territory and term]. Paid ads, outdoor media, exclusivity and renewals are priced separately unless listed. No AI training, digital replica, face replacement or sublicensing without separate written consent. Retouching restrictions [details]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Article 7 Cancellation and Termination"
+    },
+    {
+      "type": "numbered",
+      "items": [
+        "Cancellation notice [days]. Payment for completed work, approved non-refundable costs and any deposit refund follow [explicit calculation]. For events beyond reasonable control, promptly notify and agree rescheduling or termination and cost allocation. Material breach may be terminated after [days] written notice and opportunity to cure. Delivery and license consequences of termination: [terms]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Article 8 Confidentiality and Disputes"
+    },
+    {
+      "type": "numbered",
+      "items": [
+        "Use non-public pricing, personal data and engagement information only to perform this agreement, except disclosures required by law.",
+        "Liability allocation and reasonable cap [complete], without excluding liability that cannot lawfully be limited.",
+        "Governing law [jurisdiction]; dispute process and forum [complete]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Article 9 Other Provisions"
+    },
+    {
+      "type": "numbered",
+      "items": [
+        "Attachments [list] form part of this agreement; precedence if terms conflict [order].",
+        "Changes require both parties’ written agreement. Send notices to the email or address in the execution page; receipt is confirmed by [method].",
+        "Each party confirms authority to sign and permission to supply its materials. Prepare [number] counterparts; sign by [wet ink / electronic signature / other]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Execution by the Parties",
+      "pageBreak": true
+    },
+    {
+      "type": "signature",
+      "party": "Party A  Client",
+      "fields": [
+        "Legal name [complete]",
+        "Responsible person or authorized representative [name and title]",
+        "Address [complete]",
+        "Business or company registration number [if applicable]",
+        "Contact person [name]",
+        "Telephone [complete]   Email [complete]"
+      ],
+      "signature": "Signature or seal",
+      "date": "Date signed [year / month / day]"
+    },
+    {
+      "type": "signature",
+      "party": "Party B  Model",
+      "fields": [
+        "Legal name [complete]",
+        "Responsible person or authorized representative [name and title]",
+        "Address [complete]",
+        "Business or company registration number [if applicable]",
+        "Contact person [name]",
+        "Telephone [complete]   Email [complete]"
+      ],
+      "signature": "Signature or seal",
+      "date": "Date signed [year / month / day]"
+    },
+    {
+      "type": "paragraph",
+      "text": "Agreement date [year / month / day]"
+    }
+  ]
+}

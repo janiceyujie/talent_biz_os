@@ -1990,5 +1990,36 @@
     "today": "Today",
     "clear": "Clear",
     "close": "Close"
+  },
+  "documentLibrary": {
+    "title": "Contract and quote templates",
+    "expand": "Browse templates",
+    "collapse": "Collapse templates",
+    "disclaimer": "These are templates for reference only, not legal advice, and haven't been reviewed by a lawyer. Check every term for your deal and where you work, and use them at your own responsibility: you're responsible for what you sign. For anything that matters, ask a lawyer.",
+    "fileNotice": "Template for reference only, not legal advice. Taloox isn't a law firm and hasn't reviewed this for your deal. Check every term, fill in the brackets, and use it at your own responsibility; for anything that matters, ask a lawyer. Delete this note before you send it.",
+    "role": "For",
+    "allRoles": "Every role",
+    "language": "Language",
+    "kind": "Document",
+    "contract": "Contract",
+    "quote": "Quote",
+    "preview": "Preview",
+    "download": "Download Word",
+    "copy": "Copy text",
+    "copied": "Copied: {title}",
+    "copyFailed": "Couldn't copy. Select the text in the preview and copy it.",
+    "loading": "Loading templates…",
+    "loadFailed": "Couldn't load the templates.",
+    "retry": "Try again",
+    "empty": "No templates yet.",
+    "noMatch": "None for this role yet.",
+    "sources": "Where the wording comes from",
+    "source": {
+      "commonPaper": "Common Paper: professional services agreement",
+      "freelancersUnion": "Freelancers Union: contract essentials",
+      "mu": "Musicians' Union: standard contracts",
+      "artsLaw": "Arts Law: booking agreement checklist",
+      "ftc": "FTC: endorsements and influencers"
+    }
   }
 }

@@ -1990,5 +1990,36 @@
     "today": "今天",
     "clear": "清除",
     "close": "關閉"
+  },
+  "documentLibrary": {
+    "title": "合約與報價單範本",
+    "expand": "瀏覽範本",
+    "collapse": "收合範本",
+    "disclaimer": "以下僅為參考範本，不構成法律建議，也未經律師審閱。請依你的合作內容與適用地區逐條確認，並自行承擔使用責任；簽署的內容由你負責。重要事項請諮詢律師。",
+    "fileNotice": "本文件僅為參考範本，不構成法律建議。Taloox 並非律師事務所，未針對你的合作審閱本文件。請逐條確認、填寫括號內容，並自行承擔使用責任；重要事項請諮詢律師。寄出前請刪除本段說明。",
+    "role": "適用角色",
+    "allRoles": "全部角色",
+    "language": "語言",
+    "kind": "文件類型",
+    "contract": "合約",
+    "quote": "報價單",
+    "preview": "預覽",
+    "download": "下載 Word",
+    "copy": "複製全文",
+    "copied": "已複製：{title}",
+    "copyFailed": "無法複製，請在預覽中選取文字後複製。",
+    "loading": "正在載入範本…",
+    "loadFailed": "無法載入範本。",
+    "retry": "再試一次",
+    "empty": "目前還沒有範本。",
+    "noMatch": "這個角色目前還沒有範本。",
+    "sources": "條文參考來源",
+    "source": {
+      "commonPaper": "Common Paper：專業服務合約",
+      "freelancersUnion": "Freelancers Union：合約基本事項",
+      "mu": "英國音樂家工會：標準合約",
+      "artsLaw": "Arts Law：演出合約檢查清單",
+      "ftc": "美國 FTC：代言與網紅規範"
+    }
   }
 }

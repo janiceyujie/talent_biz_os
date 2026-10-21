@@ -24,6 +24,9 @@ import {
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
 import { supportedCurrencies } from "../domain/money";
+import { locales } from "../i18n/config";
+import { roles } from "../roles";
+import { templateKinds, type TemplateContent } from "../templates/content";
 import { historyModes } from "../mail/history";
 import type { SyncFields } from "@/lib/calendar/google/two-way";
 import type { NoticeFields } from "../mail/payment-notice/fields";
@@ -900,6 +903,42 @@ export const calendarSeriesProject = pgTable(
     createdAt: createdAt(),
   },
   (t) => [unique("calendar_series_project_connection_series").on(t.connectionId, t.seriesId)],
+).enableRLS();
+
+// The contract and quote template library (decision 0020): one shared catalog, not any workspace's,
+// with no customer data. Each version is a row and never changes; one per scenario, kind, and language
+// is published. Its Word file is in Storage under `storageKey`, which includes the content hash.
+// `source`: where the version came from; "repository" is published on deploy (scripts/publish-templates.mts),
+// and the online editor will add its own.
+export const templateSources = ["repository"] as const;
+export const documentTemplate = pgTable(
+  "document_template",
+  {
+    id: id(),
+    scenario: text().notNull(), // live, license, brand…
+    role: text({ enum: roles }).notNull(), // who it's written for, to filter by
+    kind: text({ enum: templateKinds }).notNull(),
+    locale: text({ enum: locales }).notNull(),
+    version: integer().notNull(),
+    title: text().notNull(),
+    content: jsonb().$type<TemplateContent>().notNull(), // lib/templates/content.ts
+    contentHash: char({ length: 64 }).notNull(), // content, the file's note, and the generator's version
+    storageKey: text().notNull(),
+    sizeBytes: integer().notNull(),
+    source: text({ enum: templateSources }).notNull().default("repository"),
+    published: boolean().notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("document_template_version").on(t.scenario, t.kind, t.locale, t.version),
+    unique("document_template_content").on(t.scenario, t.kind, t.locale, t.contentHash),
+    uniqueIndex("document_template_published").on(t.scenario, t.kind, t.locale).where(sql`${t.published}`),
+    check("document_template_role_check", oneOf(t.role, roles)),
+    check("document_template_kind_check", oneOf(t.kind, templateKinds)),
+    check("document_template_locale_check", oneOf(t.locale, locales)),
+    check("document_template_source_check", oneOf(t.source, templateSources)),
+    check("document_template_version_check", sql`${t.version} > 0`),
+  ],
 ).enableRLS();
 
 // A connected mailbox (decision 0013): one per talent for now, any Google

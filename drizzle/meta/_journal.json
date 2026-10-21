@@ -309,6 +309,13 @@
       "when": 1792558233376,
       "tag": "0043_record_fetch_failures",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1792567478663,
+      "tag": "0044_add_document_templates",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,107 @@
+{
+  "scenario": "booking",
+  "role": "manager",
+  "kind": "quote",
+  "locale": "en",
+  "title": "Single engagement booking Quotation",
+  "blocks": [
+    {
+      "type": "paragraph",
+      "text": "Quote number [ID]. Issued [date]. Valid until [date]. Currency [currency]. Subject to written confirmation; this quotation does not itself reserve dates or grant rights."
+    },
+    {
+      "type": "heading",
+      "text": "Parties"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Client [legal name, address, contact and email]",
+        "Service provider [legal name, address, contact and email]",
+        "Project [name]. Agreement date [date]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Scope and schedule"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Arrange [named engagement] and coordinate offer, schedule and contracting. Talent approves the final fee and agreement; representative cannot sign or collect money without separate written authority."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Price breakdown"
+    },
+    {
+      "type": "paragraph",
+      "text": "For each item, enter scope, quantity, unit, unit price and amount. If commission applies, specify the calculation basis and rate. Identify estimates separately from fixed fees."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Item",
+        "Qty / unit",
+        "Unit price",
+        "Amount"
+      ],
+      "rows": [
+        [
+          "Booking service fee",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Agreed commission",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Approved expenses",
+          "[___]",
+          "[___]",
+          "[___]"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Fees and payment"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Subtotal excluding tax [amount]",
+        "Discount [amount]",
+        "Tax rate and tax [rate and amount]",
+        "Total including tax [amount and currency]",
+        "Deposit [amount and due date]",
+        "Balance [amount and payment terms]"
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Usage and special terms"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Commission applies only to the identified booking and expressly agreed renewals. Exclude taxes, reimbursements and unrelated work unless specifically agreed. Protect contact and fee information; no license to talent content is granted."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Quotation conditions"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Unlisted deliverables, extra revisions, travel and usage rights are excluded. Scope changes or acceptance after expiry require a revised price and availability check. Confirm cancellation, acceptance, rights and full engagement terms in writing before work begins."
+      ]
+    }
+  ]
+}

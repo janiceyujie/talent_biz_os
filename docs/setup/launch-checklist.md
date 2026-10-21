@@ -35,6 +35,7 @@ Do this **once**, as late as possible (right before creating the production data
 - [ ] Cloud KMS key in Singapore; an encrypt-only credential on the web service and a decrypt-only one on the worker ([decision 0016](../decisions/0016-mailbox-tokens-and-key-management.md)).
 - [ ] Email: a real SMTP provider (architecture doc, "Transactional email").
 - [ ] Storage: a production bucket and keys (`STORAGE_*`).
+- [ ] `STORAGE_*` also set wherever `npm run db:migrate` runs on deploy: after the migrations it publishes the contract and quote templates, uploading their Word files ([decision 0020](../decisions/0020-document-templates-are-data.md)).
 
 ## 4. Google
 
@@ -63,3 +64,9 @@ From [decision 0008](../decisions/0008-ai-operations.md):
 - [ ] Database backups, and a restore tried once.
 - [ ] Error reporting and logs somewhere you'll see them.
 - [ ] A way to delete an account and everything in it, on request (privacy policy).
+
+## 7. Legal
+
+- [ ] Terms of service and a privacy policy, as pages in the app (Google's consent screen links to them too, section 4). The terms include the template clause from [decision 0020](../decisions/0020-document-templates-are-data.md): Taloox isn't a law firm, its templates are self-help documents and not legal advice, using them creates no lawyer–client relationship, and the person is responsible for what they sign.
+- [ ] The template library's disclaimer links to those terms.
+- [ ] A lawyer reviews the contract and quote templates, the disclaimer under the library, and the note at the top of every Word file.

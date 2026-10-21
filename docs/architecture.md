@@ -380,6 +380,7 @@ erDiagram
 | `project` (UI: 專案) | One ongoing deal with one counterparty, with a type and a stage | M2 (one project per confirmed message); matching in M4 |
 | `project_contact` | People on a project beyond its main contact (`project.counterparty_id`), each with a free-text role there | Built |
 | `project_correspondent` | Who the person corresponds with on each project, by email, with when they last wrote: recorded whenever a message is filed, whether or not they're a contact; matching reads it ([decision 0019](decisions/0019-match-messages-by-relationships.md)) | Built |
+| `document_template` | The contract and quote template library: one shared catalog, a row per version with its structured content and the key of its Word file in Storage, one version published per scenario, kind, and language. Published from `assets/document-templates/content/` by `npm run db:migrate` ([decision 0020](decisions/0020-document-templates-are-data.md)) | Built |
 | `organization` | A company, organisation, band, or label the talent works with; contacts link to it (`contact.organization_id`). [Decision 0012](decisions/0012-companies-and-their-roles-on-projects.md) | Built |
 | `project_organization` | The organisations on a project, each with a free-text role; exactly one primary (the client), whose name `project.counterparty` mirrors | Built |
 | `organization_distinct` | Pairs of organisations marked as different, so they aren't suggested as duplicates again | Built |

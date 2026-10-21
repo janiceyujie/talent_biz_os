@@ -6,7 +6,8 @@ import type { Locale } from "@/lib/i18n/config";
 import type { Appearance, Role } from "@/lib/roles";
 import type { MessageAnalysis } from "@/lib/ai/analysis";
 import type { NoticeFields } from "@/lib/mail/payment-notice/fields";
-import type { ChangeRecord } from "@/lib/domain/intake";
+import type { ChangeRecord, FiledMessage } from "@/lib/domain/intake";
+import type { ListPage } from "@/lib/domain/list-page";
 import type { ProjectType } from "@/lib/project-types";
 import type { Currency } from "@/lib/domain/money";
 
@@ -241,6 +242,34 @@ export type InboxMessage = {
   notice: NoticeFields | null;
   // Reply to-dos this message, the person's own reply, marked done (Undo reopens them).
   completedTodos: { id: string; title: string }[];
+  /**
+   * The rest of its email thread: the project an earlier message in it is filed on, whether the
+   * person replied or the other side wrote again since, and the others still waiting for review.
+   */
+  thread: { projectId: string | null; replied: boolean; newer: boolean; waiting: string[] };
+  /** Earlier filed messages' senders and dates, which the proposal matches against. */
+  filed: FiledMessage[];
+};
+
+/** A message as Intake's list and Today show it (lib/data/inbox.ts); the full one loads when it's opened. */
+export type InboxSummary = Pick<InboxMessage, "id" | "channel" | "status" | "projectId" | "receivedAt" | "notice"> & {
+  sent: boolean; // the person's own reply
+  sender: string;
+  subject: string;
+  firstLine: string;
+  title: string; // the analysis's, "" before there is one
+  snippet: string;
+  flagged: boolean;
+  fileCount: number;
+};
+
+export type InboxPage = ListPage<InboxSummary>;
+
+/** What every page knows of Intake: counts by status, the messages Today lists for review, and each project's latest message. */
+export type InboxOverview = {
+  counts: Record<InboxMessage["status"], number>;
+  review: InboxSummary[]; // waiting longest first; counts.analyzed says how many there are in all
+  lastMessageAt: Record<string, string>; // by project id
 };
 
 /** What only a project's own screen shows, loaded when it's opened (lib/data/project-detail.ts). */
@@ -314,7 +343,7 @@ export type AppData = {
   templates: ReplyTemplate[];
   drafts: ReplyDraft[];
   files: StoredFile[];
-  inbox: InboxMessage[];
+  inbox: InboxOverview;
   contracts: Contract[]; // newest version first
   notificationState: NotificationState; // this person's read and snooze marks
   preferences: Preferences; // this person's settings in this workspace (lib/preferences)

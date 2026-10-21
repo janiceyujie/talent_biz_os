@@ -84,7 +84,7 @@ export function IntakeTabs({ tab, onTab }: { tab: IntakeTab; onTab: (tab: Intake
   const t = useTranslations("gmail");
   const counts = gmail.connection?.counts ?? { waiting: 0, skipped: 0 };
   // Messages counts what's waiting for review, as the Intake badge in the menu does (app-shell).
-  const toReview = inbox.filter((m) => m.status === "analyzed" || m.status === "error").length;
+  const toReview = inbox.counts.analyzed + inbox.counts.error;
   // Every tab shows its count, 0 too: a missing number reads as "nothing here" when that isn't known.
   const tabs: [IntakeTab, string, number][] = [
     ["messages", t("tabMessages"), toReview],

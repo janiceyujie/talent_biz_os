@@ -80,12 +80,11 @@ export function MessageReview({ message }: { message: InboxMessage }) {
 /** File all: the other messages waiting in this email thread go under the same project, with their ticked items. */
 function ThreadBatch({ message, projectId }: { message: InboxMessage; projectId: string }) {
   const t = useTranslations("intake");
-  const data = useAppData();
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<string | null>(null);
-  const waiting = data.inbox.filter((m) => m.id !== message.id && m.status === "analyzed" && !m.notice && m.gmail?.threadId === message.gmail?.threadId);
+  const waiting = message.thread.waiting;
   if (!waiting.length) return null;
-  const ids = [message.id, ...waiting.map((m) => m.id)];
+  const ids = [message.id, ...waiting];
   return (
     <div className="thread-batch">
       <span>{result ?? t("threadWaiting", { count: waiting.length })}</span>

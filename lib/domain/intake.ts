@@ -43,8 +43,6 @@ export type FiledMessage = {
 
 /** What a proposal for this message knows, built the same way on the review screen and on the server. */
 export function intakeContext(data: AppData, m: InboxMessage): IntakeContext {
-  const thread = m.gmail?.threadId ? data.inbox.filter((x) => x.id !== m.id && x.gmail?.threadId === m.gmail!.threadId) : [];
-  const filed = thread.filter((x) => x.status === "confirmed" && x.projectId).sort((x, y) => y.receivedAt.localeCompare(x.receivedAt));
   const address = m.gmail?.sender.match(/<([^<>]+)>\s*$/)?.[1] ?? m.gmail?.sender ?? "";
   return {
     projects: data.projects,
@@ -53,32 +51,16 @@ export function intakeContext(data: AppData, m: InboxMessage): IntakeContext {
     calendar: data.calendar,
     receivedOn: dateInZone(data.talent.timeZone, 0, new Date(m.receivedAt)),
     replyWithinDays: data.person.replyWithinDays,
-    filed: filedMessages(data.inbox, m.id),
+    filed: m.filed,
     contracts: data.contracts,
     projectPeople: data.projectPeople,
-    thread: {
-      projectId: filed[0]?.projectId ?? null,
-      replied: thread.some((x) => x.gmail?.sent && x.receivedAt > m.receivedAt),
-      newer: thread.some((x) => !x.gmail?.sent && !x.notice && x.receivedAt > m.receivedAt),
-    },
+    thread: { projectId: m.thread.projectId, replied: m.thread.replied, newer: m.thread.newer },
     sent: !!m.gmail?.sent,
     sender:
       m.gmail && !m.gmail.sent && address.includes("@")
         ? { name: m.gmail.sender.match(/^\s*"?([^"<]+?)"?\s*</)?.[1] ?? "", email: address.trim().toLowerCase() }
         : null,
   };
-}
-
-/** The filed messages among a list of messages, for matching later ones to their projects. */
-export function filedMessages(
-  messages: { id: string; projectId: string | null; status: string; analysis: Pick<MessageAnalysis, "counterparty" | "dates"> | null }[],
-  except = "",
-): FiledMessage[] {
-  return messages.flatMap((m) =>
-    m.projectId && m.status === "confirmed" && m.analysis && m.id !== except
-      ? [{ projectId: m.projectId, counterparty: m.analysis.counterparty, dates: m.analysis.dates.filter((d) => d.date).map((d) => ({ what: d.what, date: d.date, time: d.time, timeZone: d.timeZone })) }]
-      : [],
-  );
 }
 
 // ---------------------------------------------------------------------------

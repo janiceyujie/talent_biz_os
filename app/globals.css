@@ -4527,6 +4527,11 @@ p.gmail-skipped {
 .today-action:hover strong {
   text-decoration: underline;
 }
+/* The rest of the review queue, after the messages Today lists. */
+.today-more {
+  display: inline-block;
+  margin: 14px 0 6px;
+}
 .today-action .reminder-status {
   flex: none;
   min-width: 76px; /* one width for every tag, so the titles line up */

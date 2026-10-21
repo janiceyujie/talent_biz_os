@@ -5,7 +5,7 @@
 // as it is now; the browser only says which items are ticked and how their
 // values were edited. Nothing the message proposes is applied unticked.
 
-import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { refresh } from "next/cache";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { requestCalendarSync } from "@/lib/calendar/google/sync";
 import { requireTalent } from "@/lib/auth";
 import { getAppData } from "@/lib/data";
+import { inboxDetail } from "@/lib/data/inbox";
 import { organizationNamed, setClient } from "@/lib/data/organizations";
 import { getProject } from "@/lib/data/projects";
 import { db } from "@/lib/db";
@@ -79,12 +80,17 @@ export async function fileThread(raw: { messageIds: string[]; projectId: string 
   const fail = await errorText();
   const parsed = z.object({ messageIds: z.array(z.uuid()).min(1).max(50), projectId: z.uuid() }).safeParse(raw);
   if (!parsed.success) return { error: fail("invalid") };
-  const data = await getAppData();
-  const order = parsed.data.messageIds
-    .map((id) => data.inbox.find((m) => m.id === id))
-    .filter((m): m is NonNullable<typeof m> => !!m)
-    .sort((x, y) => x.receivedAt.localeCompare(y.receivedAt));
-  let left = parsed.data.messageIds.length - order.length;
+  const { talent } = await requireTalent();
+  const ids = [...new Set(parsed.data.messageIds)];
+  // Those still waiting for review, oldest first; the rest count as left.
+  const order = await db
+    .select({ id: message.id, connectionId: message.connectionId, threadId: message.providerThreadId })
+    .from(message)
+    .where(and(eq(message.talentId, talent.id), inArray(message.id, ids), eq(message.status, "analyzed"), eq(message.kind, "message")))
+    .orderBy(asc(message.receivedAt), asc(message.id));
+  // File all is for one email thread: anything else is refused, not filed together.
+  if (order.some((m) => !m.threadId || m.connectionId !== order[0].connectionId || m.threadId !== order[0].threadId)) return { error: fail("invalid") };
+  let left = ids.length - order.length;
   for (const m of order) {
     const failure = await apply({ messageId: m.id, projectId: parsed.data.projectId, items: {}, stage: null }, { defaults: true });
     if (failure === "skipped") left++;
@@ -119,7 +125,7 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
   if (!row || row.status !== "analyzed") return fail("messageNotFound");
 
   const timeZone = data.talent.timeZone;
-  const listed = data.inbox.find((m) => m.id === input.messageId);
+  const listed = await inboxDetail(talent.id, input.messageId);
   if (!listed) return fail("messageNotFound");
   const ctx: IntakeContext = { ...intakeContext(data, listed), receivedOn: receivedOn(row.receivedAt, timeZone) };
   const { changes, question } = proposeChanges(upgradeAnalysis(row.analysis), target, ctx);

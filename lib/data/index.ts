@@ -1,18 +1,18 @@
 import "server-only";
-import { and, asc, count, desc, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
 import { freeTierOk, keepsData, modelFor } from "@/lib/ai/model";
 import { relevanceQueue } from "@/lib/queue/jobs";
 import { cache } from "react";
-import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { dailyUsage } from "@/lib/ai/usage";
 import { CALENDAR_SCOPE, hasScopes, IMPORT_SCOPES } from "@/lib/calendar/google/scope";
 import { isGoogleConfigured, isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { readPreferences } from "@/lib/preferences";
 import { pairKey } from "@/lib/domain/organizations";
+import { inboxOverview } from "./inbox";
 import { summaryOf } from "./projects";
 import { changeMark } from "./changes";
-import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, file, membership, message, messageAnalysis, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, membership, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { mailConfigured } from "@/lib/mail/connect";
 import type { Currency } from "@/lib/domain/money";
@@ -34,7 +34,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
   const { person, talent: current } = await requireTalent();
   // Read before the data, so a change made while it loads moves the mark again and is caught next check.
   const changes = await changeMark(current.id, person.personId);
-  const [[talentRow], [memberRow], projectRows, contactRows, organizationRows, distinctRows, clientRows, projectPeopleRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows, messageRows, preferenceRows] = await Promise.all([
+  const [[talentRow], [memberRow], projectRows, contactRows, organizationRows, distinctRows, clientRows, projectPeopleRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows, inboxRows, preferenceRows] = await Promise.all([
     db
       .select({ id: talent.id, name: talent.name, timeZone: talent.timeZone, vertical: talent.vertical })
       .from(talent)
@@ -79,7 +79,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       .select({ id: authAccount.id, providerId: authAccount.providerId, scope: authAccount.scope })
       .from(authAccount)
       .where(eq(authAccount.personId, person.personId)),
-    db.select().from(message).where(eq(message.talentId, current.id)).orderBy(desc(message.receivedAt)).limit(200),
+    inboxOverview(current.id), // counts and Today's list; Intake pages its own (decision 0011)
     db
       .select({ key: preference.key, value: preference.value })
       .from(preference)
@@ -151,28 +151,6 @@ export const getAppData = cache(async (): Promise<AppData> => {
 
 
 
-  // Reply to-dos each of the person's own replies marked done, for its Undo.
-  const completedBy = new Map<string, { id: string; title: string }[]>();
-  for (const t of todoRows)
-    if (t.completedByMessageId && t.status === "done")
-      completedBy.set(t.completedByMessageId, [...(completedBy.get(t.completedByMessageId) ?? []), { id: t.id, title: t.title }]);
-  // Latest analysis per message (analyses are versioned; the newest wins).
-  const analysisRows = messageRows.length
-    ? await db
-        .select()
-        .from(messageAnalysis)
-        .where(inArray(messageAnalysis.messageId, messageRows.map((m) => m.id)))
-        .orderBy(desc(messageAnalysis.createdAt))
-    : [];
-  const fileRows = messageRows.length
-    ? await db
-        .select({ id: file.id, messageId: file.messageId, contentType: file.contentType, filename: file.filename, sizeBytes: file.sizeBytes })
-        .from(file)
-        .where(inArray(file.messageId, messageRows.map((m) => m.id)))
-        .orderBy(asc(file.position))
-    : [];
-  const latestAnalysis = new Map<string, (typeof analysisRows)[number]>();
-  for (const a of analysisRows) if (!latestAnalysis.has(a.messageId)) latestAnalysis.set(a.messageId, a);
 
   const calendar: CalendarItem[] = [
     ...eventRows.map((e) => ({
@@ -376,37 +354,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       against: c.supersedesId ? ("version" as const) : ("project" as const),
       createdAt: c.createdAt.toISOString(),
     })),
-    inbox: messageRows.map((m) => {
-      const a = latestAnalysis.get(m.id);
-      return {
-        id: m.id,
-        channel: m.channel,
-        body: m.bodyText ?? "",
-        receivedAt: m.receivedAt.toISOString(),
-        status: m.status,
-        failure: m.failure,
-        projectId: m.projectId,
-        analysis: a ? { ...upgradeAnalysis(a.analysis), modelVersion: a.modelVersion, promptVersion: a.promptVersion } : null,
-        files: fileRows
-          .filter((f) => f.messageId === m.id)
-          .map((f) => ({ id: f.id, contentType: f.contentType, filename: f.filename ?? "", sizeBytes: f.sizeBytes })),
-        gmail:
-          m.channel === "gmail" && m.externalRef
-            ? {
-                gmailId: m.externalRef,
-                threadId: m.providerThreadId ?? "",
-                sent: m.direction === "sent",
-                recipients: m.recipients ?? "",
-                sender: m.sender ?? "",
-                subject: m.subject ?? "",
-                unsure: m.relevance === "unsure",
-                skippedAttachments: m.skippedAttachments ?? [],
-              }
-            : null,
-        notice: m.kind === "payment_notice" ? m.notice : null,
-        completedTodos: completedBy.get(m.id) ?? [],
-      };
-    }),
+    inbox: inboxRows,
   };
 });
 

@@ -13,7 +13,7 @@ const SHOWN = 5;
 export function StalledWidget({ ctx: { data, today } }: { ctx: OverviewContext }) {
   const t = useTranslations("today");
   const router = useRouter();
-  const deals = stalledDeals({ projects: data.projects, inbox: data.inbox, today, timeZone: data.talent.timeZone });
+  const deals = stalledDeals({ projects: data.projects, lastMessageAt: data.inbox.lastMessageAt, today, timeZone: data.talent.timeZone });
   const negotiating = data.projects.filter((p) => !p.archived && phaseOf(p.stage) === "negotiation").length;
   return (
     <Widget id="stalled" title={t("stalledTitle")} count={deals.length}>

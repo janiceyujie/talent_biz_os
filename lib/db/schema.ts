@@ -538,6 +538,7 @@ export const message = pgTable(
   },
   (t) => [
     unique("message_talent_dedup_key").on(t.talentId, t.dedupKey),
+    index("message_talent_received_idx").on(t.talentId, t.receivedAt, t.id), // Intake's list, a page at a time
     index("message_talent_status_idx").on(t.talentId, t.status),
     index("message_project_idx").on(t.projectId),
     index("message_connection_thread_idx").on(t.connectionId, t.providerThreadId),

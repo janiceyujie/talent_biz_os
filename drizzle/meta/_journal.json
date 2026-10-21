@@ -274,6 +274,13 @@
       "when": 1792552362845,
       "tag": "0038_record_six_currencies",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792553656541,
+      "tag": "0039_page_the_inbox",
+      "breakpoints": true
     }
   ]
 }

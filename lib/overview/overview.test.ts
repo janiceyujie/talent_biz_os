@@ -1,7 +1,7 @@
 // Today's widgets: arrangement and each widget's data. Run: npm test
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { InboxMessage, Payment, Project } from "@/lib/types";
+import type { Payment, Project } from "@/lib/types";
 import { monthIncome } from "./income";
 import { outstandingMoney } from "./money";
 import { editableLayout, moveWidget, overviewLayout, toSavedLayout } from "./layout";
@@ -13,7 +13,6 @@ const ZONE = "Asia/Taipei";
 
 const project = (over: Partial<Project> = {}): Project =>
   ({ id: "p1", title: "Zepp 春季巡演", stage: "negotiating", archived: false, updatedAt: "2026-09-20T02:00:00Z", ...over }) as Project;
-const message = (projectId: string, receivedAt: string) => ({ id: `m-${receivedAt}`, projectId, receivedAt }) as InboxMessage;
 const payment = (over: Partial<Payment> = {}): Payment =>
   ({
     id: "x", projectId: null, projectType: "gig", direction: "in", installment: "regular", label: "", amount: 1000, currency: "TWD",
@@ -61,7 +60,7 @@ describe("stalledDeals", () => {
     const quiet = project({ id: "a", title: "A", updatedAt: "2026-09-20T02:00:00Z" });
     const quieter = project({ id: "b", title: "B", updatedAt: "2026-09-01T02:00:00Z" });
     const recent = project({ id: "c", title: "C", updatedAt: "2026-10-04T02:00:00Z" });
-    const got = stalledDeals({ projects: [quiet, quieter, recent], inbox: [], today: TODAY, timeZone: ZONE });
+    const got = stalledDeals({ projects: [quiet, quieter, recent], lastMessageAt: {}, today: TODAY, timeZone: ZONE });
     assert.deepEqual(
       got.map((d) => [d.project.id, d.quietDays]),
       [["b", 35], ["a", 16]],
@@ -69,14 +68,14 @@ describe("stalledDeals", () => {
   });
 
   test("a recent message about the deal counts as news", () => {
-    const got = stalledDeals({ projects: [project()], inbox: [message("p1", "2026-10-05T03:00:00Z")], today: TODAY, timeZone: ZONE });
+    const got = stalledDeals({ projects: [project()], lastMessageAt: { p1: "2026-10-05T03:00:00Z" }, today: TODAY, timeZone: ZONE });
     assert.deepEqual(got, []);
   });
 
   test("signed, ended, and archived deals aren't chased", () => {
     const got = stalledDeals({
       projects: [project({ id: "s", stage: "signed" }), project({ id: "d", stage: "declined" }), project({ id: "x", archived: true })],
-      inbox: [],
+      lastMessageAt: {},
       today: TODAY,
       timeZone: ZONE,
     });

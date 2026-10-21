@@ -14,6 +14,12 @@ RUN npm ci
 
 COPY . .
 
+# Version skew: each deploy's id, so a browser holding a page from the previous deploy
+# reloads instead of calling Server Functions or loading assets that no longer exist.
+# Render passes the commit as a build argument; it must match at build and at runtime.
+ARG RENDER_GIT_COMMIT
+ENV NEXT_DEPLOYMENT_ID=$RENDER_GIT_COMMIT
+
 # Placeholders so the build doesn't need real services, as in CI; nothing connects at
 # build time. Set for this step only, and this stage isn't the one that runs.
 RUN DATABASE_URL=postgres://build:build@localhost:5432/build \
@@ -31,6 +37,8 @@ FROM node:26-slim
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ARG RENDER_GIT_COMMIT
+ENV NEXT_DEPLOYMENT_ID=$RENDER_GIT_COMMIT
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force

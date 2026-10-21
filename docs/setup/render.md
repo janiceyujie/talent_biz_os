@@ -39,6 +39,15 @@ Each environment needs its own of each of these (launch checklist, sections 3 an
 - **Networking isolation** keeps staging and production from reaching each other's private services; **protection** on production blocks destructive actions by anyone but workspace admins.
 - **The worker gets 5 minutes to stop** (`maxShutdownDelaySeconds: 300`) so running jobs finish; a job that's cut off anyway is retried (decision 0014's notes).
 
+## Deploying without interrupting anyone
+
+Render already deploys without downtime, for the web service and the worker alike: it starts the new instance, moves traffic to it once healthy (`/api/health`), and sends the old one `SIGTERM` 60 seconds later, waiting up to the shutdown delay before killing it. For a while the old and new versions run side by side, so each of these has to hold:
+
+- **Browser and server**: a page from the previous deploy reloads instead of calling Server Functions that no longer exist. Each build carries the commit as `NEXT_DEPLOYMENT_ID` (Render passes `RENDER_GIT_COMMIT` to the Dockerfile).
+- **Code and database**: migrations run before the new code, while the old still serves, so every schema change keeps the running version working: add before remove, rename in steps.
+- **Web and worker**: the old worker can pick up a job queued by the new web service. A change to a job's payload (`lib/queue/jobs.ts`) adds optional fields first, ships, and only then makes them required; payloads are strict, so the old worker fails a job with a field it doesn't know, and it's retried.
+- **Running work**: the web service finishes its requests within the default 30 seconds; the worker's running jobs within 5 minutes (`maxShutdownDelaySeconds`), and a job cut off is retried.
+
 ## Database connections
 
 Through Supabase's session-mode pooler, every open connection holds one of the database's connections for as long as it's open, so the services' pools have to fit within the pooler's pool size (Supabase dashboard: Database Settings, "Connection pooling"). Per environment:

@@ -6,7 +6,7 @@ Shortcuts taken on purpose, and gaps we know about: what happens today, why it's
 
 ### Edits made in Google to pushed events are overwritten
 
-**Today.** Events pushed to the 「Talent Biz OS」 calendar in Google are one-way. If someone moves, edits, or deletes one in Google, nothing comes back here, and the next push (any save here, or 立即同步) restores our version. The calendar's description in Google says to edit in Talent Biz OS.
+**Today.** Events pushed to the 「Taloox」 calendar in Google are one-way. If someone moves, edits, or deletes one in Google, nothing comes back here, and the next push (any save here, or 立即同步) restores our version. The calendar's description in Google says to edit in Taloox.
 
 **Why for now.** Decision 0009, phase 1: this app is the source of truth for project events, and two-way editing (conflicts, deletions that may be mistakes) is most of the complexity for a use we haven't seen.
 

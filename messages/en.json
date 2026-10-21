@@ -1054,7 +1054,7 @@
     "zone": "Times are in {zone}",
     "noProject": "Not in a project",
     "addToProject": "Add to a project",
-    "repeatingFromGoogle": "Repeating, from your Talent Biz OS calendar in Google: change it there.",
+    "repeatingFromGoogle": "Repeating, from your Taloox calendar in Google: change it there.",
     "openInGoogle": "Open in Google Calendar",
     "changeProject": "Change",
     "seriesNote": "Adding it to a project adds every occurrence of the series.",
@@ -1101,8 +1101,8 @@
     "confirmDisableBody": "Calendars that added this link stop updating. You can make a new link any time."
   },
   "googleCalendar": {
-    "calendarName": "Talent Biz OS · {talent}",
-    "calendarDescription": "Events created by Talent Biz OS. Change them here or in Talent Biz OS: both stay up to date.",
+    "calendarName": "Taloox · {talent}",
+    "calendarDescription": "Events created by Taloox. Change them here or in Taloox: both stay up to date.",
     "title": "Google Calendar",
     "notConfigured": "Google isn't set up in this environment.",
     "needGoogle": "Connect your Google account under “Sign in with Google” above first",
@@ -1123,7 +1123,7 @@
     },
     "disconnectTitle": "Disconnect Google Calendar?",
     "disconnectBody": "Syncing stops, and the app's access to your Google account is withdrawn (Google sign-in keeps working).",
-    "deleteCalendar": "Also delete the “Talent Biz OS” calendar in Google",
+    "deleteCalendar": "Also delete the “Taloox” calendar in Google",
     "confirmDisconnect": "Disconnect",
     "cancel": "Cancel",
     "importTitle": "Show here",
@@ -1135,10 +1135,10 @@
     "chooseSave": "Save",
     "saving": "Saving…",
     "sendTitle": "Sync with Google",
-    "sendTo": "Your events ⇄ the “Talent Biz OS” calendar in Google",
+    "sendTo": "Your events ⇄ the “Taloox” calendar in Google",
     "sendNote": "A change on either side updates the other.",
     "importNone": "None chosen",
-    "aboutSend": "Send to Google: confirmed events go into a dedicated “Talent Biz OS” calendar in your Google account, updated as soon as you save. This app only creates and changes that calendar; it sends the title, time, place, and project. To-dos and payments aren’t sent.",
+    "aboutSend": "Send to Google: confirmed events go into a dedicated “Taloox” calendar in your Google account, updated as soon as you save. This app only creates and changes that calendar; it sends the title, time, place, and project. To-dos and payments aren’t sent.",
     "aboutShow": "Show here: the Google calendars you tick appear read-only in the calendar here, visible only to you, so clashes with personal plans show. This app reads only the calendars you tick.",
     "notConnected": "Not connected",
     "syncedAgo": "Synced {when}",
@@ -1147,11 +1147,11 @@
     "manage": "Manage",
     "done": "Done",
     "syncedJustNow": "Synced just now",
-    "notesMarker": "── Notes (synced with Talent Biz OS) ──"
+    "notesMarker": "── Notes (synced with Taloox) ──"
   },
   "gmail": {
     "title": "Gmail",
-    "aboutRead": "Connect the mailbox your work email comes to. Talent Biz OS gets read-only access: it can't send, delete, or change anything in it.",
+    "aboutRead": "Connect the mailbox your work email comes to. Taloox gets read-only access: it can't send, delete, or change anything in it.",
     "aboutDecide": "For each new email it first looks at the sender, subject, and preview, and reads the full email only when it looks like work: offers, contracts, logistics, payments.",
     "aboutMembers": "Work email brought in belongs to this workspace, so its members, including a manager, see it. Email that isn't work isn't kept.",
     "notConfigured": "Gmail isn't set up in this environment.",
@@ -1183,7 +1183,7 @@
     "accountNote": "Pick the account your offers come to.",
     "continue": "Continue to Google",
     "disconnectTitle": "Disconnect Gmail?",
-    "disconnectBody": "Talent Biz OS stops reading this mailbox and withdraws its access at Google. Your Google sign-in isn't affected.",
+    "disconnectBody": "Taloox stops reading this mailbox and withdraws its access at Google. Your Google sign-in isn't affected.",
     "confirmDisconnect": "Disconnect",
     "result": {
       "connected": "Gmail connected.",
@@ -1687,9 +1687,9 @@
     "noticeCurrency": "Only NT$ payments can be recorded for now."
   },
   "emails": {
-    "resetSubject": "Reset your Talent Biz OS password",
+    "resetSubject": "Reset your Taloox password",
     "resetBody": "Click this link to reset your password (valid for 1 hour):\n\n{url}\n\nIf you didn't ask to reset your password, you can ignore this email.",
-    "verifySubject": "Confirm your Talent Biz OS email",
+    "verifySubject": "Confirm your Taloox email",
     "verifyBody": "Click this link to confirm your email (valid for 1 hour):\n\n{url}"
   },
   "meta": {

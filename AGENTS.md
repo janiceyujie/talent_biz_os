@@ -8,7 +8,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Talent Biz OS
+# Taloox
 
 A business operating layer for independent talent — musicians, influencers, models, and the people who manage them. Ingests the messages a talent's business runs on (gig offers, brand deals, contracts, payments), tracks each ongoing deal as one thing across multiple messages and contract versions, and surfaces what needs a decision.
 

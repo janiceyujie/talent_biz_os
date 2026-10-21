@@ -36,7 +36,7 @@ export type PlanItem = {
   amount: { value: number; currency: Currency } | null; // payment due dates; negative when paid out
   /**
    * From the person's Google calendars (decision 0009, phase 2): read-only. `series`: a repeating event
-   * in our own Talent Biz OS calendar, which can be added to a project as a whole (decision 0017).
+   * in our own Taloox calendar, which can be added to a project as a whole (decision 0017).
    */
   external: { calendar: string; color: string | null; series: string | null } | null;
 };

@@ -311,7 +311,7 @@ Our events and a dedicated calendar in the person's Google account go both ways 
 
 ```mermaid
 flowchart LR
-  subgraph Both["Ours ⇄ the Talent Biz OS calendar in Google"]
+  subgraph Both["Ours ⇄ the Taloox calendar in Google"]
     E["An event saved, archived,<br/>or deleted here"] -->|"calendar.sync<br/>(bursts merge into one)"| CS["calendar.sync, one per connection at a time"]
     REC["Worker: calendar.reconcile<br/>every 5 min, whether or not<br/>anyone has the app open"] --> CS
     SN["Sync now (in the request)"] --> CS

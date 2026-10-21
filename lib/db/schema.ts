@@ -852,7 +852,7 @@ export const calendarImportSource = pgTable(
     color: text(), // Google's background colour for the calendar, as #rrggbb
     lastImportedAt: timestamp({ withTimezone: true }),
     syncToken: text(), // tells whether the calendar changed since the last read; null = not known yet
-    // Our own Talent Biz OS calendar's repeating events, read-only like a chosen calendar (decision 0017).
+    // Our own Taloox calendar's repeating events, read-only like a chosen calendar (decision 0017).
     own: boolean().notNull().default(false),
     createdAt: createdAt(),
   },
@@ -881,7 +881,7 @@ export const externalEvent = pgTable(
   (t) => [unique("external_event_source_event").on(t.sourceId, t.externalEventId), index("external_event_source_start_idx").on(t.sourceId, t.startDate)],
 ).enableRLS();
 
-// A repeating event made in our own Talent Biz OS calendar, added to a project as a whole (decision
+// A repeating event made in our own Taloox calendar, added to a project as a whole (decision
 // 0017): every occurrence shows on it. The series stays read-only here, edited in Google.
 export const calendarSeriesProject = pgTable(
   "calendar_series_project",

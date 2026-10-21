@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { feedEvents, hashFeedToken, appUrl } from "@/lib/calendar/feed";
+import { PRODUCT_NAME } from "@/lib/brand";
 import { buildCalendar } from "@/lib/calendar/ics";
 import { db } from "@/lib/db";
 import { membership, person, talent } from "@/lib/db/schema";
@@ -22,7 +23,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/api/calendar/fe
 
   // Described in the language of the person whose link this is.
   const body = buildCalendar(await feedEvents(owner.talentId, owner.locale), {
-    name: `${owner.name} · Talent Biz OS`,
+    name: `${owner.name} · ${PRODUCT_NAME}`,
     host: new URL(appUrl()).host,
   });
   return new Response(body, {

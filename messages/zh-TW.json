@@ -1054,7 +1054,7 @@
     "zone": "時間以 {zone} 顯示",
     "noProject": "未歸入合作案",
     "addToProject": "加到合作案",
-    "repeatingFromGoogle": "週期性行程，來自 Google 上的 Talent Biz OS 日曆；請在 Google 修改。",
+    "repeatingFromGoogle": "週期性行程，來自 Google 上的 Taloox 日曆；請在 Google 修改。",
     "openInGoogle": "在 Google 日曆開啟",
     "changeProject": "更換",
     "seriesNote": "加到合作案時，會連同這個系列的每一次一起加入。",
@@ -1101,8 +1101,8 @@
     "confirmDisableBody": "已加入這個連結的行事曆將停止更新。之後可以隨時建立新連結。"
   },
   "googleCalendar": {
-    "calendarName": "Talent Biz OS · {talent}",
-    "calendarDescription": "由 Talent Biz OS 建立的行程。在這裡或 Talent Biz OS 修改，兩邊都會更新。",
+    "calendarName": "Taloox · {talent}",
+    "calendarDescription": "由 Taloox 建立的行程。在這裡或 Taloox 修改，兩邊都會更新。",
     "title": "Google 日曆",
     "notConfigured": "這個環境尚未設定 Google。",
     "needGoogle": "請先在上方「以 Google 登入」連結 Google 帳號",
@@ -1123,7 +1123,7 @@
     },
     "disconnectTitle": "中斷 Google 日曆連結？",
     "disconnectBody": "之後不再同步，並撤銷本服務對你 Google 帳號的存取權（Google 登入不受影響）。",
-    "deleteCalendar": "同時刪除 Google 上的「Talent Biz OS」日曆",
+    "deleteCalendar": "同時刪除 Google 上的「Taloox」日曆",
     "confirmDisconnect": "中斷連結",
     "cancel": "取消",
     "importTitle": "在這裡顯示",
@@ -1135,10 +1135,10 @@
     "chooseSave": "儲存",
     "saving": "儲存中…",
     "sendTitle": "與 Google 同步",
-    "sendTo": "你的行程 ⇄ Google 上的「Talent Biz OS」日曆",
+    "sendTo": "你的行程 ⇄ Google 上的「Taloox」日曆",
     "sendNote": "在任一邊修改，另一邊也會跟著更新。",
     "importNone": "尚未選擇",
-    "aboutSend": "傳送到 Google：已確認的行程會放進你 Google 帳號中專屬的「Talent Biz OS」日曆，儲存後隨即更新。本服務只會建立與修改這個日曆；同步標題、時間、地點與所屬合作案，待辦與款項不會同步。",
+    "aboutSend": "傳送到 Google：已確認的行程會放進你 Google 帳號中專屬的「Taloox」日曆，儲存後隨即更新。本服務只會建立與修改這個日曆；同步標題、時間、地點與所屬合作案，待辦與款項不會同步。",
     "aboutShow": "在這裡顯示：你勾選的 Google 日曆會唯讀顯示在這裡的行事曆中，只有你看得到，方便看出和私人行程的衝突。本服務只讀取你勾選的日曆。",
     "notConnected": "未連結",
     "syncedAgo": "{when}同步",
@@ -1147,11 +1147,11 @@
     "manage": "管理",
     "done": "完成",
     "syncedJustNow": "剛剛同步",
-    "notesMarker": "── 備註（與 Talent Biz OS 同步）──"
+    "notesMarker": "── 備註（與 Taloox 同步）──"
   },
   "gmail": {
     "title": "Gmail",
-    "aboutRead": "連結收工作信的信箱。Talent Biz OS 只取得唯讀權限：無法寄信、刪信，也無法更改信箱裡的任何內容。",
+    "aboutRead": "連結收工作信的信箱。Taloox 只取得唯讀權限：無法寄信、刪信，也無法更改信箱裡的任何內容。",
     "aboutDecide": "每封新信會先看寄件者、主旨和預覽，看起來是工作信（邀約、合約、行程安排、款項）時才讀取全文。",
     "aboutMembers": "收進來的工作信屬於這個工作區，所有成員（包括經紀人）都看得到。不是工作的信不會保留。",
     "notConfigured": "這個環境尚未設定 Gmail。",
@@ -1183,7 +1183,7 @@
     "accountNote": "請選收邀約信的帳號。",
     "continue": "前往 Google",
     "disconnectTitle": "中斷 Gmail 連結？",
-    "disconnectBody": "Talent Biz OS 會停止讀取這個信箱，並撤銷在 Google 的存取權。Google 登入不受影響。",
+    "disconnectBody": "Taloox 會停止讀取這個信箱，並撤銷在 Google 的存取權。Google 登入不受影響。",
     "confirmDisconnect": "中斷連結",
     "result": {
       "connected": "已連結 Gmail。",
@@ -1687,9 +1687,9 @@
     "noticeCurrency": "目前只能記錄新台幣款項。"
   },
   "emails": {
-    "resetSubject": "重設 Talent Biz OS 密碼",
+    "resetSubject": "重設 Taloox 密碼",
     "resetBody": "請點擊以下連結重設密碼（1 小時內有效）：\n\n{url}\n\n如果你沒有要求重設密碼，請忽略這封信。",
-    "verifySubject": "確認你的 Talent Biz OS 電子郵件",
+    "verifySubject": "確認你的 Taloox 電子郵件",
     "verifyBody": "請點擊以下連結確認你的電子郵件（1 小時內有效）：\n\n{url}"
   },
   "meta": {

@@ -755,7 +755,7 @@ function zoneOffset(date: string, timeZone: string, locale: string) {
   return parts.find((p) => p.type === "timeZoneName")?.value ?? timeZone;
 }
 
-/** A repeating event in our own Talent Biz OS calendar: read-only here, but it can go on a project as a whole (decision 0017). */
+/** A repeating event in our own Taloox calendar: read-only here, but it can go on a project as a whole (decision 0017). */
 function SeriesDialog({ item, onClose, onFile }: { item: PlanItem; onClose: () => void; onFile: () => void }) {
   const t = useTranslations("planner");
   const link = item.ref.source === "google" ? item.ref.link : "";

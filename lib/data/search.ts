@@ -21,7 +21,7 @@ const allWords = (words: string[], columns: (AnyColumn | SQL)[]) =>
 
 const hrefOf = {
   project: (id: string) => `/projects?id=${encodeURIComponent(id)}`,
-  contact: () => "/contacts",
+  contact: (name: string) => `/contacts?q=${encodeURIComponent(name)}`, // the list, searched for them
   organization: (id: string) => `/contacts/organizations/${encodeURIComponent(id)}`,
   calendar: (date: string) => `/calendar?day=${encodeURIComponent(date)}`,
   template: () => "/drafts",
@@ -84,7 +84,7 @@ async function candidates(talentId: string, match: (columns: (AnyColumn | SQL)[]
   ]);
   const hits: SearchHit[] = [
     ...projects.map((r) => ({ id: `project:${r.id}`, kind: "project" as const, label: r.label, detail: r.detail, href: hrefOf.project(r.id) })),
-    ...contacts.map((r) => ({ id: `contact:${r.id}`, kind: "contact" as const, label: r.label, detail: r.detail ?? "", keywords: r.email ?? "", role: r.role, href: hrefOf.contact() })),
+    ...contacts.map((r) => ({ id: `contact:${r.id}`, kind: "contact" as const, label: r.label, detail: r.detail ?? "", keywords: r.email ?? "", role: r.role, href: hrefOf.contact(r.label) })),
     ...organizations.map((r) => ({ id: `organization:${r.id}`, kind: "organization" as const, label: r.label, detail: "", href: hrefOf.organization(r.id) })),
     ...[...events, ...todos].map((r) => ({ id: `calendar:${r.id}`, kind: "calendar" as const, label: r.label, detail: r.date!, href: hrefOf.calendar(r.date!) })),
     ...templates.map((r) => ({ id: `template:${r.id}`, kind: "template" as const, label: r.label, detail: "", href: hrefOf.template() })),

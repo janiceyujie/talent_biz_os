@@ -271,22 +271,113 @@
     {
       "idx": 38,
       "version": "7",
-      "when": 1792513124821,
-      "tag": "0038_condemned_ironclad",
+      "when": 1792552362845,
+      "tag": "0038_record_six_currencies",
       "breakpoints": true
     },
     {
       "idx": 39,
       "version": "7",
-      "when": 1792513463266,
-      "tag": "0039_ordinary_blacklash",
+      "when": 1792553656541,
+      "tag": "0039_page_the_inbox",
       "breakpoints": true
     },
     {
       "idx": 40,
       "version": "7",
-      "when": 1792513616710,
-      "tag": "0040_handy_dust",
+      "when": 1792555804541,
+      "tag": "0040_record_correspondents",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792555992989,
+      "tag": "0041_backfill_correspondents",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1792557738193,
+      "tag": "0042_record_too_large",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792558233376,
+      "tag": "0043_record_fetch_failures",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1792567478663,
+      "tag": "0044_add_document_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1792640470835,
+      "tag": "0045_add_payment_receipts",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1792640486835,
+      "tag": "0046_receipts_from_settled_payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792640501359,
+      "tag": "0047_drop_settled_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1792649742786,
+      "tag": "0048_ai_call_flags",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1792651237317,
+      "tag": "0049_assistant_conversations",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1792696089157,
+      "tag": "0050_acoustic_whirlwind",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1792696785178,
+      "tag": "0051_brown_gargoyle",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1792697693316,
+      "tag": "0052_wonderful_susan_delgado",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1792697885084,
+      "tag": "0053_lame_lifeguard",
       "breakpoints": true
     }
   ]

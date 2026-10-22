@@ -7,7 +7,7 @@ import type { Payment } from "@/lib/types";
 const payment = (overrides: Partial<Payment> = {}): Payment => ({
   id: "test", projectId: null, projectType: "other", direction: "in", installment: "regular",
   label: "Test payment", amount: 100, currency: "TWD", taxRate: 5, taxIncluded: false,
-  recordedDate: "2026-10-01", dueDate: "2026-10-31", status: "expected", settledAmount: null,
+  recordedDate: "2026-10-01", dueDate: "2026-10-31", status: "expected", receipts: [], settledAmount: null,
   settledDate: null, invoiceRef: "", notes: "", voided: false, ...overrides,
 });
 const paymentInCurrency = (currency: string, overrides: Partial<Payment> = {}): Payment =>

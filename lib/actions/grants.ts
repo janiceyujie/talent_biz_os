@@ -1,5 +1,6 @@
 "use server";
-import { and, eq } from "drizzle-orm";
+import { acknowledgeGrantChanges } from "@/lib/data/grant-changes";
+import { and, eq, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
@@ -103,11 +104,14 @@ export async function setGrantWatch(enabled:boolean, regions:unknown): Promise<s
   const parsed=z.array(z.enum(grantRegions)).min(1).max(2).safeParse(regions);
   if(typeof enabled!=="boolean"||!parsed.success) return t("invalid");
   await db.insert(grantWatch).values({talentId:talent.id,personId:person.personId,enabled,regions:[...new Set(parsed.data)]})
-    .onConflictDoUpdate({target:[grantWatch.personId,grantWatch.talentId],set:{enabled,regions:[...new Set(parsed.data)]}});
+    .onConflictDoUpdate({target:[grantWatch.personId,grantWatch.talentId],set:{enabled,regions:[...new Set(parsed.data)],seenAt:sql`case when ${grantWatch.enabled}=false and ${enabled}=true then now() else ${grantWatch.seenAt} end`}});
   refresh(); return null;
 }
-export async function markGrantsSeen(): Promise<string|null> {
-  const {talent,person}=await context();
-  await db.update(grantWatch).set({seenAt:new Date()}).where(and(eq(grantWatch.talentId,talent.id),eq(grantWatch.personId,person.personId)));
+export async function markGrantsSeen(through:string): Promise<string|null> {
+  const {talent,person,t}=await context();
+  const parsed=z.iso.datetime().safeParse(through);
+  if(!parsed.success||Date.parse(through)>Date.now())return t("invalid");
+  // Acknowledge only the displayed snapshot; concurrent changes after it remain unread.
+  await acknowledgeGrantChanges(talent.id,person.personId,through);
   refresh(); return null;
 }

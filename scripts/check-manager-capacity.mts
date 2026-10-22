@@ -48,13 +48,19 @@ try {
     await tx.insert(s.project).values({talentId:p.talentId,title:p.name+" unbilled",counterparty:"Fictional Studio",type:"other",stage:"signed",quoteCurrency:"USD",quotedAmount:200});
     await tx.insert(s.calendarEvent).values([{talentId:p.talentId,projectId:p.projectId,title:"Current rehearsal",kind:"meeting",startDate:today,timeZone:"UTC"},{talentId:p.talentId,title:"Old rehearsal",kind:"meeting",startDate:"2020-01-01",timeZone:"UTC"},{talentId:p.talentId,title:"Future rehearsal",kind:"meeting",startDate:"2030-01-01",timeZone:"UTC"}]);
     await tx.insert(s.todo).values({talentId:p.talentId,projectId:p.projectId,title:"Old unpaid task",dueDate:"2020-01-01",timeZone:"UTC"});
-    const receipts=[{id:"original",date:today,cash:50,withheld:10},{id:"corrected",replaces:"original",date:today,cash:30,withheld:10}];
-    await tx.insert(s.payment).values([
+    const originalId=randomUUID(),correctedId=randomUUID(),oldId=randomUUID(),withdrawnId=randomUUID();
+    const receipts=[{id:originalId,date:today,cash:50,withheld:10},{id:correctedId,replaces:originalId,date:today,cash:30,withheld:10}];
+    const paymentSeeds=[
      {talentId:p.talentId,projectId:p.projectId,label:"Partial corrected",direction:"in",currency:"USD",amount:100,taxRate:5,recordedOn:today,dueOn:today,receipts},
-     {talentId:p.talentId,projectId:p.projectId,label:"Legacy short",direction:"out",currency:"USD",amount:100,recordedOn:today,dueOn:today,status:"settled",settledOn:today,settledAmount:90},
+     {talentId:p.talentId,projectId:p.projectId,label:"Partial cost",direction:"out",currency:"USD",amount:100,recordedOn:today,dueOn:today,receipts:[{id:randomUUID(),date:today,cash:90,withheld:0}]},
      {talentId:p.talentId,projectId:p.projectId,label:"Yen inclusive",direction:"in",currency:"JPY",amount:55,taxRate:8.875,taxIncluded:true,recordedOn:today,dueOn:today},
-     {talentId:p.talentId,projectId:p.projectId,label:"Withdrawn",direction:"in",currency:"USD",amount:10,recordedOn:today,dueOn:today,receipts:[{id:"old",date:today,cash:10,withheld:0},{id:"void",replaces:"old",date:today,cash:0,withheld:0,withdrawn:true}]},
-    ]);
+     {talentId:p.talentId,projectId:p.projectId,label:"Withdrawn",direction:"in",currency:"USD",amount:10,recordedOn:today,dueOn:today,receipts:[{id:oldId,date:today,cash:10,withheld:0},{id:withdrawnId,replaces:oldId,date:today,cash:0,withheld:0,withdrawn:true}]},
+    ];
+    for(const seed of paymentSeeds){
+      const {receipts:entries=[],...row}=seed;
+      const [stored]=await tx.insert(s.payment).values({...row,direction:row.direction as "in"|"out"}).returning({id:s.payment.id});
+      for(const entry of entries)await tx.insert(s.paymentReceipt).values({id:entry.id,talentId:p.talentId,paymentId:stored.id,receivedOn:entry.date,cash:entry.cash,withheld:entry.withheld,replacesId:"replaces" in entry?entry.replaces:null,withdrawn:"withdrawn" in entry?Boolean(entry.withdrawn):false});
+    }
    }
   }
   await tx.insert(s.managerEntitlement).values({personId:manager.personId,plan:"manager",artistLimit:3,active:true,source:"local_trial"});
@@ -98,7 +104,8 @@ try {
  const ids=artists.slice(0,30).map(a=>a.talentId);
  const res=await get(`/api/manager/overview?view=finance&start=${from}&end=${end}&${selection(ids)}`,mc);ok(res.status===200,"SQL finance loads");const aggregate=await res.json();
  const {inArray}=await import("drizzle-orm");
- const raw=await db.select().from(s.payment).where(inArray(s.payment.talentId,ids));
+ const {withReceiptRows}=await import("../lib/data/payment-receipts");
+ const raw=await withReceiptRows(db,await db.select().from(s.payment).where(inArray(s.payment.talentId,ids)));
  const stages=await q`select id,stage from project where talent_id in ${q(ids)}`;
  const expected=managerFinance(raw.map(row=>({...row,projectStage:stages.find(p=>p.id===row.projectId)?.stage})),from,end).sort((a,b)=>`${a.artistId}:${a.currency}`.localeCompare(`${b.artistId}:${b.currency}`));
  assert.deepEqual(aggregate.finance.sort((a:{artistId:string;currency:string},b:{artistId:string;currency:string})=>`${a.artistId}:${a.currency}`.localeCompare(`${b.artistId}:${b.currency}`)),expected);checks++;

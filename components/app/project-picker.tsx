@@ -97,7 +97,7 @@ export function EventProjectPicker({ item, onClose, onDone }: { item: CalendarIt
   );
 }
 
-/** Add to a project, for a repeating event in our own Talent Biz OS calendar: the whole series (decision 0017). */
+/** Add to a project, for a repeating event in our own Taloox calendar: the whole series (decision 0017). */
 export function SeriesProjectPicker({ seriesId, title, onClose, onDone }: { seriesId: string; title: string; onClose: () => void; onDone?: (message: string) => void }) {
   return <ProjectPicker title={title} onPick={(projectId) => fileGoogleSeries(seriesId, projectId)} onClose={onClose} onDone={onDone} />;
 }

@@ -52,6 +52,7 @@ function ShellContent({ children, sessionKey }: { children: ReactNode; sessionKe
   const [narrow, setNarrow] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [companionOpen, setCompanionOpen] = useState(false);
   const sidebar = useRef<HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -267,8 +268,8 @@ function ShellContent({ children, sessionKey }: { children: ReactNode; sessionKe
       )}
       <LiveRefresh />
       <div className="workspace-tools">
-      <DailyBriefing requestId={briefingRequest} sessionKey={sessionKey} onShow={() => setCompanionOpen(false)} onOpen={open} suppress={showNotifications || showSearch || mobile} />
-      <AssistantDock hidden={mobile || showNotifications || showSearch} />
+      <DailyBriefing requestId={briefingRequest} sessionKey={sessionKey} onShow={() => setCompanionOpen(false)} onOpen={open} suppress={showNotifications || showSearch || mobile || assistantOpen} />
+      <AssistantDock open={assistantOpen} setOpen={setAssistantOpen} hidden={mobile || showNotifications || showSearch || pathname === "/assistant"} />
       </div>
 
     </div>

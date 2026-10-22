@@ -9,8 +9,7 @@ import { profileRoleSchema } from "@/lib/profile";
 import { updateRole } from "@/app/role/actions";
 
 /** "Change role": the onboarding role picker, without the name step. */
-export default async function ChangeRolePage({ searchParams }: { searchParams: Promise<{ returnTo?: string | string[] }> }) {
-  const returnHref = roleReturnHref((await searchParams).returnTo);
+export default async function ChangeRolePage({ searchParams }: PageProps<"/role">) {
   const { person: current, talent } = await requireTalent();
   const [row] = await db
     .select({ accountType: person.accountType, avatarAppearance: person.avatarAppearance })
@@ -21,13 +20,13 @@ export default async function ChangeRolePage({ searchParams }: { searchParams: P
   return (
     <RolePicker
       mode="change"
-      returnHref={returnHref}
       initial={{
         role: roleOf(row.accountType, talent.vertical),
         appearance: row.avatarAppearance,
         profileRole: profile.success ? profile.data.role : roleOf(row.accountType, talent.vertical),
       }}
       action={updateRole}
+      returnHref={roleReturnHref((await searchParams).returnTo)}
     />
   );
 }

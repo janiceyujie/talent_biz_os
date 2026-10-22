@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { z } from "zod";
+import { aiPaused } from "@/lib/ai/pause";
 import { canAnalyze } from "@/lib/ai/usage";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -66,6 +67,7 @@ export async function reanalyzeMessage(id: string): Promise<string | null> {
   const { person, talent } = await requireTalent();
   const fail = await errorText();
   if (!z.uuid().safeParse(id).success) return fail("invalid");
+  if (await aiPaused()) return fail("aiPaused");
   const allowed = await canAnalyze(talent.id, id);
   if (!allowed.ok) return fail(allowed.reason === "daily" ? "aiDailyLimit" : "aiMessageLimit");
   const locale = toLocale(person.locale);
@@ -89,6 +91,7 @@ export async function openFromHistory(id: string): Promise<string | null> {
   const { person, talent } = await requireTalent();
   const fail = await errorText();
   if (!z.uuid().safeParse(id).success) return fail("invalid");
+  if (await aiPaused()) return fail("aiPaused");
   const allowed = await canAnalyze(talent.id, id);
   if (!allowed.ok) return fail(allowed.reason === "daily" ? "aiDailyLimit" : "aiMessageLimit");
   const locale = toLocale(person.locale);

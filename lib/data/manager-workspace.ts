@@ -1,15 +1,15 @@
 import "server-only";
+import {paymentsOf} from "./rows";
 import {requireManagerCapability,managerPlanAccess} from "./manager-entitlement";
 import {and,asc,desc,eq,getTableColumns,inArray,isNull,sql} from "drizzle-orm";
 import {db} from "@/lib/db";
-import {calendarEvent,membership,payment,project,todo} from "@/lib/db/schema";
+import {paymentReceipt,calendarEvent,membership,payment,project,todo} from "@/lib/db/schema";
 import {getManagerRoster} from "./manager";
 import {summaryOf} from "./projects";
 import {managerLocalEnabled} from "@/lib/manager/config";
 import {ManagerScopeError,selectManagedArtists} from "@/lib/manager/scope";
 import type {PortfolioWorkspace} from "@/lib/manager/workspace-types";
-import {calendarKinds,type CalendarKind,type Payment,type TravelDetails} from "@/lib/types";
-import {isProjectType} from "@/lib/project-types";
+import {calendarKinds,type CalendarKind,type TravelDetails} from "@/lib/types";
 import {type WorkspaceQuery} from "@/lib/manager/workspace-query";
 import {dateInZone} from "@/lib/domain/dates";
 const hhmm=(value:string|null)=>value?.slice(0,5)||"";
@@ -27,7 +27,7 @@ export async function getManagerWorkspace(personId:string,requested?:string[],pr
   // Open old tasks and unpaid balances remain eligible; finished historical rows do not.
   const eventRange=calendarOnly?sql`${calendarEvent.startDate}<=${end} and coalesce(${calendarEvent.endDate},${calendarEvent.startDate})>=${query.start}`:(reminders||today)?and(isNull(calendarEvent.archivedAt),sql`${calendarEvent.startDate}<=${end}`):undefined;
   const taskRange=calendarOnly?sql`${todo.dueDate} between ${query.start} and ${end}`:(reminders||today)?and(eq(todo.status,"open"),sql`${todo.dueDate}<=${end}`):undefined;
-  const paymentRange=calendarOnly?sql`${payment.dueOn} between ${query.start} and ${end}`:reminders?sql`${payment.dueOn}<=${end}`:financeOnly&&query.start&&query.end?sql`(${payment.recordedOn} between ${query.start} and ${query.end} or ${payment.settledOn} between ${query.start} and ${query.end} or exists(select 1 from jsonb_array_elements(${payment.receipts}) r where r->>'date' between ${query.start} and ${query.end}))`:undefined;
+  const paymentRange=calendarOnly?sql`${payment.dueOn} between ${query.start} and ${end}`:reminders?sql`${payment.dueOn}<=${end}`:financeOnly&&query.start&&query.end?sql`(${payment.recordedOn} between ${query.start} and ${query.end} or exists(select 1 from payment_receipt r where r.payment_id=${payment.id} and r.talent_id=${payment.talentId} and r.received_on between ${query.start}::date and ${query.end}::date and not r.withdrawn and not exists(select 1 from payment_receipt x where x.replaces_id=r.id)))`:undefined;
   const [events,tasks,payments]=await Promise.all([
     financeOnly?Promise.resolve([]):db.select(getTableColumns(calendarEvent)).from(calendarEvent).innerJoin(membership,and(eq(membership.talentId,calendarEvent.talentId),access)).where(and(inArray(calendarEvent.talentId,ids),eq(calendarEvent.status,"confirmed"),isNull(calendarEvent.deletedInGoogleAt),eventRange,projectId?eq(calendarEvent.projectId,projectId):undefined)).orderBy(asc(calendarEvent.startDate),asc(calendarEvent.id)).limit(1001),
     financeOnly?Promise.resolve([]):db.select(getTableColumns(todo)).from(todo).innerJoin(membership,and(eq(membership.talentId,todo.talentId),access)).where(and(inArray(todo.talentId,ids),taskRange,projectId?eq(todo.projectId,projectId):undefined)).orderBy(asc(todo.dueDate),asc(todo.id)).limit(1001),
@@ -40,14 +40,15 @@ export async function getManagerWorkspace(personId:string,requested?:string[],pr
   selectManagedArtists(await getManagerRoster(personId),ids,currentCapability.artistLimit);
   // Never present partial collections as complete financial totals.
   if(events.length>1000||tasks.length>1000||payments.length>2000||projects.length>1000)return {...base,limited:true,calendar:[],payments:[],projects:[]};
+  const receiptRows=payments.length?await db.select(getTableColumns(paymentReceipt)).from(paymentReceipt).innerJoin(membership,and(eq(membership.talentId,paymentReceipt.talentId),access)).where(and(inArray(paymentReceipt.paymentId,payments.map(p=>p.id)),inArray(paymentReceipt.talentId,ids))):[];
   const artistOf=(id:string)=>({artistId:id,artistName:selected.find(row=>row.id===id)!.name});
   const kind=(value:string):CalendarKind=>calendarKinds.includes(value as CalendarKind)?value as CalendarKind:"meeting";
   return {...base,
     calendar:[...events.map(row=>({...artistOf(row.talentId),id:row.id,source:"event" as const,kind:kind(row.kind),title:row.title,date:row.startDate,time:hhmm(row.startTime),timeZone:row.timeZone,location:row.location||"",suggestedProjectId:null,projectId:row.projectId,notes:row.notes||"",done:false,archived:!!row.archivedAt,
       travel:row.kind==="travel"||row.kind==="accommodation"?{endDate:row.endDate||"",endTime:hhmm(row.endTime),endTimeZone:row.endTimeZone||"",transportMode:(row.transportMode||"") as TravelDetails["transportMode"],operator:row.operator||"",serviceNumber:row.serviceNumber||"",destination:row.destination||"",seat:row.seat||"",hotelName:row.hotelName||""}:null,
       endDate:row.endDate||"",endTime:hhmm(row.endTime)})),
-      ...tasks.filter(row=>row.dueDate).map(row=>({...artistOf(row.talentId),id:row.id,source:"todo" as const,kind:({deliverable:"deliverable",payment_due:"payment"} as Record<string,CalendarKind>)[row.type]||"todo",title:row.title,date:row.dueDate!,time:hhmm(row.dueTime),timeZone:row.timeZone,location:"",suggestedProjectId:null,projectId:row.projectId,notes:row.notes||"",done:row.status==="done",archived:row.status==="dismissed",travel:null,endDate:"",endTime:""}))],
-    payments:payments.map(row=>({...artistOf(row.talentId),id:row.id,projectId:row.projectId,projectType:isProjectType(row.projectType)?row.projectType:"other",direction:row.direction,installment:row.installment,label:row.label,amount:row.amount,currency:row.currency.trim() as Payment["currency"],taxRate:row.taxRate,taxIncluded:row.taxIncluded,recordedDate:row.recordedOn,dueDate:row.dueOn,status:row.status,receipts:row.receipts,settledAmount:row.settledAmount,settledDate:row.settledOn,invoiceRef:row.invoiceRef||"",notes:row.notes||"",voided:!!row.voidedAt})),
+      ...tasks.filter(row=>row.dueDate).map(row=>({...artistOf(row.talentId),id:row.id,source:"todo" as const,kind:({deliverable:"deliverable",payment_due:"payment"} as Record<string,CalendarKind>)[row.type]||"todo",title:row.title,date:row.dueDate!,time:hhmm(row.dueTime),timeZone:row.timeZone,location:"",projectId:row.projectId,suggestedProjectId:null,notes:row.notes||"",done:row.status==="done",archived:row.status==="dismissed",travel:null,endDate:"",endTime:""}))],
+    payments:paymentsOf(payments,receiptRows).map((row,index)=>({...row,...artistOf(payments[index].talentId)})),
     projects:projects.map(row=>summaryOf(row,null,artistOf(row.talentId).artistName,null)),
   };
 }

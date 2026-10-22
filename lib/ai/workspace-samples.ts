@@ -1,8 +1,10 @@
 import type { AppData, InboxMessage } from "@/lib/types";
 import { assistantSamples } from "./assistant-samples";
 
+type SampleCopyKey = keyof typeof import("@/messages/en.json")["previewSamples"];
+
 // Pure display fixtures. No database, mailbox or model calls.
-export function workspaceSamples(real: AppData): AppData {
+export function workspaceSamples(real: AppData, copy?: (key: SampleCopyKey) => string, language = "en"): AppData {
   const portfolio = assistantSamples();
   const mail = [
     ["show", "Festival booking inquiry [Sample]", "inquiry", "We would like to invite Max Aidan for a 45-minute set at Coastal Music Festival. Our proposed fee is TWD 120,000 before tax. Please confirm availability and send your technical rider. Travel and accommodation are still to be agreed.", 120000],
@@ -20,8 +22,27 @@ export function workspaceSamples(real: AppData): AppData {
       dates:[],money:{amount:amount||null,currency:amount?"TWD":"",taxIncluded:i===0?false:amount?true:null,asStated:amount?String(amount):""},paymentTerms:"",replyBy:"",replyByStated:"",details:{},asks:[],missing:[],assumptions:[],flags:[],confidence:intent==="other"?0.2:0.95,
       modelVersion:"synthetic-fixture",promptVersion:"preview-v1"}
   }));
-  return {...real,...portfolio,calendar:portfolio.calendar.map(c=>c.projectId==="film"?{...c,source:"event",kind:"meeting"}:c),preview:true,previewProjectDetails:portfolio.projectDetails,organizations:[],distinctOrganizations:[],projectPeople:[],previewDate:"2026-10-07",inbox,inboxOverview:undefined,
+  const sample: AppData = {...real,...portfolio,calendar:portfolio.calendar.map(c=>c.projectId==="film"?{...c,source:"event",kind:"meeting"}:c),preview:true,previewProjectDetails:portfolio.projectDetails,organizations:[],distinctOrganizations:[],projectPeople:[],previewDate:"2026-10-07",inbox,inboxOverview:undefined,
     contacts:[{id:"preview-contact",role:"counterparty",organizationId:null,name:"Sam [Sample]",company:"Morrow Studio",email:"sample@example.com",phone:"",notes:"Synthetic contact",archived:false}],
     projects:portfolio.projects.map(p=>({...p,nextAction:p.id==="show"?{id:"preview-next-show",title:"Confirm festival availability [Sample]",dueDate:"2026-10-08"}:p.nextAction,updatedAt:p.id==="show"?"2026-09-25T12:00:00.000Z":p.updatedAt})),
     contracts:[],templates:[],drafts:[],files:[],externalEvents:[],notificationState:{},preferences:{"opportunities.profile":null,"profile.role":real.preferences?.["profile.role"]??null,"overview.layout":null},calendarFeed:false};
+  if (!copy) return sample;
+  const translate = (key: string) => copy(key as SampleCopyKey);
+  // Localize display fixtures only. IDs, money, dates and evaluation inputs stay unchanged.
+  const projects = sample.projects.map(p => ({...p,
+    title: translate(p.id + "Title"), counterparty: translate(p.id === "show" ? "stage" : "studio"),
+    artist: translate(p.id === "film" ? "filmArtist" : "artist"), notes: translate("projectNotes"),
+    details: {...p.details, deliverables: translate(p.id + "Deliverables"), ...(p.id === "brand" ? {rights: translate("rights"), contractNotes: translate("contractNotes")} : {})},
+    nextAction: p.nextAction ? {...p.nextAction, title: translate("nextAction")} : null
+  }));
+  return {...sample, talent: {...sample.talent, name: translate("portfolio")}, projects,
+    previewProjectDetails: Object.fromEntries(projects.map(p => [p.id, {...sample.previewProjectDetails![p.id], details: p.details, notes: p.notes}])),
+    payments: sample.payments.map(p => ({...p, label: translate("payment" + p.id.replaceAll("-", "_")), notes: translate("synthetic")})),
+    calendar: sample.calendar.map(c => ({...c, title: translate(c.projectId + "Calendar"), location: translate("location"), notes: translate("synthetic")})),
+    contacts: sample.contacts.map(c => ({...c, name: translate("contact"), company: translate("studio"), notes: translate("contactNotes")})),
+    inbox: sample.inbox.map((m, i) => ({...m, body: translate(`mail${i}Body`), analysis: m.analysis ? {...m.analysis,
+      title: translate(`mail${i}Title`), summary: translate(`mail${i}Body`), language,
+      counterparty: {...m.analysis.counterparty, name: translate(m.projectId === "show" ? "showContact" : "contact"), company: translate(m.projectId === "show" ? "stage" : "studio")}
+    } : null}))
+  };
 }

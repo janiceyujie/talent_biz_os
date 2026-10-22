@@ -1,3 +1,4 @@
+import {readLockedPayment,withReceiptRows,persistReceipts,type ReceiptPayment} from "@/lib/data/payment-receipts";
 import "server-only";
 import { billingDocumentKind, defaultDocumentKind, isBillingCurrency } from "./document";
 import { randomUUID } from "node:crypto";
@@ -54,11 +55,7 @@ export async function invoiceReceivable(
   paymentId: string,
   checkProject = true,
 ) {
-  const [p] = await tx
-    .select()
-    .from(payment)
-    .where(and(eq(payment.id, paymentId), eq(payment.talentId, talentId)))
-    .for("update");
+  const p=await readLockedPayment(tx,talentId,paymentId);
   if (
     !p ||
     p.direction !== "in" ||
@@ -305,8 +302,9 @@ export async function listInvoices(
     .limit(21);
   const shown = rows.slice(0, 20),
     last = shown.at(-1);
+  const hydrated=await withReceiptRows(db,shown.map(r=>r.payment));
   return {
-    items: shown.map((r) => summary(r.row, r.payment)),
+    items: shown.map((r,i) => summary(r.row, hydrated[i])),
     total: total.value,
     nextCursor:
       rows.length > 20 && last
@@ -322,7 +320,7 @@ export async function listInvoices(
 }
 function summary(
   r: typeof invoice.$inferSelect,
-  p: typeof payment.$inferSelect,
+  p: ReceiptPayment,
 ): InvoiceSummary {
   const received = p.voidedAt ? 0 : paymentBalance(p).cash;
   return {
@@ -360,7 +358,7 @@ export async function getInvoice(
   const mailbox = await invoiceMailbox(db,talentId);
   const mode = invoiceGmailMode();
   return {
-    ...summary(r.row, r.payment),
+    ...summary(r.row, (await withReceiptRows(db,[r.payment]))[0]),
     snapshot: r.row.snapshot,
     deliveryMode: "disabled",
     from: r.row.gmailAccountEmail || mailbox?.accountEmail || "",
@@ -414,10 +412,7 @@ export async function settleInvoice(
     if (!sameAmounts(r.snapshot, invoiceAmounts(p))) fail("amountChanged");
     if (!validInvoiceReceiptDate(settledOn, r.issueOn, await day(tx, talentId)))
       fail("invalid");
-    await tx
-      .update(payment)
-      .set(appendReceipt(p, { id: randomUUID(), date: settledOn, cash: paymentBalance(p).remaining, reason: "unpaid" }))
-      .where(eq(payment.id, p.id));
+    await persistReceipts(tx,p,appendReceipt(p, { id: randomUUID(), date: settledOn, cash: paymentBalance(p).remaining, reason: "unpaid",recordedBy:personId,recordedAt:new Date().toISOString() }));
   });
 }
 

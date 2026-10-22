@@ -113,3 +113,15 @@
 
 /* Clip horizontal overflow without creating a non-scrolling sticky ancestor. */
 .page-content:has(.grants-workspace) { overflow:clip; }
+
+.grant-discipline-tag { font-size:12px; color:var(--muted); border:1px solid var(--border); border-radius:999px; padding:2px 8px; overflow-wrap:anywhere; }
+@media(max-width:600px) { .grant-filters > label:not(.grant-search) { flex:1 1 calc(50% - 12px); } .grant-filters > .grant-search { flex:1 1 100%; } }
+
+.grant-change-history { margin-block: 1rem; border-block: 1px solid var(--line); padding-block: .75rem; min-width: 0; }
+.grant-change-history summary { cursor: pointer; font-weight: 600; }
+.grant-change-history ol { list-style: none; padding: 0; margin: 0; }
+.grant-change-history li { padding-block: .75rem; overflow-wrap: anywhere; }
+.grant-change-history li + li { border-top: 1px solid var(--line); }
+.grant-change-history li > div { display: flex; flex-wrap: wrap; gap: .35rem 1rem; align-items: baseline; justify-content: space-between; }
+.grant-change-history time { font-size: .8rem; color: var(--muted); }
+.grant-change-history p { margin-block: .4rem; }

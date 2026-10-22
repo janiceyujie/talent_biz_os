@@ -18,14 +18,12 @@ export function managerFinanceQuery(personId:string,ids:string[],start:string,en
   ), balances as (
     select p.*, coalesce(r.cash,0) as cash,coalesce(r.withheld,0) as withheld,coalesce(r.period_cash,0) as period_cash
     from amounts p left join lateral (
-      select sum(round((entry->>'cash')::numeric*p.factor)) as cash,
-        sum(round(coalesce((entry->>'withheld')::numeric,0)*p.factor)) as withheld,
-        sum(case when entry->>'date' between ${start} and ${end} then round((entry->>'cash')::numeric*p.factor) else 0 end) as period_cash
-      from jsonb_array_elements(case when jsonb_array_length(p.receipts)>0 then p.receipts
-        when p.status='settled' then jsonb_build_array(jsonb_build_object('id','legacy','cash',coalesce(p.settled_amount,p.gross/p.factor),'withheld',0,'date',coalesce(p.settled_on::text,'')))
-        else '[]'::jsonb end) entry
-      where coalesce((entry->>'withdrawn')::boolean,false)=false
-        and not exists(select 1 from jsonb_array_elements(p.receipts) replacement where replacement->>'replaces'=entry->>'id')
+      select sum(round(r.cash*p.factor)) as cash,
+        sum(round(r.withheld*p.factor)) as withheld,
+        sum(case when r.received_on between ${start}::date and ${end}::date then round(r.cash*p.factor) else 0 end) as period_cash
+      from payment_receipt r
+      where r.payment_id=p.id and r.talent_id=p.talent_id and not r.withdrawn
+        and not exists(select 1 from payment_receipt replacement where replacement.replaces_id=r.id)
     ) r on true
   ) select talent_id as "artistId",trim(currency) as currency,
     (sum(case when direction='in' then period_cash else 0 end)/max(factor))::float8 as received,

@@ -1,6 +1,4 @@
-# Original three-branch publication — 2026-10-20
-
-> Historical validation record. The later four-branch split supersedes the allocation and complete-version branch below. Read `docs/testing/branch-review-order-2026-10-20.md` first.
+# Personal branch publication — 2026-10-20
 
 Sensitive areas: database migration lineage, tenant-scoped calendar synchronization, payments and manager access.
 

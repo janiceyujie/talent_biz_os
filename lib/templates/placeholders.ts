@@ -69,15 +69,15 @@ export const placeholderName = (key: PlaceholderKey, locale: Locale) => `{{${nam
 /** Wording that goes into a rendered reply follows the template's language, not the UI's. */
 export const contentWords: Record<
   Locale,
-  { quote: (amount: number, taxRate: number) => string; missing: (name: string) => string; listSeparator: string }
+  { quote: (amount: number, taxRate: number, currency: string) => string; missing: (name: string) => string; listSeparator: string }
 > = {
   en: {
-    quote: (amount, taxRate) => `${money(amount, "en")} (incl. tax, ${taxRate}%)`,
+    quote: (amount, taxRate, currency) => `${money(amount, "en", currency)} (incl. tax, ${taxRate}%)`,
     missing: (name) => `[to confirm: ${name}]`,
     listSeparator: ", ",
   },
   "zh-TW": {
-    quote: (amount, taxRate) => `${money(amount, "zh-TW")}（含稅，稅率 ${taxRate}%）`,
+    quote: (amount, taxRate, currency) => `${money(amount, "zh-TW", currency)}（含稅，稅率 ${taxRate}%）`,
     missing: (name) => `【待確認：${name}】`,
     listSeparator: "、",
   },

@@ -9,17 +9,17 @@ import { projectSettlement, summarize } from "./workflow";
 const sample = workspaceSamples({} as AppData);
 const payment = (currency: Payment["currency"], overrides: Partial<Payment> = {}): Payment => ({
   ...sample.payments[0], id: currency, projectId: "test-project", currency,
-  amount: 1000, taxRate: 5, taxIncluded: false, status: "settled", settledAmount: 1050,
+  amount: 1000, taxRate: 5, taxIncluded: false, status: "settled", receipts: [{id:"receipt",date:"2026-10-07",cash:1050,withheld:0,note:"",replacesId:null,withdrawn:false,recordedAt:"2026-10-07T12:00:00Z"}], settledAmount: 1050,
   settledDate: "2026-10-07", ...overrides,
 });
 
 test("finance totals and ledger rows stay scoped to each of the six recorded currencies", () => {
   const payments = supportedCurrencies.flatMap(currency => [
-    payment(currency), payment(currency, { id: `${currency}-pending`, status: "expected", settledAmount: null, settledDate: null }),
+    payment(currency), payment(currency, { id: `${currency}-pending`, status: "expected", receipts: [], settledAmount: null, settledDate: null }),
     payment(currency, { id: `${currency}-void`, voided: true }),
   ]);
   for (const currency of supportedCurrencies) {
-    const report = summarize({ payments }, "", "9999-12-31", currency);
+    const report = summarize({ payments, projects:[{id:"test-project",stage:"signed"}] }, "", "9999-12-31", currency);
     assert.equal(report.received, 1050);
     assert.equal(report.receivable, 1050);
     assert.equal(report.rows.length, 2);

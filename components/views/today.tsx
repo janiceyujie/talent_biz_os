@@ -35,7 +35,7 @@ export function TodayView() {
 
   return (
     <>
-      {data.grantNotice && <GrantNotice count={data.grantNotice.count}/>}
+      {data.grantNotice && <GrantNotice count={data.grantNotice.count} through={data.grantNotice.through}/>}
       {!data.projects.length && !data.contacts.length && (
         <section className="surface welcome-card">
           <span>{tEyebrow("welcome")}</span>

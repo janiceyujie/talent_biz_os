@@ -2,9 +2,9 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { IcsEvent } from "@/lib/calendar/ics";
-import { changedHere, fieldsOfOurs, fieldsOfTheirs, googleDescription, keysFor, mergeFields, notesFrom, suggestProject, type SyncFields } from "./two-way";
+import { changedHere, earlierNotesMarkers, fieldsOfOurs, fieldsOfTheirs, googleDescription, infoFrom, keysFor, mergeFields, notesFrom, suggestProject, type SyncFields } from "./two-way";
 
-const markers = ["── Notes (synced with Talent Biz OS) ──", "── 備註（與 Talent Biz OS 同步）──"];
+const markers = ["── Notes (synced with Taloox) ──", "── 備註（與 Taloox 同步）──", ...earlierNotesMarkers];
 const fields = (over: Partial<SyncFields> = {}): SyncFields => ({
   title: "Show",
   date: "2026-12-13",
@@ -144,5 +144,13 @@ describe("suggestProject", () => {
   test("unclear: nothing", () => {
     assert.equal(suggestProject({ title: "Brightfern × Haoshi dinner" }, projects), null);
     assert.equal(suggestProject({ title: "Dentist" }, projects), null);
+  });
+});
+
+describe("the notes line from before the rename", () => {
+  test("an event pushed with it still keeps its notes apart from the details above", () => {
+    const description = "Venue: Main stage\n── 備註（與 Talent Biz OS 同步）──\nBring the in-ear monitors";
+    assert.equal(notesFrom(description, markers), "Bring the in-ear monitors");
+    assert.equal(infoFrom(description, markers), "Venue: Main stage");
   });
 });

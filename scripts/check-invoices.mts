@@ -22,6 +22,8 @@ const q = postgres(process.env.DATABASE_URL!);
 const { hashPassword } = await import("better-auth/crypto");
 const { queue } = await import("../lib/queue");
 const { prepareInvoices } = await import("../lib/invoices/service");
+const {run}=await import("graphile-worker");
+const prepareRunner=await run({connectionString:process.env.DATABASE_URL,concurrency:1,pollInterval:100,taskList:{"invoice.prepare":async()=>{await prepareInvoices();}},noHandleSignals:true});
 const { renderInvoicePdf } = await import("../lib/invoices/pdf");
 const { PDFDocument } = await import("pdf-lib");
 const suffix = randomBytes(5).toString("hex");
@@ -492,7 +494,7 @@ try {
   );
   const [paid] = await q`select * from payment where id=${payments[0].id}`;
   ok(
-    paid.status === "settled" && Number(paid.settled_amount) === 1000,
+    paid.status === "settled" && Number((await q`select sum(cash) as cash from payment_receipt r where payment_id=${payments[0].id} and not withdrawn and not exists(select 1 from payment_receipt x where x.replaces_id=r.id)`)[0].cash) === 1000,
     "Same receivable settled",
   );
   ok(
@@ -622,6 +624,7 @@ try {
     }),
   );
 } finally {
+  await prepareRunner.stop();
   // Remove only this test's generated records and files, never the user's workspace.
   const keys =
     await q`select storage_key from invoice where talent_id=${artist.talentId} and storage_key is not null`;

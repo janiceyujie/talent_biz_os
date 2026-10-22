@@ -33,3 +33,9 @@ test("detail request cap and failure preserve every original discovery record",a
  const enriched=await enrichGrantsGovEligibility(rows,async()=>{calls++;if(calls===1)throw new Error("source down");return detail(["21"]);},now);
  assert.equal(calls,30);assert.equal(enriched.length,35);assert.equal(enriched[0].eligibility,null);assert.equal(enriched[1].eligibility?.applicantTypes?.[0],"individual");assert.equal(enriched[34].eligibility,undefined);
 });
+
+test("official category ordering does not issue a false content-change notification",()=>{
+ const a=parseGrantsGovEligibility(detail(["12","21","00"]),"123",now);
+ const b=parseGrantsGovEligibility(detail(["00","12","21"]),"123",now);
+ assert.deepEqual(a,b);assert.equal(listingHash({...row,eligibility:a}),listingHash({...row,eligibility:b}));
+});

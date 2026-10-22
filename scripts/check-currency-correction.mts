@@ -6,7 +6,7 @@ import { readFile, writeFile } from "node:fs/promises";
 env.loadEnvConfig(process.cwd());
 assert.equal(process.env.APP_ENV,"development");
 const url=new URL(process.env.DATABASE_URL!);
-assert.equal(url.hostname,"127.0.0.1");assert.match(url.pathname,/^\/taloox_(integrated|refresh|merged)_\d{8}$/);
+assert.equal(url.hostname,"127.0.0.1");assert.match(url.pathname,/^\/taloox_((integrated|refresh|merged)_\d{8}|int_20261022_(fresh|upgrade))$/);
 assert.ok(["localhost","127.0.0.1"].includes(new URL(process.env.WORKFLOW_TEST_URL || "http://localhost:3000").hostname));
 const {default:postgres}=await import("postgres");
 const q=postgres(process.env.DATABASE_URL!);
@@ -43,7 +43,8 @@ try {
  const input={projectId:id,label:"Currency correction partial QA",direction:"in",installment:"regular",amount:1000,currency:"TWD",taxRate:0,taxIncluded:true,recordedDate:"2026-09-15",dueDate:today,status:"settled",settledDate:today,settledAmount:400,withheldAmount:100,shortfallReason:"withholding",receiptId:randomUUID(),receiptRevision:0,invoiceRef:"",notes:"Synthetic test"};
  const made=await action("savePaymentWithId",[input]);ok(made.id);
  const cost=await action("savePaymentWithId",[{...input,label:"Foreign cost",direction:"out",currency:"EUR",status:"expected",shortfallReason:"",withheldAmount:""}]);ok(cost.id);
- const before=await q`select * from payment where id=${made.id}`;
+async function receiptRows(id:string){return (await q`select * from payment_receipt where payment_id=${id} order by created_at,id`).map(r=>({id:r.id,date:r.received_on instanceof Date?r.received_on.toISOString().slice(0,10):r.received_on,cash:Number(r.cash),withheld:Number(r.withheld),replaces:r.replaces_id||undefined,withdrawn:r.withdrawn,note:r.note||"",recordedAt:r.created_at.toISOString(),recordedBy:r.recorded_by||undefined}));}
+ const before=await q`select * from payment where id=${made.id}`;before[0].receipts=await receiptRows(made.id);
  const preview=()=>action("previewProjectCurrency",[{projectId:id,currency:"USD"}]);
  const first=await preview();ok(!first.blocked && first.payments.length===1 && first.costs===1);
  ok(first.payments[0].remaining===500 && first.payments[0].withheld===100);
@@ -58,7 +59,7 @@ try {
  correction={...correction,token:(await preview()).token};
  ok((await action("correctProjectCurrency",[correction]))===null);
  ok((await action("correctProjectCurrency",[correction]))===null);
- const after=(await q`select * from payment where id=${made.id}`)[0];
+ const after=(await q`select * from payment where id=${made.id}`)[0];after.receipts=await receiptRows(made.id);const replaced=new Set(after.receipts.map((r:{replaces?:string})=>r.replaces));after.settled_amount=after.receipts.filter((r:{id:string;withdrawn:boolean})=>!r.withdrawn&&!replaced.has(r.id)).reduce((n:number,r:{cash:number})=>n+r.cash,0);
  ok(after.currency==="USD" && Number(after.amount)===1000 && Number(after.settled_amount)===400 && after.status==="expected");
  assert.deepEqual(after.receipts,before[0].receipts);checks++;
  ok((await q`select currency from payment where id=${cost.id}`)[0].currency==="EUR");

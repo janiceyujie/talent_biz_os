@@ -6,7 +6,7 @@ import { readFile, writeFile } from "node:fs/promises";
 env.loadEnvConfig(process.cwd());
 assert.equal(process.env.APP_ENV,"development");
 const url=new URL(process.env.DATABASE_URL!);
-assert.equal(url.hostname,"127.0.0.1");assert.match(url.pathname,/^\/taloox_(integrated|refresh|merged)_\d{8}$/);
+assert.equal(url.hostname,"127.0.0.1");assert.match(url.pathname,/^\/taloox_((integrated|refresh|merged)_\d{8}|int_20261022_(fresh|upgrade))$/);
 assert.ok(["localhost","127.0.0.1"].includes(new URL(process.env.WORKFLOW_TEST_URL || "http://localhost:3000").hostname));
 const {default:postgres}=await import("postgres");
 const q=postgres(process.env.DATABASE_URL!);
@@ -52,7 +52,7 @@ try {
  ok((await action("savePaymentWithId",[{...receipt,shortfallReason:""}])).error);
  ok((await action("savePaymentWithId",[receipt],cookies[1])).error);
  ok((await action("savePaymentWithId",[receipt])).id===created.id);
- const load=async(id:string)=>{const [p]=await q`select * from payment where id=${id}`;return p;};
+ const load=async(id:string)=>{const [p]=await q`select * from payment where id=${id}`;const rows=await q`select * from payment_receipt where payment_id=${id} order by created_at,id`;p.receipts=rows.map(r=>({id:r.id,date:r.received_on instanceof Date?r.received_on.toISOString().slice(0,10):r.received_on,cash:Number(r.cash),withheld:Number(r.withheld),replaces:r.replaces_id||undefined,withdrawn:r.withdrawn,note:r.note||"",recordedAt:r.created_at.toISOString(),recordedBy:r.recorded_by||undefined}));p.settled_amount=paymentBalance({amount:Number(p.amount),taxRate:Number(p.tax_rate),taxIncluded:p.tax_included,currency:p.currency,status:p.status,settledAmount:0,receipts:p.receipts}).cash;return p;};
  let p=await load(created.id);ok(p.status==="expected" && Number(p.settled_amount)===55000 && p.receipts.length===1);
  ok((await action("setProjectStage",[actors[0].projectId,"closed"]))!==null);
  ok((await action("savePaymentWithId",[receipt])).id===created.id);
@@ -218,7 +218,7 @@ try {
  const multiIds:string[]=[];
  for(const entry of multiInputs){const saved=await action("savePaymentWithId",[entry]);assert.ok(saved.id,`${entry.label}: ${saved.error ?? "missing id"}`);checks++;multiIds.push(saved.id);}
  const multiState=async()=>{
-  const rows=await q`select * from payment where project_id=${multiProjectId} and talent_id=${actors[0].talentId}`;
+  const ids=await q`select id from payment where project_id=${multiProjectId} and talent_id=${actors[0].talentId}`;const rows=await Promise.all(ids.map(r=>load(r.id)));
   const [project]=await q`select stage from project where id=${multiProjectId} and talent_id=${actors[0].talentId}`;
   const summary={...payoff.summary,id:multiProjectId,stage:project.stage};
   const payments=rows.map(p=>({id:p.id,projectId:multiProjectId,direction:p.direction,label:p.label,amount:Number(p.amount),taxRate:Number(p.tax_rate),taxIncluded:p.tax_included,currency:p.currency,status:p.status,settledAmount:Number(p.settled_amount),receipts:p.receipts,dueDate:today,recordedDate:"2026-09-15",voided:!!p.voided_at}));

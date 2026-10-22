@@ -1,0 +1,534 @@
+[
+  {
+    "externalId": "tfam-x-site-2027",
+    "kind": "exhibition",
+    "region": "TW",
+    "title": "2027 X-site 計畫",
+    "agency": "臺北市立美術館",
+    "url": "https://www.tfam.museum/News/News_page.aspx?ddlLang=zh-tw&id=2111",
+    "opensOn": "2026-08-31",
+    "closesOn": "2026-10-23",
+    "sourceStatus": "posted",
+    "summary": "10/23 下午 17:00 截止。徵求介入北美館戶外廣場的原創跨域提案，須首次發表並考量承重、限高與公共安全。勝選製作經費 400 萬元（含稅），不是無條件獎金；參選身分及執行責任請詳閱簡章。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://www.tfam.museum/News/News_page.aspx?ddlLang=zh-tw&id=2111",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-10-23",
+      "notes": {
+        "en": "Deadline October 23 at 17:00 Taiwan time. First-presentation proposals must address site loading, height and public safety. The NT$4 million production budget includes tax and project obligations. Verify entrant requirements in the linked guidelines.",
+        "zh-TW": "10/23 下午 17:00 截止。徵求介入北美館戶外廣場的原創跨域提案，須首次發表並考量承重、限高與公共安全。勝選製作經費 400 萬元（含稅），不是無條件獎金；參選身分及執行責任請詳閱簡章。"
+      }
+    },
+    "disciplines": [
+      "visual_art",
+      "design"
+    ]
+  },
+  {
+    "externalId": "skm-photo-contest-2027",
+    "kind": "competition",
+    "region": "TW",
+    "title": "2027 SKM PHOTO 新光三越國際攝影大賽",
+    "agency": "新光三越文教基金會",
+    "url": "https://culture.skm.com.tw/ActEvent/Cweb/ActiveContent?ActUUID=807a24b9-5380-41f0-96e2-b98636e0267e&MenuUUID=68381c6f-c841-46b9-bb39-0f0e9ff98722",
+    "opensOn": "2026-09-01",
+    "closesOn": "2026-10-31",
+    "sourceStatus": "posted",
+    "summary": "不限年齡及國籍，免費報名。自訂主題，以五張照片組成一組作品；除填寫報名資料，還須在收件期限內繳交實體作品。這是攝影大賽，與 11/20 截止的類比攝影徵選不同。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": [
+        "TW",
+        "US",
+        "other"
+      ],
+      "evidenceUrl": "https://culture.skm.com.tw/ActEvent/Cweb/ActiveContent?ActUUID=807a24b9-5380-41f0-96e2-b98636e0267e&MenuUUID=68381c6f-c841-46b9-bb39-0f0e9ff98722",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-10-31",
+      "notes": {
+        "en": "No age or nationality limit; entry is free. Submit five photographs as one series and complete physical delivery as well as registration. This contest closes October 31, separately from the analog call.",
+        "zh-TW": "不限年齡及國籍，免費報名。自訂主題，以五張照片組成一組作品；除填寫報名資料，還須在收件期限內繳交實體作品。這是攝影大賽，與 11/20 截止的類比攝影徵選不同。"
+      }
+    },
+    "disciplines": [
+      "photography"
+    ]
+  },
+  {
+    "externalId": "skm-analog-2027",
+    "kind": "exhibition",
+    "region": "TW",
+    "title": "2027 SKM PHOTO 類比攝影創作徵選",
+    "agency": "新光三越文教基金會",
+    "url": "https://culture.skm.com.tw/ActEvent/Cweb/ManualDownload?ActUUID=81cf9245-ae45-4bd8-90b3-1ea90a40def7&MenuUUID=23a22f8c-b1ad-426d-8e75-33d69624bed3",
+    "opensOn": "2026-09-01",
+    "closesOn": "2026-11-20",
+    "sourceStatus": "posted",
+    "summary": "徵求以底片、拍立得、替代技法等類比攝影為核心的作品，可結合數位技法，但不接受純數位影像。11/20 截止；依簡章備妥作品檔案、報名表與必要文件。不是一般攝影大賽的延長報名。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://culture.skm.com.tw/ActEvent/Cweb/ManualDownload?ActUUID=81cf9245-ae45-4bd8-90b3-1ea90a40def7&MenuUUID=23a22f8c-b1ad-426d-8e75-33d69624bed3",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-11-19",
+      "notes": {
+        "en": "Analog photography and alternative processes are accepted, including hybrid work centered on analog creation; purely digital work is excluded. Prepare the application and required files according to the guidelines. Separate from the October photography contest.",
+        "zh-TW": "徵求以底片、拍立得、替代技法等類比攝影為核心的作品，可結合數位技法，但不接受純數位影像。11/20 截止；依簡章備妥作品檔案、報名表與必要文件。不是一般攝影大賽的延長報名。"
+      }
+    },
+    "disciplines": [
+      "photography"
+    ]
+  },
+  {
+    "externalId": "kaohsiung-award-2027",
+    "kind": "competition",
+    "region": "TW",
+    "title": "2027 高雄獎",
+    "agency": "高雄市立美術館",
+    "url": "https://awardkmfa.org.tw/",
+    "opensOn": "2026-10-01",
+    "closesOn": "2026-10-31",
+    "sourceStatus": "posted",
+    "summary": "五類：書寫／書畫、繪畫／版次、空間裝置、影像科技媒體、計畫型跨領域。個人須具中華民國國籍或在臺居留簽證；團體至少三分之一成員符合。作品須為 2024/1/1 後完成且未於國內公開競賽得獎。官網新聞起日有歧異，採當屆簡章的 10/1–10/31。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://awardkmfa.org.tw/",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-10-31",
+      "notes": {
+        "en": "Individuals need ROC nationality or a Taiwan residence visa; at least one third of a group's members must qualify. Works must date from January 1, 2024 onward and not have won a domestic public competition. The current guidelines specify October 1–31; a press release has a conflicting opening date.",
+        "zh-TW": "五類：書寫／書畫、繪畫／版次、空間裝置、影像科技媒體、計畫型跨領域。個人須具中華民國國籍或在臺居留簽證；團體至少三分之一成員符合。作品須為 2024/1/1 後完成且未於國內公開競賽得獎。官網新聞起日有歧異，採當屆簡章的 10/1–10/31。"
+      }
+    },
+    "disciplines": [
+      "visual_art"
+    ]
+  },
+  {
+    "externalId": "matsu-biennial-2027",
+    "kind": "exhibition",
+    "region": "TW",
+    "title": "2027 第四屆馬祖國際藝術島 · 國際藝術家徵件",
+    "agency": "馬祖國際藝術島",
+    "url": "https://matsubiennial.tw/news/details/87",
+    "opensOn": "2026-09-15",
+    "closesOn": "2026-10-30",
+    "sourceStatus": "posted",
+    "summary": "10/30 17:00（GMT+8）截止。徵求現地裝置及參與式創意計畫，可從島嶼、前哨、海洋發想。每案製作支持原則 80 萬元（含稅），須配合馬祖現地執行；預定 2027/8/20–11/7 展出。申請條件與執行成本請確認簡章。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://matsubiennial.tw/news/details/87",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-10-30",
+      "notes": {
+        "en": "Deadline October 30 at 17:00 GMT+8. Site-specific installations and participatory projects are invited. The indicative NT$800,000 tax-inclusive support funds production obligations, not an unconditional prize. Confirm applicant rules, logistics and the planned August–November 2027 exhibition.",
+        "zh-TW": "10/30 17:00（GMT+8）截止。徵求現地裝置及參與式創意計畫，可從島嶼、前哨、海洋發想。每案製作支持原則 80 萬元（含稅），須配合馬祖現地執行；預定 2027/8/20–11/7 展出。申請條件與執行成本請確認簡章。"
+      }
+    },
+    "disciplines": [
+      "visual_art"
+    ]
+  },
+  {
+    "externalId": "keelung-ciao-2027",
+    "kind": "exhibition",
+    "region": "TW",
+    "title": "2027 基隆潮藝術 · 藝術孵育徵件",
+    "agency": "基隆市文化觀光局",
+    "url": "https://klctb.klcg.gov.tw/News_Content.aspx?n=7488&s=18784&sms=12483",
+    "opensOn": "2026-09-23",
+    "closesOn": "2026-11-30",
+    "sourceStatus": "posted",
+    "summary": "官方公告徵件至 2026 年 11 月底，未載確切截止時刻。徵選至少四案，每案最高 30 萬元（含稅）。媒材不限，可提策展或行動展演；須選擇並排序場域、全程參與孵育，於基隆潮藝術呈現成果。收件時間及完整資格依簡章確認。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://klctb.klcg.gov.tw/News_Content.aspx?n=7488&s=18784&sms=12483",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-11-19",
+      "notes": {
+        "en": "Official notice closes at the end of November 2026 without specifying a time. At least four projects receive up to NT$300,000 tax-inclusive support each. Applicants must rank sites, participate throughout incubation and deliver public presentation; confirm detailed conditions.",
+        "zh-TW": "官方公告徵件至 2026 年 11 月底，未載確切截止時刻。徵選至少四案，每案最高 30 萬元（含稅）。媒材不限，可提策展或行動展演；須選擇並排序場域、全程參與孵育，於基隆潮藝術呈現成果。收件時間及完整資格依簡章確認。"
+      }
+    },
+    "disciplines": [
+      "visual_art"
+    ]
+  },
+  {
+    "externalId": "cycc-graduation-2027",
+    "kind": "exhibition",
+    "region": "TW",
+    "title": "2027 中原文創園區創意畢業季",
+    "agency": "中原文創園區",
+    "url": "https://cycc.org.tw/zh-hant/node/246",
+    "opensOn": "2026-05-19",
+    "closesOn": "2026-10-30",
+    "sourceStatus": "posted",
+    "summary": "10/30 23:59 截止，以電子郵件收件時間為準。限國內立案學校之畢業或學期成果展，個人、團體或跨校聯展可申請，須校方／系所用印證明。免場租，但有 15,000 元保證金及每區每日 500 元水電空調費；展期為 2027 年 5–6 月指定梯次。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://cycc.org.tw/zh-hant/node/246",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-10-30",
+      "notes": {
+        "en": "Email receipt deadline October 30 at 23:59 Taiwan time. For graduation or term exhibitions from registered Taiwan schools, with institutional endorsement. Rental is waived but a NT$15,000 deposit and NT$500 per area per day utilities apply. Nationality is not inferred from school location.",
+        "zh-TW": "10/30 23:59 截止，以電子郵件收件時間為準。限國內立案學校之畢業或學期成果展，個人、團體或跨校聯展可申請，須校方／系所用印證明。免場租，但有 15,000 元保證金及每區每日 500 元水電空調費；展期為 2027 年 5–6 月指定梯次。"
+      }
+    },
+    "disciplines": [
+      "multidisciplinary",
+      "visual_art",
+      "design",
+      "fashion",
+      "film",
+      "music",
+      "performing_arts"
+    ]
+  },
+  {
+    "externalId": "ntso-composition-2027",
+    "kind": "competition",
+    "region": "TW",
+    "title": "國臺交 2027 青年音樂創作競賽",
+    "agency": "國立臺灣交響樂團",
+    "url": "https://event.culture.tw/mocweb/reg/NTSO/Detail.init.ctr?actId=60094",
+    "opensOn": "2026-10-21",
+    "closesOn": "2026-11-04",
+    "sourceStatus": "posted",
+    "summary": "10/21 上午 09:00 起收件（臺灣時間）；11/4 中午 12:00 停止線上填表，紙本資料亦須於期限內寄達。限中華民國國籍、依收件年計算 16–45 歲（1981–2010 年出生）。創作須含臺灣傳統音樂元素；線上填表不等於完成通訊繳件。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": [
+        "individual"
+      ],
+      "countries": [
+        "TW"
+      ],
+      "evidenceUrl": "https://event.culture.tw/mocweb/reg/NTSO/Detail.init.ctr?actId=60094",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-11-04",
+      "notes": {
+        "en": "Opens October 21 at 09:00 Taiwan time. Online forms close November 4 at noon and required physical materials must arrive by the deadline. ROC citizens born in 1981–2010 are eligible under the collection-year age rule. Works must incorporate traditional Taiwanese music elements.",
+        "zh-TW": "10/21 上午 09:00 起收件（臺灣時間）；11/4 中午 12:00 停止線上填表，紙本資料亦須於期限內寄達。限中華民國國籍、依收件年計算 16–45 歲（1981–2010 年出生）。創作須含臺灣傳統音樂元素；線上填表不等於完成通訊繳件。"
+      }
+    }
+  },
+  {
+    "externalId": "art-future-2027",
+    "kind": "exhibition",
+    "region": "TW",
+    "title": "2027 ART FUTURE 藝術未來 · 畫廊參展",
+    "agency": "大苑藝術會展",
+    "url": "https://www.art-formosa.com/?action=application",
+    "opensOn": null,
+    "closesOn": "2026-11-10",
+    "sourceStatus": "posted",
+    "summary": "官方列 11/10 申請截止，2027/1/8–1/10 在台北君悅展出；開始日期未明列，請確認仍可受理。主要面向每年在自有場地辦三次以上個展／聯展的畫廊，非一般個人免費徵展。各展區年齡規則不同，部分邀約制；須確認展位費、保證金與作品條件。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://www.art-formosa.com/?action=application",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-11-10",
+      "notes": {
+        "en": "Application deadline November 10; opening date not stated. Intended for galleries with at least three annual exhibitions in their own venue. Section-specific age rules, invitation-only areas, booth fees and deposits apply. Do not infer general individual eligibility.",
+        "zh-TW": "官方列 11/10 申請截止，2027/1/8–1/10 在台北君悅展出；開始日期未明列，請確認仍可受理。主要面向每年在自有場地辦三次以上個展／聯展的畫廊，非一般個人免費徵展。各展區年齡規則不同，部分邀約制；須確認展位費、保證金與作品條件。"
+      }
+    },
+    "disciplines": [
+      "visual_art"
+    ]
+  },
+  {
+    "externalId": "illustration-taipei-2027",
+    "kind": "exhibition",
+    "region": "TW",
+    "title": "2027 台北國際插畫博覽會 · 參展徵集",
+    "agency": "台北國際插畫博覽會",
+    "url": "https://illustrationtaipei.com/taipei/news/bd1ed9e5-2f6c-448c-85c2-6f26af671479",
+    "opensOn": "2026-10-07",
+    "closesOn": null,
+    "sourceStatus": "unknown",
+    "summary": "主辦公告邀請插畫家、圖像創作者與原創角色參展，展期 2027/4/2–4/6。公告刊於 2026/10/7，卻將報名截止寫成已過的 2026/2/26，年度矛盾待主辦確認，未擅自改為 2027。11/6 是超早鳥優惠期限，不當作總報名截止。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://illustrationtaipei.com/taipei/news/bd1ed9e5-2f6c-448c-85c2-6f26af671479",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-11-19",
+      "notes": {
+        "en": "Organizer announcement invites illustrators and original characters. The April 2027 event is announced in October 2026 but its application deadline says February 2026. Keep the deadline unknown until clarified; November 6 is an early-bird promotion, not the final deadline.",
+        "zh-TW": "主辦公告邀請插畫家、圖像創作者與原創角色參展，展期 2027/4/2–4/6。公告刊於 2026/10/7，卻將報名截止寫成已過的 2026/2/26，年度矛盾待主辦確認，未擅自改為 2027。11/6 是超早鳥優惠期限，不當作總報名截止。"
+      }
+    },
+    "disciplines": [
+      "design",
+      "visual_art"
+    ]
+  },
+  {
+    "externalId": "if8-circle-2027",
+    "kind": "exhibition",
+    "region": "TW",
+    "title": "IF8 創集繪 · 2027 社團攤位一招",
+    "agency": "GJ 工作室",
+    "url": "https://if.gjs.tw/circle.html",
+    "opensOn": "2027-01-13",
+    "closesOn": "2027-02-24",
+    "sourceStatus": "forecasted",
+    "summary": "尚未開始：一招預定 2027/1/13 12:00–2/24 23:59，活動 5/29 於台北花博爭艷館。適合原創／同人漫畫、小說、插畫及手作社團；每攤 650 元，須遵守著作權及商品規則。海外社團可申請；商業攤位須另洽主辦。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://if.gjs.tw/circle.html",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-11-19",
+      "notes": {
+        "en": "First call scheduled January 13 at noon to February 24 at 23:59, 2027, for the May 29 fair. Overseas circles may apply; commercial booths must contact the organizer separately. NT$650 per standard booth, with copyright and merchandise restrictions.",
+        "zh-TW": "尚未開始：一招預定 2027/1/13 12:00–2/24 23:59，活動 5/29 於台北花博爭艷館。適合原創／同人漫畫、小說、插畫及手作社團；每攤 650 元，須遵守著作權及商品規則。海外社團可申請；商業攤位須另洽主辦。"
+      }
+    },
+    "disciplines": [
+      "design",
+      "visual_art"
+    ]
+  },
+  {
+    "externalId": "madzine-modular-tour-call-2026",
+    "kind": "showcase",
+    "region": "TW",
+    "title": "HATAKEN × SAKAGUCHI × MADZINE · 台灣巡演藝術家徵選",
+    "agency": "MADZINE",
+    "url": "https://www.patreon.com/madzinetw/posts/hataken-x-x-2026-171658751",
+    "opensOn": "2026-10-20",
+    "closesOn": "2026-11-01",
+    "sourceStatus": "unknown",
+    "summary": "主辦公開 Patreon 公告以模組／軟體模組合成器創作者為主，需 20–30 分鐘音訊及演出影片，報名費 1,000 元。公告列 10/20–11/1 報名，但表單仍稱近期開放，高雄演出日期也有 2/26、2/27 兩種說法，因此標待確認。差旅自理，注意宣傳及錄影音授權。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://www.patreon.com/madzinetw/posts/hataken-x-x-2026-171658751",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-11-01",
+      "notes": {
+        "en": "Public organizer Patreon call for modular or software-modular performers. Requires 20–30 minute audio and performance video; NT$1,000 fee. Application form is still described as forthcoming and Kaohsiung dates conflict, so availability remains unconfirmed. Travel and licensing terms require review.",
+        "zh-TW": "主辦公開 Patreon 公告以模組／軟體模組合成器創作者為主，需 20–30 分鐘音訊及演出影片，報名費 1,000 元。公告列 10/20–11/1 報名，但表單仍稱近期開放，高雄演出日期也有 2/26、2/27 兩種說法，因此標待確認。差旅自理，注意宣傳及錄影音授權。"
+      }
+    },
+    "disciplines": [
+      "music"
+    ]
+  },
+  {
+    "externalId": "mwd-film-2026",
+    "kind": "competition",
+    "region": "TW",
+    "title": "2026 麥味登微電影暨短影音創作大賽",
+    "agency": "揚秦國際企業／麥味登",
+    "url": "https://www.mwd.com.tw/index.php?article_id=6601&code=list&flag=detail&ids=18",
+    "opensOn": "2026-05-15",
+    "closesOn": "2026-10-30",
+    "sourceStatus": "posted",
+    "summary": "10/30 上午 10:00 截止。個人或團隊參賽，微電影不超過 480 秒、直式短影音不超過 60 秒，須符合指定品牌主題。重要限制：與版權／經紀公司有現存合約者及重複參賽作品不適用；得獎作品權利條款範圍廣，請先詳閱官方簡章。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://www.mwd.com.tw/index.php?article_id=6601&code=list&flag=detail&ids=18",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-10-30",
+      "notes": {
+        "en": "Deadline October 30 at 10:00 Taiwan time. Individuals or teams may enter brand-themed films up to 480 seconds or vertical shorts up to 60 seconds. Existing copyright/agency contracts and prior or simultaneous competitions can disqualify entries; review the broad winner-rights terms.",
+        "zh-TW": "10/30 上午 10:00 截止。個人或團隊參賽，微電影不超過 480 秒、直式短影音不超過 60 秒，須符合指定品牌主題。重要限制：與版權／經紀公司有現存合約者及重複參賽作品不適用；得獎作品權利條款範圍廣，請先詳閱官方簡章。"
+      }
+    }
+  },
+  {
+    "externalId": "youth-film-university-2026",
+    "kind": "competition",
+    "region": "TW",
+    "title": "2026 第十二屆青春有影大學盃",
+    "agency": "中華民國微電影協會",
+    "url": "https://micromovie.org.tw/2026youth-films-festival/",
+    "opensOn": "2026-06-06",
+    "closesOn": "2026-12-31",
+    "sourceStatus": "posted",
+    "summary": "12/31 23:59 截止，主辦建議 23:30 前送出。限臺灣大專校院在學學生及應屆畢業生，含碩博士與符合規定之專科生；個人或團體皆可。作品須於 2025 年 7 月後完成，可選劇情、紀錄、動畫、手機或 AI 等組別，需同意非商業播映。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://micromovie.org.tw/2026youth-films-festival/",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-11-19",
+      "notes": {
+        "en": "Deadline December 31 at 23:59; organizer recommends submission before 23:30. For students or current-year graduates of Taiwan tertiary institutions, subject to the stated college rules. Works completed after July 2025 require noncommercial screening permission; school location does not imply citizenship.",
+        "zh-TW": "12/31 23:59 截止，主辦建議 23:30 前送出。限臺灣大專校院在學學生及應屆畢業生，含碩博士與符合規定之專科生；個人或團體皆可。作品須於 2025 年 7 月後完成，可選劇情、紀錄、動畫、手機或 AI 等組別，需同意非商業播映。"
+      }
+    },
+    "disciplines": [
+      "film"
+    ]
+  },
+  {
+    "externalId": "tccs-short-film-2026",
+    "kind": "competition",
+    "region": "TW",
+    "title": "小網紅大夢想第五屆短片選拔",
+    "agency": "台灣文化創意學會",
+    "url": "https://www.tccs.org.tw/contest/",
+    "opensOn": "2026-08-25",
+    "closesOn": "2026-11-25",
+    "sourceStatus": "posted",
+    "summary": "11/25 中午 12:00 截止，免費。限幼兒園至大專校院學生，個人或五人以內團體；製作 1–3 分鐘 SDGs 主題影片。須有參賽者出鏡、上傳 YouTube 並備授權書，影片公開維持期限及後續使用授權請詳閱規則。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://www.tccs.org.tw/contest/",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-11-19",
+      "notes": {
+        "en": "Deadline November 25 at noon; free. For kindergarten through tertiary students, individually or in groups of up to five. Submit a 1–3 minute SDGs video including a participant, a YouTube link and consent documents; review ongoing public-access and licensing obligations.",
+        "zh-TW": "11/25 中午 12:00 截止，免費。限幼兒園至大專校院學生，個人或五人以內團體；製作 1–3 分鐘 SDGs 主題影片。須有參賽者出鏡、上傳 YouTube 並備授權書，影片公開維持期限及後續使用授權請詳閱規則。"
+      }
+    }
+  },
+  {
+    "externalId": "streetvoice-next-big-thing-2026",
+    "kind": "showcase",
+    "region": "TW",
+    "title": "2026 The Next Big Thing 大團誕生 · 樂團徵選",
+    "agency": "StreetVoice 街聲",
+    "url": "https://streetvoice.com/opportunities/1081/",
+    "opensOn": "2026-01-28",
+    "closesOn": "2026-10-01",
+    "sourceStatus": "posted",
+    "summary": "本輪徵選已於 2026/10/1 截止。11 月開發場與後續年度活動是演出日期，不代表仍可報名。保留本屆資料供回看，下一屆須等主辦新公告，不沿用本屆期限。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://streetvoice.com/opportunities/1081/",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-10-20",
+      "notes": {
+        "en": "This call closed October 1, 2026. Later performance dates do not extend registration. Retained as a closed historical cycle; a future cycle needs a new official announcement.",
+        "zh-TW": "本輪徵選已於 2026/10/1 截止。11 月開發場與後續年度活動是演出日期，不代表仍可報名。保留本屆資料供回看，下一屆須等主辦新公告，不沿用本屆期限。"
+      }
+    },
+    "disciplines": [
+      "music"
+    ]
+  },
+  {
+    "externalId": "kingcar-weekend-music-2027",
+    "kind": "showcase",
+    "region": "TW",
+    "title": "2027 金車週末音樂會 · 演出徵選",
+    "agency": "金車文教基金會／金車文藝中心",
+    "url": "https://www.kingcarart.org.tw/projects-detail/208",
+    "opensOn": "2026-09-01",
+    "closesOn": "2026-09-30",
+    "sourceStatus": "posted",
+    "summary": "本輪已於 2026/9/30 18:00 截止，2027 年是演出年度。適用雙北、宜蘭、花蓮、臺東學校或社區音樂團體；入選補助與場地安排依主辦核定。保留已截止紀錄，不當作現在可投的機會。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": {
+      "version": 1,
+      "applicantTypes": null,
+      "countries": null,
+      "evidenceUrl": "https://www.kingcarart.org.tw/projects-detail/208",
+      "verifiedOn": "2026-10-20",
+      "validThrough": "2026-10-20",
+      "notes": {
+        "en": "Applications closed September 30, 2026 at 18:00, for performances in 2027. For school/community music groups from Taipei, New Taipei, Yilan, Hualien and Taitung. This is a closed cycle, not a current open call.",
+        "zh-TW": "本輪已於 2026/9/30 18:00 截止，2027 年是演出年度。適用雙北、宜蘭、花蓮、臺東學校或社區音樂團體；入選補助與場地安排依主辦核定。保留已截止紀錄，不當作現在可投的機會。"
+      }
+    }
+  },
+  {
+    "externalId": "taipei-film-awards-2026",
+    "title": "2026 台北電影獎",
+    "kind": "competition",
+    "region": "TW",
+    "agency": "台北電影節",
+    "url": "https://www.taipeiff.taipei/tw/news/1a556a79a86F",
+    "opensOn": "2026-02-06",
+    "closesOn": "2026-03-13",
+    "sourceStatus": "posted",
+    "summary": "本屆報名已截止。報名期間與影展、頒獎日期不同；請至官方簡章確認組別及資格，下一屆日期尚未確認。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": null,
+    "disciplines": [
+      "film"
+    ]
+  },
+  {
+    "externalId": "taipei-new-talent-2026",
+    "title": "2026 台北電影節國際新導演競賽",
+    "kind": "competition",
+    "region": "TW",
+    "agency": "台北電影節",
+    "url": "https://www.taipeiff.taipei/tw/news/1a556a79a86F",
+    "opensOn": "2026-02-06",
+    "closesOn": "2026-03-13",
+    "sourceStatus": "posted",
+    "summary": "本屆報名已截止。報名期間與影展、頒獎日期不同；請至官方簡章確認組別及資格，下一屆日期尚未確認。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": null,
+    "disciplines": [
+      "film"
+    ]
+  },
+  {
+    "externalId": "taipei-film-marketing-2026",
+    "title": "2026 台灣電影行銷創意獎",
+    "kind": "competition",
+    "region": "TW",
+    "agency": "台北電影節",
+    "url": "https://www.taipeiff.taipei/tw/news/1a556a79a86F",
+    "opensOn": "2026-02-06",
+    "closesOn": "2026-03-20",
+    "sourceStatus": "posted",
+    "summary": "本屆報名已截止。報名期間與影展、頒獎日期不同；請至官方簡章確認組別及資格，下一屆日期尚未確認。",
+    "reviewedOn": "2026-10-20",
+    "eligibility": null,
+    "disciplines": [
+      "film"
+    ]
+  }
+]

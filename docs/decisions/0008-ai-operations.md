@@ -58,7 +58,8 @@ Live evals:
 | A re-analysis cap per message | Done |
 | Per-month and short-burst limits | Before real users |
 | Rate limits on server actions and the upload and file routes | Before real users |
-| A switch to pause AI app-wide (messages wait as "paused" instead of failing) | Before real users |
+| A switch to pause AI app-wide (messages wait as "paused" instead of failing) | Done |
+| An app-wide daily spending cap that pauses AI on its own, with an alert | Done |
 | Alerts on unusual accounts; a CAPTCHA on sign-up if bots appear | When needed |
 | Limits by plan | With billing (Later) |
 
@@ -81,3 +82,14 @@ Live evals:
 - `ai_call` logs task, provider, model, prompt version, tokens, latency, status, and failure code. Estimated cost and finish reason are not stored yet; cost comes with the paid-model price table.
 - Plain-code tests run with `npm test` (Node's test runner through tsx, no extra dependency); the first cover the intake rules.
 - Recording keys leave out the system prompt, which carries today's date and calendar, so a recording stays valid across days; the prompt version still changes it whenever the rules change.
+
+## Implementation notes (2026-10-22): pausing AI app-wide
+
+- **One check, `aiPaused()` in `lib/ai/pause.ts`**, with two causes: the switch (`AI_PAUSED=1`, set by hand; a redeploy away) and a daily spending cap (`AI_DAILY_SPEND_CAP_USD`, default 20; `0` turns it off). A database flag with an admin toggle can be added there later, without changing callers.
+- **The cap is an estimate**: the last rolling 24 hours of `ai_call` (real calls only; not replays, not calls stopped before sending, not evals), priced from list prices in `lib/ai/spend.ts`, checked at most once a minute per process. It resumes on its own as old calls leave the window. The providers' own monthly limits stay the hard cap.
+- **The alert**: when the cap is reached, a log line, and an email to `AI_ALERT_EMAIL` when it's set. Once per process each time it trips (the web app and the worker may each send one); a single app-wide alert would need somewhere shared to record it.
+- **Paused, nothing is sent.** The model seam (`generateObject`) refuses with the failure code `paused` and logs the call, which doesn't count toward any limit; evals and recordings still run. Callers check first, so they wait rather than fail:
+  - analysis: the message stays pending, marked `paused`, and its job comes back every 5 minutes on the talent's queue until AI resumes. Analyze again and Open from history say AI is paused instead of queueing;
+  - the mailbox's relevance check and notice reads: the same wait as the mailbox's daily cap (`canScore`), so emails stay "Not decided yet" or in Waiting until a later sync;
+  - the assistant: a question in the person's own words gets "paused"; the quick prompts, worked in code, still answer.
+- The inbox and Today say AI is paused and look again only once a minute while it is.

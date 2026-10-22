@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { InfoHint } from "./info-hint";
 import type { AppData, ReplyTemplate } from "@/lib/types";
 import { workspaceSamples } from "@/lib/ai/workspace-samples";
@@ -24,6 +24,8 @@ export function AppDataProvider({ data, children, previewAvailable = false }: { 
   const [templates,setTemplates]=useState<ReplyTemplate[]>([]);
   const pathname=usePathname();
   const t=useTranslations("preview");
+  const sampleCopy=useTranslations("previewSamples");
+  const locale=useLocale();
   const key=`taloox-preview:${data.talent.id}:${data.person.email}`;
   useEffect(()=>{
     let value=previewAvailable;
@@ -41,7 +43,7 @@ export function AppDataProvider({ data, children, previewAvailable = false }: { 
       <button type="button" className="secondary" onClick={toggle}>{enabled?t("exit"):t("enter")}</button>
     </aside>;
   if(!ready)return <div className="portfolio-loading" role="status" aria-busy="true">{t("loading")}</div>;
-  return <WorkspaceTalentContext.Provider value={data.talent}><RealWorkspaceContext.Provider value={openRealWorkspace}><PreviewBannerContext.Provider value={banner}><AppDataContext.Provider value={active?{...workspaceSamples(data),templates}:data}>
+  return <WorkspaceTalentContext.Provider value={data.talent}><RealWorkspaceContext.Provider value={openRealWorkspace}><PreviewBannerContext.Provider value={banner}><AppDataContext.Provider value={active?{...workspaceSamples(data,sampleCopy,locale),templates}:data}>
 
     <PreviewTemplatesContext.Provider value={{save, archive}}>{children}</PreviewTemplatesContext.Provider>
   </AppDataContext.Provider></PreviewBannerContext.Provider></RealWorkspaceContext.Provider></WorkspaceTalentContext.Provider>;

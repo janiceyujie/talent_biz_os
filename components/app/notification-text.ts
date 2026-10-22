@@ -9,8 +9,10 @@ export function useNotificationText() {
   const t = useTranslations("shell");
   const tCalendar = useTranslations("calendar");
   const invoice = useTranslations("invoices");
+  const grants = useTranslations("grants");
   const money = useMoney();
   return (n: Notification) => {
+    if(n.kind==="opportunity")return {title:grants(n.changeKind==="new"?"changeNew":"changeDates",{title:n.title}),detail:n.changeKind==="new"?grants("deadlineDate",{date:n.newClosesOn||grants("unknown")}):[n.oldOpensOn!==n.newOpensOn?grants("changeOpening",{before:n.oldOpensOn||grants("unknown"),after:n.newOpensOn||grants("unknown")}):"",n.oldClosesOn!==n.newClosesOn?grants("changeClosing",{before:n.oldClosesOn||grants("unknown"),after:n.newClosesOn||grants("unknown")}):""].filter(Boolean).join(" · ")};
     if (n.kind === "invoice") return {title: n.status === "unprepared" ? t("prepareInvoice", {label:n.title}) : t("invoiceReminder", {name:n.title}), detail: [n.status === "unprepared" ? "" : invoice(`statuses.${n.status}`),n.number,n.date].filter(Boolean).join(" · ")};
     if (n.kind === "calendar")
       return {

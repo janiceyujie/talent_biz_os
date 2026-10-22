@@ -10,8 +10,9 @@ export function snoozeReady(id: string, state: NotificationState, now: Date) {
 export function briefingItems(items: StatefulNotification[], state: NotificationState, now: Date, zone: string) {
   const day = dateInZone(zone, 0, now);
   return items.filter(n => {
-    if (n.snoozedUntil) return false;
+    if (n.snoozedUntil || (n.kind==="opportunity"&&n.read)) return false;
     if (snoozeReady(n.id, state, now)) return true;
+    if (n.kind === "opportunity") return true; // Already occurred, regardless of the reader's calendar day.
     if (n.kind === "calendar" && n.source === "event") {
       const localDay = n.time && n.dueAt !== null ? dateInZone(zone, 0, new Date(n.dueAt)) : n.date;
       return localDay === day;

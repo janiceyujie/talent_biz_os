@@ -1,3 +1,4 @@
+import { getOpportunityNotifications } from "@/lib/data/grant-changes";
 import { z } from "zod";
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { getCurrentTalent, getSession } from "@/lib/auth";
@@ -18,7 +19,7 @@ export async function GET(req: Request) {
   if (!current) return invoiceJson({ error: "forbidden" }, 403);
   const [workspace] = await db.select({ timeZone: talent.timeZone }).from(talent).where(eq(talent.id, current.id));
   const now = new Date(), day = dateInZone(workspace.timeZone, 0, now);
-  const [rows, states, unprepared] = await Promise.all([
+  const [rows, states, unprepared, opportunityItems] = await Promise.all([
     db.select({ id: invoice.id, number: invoice.number, snapshot: invoice.snapshot, issueOn: invoice.issueOn, status: invoice.status, revision: invoice.revision })
       .from(invoice).innerJoin(payment, and(eq(payment.id, invoice.paymentId), eq(payment.talentId, current.id)))
       .where(and(eq(invoice.talentId, current.id), lte(invoice.issueOn, day),
@@ -33,6 +34,7 @@ export async function GET(req: Request) {
         or(isNull(payment.projectId), sql`exists (select 1 from ${project} where ${project.id} = ${payment.projectId} and ${project.talentId} = ${current.id} and ${project.archivedAt} is null and ${project.stage} in ('signed', 'in_progress', 'collecting_payment', 'closed'))`),
         sql`not exists (select 1 from ${invoice} where ${invoice.paymentId} = ${payment.id} and ${invoice.talentId} = ${current.id} and ${ne(invoice.status,"cancelled")})`))
       .orderBy(asc(payment.invoiceOn),asc(payment.id)).limit(21),
+    getOpportunityNotifications(current.id,session.personId,parts),
   ]);
   const items: Notification[] = rows.map(row => ({
     id: `invoice:${row.id}:${row.revision}:${row.issueOn}`, kind: "invoice", title: row.snapshot.buyerName,
@@ -44,6 +46,7 @@ export async function GET(req: Request) {
     id:`billing:${row.id}:${row.date}`,kind:"invoice" as const,title:row.label,number:"",status:"unprepared" as const,date:row.date!,time:"",timeZone:workspace.timeZone,
     urgency:row.date! < day ? "overdue" as const : "today" as const,dueAt:null,href:`/finance?invoicePayment=${row.id}#invoices`,
   })));
+  items.push(...opportunityItems);
   items.sort((a,b)=>a.date.localeCompare(b.date)||a.id.split(":")[1].localeCompare(b.id.split(":")[1]));
   const last=items[19];
   return invoiceJson({ items:items.slice(0,20), hasMore: items.length > 20, nextCursor:items.length > 20 ? `${last.date}:${last.id.split(":")[1]}` : null, now: now.toISOString(),

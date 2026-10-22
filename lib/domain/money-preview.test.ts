@@ -9,7 +9,7 @@ test("tax-inclusive and exclusive previews agree with ledger cash", () => {
     const totals = moneyPreview(55500, 5, included, "TWD")!;
     assert.equal(totals.total, expected);
     assert.equal(totals.net + totals.tax, totals.total);
-    assert.equal(paymentCash({ amount: 55500, taxRate: 5, taxIncluded: included, currency: "TWD", status: "settled", settledAmount: null } as Payment), totals.total);
+    assert.equal(paymentCash({ amount: 55500, taxRate: 5, taxIncluded: included, currency: "TWD", status: "settled", settledAmount: null,receipts:[{id:"receipt",date:"2026-10-01",cash:expected,withheld:0}] } as Payment), totals.total);
   }
 });
 

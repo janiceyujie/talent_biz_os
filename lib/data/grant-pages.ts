@@ -8,12 +8,14 @@ import { LIST_PAGE_SIZE, type CursorPage } from "@/lib/domain/cursor-page";
 import type { GrantOpportunity } from "@/lib/grants/types";
 import { decodePageCursor, encodePageCursor, InvalidCursor, literalSearch } from "./page-cursor";
 
+import { opportunityDisciplines } from "@/lib/grants/disciplines";
 import { eligibilityProfileSchema } from "@/lib/grants/eligibility";
 
 export const grantListParams = z.object({
   region: z.enum(["all", "TW", "US"]).default("all"), scope: z.enum(["discover", "mine"]).default("discover"),
   availability: z.enum(["active", "all", "open", "upcoming", "check", "closed"]).default("active"),
   kind:z.enum(["all","grant","opportunities","competition","exhibition","showcase"]).default("all"),
+  discipline:z.enum(["all","unclassified",...opportunityDisciplines]).default("all"),
   eligibility:z.enum(["all","possible","match","check","mismatch"]).default("all"),
   q: z.string().max(200).default(""), cursor: z.string().max(3000).default(""),
 });
@@ -23,7 +25,7 @@ export async function listGrantOpportunities(talentId: string, timeZone: string,
   const [savedProfile] = personId ? await db.select({value:preference.value}).from(preference).where(and(eq(preference.personId,personId),eq(preference.talentId,talentId),eq(preference.key,"opportunities.profile"))) : [];
   const profileResult=eligibilityProfileSchema.safeParse(savedProfile?.value);
   const profile=profileResult.success?profileResult.data:null;
-  const key = JSON.stringify([talentId, personId, timeZone, params.region, params.scope, params.availability, params.kind, params.eligibility, profile, query]);
+  const key = JSON.stringify([talentId, personId, timeZone, params.region, params.scope, params.availability, params.kind, params.discipline, params.eligibility, profile, query]);
   const cursor = decodePageCursor(params.cursor, z.tuple([z.number().int().min(0).max(3), z.iso.date(), z.uuid(), z.iso.datetime(), z.string()]));
   if (cursor && cursor[4] !== key) throw new InvalidCursor("Cursor filters changed");
   const asOf = cursor?.[3] ?? new Date().toISOString();
@@ -51,6 +53,7 @@ export async function listGrantOpportunities(talentId: string, timeZone: string,
   const states = { open: 0, upcoming: 1, check: 2, closed: 3 };
   const availability = params.scope === "mine" ? "all" : params.availability;
   const filters = and(
+    params.discipline === "all" ? undefined : params.discipline === "unclassified" ? sql`cardinality(${grant.disciplines}) = 0` : sql`${grant.disciplines} @> ARRAY[${params.discipline}]::text[]`,
     params.kind === "all" ? undefined : params.kind === "opportunities" ? sql`${grant.kind} <> 'grant'` : eq(grant.kind,params.kind),
     params.eligibility === "all" ? undefined : params.eligibility === "possible" ? sql`(${eligibility}) <> 'mismatch'` : sql`(${eligibility}) = ${params.eligibility}`,
     params.region === "all" ? undefined : eq(grant.region, params.region),

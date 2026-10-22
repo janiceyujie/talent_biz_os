@@ -63,6 +63,22 @@ On GitHub, in the repository's settings:
 
 Until then, deploy by hand in the same order: the worker (Manual Deploy → Deploy a specific commit), wait for it to be live, then the web service.
 
+## Fixes and rollbacks
+
+**A fix is a patch release.** Merge it to `main` as usual, let it reach staging, then release `v0.x.(y+1)` from `main`. `main` is always releasable (`docs/git-workflow.md`), so the release carries everything merged since the last one: read the generated release notes before publishing. There are no hotfix branches; if `main` often holds work that can't ship yet, hide it behind a flag rather than release from a branch.
+
+**Something is broken in production right now: roll back first, fix after.**
+
+1. In Render, open the service → Deploys → the last good deploy → Rollback. The web service if pages fail, the worker if jobs do, or both. A rollback reuses that deploy's build, so it skips building and is quick.
+2. It's safe for the data: schema changes only add before they remove, so the earlier code runs on the newer schema.
+3. Rolling back from the dashboard turns off the service's auto-deploy, which is off already; nothing to undo.
+4. Then fix forward: a pull request, staging, and a new patch release, which deploys over the rollback.
+
+Limits:
+
+- Render keeps a limited number of recent builds per service (by workspace plan); older ones can't be rolled back to.
+- Render doesn't say whether a rollback runs the pre-deploy step again. If it does, an earlier worker refuses while the queue holds jobs under a name only the newer version knows (a new `….v2`). Roll back the web service alone, or wait for those jobs to drain.
+
 ## Deploying without interrupting anyone
 
 Render already deploys without downtime, for the web service and the worker alike: it starts the new instance, moves traffic to it once healthy (`/api/health`), and sends the old one `SIGTERM` 60 seconds later, waiting up to the shutdown delay before killing it. For a while the old and new versions run side by side, so each of these has to hold:

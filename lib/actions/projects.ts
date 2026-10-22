@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { auditLog, calendarEvent, contact, organization, payment, project, talent as talentTable, todo } from "@/lib/db/schema";
 import { requestCalendarSync } from "@/lib/calendar/google/sync";
 import { dateInZone } from "@/lib/domain/dates";
-import { quote, supportedCurrencies } from "@/lib/domain/money";
+import { quote, supportedCurrencies, type Currency } from "@/lib/domain/money";
 import { phaseOf } from "@/lib/domain/phases";
 import { organizationNamed, setClient } from "@/lib/data/organizations";
 import { projectTypeKeys } from "@/lib/project-types";
@@ -48,6 +48,8 @@ const projectInput = z
       .transform((v) => (v === "" || v === undefined ? null : v)),
     // The deal's own currency: what its quote is in. Its payments may be in any currency.
     currency: z.enum(supportedCurrencies),
+    // Payments of this deal still in its old currency, put in the new one with it (amounts unchanged).
+    paymentsToCurrency: z.array(z.uuid()).max(500).default([]),
     taxRate: z.coerce.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
     taxIncluded: z.boolean(),
     deliverables: optionalText,
@@ -137,10 +139,24 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
       return null;
     }
     const [existing] = await tx
-      .select({ stage: project.stage, details: project.details })
+      .select({ stage: project.stage, currency: project.quoteCurrency, details: project.details })
       .from(project)
-      .where(and(eq(project.id, input.id), eq(project.talentId, talent.id)));
+      .where(and(eq(project.id, input.id), eq(project.talentId, talent.id)))
+      .for("update");
     if (!existing) return fail("projectNotFound");
+    if (existing.currency !== input.currency) {
+      const moved = await movePayments(tx, talent.id, input.id, input.paymentsToCurrency, existing.currency, input.currency);
+      if (moved === null) return fail("paymentsChanged");
+      if (moved === "wholeYen") return fail("amountWholeYen");
+      await tx.insert(auditLog).values({
+        talentId: talent.id,
+        actorPersonId: person.personId,
+        action: "project.currency_changed",
+        targetType: "project",
+        targetId: input.id,
+        details: { from: existing.currency, to: input.currency, payments: moved },
+      });
+    }
     // The form edits only some details; keep the rest (deal fields, dates, to-confirm list from messages).
     const details = { ...existing.details, ...values.details };
     await tx.update(project).set({ ...values, details }).where(and(eq(project.id, input.id), eq(project.talentId, talent.id)));
@@ -151,6 +167,33 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
   });
   if (!failure) refresh();
   return failure;
+}
+
+/**
+ * A deal's currency was set wrong: put the picked payments in the new one too, amounts as they are
+ * (a correction, not a conversion). Only this deal's live payments still in the old currency; null
+ * when one of them isn't any more (edited meanwhile), "wholeYen" when an amount has cents.
+ */
+async function movePayments(tx: Tx, talentId: string, projectId: string, ids: string[], from: string, to: Currency) {
+  if (!ids.length) return [];
+  const rows = await tx
+    .select({ id: payment.id, amount: payment.amount, settledAmount: payment.settledAmount })
+    .from(payment)
+    .where(
+      and(
+        inArray(payment.id, ids),
+        eq(payment.talentId, talentId),
+        eq(payment.projectId, projectId),
+        eq(payment.currency, from),
+        isNull(payment.voidedAt),
+      ),
+    )
+    .for("update");
+  if (rows.length !== new Set(ids).size) return null;
+  if (to === "JPY" && rows.some((r) => !Number.isInteger(r.amount) || (r.settledAmount !== null && !Number.isInteger(r.settledAmount))))
+    return "wholeYen";
+  await tx.update(payment).set({ currency: to }).where(and(inArray(payment.id, ids), eq(payment.talentId, talentId)));
+  return rows.map((r) => r.id);
 }
 
 // Talking about the deal goes on after it ends (declining politely, say); the rest of its plan doesn't.

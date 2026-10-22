@@ -1483,6 +1483,13 @@
     "discard": "放棄變更",
     "contactLinked": "已連結聯絡人",
     "contactClear": "清除合作方",
+    "moveCurrency": {
+      "legend": "幣別為 {from} 的款項",
+      "note": "勾選的款項會跟著合作案改成 {to}。金額不變：這是更正幣別，不是換算匯率。",
+      "income": "收入",
+      "cost": "支出",
+      "hasCents": "有小數：請先改成整數日圓"
+    },
     "section": {
       "amount": "金額與稅額",
       "basics": "基本資料",
@@ -1647,6 +1654,7 @@
     "taxRateRange": "稅率需介於 0–100%。",
     "settledDateRequired": "已收／已付的紀錄需要實際收付日期。",
     "settledDateFuture": "實際收付日期不能晚於今天。",
+    "paymentsChanged": "編輯期間這個合作案的款項有變動。請關閉表單後重新開啟，再選一次要一起改的款項。",
     "paymentNotFound": "找不到這筆紀錄。",
     "balanceBeforeDeposit": "尾款期限不能早於訂金期限。",
     "incomeExists": "這個合作案已有請款，請編輯既有款項，避免重複計入。",

@@ -1483,6 +1483,13 @@
     "discard": "Discard changes",
     "contactLinked": "Linked contact",
     "contactClear": "Clear partner",
+    "moveCurrency": {
+      "legend": "Payments in {from}",
+      "note": "Ticked payments change to {to} with the project. Amounts stay as they are: this corrects the currency, it doesn't convert.",
+      "income": "Income",
+      "cost": "Cost",
+      "hasCents": "has cents: make it a whole number of yen first"
+    },
     "section": {
       "amount": "Amount and tax",
       "basics": "Project details",
@@ -1647,6 +1654,7 @@
     "taxRateRange": "The tax rate must be between 0 and 100%.",
     "settledDateRequired": "Received or paid entries need the date settled.",
     "settledDateFuture": "The date settled can't be later than today.",
+    "paymentsChanged": "Payments on this project changed while you were editing. Close the form, open it again, and pick them again.",
     "paymentNotFound": "Entry not found.",
     "balanceBeforeDeposit": "The balance can't be due before the deposit.",
     "incomeExists": "This project already has payment requests — edit those so nothing is counted twice.",

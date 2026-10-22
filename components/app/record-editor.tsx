@@ -14,7 +14,7 @@ import { localeNames, locales, toLocale } from "@/lib/i18n/config";
 import { placeholderKeys, placeholderName, toDisplay } from "@/lib/templates/placeholders";
 import { isOpenStage } from "@/lib/domain/phases";
 import { supportedCurrencies } from "@/lib/domain/money";
-import { useCurrencyName } from "@/lib/i18n/format";
+import { useCurrencyName, useMoney } from "@/lib/i18n/format";
 import { placeSuggestions } from "@/lib/calendar/places";
 import {
   calendarKinds,
@@ -22,6 +22,7 @@ import {
   stages,
   transportModes,
   type CalendarItem,
+  type Payment,
   type Project,
   type Stage,
   type TransportMode,
@@ -222,6 +223,19 @@ export function RecordEditor({
         : {}),
     }));
 
+  // Changing a deal's currency: its payments still in the old one, to put in the new one too.
+  // Income starts ticked (usually the same mistake), costs not (often really in another currency).
+  const money = useMoney();
+  const [movePicks, setMovePicks] = useState<Record<string, boolean>>({});
+  const fromCurrency = String(initialData.currency ?? "");
+  const oldCurrencyPayments =
+    kind === "project" && data.id && data.currency !== fromCurrency
+      ? data$.payments.filter((p) => p.projectId === data.id && p.currency === fromCurrency && !p.voided)
+      : [];
+  const hasCents = (p: Payment) => !Number.isInteger(p.amount) || (p.settledAmount !== null && !Number.isInteger(p.settledAmount));
+  const canMove = (p: Payment) => data.currency !== "JPY" || !hasCents(p);
+  const moving = oldCurrencyPayments.filter((p) => canMove(p) && (movePicks[p.id] ?? p.direction === "in"));
+
   const currencyName = useCurrencyName();
   const currencyOptions = supportedCurrencies.map((c) => [c, `${c} · ${currencyName(c)}`] as const);
 
@@ -315,9 +329,11 @@ export function RecordEditor({
           setPending(true);
           // A typed main contact who isn't a contact yet is added as one, with any details given.
           const typedContact = kind === "project" && !data.counterpartyId && String(data.contactName ?? "").trim();
-          const failure = await onSave(
-            typedContact ? { ...data, newContact: { email: "", phone: "", ...newContact, name: typedContact } } : data,
-          );
+          const failure = await onSave({
+            ...data,
+            ...(typedContact ? { newContact: { email: "", phone: "", ...newContact, name: typedContact } } : {}),
+            ...(kind === "project" ? { paymentsToCurrency: moving.map((p) => p.id) } : {}),
+          });
           setPending(false);
           if (failure) setError(failure);
           else {
@@ -367,6 +383,26 @@ export function RecordEditor({
               </fieldset>
               {pricing("quotedAmount", false, t("section.quote"), t("field.quotedAmount"))}
               <p className="muted">{t("quoteHelp")}</p>
+              {oldCurrencyPayments.length > 0 && (
+                <fieldset className="form-section">
+                  <legend>{t("moveCurrency.legend", { from: fromCurrency })}</legend>
+                  <p className="muted">{t("moveCurrency.note", { to: String(data.currency) })}</p>
+                  {oldCurrencyPayments.map((p) => (
+                    <label key={p.id} className="check-line">
+                      <input
+                        type="checkbox"
+                        disabled={!canMove(p)}
+                        checked={moving.includes(p)}
+                        onChange={(e) => setMovePicks((m) => ({ ...m, [p.id]: e.target.checked }))}
+                      />
+                      <span>
+                        {p.label} · {t(p.direction === "in" ? "moveCurrency.income" : "moveCurrency.cost")} · {money(p.amount, p.currency)}
+                        {!canMove(p) && <small className="muted"> · {t("moveCurrency.hasCents")}</small>}
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+              )}
               {/* Can be filled in later; collapsing keeps what's typed. */}
               <details className="form-details" open={editor.focus ? true : undefined}>
                 <summary>{t("section.dealDetails")}</summary>

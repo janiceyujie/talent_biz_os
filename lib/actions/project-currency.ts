@@ -1,5 +1,6 @@
 "use server";
 
+import {withReceiptRows} from "@/lib/data/payment-receipts";
 import { createHash } from "node:crypto";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { refresh } from "next/cache";
@@ -20,7 +21,7 @@ async function snapshot(tx: Tx, talentId: string, projectId: string) {
   const [p] = await tx.select().from(project).where(and(eq(project.id, projectId), eq(project.talentId, talentId))).for("update");
   if (!p) return null;
   // All payment writers take the parent lock before inserting or moving a linked row.
-  const rows = await tx.select().from(payment).where(and(eq(payment.projectId, projectId), eq(payment.talentId, talentId))).orderBy(asc(payment.id)).for("update");
+  const rows = await withReceiptRows(tx,await tx.select().from(payment).where(and(eq(payment.projectId, projectId), eq(payment.talentId, talentId))).orderBy(asc(payment.id)).for("update"));
   const income = rows.filter(row => row.direction === "in");
   const docs = income.length ? await tx.select().from(invoice).where(and(eq(invoice.talentId, talentId), inArray(invoice.paymentId, income.map(row => row.id)))).orderBy(asc(invoice.id)).for("update") : [];
   const token = createHash("sha256").update(JSON.stringify({p, rows, docs})).digest("hex");

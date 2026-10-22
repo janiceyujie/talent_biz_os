@@ -1,114 +1,12 @@
 "use client";
 
-import { appendPage } from "@/lib/domain/cursor-page";
-import { useAppData } from "./app-data";
-import { previewProjectPage } from "@/lib/domain/preview-projects";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { PAGE_MAX, PAGE_SIZE, type ListSort, type ListView, type ProjectPage as Page } from "@/lib/domain/project-list";
-
-const SEARCH_PAUSE = 250; // ms after the last keystroke
+import { type ListSort, type ListView, type ProjectPage } from "@/lib/domain/project-list";
+import { useListPages } from "./list-pages";
 
 type ListParams = { view: ListView; type: string; contact: string; q: string; sort: ListSort };
 
-const url = (p: ListParams, cursor: string, limit: number) =>
-  `/api/projects?${new URLSearchParams({ view: p.view, type: p.type, contact: p.contact, q: p.q, sort: p.sort, cursor, limit: String(limit) })}`;
-
-/**
- * The projects list, a page at a time from app/api/projects (decision 0011).
- * A new view, filter, or order starts again from the first page (a search
- * once typing pauses); `loadMore` appends the next. When `revision` changes
- * — the app's data after a save — it reloads as many rows as are showing, so
- * the list doesn't jump back to the top. `restore` is how many rows to load
- * on arrival, when coming back to a list that had scrolled further.
- */
+/** The projects list from app/api/projects (decision 0011), with each view's count for the tabs. See useListPages. */
 export function useProjectPages(params: ListParams, revision: unknown, restore = 0) {
-  const data = useAppData();
-  const preview = !!data.preview;
-  const artistScope=data.portfolio?JSON.stringify(data.portfolio.artists.map(artist=>artist.id).sort()):"";
-  const scopeKey=`${data.person.email}:${data.talent.id}:${artistScope}:${JSON.stringify(params)}`;
-  const [state, setState] = useState<{scope:string;page: Page | null; loading: boolean; failed: boolean }>({scope:"",page: null, loading: true, failed: false });
-  const shown = useRef(0);
-  const request = useRef<AbortController | null>(null);
-  const count = state.page?.items.length ?? 0;
-  useEffect(() => {
-    shown.current = count;
-  }, [count]);
-
-  const load = useCallback(
-    (cursor: string, limit: number, append: boolean) => {
-      request.current?.abort();
-      if (preview) return;
-      const abort = (request.current = new AbortController());
-      setState((s) => ({ ...s, loading: true, failed: false }));
-      const target=artistScope?new URL(url(params,cursor,limit),window.location.origin):null;
-      if(target){target.pathname="/api/manager/projects";const ids=JSON.parse(artistScope) as string[];if(!ids.length)target.searchParams.set("artist","none");else ids.forEach(id=>target.searchParams.append("artist",id));}
-      fetch(target?`${target.pathname}${target.search}`:url(params, cursor, limit), { signal: abort.signal,cache:"no-store" })
-        .then((r) => (r.ok ? (r.json() as Promise<Page>) : Promise.reject(r.status)))
-        .then((next) =>
-          !abort.signal.aborted&&setState((s) => ({
-            scope:scopeKey,
-            page: append && s.scope===scopeKey && s.page ? { ...next, items: appendPage(s.page.items, next.items) } : next,
-            loading: false,
-            failed: false,
-          })),
-        )
-        .catch(() => !abort.signal.aborted && setState((s) => ({ ...s,scope:scopeKey,page:artistScope||s.scope!==scopeKey?null:s.page, loading: false, failed: true })));
-    },
-    [preview, artistScope,scopeKey, params.view, params.type, params.contact, params.q, params.sort], // eslint-disable-line react-hooks/exhaustive-deps -- the five values are the request
-  );
-
-  // A new view, filter, or order: the first page (after a pause while typing). On arrival, as many rows as before.
-  // Decided by the list, not consumed: effects may run twice (React's development checks) and must agree.
-  const listKey = `${params.view}|${params.type}|${params.contact}|${params.q.trim()}|${params.sort}`;
-  const arrivedAt = useRef(listKey);
-  const goal = useRef(0); // rows still to load back in
-  useEffect(() => {
-    if (listKey !== arrivedAt.current) arrivedAt.current = ""; // left the list we arrived at
-    const target = arrivedAt.current ? restore : 0;
-    goal.current = target;
-    const timer = setTimeout(() => load("", Math.min(Math.max(target, PAGE_SIZE), PAGE_MAX), false), params.q && !target ? SEARCH_PAUSE : 0);
-    return () => { clearTimeout(timer); request.current?.abort(); };
-  }, [load]); // eslint-disable-line react-hooks/exhaustive-deps -- `load` changes with the request
-
-  // Coming back to more rows than one request returns: keep loading pages until they're all there.
-  const { page: current, loading: busy } = state;
-  useEffect(() => {
-    const want = goal.current;
-    if (!want || !current || busy || state.failed || state.scope !== scopeKey) return;
-    if (current.items.length >= want || !current.nextCursor) goal.current = 0;
-    else load(current.nextCursor, Math.min(want - current.items.length, PAGE_MAX), true);
-  }, [current, busy, state.failed, state.scope, scopeKey, load]);
-
-  // After a save: the same rows again, fresh.
-  const first = useRef(true);
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    load("", Math.min(Math.max(shown.current, PAGE_SIZE), PAGE_MAX), false);
-  }, [revision]); // eslint-disable-line react-hooks/exhaustive-deps -- only a new revision reloads
-
-  useEffect(() => () => request.current?.abort(), []);
-
-  const currentScope=state.scope===scopeKey;
-  const page=currentScope?state.page:null,loading=!currentScope||state.loading,failed=currentScope&&state.failed;
-  const loadMore = useCallback(() => {
-    if (page?.nextCursor && !loading && !failed) load(page.nextCursor, PAGE_SIZE, true);
-  }, [page, loading, failed, load]);
-
-  if (preview) {
-    const sample = previewProjectPage(data, params);
-    return { ...sample, hasMore: false, loading: false, failed: false, loadMore: () => {}, retry: () => {} };
-  }
-  return {
-    items: page?.items ?? [],
-    total: page?.total ?? null,
-    counts: page?.counts ?? null,
-    hasMore: !!page?.nextCursor,
-    loading,
-    failed,
-    loadMore,
-    retry: () => load("", PAGE_SIZE, false),
-  };
+  const { page, ...list } = useListPages<ProjectPage>("/api/projects", params, revision, { restore });
+  return { ...list, counts: page?.counts ?? null };
 }

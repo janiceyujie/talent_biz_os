@@ -1,6 +1,6 @@
 # 0006 — Model calls go through one provider seam; a free model during development
 
-**Status:** Accepted (2026-10-03). The production choice (Claude) is replaced by [decision 0015](0015-production-model-providers.md); the seam stands.
+**Status:** Accepted (2026-10-03). The production choice (Claude) is replaced by [decision 0015](0015-production-model-providers.md), and the free development model by [decision 0022](0022-paid-providers-only.md); the seam stands.
 
 ## Context
 

@@ -96,7 +96,7 @@ const payment = (o: Partial<Payment>): Payment => ({
   recordedDate: "2026-10-01",
   dueDate: null,
   status: "expected",
-  settledAmount: null,
+  receipts: [],
   settledDate: null,
   invoiceRef: "",
   notes: "",

@@ -1,6 +1,6 @@
-// In-app notifications: computed on read from calendar items and payments,
-// never stored. Ids are stable so per-person read/snooze state
-// (notification_state) can refer to them. Pure functions; run anywhere.
+// In-app notifications combine computed action items with persisted opportunity revisions.
+// Stable IDs let per-person notification_state track reads and snoozes.
+// These domain functions are pure and can run anywhere.
 import type { InvoiceStatus } from "@/lib/invoices/types";
 import { calendarPoints, pointKind } from "@/lib/calendar/points";
 import type { AppData, CalendarKind, NotificationState } from "@/lib/types";
@@ -29,6 +29,7 @@ export type Notification = Base &
   (
     | { kind: "calendar"; source: "event" | "todo"; calendarKind: CalendarKind; marker: ReturnType<typeof pointKind>; location: string }
     | { kind: "receivable" | "payable"; amount: number; currency?: string }
+    | { kind: "opportunity"; changeKind:"new"|"dates"; oldOpensOn:string|null;newOpensOn:string|null;oldClosesOn:string|null;newClosesOn:string|null }
     | { kind: "invoice"; number: string; status: InvoiceStatus | "unprepared" }
   );
 
@@ -111,7 +112,8 @@ export function notifications(data: AppData, now = new Date(), includeTodayHisto
 }
 
 /** A notification id as the server accepts it: what notifications() produces. */
-export const notificationIdPattern = /^(calendar:[0-9a-f-]{36}:(end:)?\d{4}-\d{2}-\d{2}:(\d{2}:\d{2})?|payment:[0-9a-f-]{36}:\d{4}-\d{2}-\d{2}|billing:[0-9a-f-]{36}:\d{4}-\d{2}-\d{2}|invoice:[0-9a-f-]{36}:[1-9]\d{0,8}:\d{4}-\d{2}-\d{2})$/;
+export const SNOOZE_HOURS = [1,2,3] as const;
+export const notificationIdPattern = /^(opportunity:[0-9a-f-]{36}:[0-9a-f-]{36}|calendar:[0-9a-f-]{36}:(end:)?\d{4}-\d{2}-\d{2}:(\d{2}:\d{2})?|payment:[0-9a-f-]{36}:\d{4}-\d{2}-\d{2}|billing:[0-9a-f-]{36}:\d{4}-\d{2}-\d{2}|invoice:[0-9a-f-]{36}:[1-9]\d{0,8}:\d{4}-\d{2}-\d{2})$/;
 
 /**
  * Notifications with this person's read and snooze state. A snooze that has

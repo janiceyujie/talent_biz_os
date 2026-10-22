@@ -1,4 +1,4 @@
-# Talent Biz OS
+# Taloox
 
 A business operating layer for independent talent — musicians, influencers, models, and the people who manage them. See [docs/architecture.md](docs/architecture.md) for the full design. Known shortcuts and gaps are in [docs/tech-debt.md](docs/tech-debt.md).
 

@@ -8,7 +8,7 @@ import {randomUUID,randomBytes} from 'node:crypto';
 import {readFile,writeFile,unlink} from 'node:fs/promises';
 env.loadEnvConfig(process.cwd());
 const url=new URL(process.env.DATABASE_URL!);
-assert.equal(url.hostname,'127.0.0.1');assert.match(url.pathname,/^\/taloox_(integrated|refresh|merged)_\d{8}$/);assert.equal(process.env.APP_ENV,'development');
+assert.equal(url.hostname,'127.0.0.1');assert.match(url.pathname,/^\/taloox_((integrated|refresh|merged)_\d{8}|int_20261022_(fresh|upgrade))$/);assert.equal(process.env.APP_ENV,'development');
 const {default:postgres}=await import('postgres'),q=postgres(process.env.DATABASE_URL!);
 const base=process.env.WORKFLOW_TEST_URL||'http://localhost:3000';
 assert.ok(['localhost','127.0.0.1'].includes(new URL(base).hostname));
@@ -68,8 +68,10 @@ try {
  ok((await fetch(`${base}/api/grants?${new URLSearchParams({...filters,cursor:first.nextCursor,eligibility:'match'})}`,{headers:{Cookie:cookies[0]}})).status===400);
  ok((await fetch(`${base}/api/grants?kind=invalid`,{headers:{Cookie:cookies[0]}})).status===400);
  ok((await fetch(`${base}/api/grants`)).status===401);
- const catalogue=await get({kind:'opportunities',region:'all'});ok(catalogue.items.some(r=>r.kind==='competition')&&catalogue.items.some(r=>r.kind==='exhibition')&&catalogue.items.some(r=>r.kind==='showcase'));
- const [target]=await q`select id from grant_opportunity where source='reviewed' and external_id='sxsw-music-2027'`;
+ const opportunityIds:string[]=[];
+ for(const kind of ['competition','exhibition','showcase']){const id=randomUUID();opportunityIds.push(id);await q`insert into grant_opportunity(id,source,external_id,region,title,agency,url,opens_on,closes_on,source_status,summary,content_hash,kind) values(${id},${source},${kind},'TW',${source+' '+kind},'QA','https://example.invalid/qa',${today},${later},'posted','Synthetic fixture','qa',${kind})`;}
+ const catalogue=await get({kind:'opportunities',region:'all',q:source});ok(catalogue.items.some(r=>r.kind==='competition')&&catalogue.items.some(r=>r.kind==='exhibition')&&catalogue.items.some(r=>r.kind==='showcase'));
+ const target={id:opportunityIds[2]};
  const schedule={date:tomorrow,time:'14:00',timeZone:'Asia/Taipei'};
  ok(await action('saveGrant',[target.id,schedule])===null);ok(await action('saveGrant',[target.id,schedule])===null);
  const [app]=await q`select * from grant_application where talent_id=${actors[0].talentId} and opportunity_id=${target.id}`;

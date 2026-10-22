@@ -1,49 +1,152 @@
 "use client";
-import { useEffect, useRef } from "react";
+
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { InfoHint } from "@/components/app/info-hint";
 import { useAppData } from "@/components/app/app-data";
-import { useAssistantConversation } from "@/components/app/assistant-provider";
+import { useAssistantConversation, type Question } from "@/components/app/assistant-provider";
 import { RoleAvatar } from "@/components/role/role-portrait";
-import { assistantSamples } from "@/lib/ai/assistant-samples";
-import { AssistantArchiveView } from "@/components/views/assistant-archive";
+import { assistantIntents, promptKeys, QUESTION_MAX } from "@/lib/assistant/answers";
+import { AnswerView } from "./assistant-answer";
 
+/**
+ * The assistant (decision 0023): quick prompts answered from the person's own records, and questions
+ * in their own words answered by the model from the workspace or one project, with the conversation's
+ * last turns. Every answered question is saved to the conversation.
+ */
 export function AssistantView({ compact = false }: { compact?: boolean }) {
-  const t=useTranslations("assistant"), errors=useTranslations("assistant.error"), eyebrow=useTranslations("eyebrow");
-  const data=useAppData();
-  const { query, setQuery, lines, sample, setSample, projectId, setProjectId, error, spent, pending,
-    archive, loadingHistory, historyError, loadingOlder, loadOlder, totals, restore, reset, send, activate } = useAssistantConversation();
-  const end=useRef<HTMLDivElement>(null), field=useRef<HTMLTextAreaElement>(null);
-  const source=sample?assistantSamples():data;
-  useEffect(()=>{activate(true);},[activate]);
-  useEffect(()=>{end.current?.scrollIntoView({block:"nearest"});},[lines,pending]);
-  useEffect(()=>{if(!pending&&!loadingHistory)field.current?.focus({preventScroll:true});},[pending,loadingHistory]);
-  return <section data-preview-safe="true" className={`assistant-panel ${compact?"":"assistant-expanded"}`}>
-    {!compact&&<header><RoleAvatar role={data.person.role} appearance={data.person.appearance}/><div><span>{eyebrow("talentAssistant")}</span><small>{t("status")} <InfoHint label={t("privacyTitle")} notes={[t("privacy")]} /></small></div></header>}
-    <details className="assistant-options-disclosure" open={compact?undefined:true}>
-      <summary>{t("options")} · {sample?t("sample"):t("workspace")}</summary>
-    <div className="assistant-controls">
-      <div className="assistant-sample-control"><label><input type="checkbox" checked={sample} disabled={!!data.preview||pending||loadingHistory} onChange={e=>{setSample(e.target.checked);setProjectId("");reset();}}/>{t("sample")}</label>{sample && <InfoHint label={t("sample")} notes={[t("sampleNotice")]} />}</div>
-      <label>{t("scope")}<select value={projectId} disabled={pending||loadingHistory} onChange={e=>{setProjectId(e.target.value);reset();}}><option value="">{t("overview")}</option>{source.projects.filter(p=>!p.archived).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
-      <button type="button" className="text-button" onClick={reset} disabled={pending||loadingHistory||!lines.length}>{t("clear")}</button>
-    </div>
+  const t = useTranslations("assistant");
+  const tEyebrow = useTranslations("eyebrow");
+  const { person } = useAppData();
+  const { lines, pending, ask, readOnly, projectId, setProjectId, projects, loadProjects, monthLeft } = useAssistantConversation();
+  const [draft, setDraft] = useState("");
+  const end = useRef<HTMLDivElement>(null);
+  const field = useRef<HTMLTextAreaElement>(null);
+  const noteId = useId();
+  const scopeId = useId();
+  const asked = (q: Question) => ("intent" in q ? t(`prompt.${promptKeys[q.intent]}`) : q.text);
+  const off = pending || readOnly;
 
-    </details>
-    {loadingHistory&&<p role="status">{t("loadingHistory")}</p>}
-    {historyError&&<p role="alert" className="assistant-error">{t("historyError")}</p>}
-    {!!lines.length&&<p className="assistant-totals">{t("conversationTotals",{...totals,cost:totals.cost.toFixed(6)})}</p>}
-    <div className="message-list" role="log" aria-label={t("conversation")} aria-live="polite" aria-busy={pending}>
-      {!lines.length&&<p className="message">{t("intro")}</p>}
-      {lines.map((line,i)=><div key={i} className={`message ${line.role=== "user"?"user":""}`} role="group" aria-label={line.role==="user"?t("you"):eyebrow("talentAssistant")}><p className="assistant-reply">{line.content}</p>{line.failed&&<small className="assistant-error">{t("failed")}</small>}{line.mode==="local"&&<small className="message-mode">{t("localUsage")}</small>}{line.usage&&line.mode!=="local"&&<small className="message-mode">{t("usage",{input:line.usage.inputTokens,output:line.usage.outputTokens,total:line.usage.inputTokens+line.usage.outputTokens,reasoning:line.usage.reasoningTokens,cost:(line.cost??0).toFixed(6)})}</small>}</div>)}
-      {pending&&<div className="message assistant-pending" role="status"><p>{t("working")}<span className="assistant-typing" aria-hidden="true"><span/><span/><span/></span></p></div>}<div ref={end}/>
-    </div>
-    {error&&<p role="alert" className="assistant-error">{errors(error as "unexpected")} <button type="button" className="text-button" disabled={pending} onClick={()=>{const last=lines.at(-1);if(last?.failed)void send(last.content);}}>{t("retry")}</button></p>}
-    <div className="quick-prompts">{[t("prompt.today"),t("prompt.tomorrow"),t("prompt.unpaid"),t("prompt.payable")].map(p=><button type="button" key={p} disabled={pending||loadingHistory} onClick={()=>{void send(p,false);}}>{p}</button>)}</div>
-    <form className="assistant-input" onSubmit={e=>{e.preventDefault();send();}}>
-      <textarea ref={field} rows={2} value={query} maxLength={12000} readOnly={pending||loadingHistory} aria-label={t("input")} placeholder={t("placeholder")} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/>
-      <button aria-label={t("send")} disabled={pending||loadingHistory||!query.trim()}>↑</button>
-    </form>
-    {!compact&&archive&&<AssistantArchiveView archive={archive} disabled={pending||loadingHistory} onRestore={restore} onLoadOlder={loadOlder} loadingOlder={loadingOlder}/>}
-    {compact?<div className="assistant-compact-note"><InfoHint label={t("privacyTitle")} above notes={[t("privacy"),t("history"),...(spent!==null?[t("budget",{spent:spent.toFixed(4)})]:[])]}/></div>:<small className="assistant-notice">{t("history")}{spent!==null&&` · ${t("budget",{spent:spent.toFixed(4)})}`}</small>}
-  </section>;
+  useEffect(loadProjects, [loadProjects]); // the scope picker's projects, once per talent
+
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "nearest" }); // braces: newer browsers return a promise here, which React would take for a cleanup
+  }, [lines, pending]);
+
+  const send = async () => {
+    const text = draft.trim();
+    if (!text || pending) return;
+    setDraft("");
+    // A failed question goes back in the box, so nothing typed is lost.
+    if (!(await ask({ text, ...(projectId ? { projectId } : {}) }))) setDraft((current) => current || text);
+    field.current?.focus();
+  };
+
+  return (
+    <section className={`assistant-panel ${compact ? "" : "assistant-expanded"}`}>
+      {!compact && (
+        <header>
+          <RoleAvatar role={person.role} appearance={person.appearance} />
+          <div>
+            <span>{tEyebrow("talentAssistant")}</span>
+            <small>{t("status")}</small>
+          </div>
+        </header>
+      )}
+      <div className="message-list" role="log" aria-label={t("conversation")} aria-live="polite" aria-busy={pending}>
+        {!lines.length && <p className="message">{t("intro")}</p>}
+        {lines.map((line) =>
+          "unreadable" in line ? (
+            <div key={line.id} className={`message ${line.role === "user" ? "user" : ""}`} role="group">
+              <p className="muted">{t("unreadable")}</p>
+            </div>
+          ) : line.role === "user" ? (
+            <div key={line.id} className="message user" role="group" aria-label={t("you")}>
+              <p>{asked(line.question)}</p>
+              {"error" in line && (
+                <small className="assistant-error">
+                  {t(`error.${line.error}`)}{" "}
+                  {(line.error === "failed" || line.error === "unavailable" || line.error === "busy") && (
+                    <button type="button" className="text-button" disabled={pending} onClick={() => void ask(line.question)}>
+                      {t("retry")}
+                    </button>
+                  )}
+                </small>
+              )}
+            </div>
+          ) : (
+            <div key={line.id} className="message assistant-answer" role="group" aria-label={tEyebrow("talentAssistant")}>
+              <AnswerView answer={line.answer} />
+            </div>
+          ),
+        )}
+        {pending && (
+          <div className="message assistant-pending" role="status">
+            <p>
+              {t("working")}
+              <span className="assistant-typing" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+            </p>
+          </div>
+        )}
+        <div ref={end} />
+      </div>
+      <div className="quick-prompts">
+        {assistantIntents.map((intent) => (
+          <button type="button" key={intent} disabled={off} onClick={() => void ask({ intent })}>
+            {t(`prompt.${promptKeys[intent]}`)}
+          </button>
+        ))}
+      </div>
+      <div className="assistant-scope">
+        <label htmlFor={scopeId}>{t("scope")}</label>
+        <select id={scopeId} value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={off}>
+          <option value="">{t("scopeOverview")}</option>
+          {(projects?.items ?? []).map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.title}
+            </option>
+          ))}
+          {/* Chosen before the list arrived, or beyond it: keep it selectable. */}
+          {projectId && !projects?.items.some((p) => p.id === projectId) && <option value={projectId}>{t("scopeProject")}</option>}
+        </select>
+        {projects?.more && <small>{t("scopeRecent")}</small>}
+      </div>
+      <form
+        className="assistant-input"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void send();
+        }}
+      >
+        <textarea
+          ref={field}
+          rows={compact ? 1 : 2}
+          value={draft}
+          maxLength={QUESTION_MAX}
+          readOnly={off}
+          aria-label={t("input")}
+          aria-describedby={noteId}
+          placeholder={t("placeholder")}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            // Enter sends; Shift+Enter is a new line; Enter while composing (Chinese input) only picks the characters.
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              void send();
+            }
+          }}
+        />
+        <button aria-label={t("send")} disabled={off || !draft.trim()}>
+          ↑
+        </button>
+      </form>
+      <small id={noteId} className="assistant-notice">
+        {readOnly ? t("readOnly") : t("note")}
+        {!readOnly && monthLeft !== null && ` ${t("monthLeft", { count: monthLeft })}`}
+      </small>
+    </section>
+  );
 }

@@ -18,13 +18,14 @@ export function parseGrantsGovEligibility(value:unknown,externalId:string,now:Da
   const parsed=detailSchema.safeParse(value);
   if(!parsed.success || String(parsed.data.data.id)!==externalId || !parsed.data.data.synopsis) return null;
   const synopsis=parsed.data.data.synopsis;
+  const categories=[...synopsis.applicantTypes].sort((a,b)=>a.id.localeCompare(b.id)||a.description.localeCompare(b.description));
   // 'Other', unknown codes, ambiguous institution types or extra eligibility prose require human review.
   // Never infer eligibility by keywords in a grant title or infer residency from its source country.
   const additional=grantPlainText(synopsis.applicantEligibilityDesc??"");
-  const ambiguous=synopsis.applicantTypes.some(t=>!types[t.id]) || !!additional;
-  const labels=synopsis.applicantTypes.map(t=>grantPlainText(t.description)).join("; ").slice(0,700);
+  const ambiguous=categories.some(t=>!types[t.id]) || !!additional;
+  const labels=categories.map(t=>grantPlainText(t.description)).join("; ").slice(0,700);
   const excerpt=additional?` ${additional.slice(0,900)}`:"";
-  return {version:1,applicantTypes:ambiguous?null:[...new Set(synopsis.applicantTypes.flatMap(t=>types[t.id]))],countries:null,
+  return {version:1,applicantTypes:ambiguous?null:[...new Set(categories.flatMap(t=>types[t.id]))],countries:null,
     evidenceUrl:`https://www.grants.gov/search-results-detail/${encodeURIComponent(externalId)}`,
     verifiedOn:now.toISOString().slice(0,10),validThrough:new Date(now.getTime()+86400000).toISOString().slice(0,10),
     notes:{en:`Official applicant categories (excerpt): ${labels}.${excerpt} Check exact legal subtype, other requirements and the complete announcement before applying.`,"zh-TW":`官方申請者分類（節錄）：${labels}。${excerpt} 仍需核對精確的法律類型、其他資格與完整公告；本結果不是核准申請資格。`}};

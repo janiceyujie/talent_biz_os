@@ -40,7 +40,6 @@ export async function readNotice(text: string, receivedOn: string, talentId: str
   const masked = maskNotice(stripInvisible(text).text);
   const { object } = await generateObject({
     role: "relevance", // the small mailbox model: a short, structured read
-    fromMailbox: true,
     system: SYSTEM,
     prompt: promptFor(masked, receivedOn),
     schema: noticeOutput,

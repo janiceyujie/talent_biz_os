@@ -20,7 +20,7 @@ So:
 - **Per artist account (talent) only.** An artist's examples and vectors decide only that artist's mail and projects. Never one model, index, or set of examples shared across artists, and never a model trained on everyone's mail.
 - **For a feature people see.** Sorting their mail, suggesting a project. Not analytics, not anything else.
 - **Shared parts learn from made-up data only.** Prompts, rules, and anything common to everyone are tuned on invented cases (`evals/`), as today. Aggregate rates (how often Not work is pressed) may tune thresholds as internal operations; confirm that in Google's review (CASA) before relying on it.
-- **A provider that keeps nothing.** Vectors are computed by a provider only to provide the feature, with no training on what it's sent; the rule for real mail in development holds (`AI_PROVIDER_KEEPS_DATA`).
+- **A provider that keeps nothing.** Vectors are computed by a provider only to provide the feature, with no training on what it's sent, in development too (decision 0022).
 - **Deleted with the mailbox.** Vectors and examples from Gmail go when the mailbox is disconnected or the talent is deleted, like the rest of its data.
 - **Only mail brought in.** Filtered out mail's body is never read; it isn't read to make a vector either.
 

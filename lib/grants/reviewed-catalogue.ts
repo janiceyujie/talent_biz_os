@@ -1,5 +1,7 @@
 import { z } from "zod";
+import taiwanReviewed from "./catalogue/taiwan-20261020.json";
 import { eligibilityRuleSchema } from "./eligibility";
+import { opportunityDisciplines } from "./disciplines";
 import { opportunityKinds } from "./types";
 
 export const reviewedOpportunitySchema=z.object({
@@ -8,11 +10,13 @@ export const reviewedOpportunitySchema=z.object({
   url:z.url().refine(url=>new URL(url).protocol==="https:"),
   opensOn:z.iso.date().nullable(),closesOn:z.iso.date().nullable(),
   sourceStatus:z.enum(["posted","forecasted","unknown"]),summary:z.string().max(2000),
+  disciplines:z.array(z.enum(opportunityDisciplines)).optional(),
   reviewedOn:z.iso.date(),eligibility:eligibilityRuleSchema.nullable(),
 });
 const review={version:1,verifiedOn:"2026-10-20",validThrough:"2026-11-19"} as const;
 /** Reviewed snapshots, not an automatic feed. Never advance review dates merely by importing again. */
 export const reviewedCatalogue=z.array(reviewedOpportunitySchema).parse([
+  ...taiwanReviewed,
   {externalId:"sxsw-music-2027",kind:"showcase",region:"US",title:"SXSW 2027 · Music Festival Showcase",agency:"SXSW",
     url:"https://sxsw.com/music-festival/",opensOn:null,closesOn:"2026-11-20",sourceStatus:"posted",reviewedOn:"2026-10-20",
     summary:"Official artist showcase application. The listed closing date is not a confirmed cutoff time. Review fees, travel arrangements and application terms before applying.",
@@ -21,7 +25,7 @@ export const reviewedCatalogue=z.array(reviewedOpportunitySchema).parse([
     url:"https://songwritingcompetition.com/rules",opensOn:null,closesOn:"2026-11-23",sourceStatus:"posted",reviewedOn:"2026-10-20",
     summary:"The extended entry deadline is November 23, 2026. Later promotions may have different windows. Check the selected category, current fee and official cutoff time.",
     eligibility:{...review,applicantTypes:null,countries:["TW","US","other"],evidenceUrl:"https://songwritingcompetition.com/rules",notes:{en:"International entries are accepted. Check authorship and rights, the Teen age limit, special-category restrictions, fees and AI-use disclosures.","zh-TW":"接受國際報名。仍需核對作品作者與權利、青少年組年齡、特殊組別限制、報名費與 AI 使用揭露規則。"}}},
-  {externalId:"creative-expo-next-call",kind:"exhibition",region:"TW",title:"臺灣文博會 · 後續徵展公告追蹤",agency:"臺灣文博會",
+  {externalId:"creative-expo-next-call",kind:"exhibition",region:"TW",title:"臺灣文博會 · 後續徵展公告追蹤",disciplines:["multidisciplinary","design"],agency:"臺灣文博會",
     url:"https://creativexpo.tw/zh-TW",opensOn:null,closesOn:null,sourceStatus:"unknown",reviewedOn:"2026-10-20",
     summary:"2026 activities have concluded. This is a source to follow for the next exhibitor call, not a currently open application. The next application dates and requirements are not confirmed.",eligibility:null},
   {externalId:"nea-gap-2026-july",kind:"grant",region:"US",title:"NEA Grants for Arts Projects · July 2026 cycle",agency:"National Endowment for the Arts",

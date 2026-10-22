@@ -139,7 +139,6 @@ ALTER TABLE "organization" ADD COLUMN "billing_address" text;--> statement-break
 ALTER TABLE "organization" ADD COLUMN "billing_address_parts" jsonb;--> statement-breakpoint
 ALTER TABLE "organization" ADD COLUMN "billing_email" text;--> statement-breakpoint
 ALTER TABLE "payment" ADD COLUMN "invoice_on" date;--> statement-breakpoint
-ALTER TABLE "payment" ADD COLUMN "receipts" jsonb DEFAULT '[]'::jsonb NOT NULL;--> statement-breakpoint
 ALTER TABLE "invoice" ADD CONSTRAINT "invoice_talent_id_talent_id_fk" FOREIGN KEY ("talent_id") REFERENCES "public"."talent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invoice" ADD CONSTRAINT "invoice_payment_id_payment_id_fk" FOREIGN KEY ("payment_id") REFERENCES "public"."payment"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invoice" ADD CONSTRAINT "invoice_project_id_project_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."project"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint

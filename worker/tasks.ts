@@ -7,7 +7,7 @@ import { importConnection } from "@/lib/calendar/google/import";
 import { reconcileCalendars, runCalendarSync } from "@/lib/calendar/google/sync";
 import { disconnectMailbox } from "@/lib/mail/jobs/disconnect";
 import { cleanup } from "@/lib/mail/jobs/cleanup";
-import { fetchDecision } from "@/lib/mail/jobs/fetch";
+import { fetchDecision, markFetchFailed } from "@/lib/mail/jobs/fetch";
 import { reconcile } from "@/lib/mail/jobs/reconcile";
 import { scoreDecision } from "@/lib/mail/jobs/relevance";
 import { syncMailbox } from "@/lib/mail/jobs/sync";
@@ -60,9 +60,15 @@ const tasks: Record<JobName, Task> = {
     const { decisionId } = jobs["mail.relevance"].parse(payload);
     await scoreDecision(decisionId);
   },
-  "mail.fetch": async (payload) => {
+  "mail.fetch": async (payload, { job }) => {
     const { decisionId } = jobs["mail.fetch"].parse(payload);
-    await fetchDecision(decisionId);
+    try {
+      await fetchDecision(decisionId);
+    } catch (e) {
+      // The last attempt: no retry follows, so Waiting says it couldn't be brought in.
+      if (job.attempts >= job.max_attempts) await markFetchFailed(decisionId, e).catch((err) => console.error("markFetchFailed", decisionId, err));
+      throw e;
+    }
   },
   "mail.disconnect": async (payload, { job }) => {
     const { connectionId, keep } = jobs["mail.disconnect"].parse(payload);

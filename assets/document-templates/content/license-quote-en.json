@@ -1,0 +1,113 @@
+{
+  "scenario": "license",
+  "role": "musician",
+  "kind": "quote",
+  "locale": "en",
+  "title": "Music license Quotation",
+  "blocks": [
+    {
+      "type": "paragraph",
+      "text": "Quote number [ID]. Issued [date]. Valid until [date]. Currency [currency]. Subject to written confirmation; this quotation does not itself reserve dates or grant rights."
+    },
+    {
+      "type": "heading",
+      "text": "Parties"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Client [legal name, address, contact and email]",
+        "Service provider [legal name, address, contact and email]",
+        "Project [name]. Agreement date [date]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Scope and schedule"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Identify composition [title, writers, publishers and shares] and recording [version, owner, identifier]. Licensed use [production and placement], media [list], territory [list], term [start and end], edit length [seconds]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Price breakdown"
+    },
+    {
+      "type": "paragraph",
+      "text": "For each item, enter scope, quantity, unit, unit price and amount. If commission applies, specify the calculation basis and rate. Identify estimates separately from fixed fees."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Item",
+        "Qty / unit",
+        "Unit price",
+        "Amount"
+      ],
+      "rows": [
+        [
+          "Composition license",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Master recording license",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Additional territory or media",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Extension of term",
+          "[___]",
+          "[___]",
+          "[___]"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Fees and payment"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Subtotal excluding tax [amount]",
+        "Discount [amount]",
+        "Tax rate and tax [rate and amount]",
+        "Total including tax [amount and currency]",
+        "Deposit [amount and due date]",
+        "Balance [amount and payment terms]"
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Usage and special terms"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "The licensor grants only the rights it controls as listed here: [composition synchronization / master use / other]. Any additional rights require separate clearance. No ownership transfer, AI training, voice cloning, sublicensing or new campaign use without written approval. Credit [wording]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Quotation conditions"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Unlisted deliverables, extra revisions, travel and usage rights are excluded. Scope changes or acceptance after expiry require a revised price and availability check. Confirm cancellation, acceptance, rights and full engagement terms in writing before work begins."
+      ]
+    }
+  ]
+}

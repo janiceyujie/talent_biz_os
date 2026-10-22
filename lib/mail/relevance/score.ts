@@ -9,12 +9,11 @@ import { RELEVANCE_PROMPT_VERSION, relevanceOutput, relevancePrompt, relevanceSy
  * (lib/mail/jobs/relevance.ts) and the eval (scripts/eval-relevance.mts) both
  * go through here, so an eval measures exactly what the worker does.
  */
-export async function scoreMail(m: Pick<MailMetadata, "from" | "subject" | "labels" | "snippet">, trace: Omit<CallTrace, "promptVersion">, fromMailbox: boolean) {
+export async function scoreMail(m: Pick<MailMetadata, "from" | "subject" | "labels" | "snippet">, trace: Omit<CallTrace, "promptVersion">) {
   // Invisible characters can hide instructions: the model reads only what a person would see.
   const visible = { ...m, subject: stripInvisible(m.subject).text, snippet: stripInvisible(m.snippet).text };
   const { object, modelVersion } = await generateObject({
     role: "relevance",
-    fromMailbox,
     system: relevanceSystem(),
     prompt: relevancePrompt(visible),
     schema: relevanceOutput,

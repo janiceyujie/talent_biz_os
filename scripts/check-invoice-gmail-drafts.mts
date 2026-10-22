@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { randomBytes, randomUUID, createHash } from "node:crypto";
 import { writeFile, readFile } from "node:fs/promises";
 env.loadEnvConfig(process.cwd());
-Object.assign(process.env, { INVOICE_GMAIL_DRAFTS_ENABLED:"1", INVOICE_GMAIL_API_URL:"http://127.0.0.1:54500/gmail/v1", GOOGLE_OAUTH_TOKEN_URL:"http://127.0.0.1:54500/token", GOOGLE_CLIENT_ID:"synthetic-client", GOOGLE_CLIENT_SECRET:"synthetic-secret", BETTER_AUTH_URL:"http://localhost:3002", NEXT_DIST_DIR:process.env.INVOICE_QA_DIST_DIR || ".next-test" });
+Object.assign(process.env, { MAIL_KEY_DEV:randomBytes(32).toString("base64"), INVOICE_GMAIL_DRAFTS_ENABLED:"1", INVOICE_GMAIL_API_URL:"http://127.0.0.1:54500/gmail/v1", GOOGLE_OAUTH_TOKEN_URL:"http://127.0.0.1:54500/token", GOOGLE_CLIENT_ID:"synthetic-client", GOOGLE_CLIENT_SECRET:"synthetic-secret", BETTER_AUTH_URL:"http://localhost:3002", NEXT_DIST_DIR:process.env.INVOICE_QA_DIST_DIR || ".next-test" });
 const base = "http://localhost:3002";
 const local = (value: string) =>
   ["localhost", "127.0.0.1", "[::1]"].includes(new URL(value).hostname);

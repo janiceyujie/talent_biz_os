@@ -1,18 +1,18 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { grantApplication, grantOpportunity, grantSource, grantTask, grantWatch, todo, talent } from "@/lib/db/schema";
+import { grantApplication, grantOpportunity, grantSource, grantTask, grantWatch, todo } from "@/lib/db/schema";
 import { grantsLocalEnabled } from "@/lib/grants/config";
 import { grantSources, type GrantSource, type GrantWorkspace } from "@/lib/grants/types";
 
-export async function getGrantWorkspace(): Promise<GrantWorkspace> {
+export async function getGrantWorkspace(initialId?:string): Promise<GrantWorkspace> {
   const {talent,person}=await requireTalent();
   if (!grantsLocalEnabled()) throw new Error("grants_local_only");
   const [opportunities,applications,sources,[watch]]=await Promise.all([
     // Only saved records are needed for application details and calendar deep links.
     // Public discovery is paginated separately; never preload the entire national feed.
-    db.select().from(grantOpportunity).where(sql`exists (select 1 from ${grantApplication} a where a.opportunity_id = ${grantOpportunity.id} and a.talent_id = ${talent.id}::uuid)`).orderBy(desc(grantOpportunity.changedAt)),
+    db.select().from(grantOpportunity).where(or(sql`exists (select 1 from ${grantApplication} a where a.opportunity_id = ${grantOpportunity.id} and a.talent_id = ${talent.id}::uuid)`,initialId?eq(grantOpportunity.id,initialId):undefined)).orderBy(desc(grantOpportunity.changedAt)),
     db.select().from(grantApplication).where(eq(grantApplication.talentId,talent.id)).orderBy(desc(grantApplication.updatedAt)),
     db.select().from(grantSource),
     db.select().from(grantWatch).where(and(eq(grantWatch.talentId,talent.id),eq(grantWatch.personId,person.personId))),
@@ -27,17 +27,4 @@ export async function getGrantWorkspace(): Promise<GrantWorkspace> {
     watch:{enabled:watch?.enabled||false,regions:watch?.regions||["TW","US"]},
   };
 }
-export async function getGrantNotice(talentId:string, personId:string) {
-  if (!grantsLocalEnabled()) return null;
-  const [watch]=await db.select().from(grantWatch).where(and(eq(grantWatch.talentId,talentId),eq(grantWatch.personId,personId)));
-  if (!watch?.enabled || !watch.regions.length) return null;
-  const [workspace]=await db.select({timeZone:talent.timeZone}).from(talent).where(eq(talent.id,talentId));
-  if (!workspace) return null;
-  const openedAt=sql`(${grantOpportunity.opensOn}::timestamp at time zone (case when ${grantOpportunity.region}='TW' then 'Asia/Taipei' else ${workspace.timeZone} end))`;
-  const [row]=await db.select({count:sql<number>`count(*)::int`}).from(grantOpportunity).where(and(inArray(grantOpportunity.region,watch.regions),sql`(
-    ${grantOpportunity.changedAt}>${watch.seenAt.toISOString()}::timestamptz
-    or (${grantOpportunity.sourceStatus}='posted' and ${grantOpportunity.checkedAt}>now()-interval '24 hours'
-        and ${openedAt}>${watch.seenAt.toISOString()}::timestamptz and ${openedAt}<=now())
-  )`));
-  return {count:row.count};
-}
+export { unreadGrantChanges as getGrantNotice } from "./grant-changes";

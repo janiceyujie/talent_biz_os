@@ -20,7 +20,7 @@ This design reads our calendar back and brings what changed in Google into our e
 | 4 | An event added in Google to our calendar | **It appears here right away, without a project**, marked simply as not in a project, and can be added to one from the Calendar screen. |
 | 5 | How quickly Google's changes come back | **Every 5 minutes from the worker now; Google's change notices once deployed**, with a 30-minute read as the safety net. |
 | 6 | An end for shows and meetings | **An end changed in Google comes back for every event.** Every kind can already have an end here (the planner and the event form; an ordinary event's end is in its start zone). With none, it goes to Google as one hour. |
-| 7 | A repeating event added in Google | **Shown read-only**, like the person's other Google calendars: every occurrence in the window, edited in Google. **It can be added to a project as a whole series** (a weekly rehearsal for a show): every occurrence then shows the project. Unfiled, each occurrence carries "Not in a project" with Add to a project. Only for series in our own Talent Biz OS calendar; the person's other calendars stay personal (decision 0009). |
+| 7 | A repeating event added in Google | **Shown read-only**, like the person's other Google calendars: every occurrence in the window, edited in Google. **It can be added to a project as a whole series** (a weekly rehearsal for a show): every occurrence then shows the project. Unfiled, each occurrence carries "Not in a project" with Add to a project. Only for series in our own Taloox calendar; the person's other calendars stay personal (decision 0009). |
 | 8 | Adding an event to a project | **All the talent's open projects, with the matched one first**, marked "Suggested", when one is clear. The match runs in code: an invited address matching a contact on exactly one project first, then exactly one project whose name, counterparty, or organization is in the title. Otherwise none: no guessing by date. Worked out when the event comes in from Google (with who was invited) and stored; for an event without a project made here, a name in its title. No reason text. Invited addresses are read for this match only, never stored. |
 
 Out of sight, and kept so that Restore or a history can be added later:
@@ -88,7 +88,7 @@ Every applied change is recorded in `audit_log`, and nothing is shown.
 ```
 Project: Haoshi Winter Festival
 Taipei → Tokyo · BR198 · 12A
-── Notes (synced with Talent Biz OS) ──
+── Notes (synced with Taloox) ──
 Bring the in-ear monitors
 ```
 

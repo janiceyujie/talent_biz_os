@@ -14,7 +14,7 @@ test("trial identities are repeatable and isolated by workspace and period",()=>
 test("trial money and scheduled execution reference signed projects and keep currencies separate",()=>{
  const f=trialFixtures(talent,person,"2026-10","Asia/Taipei");
  const projects=new Map(f.projects.map(p=>[p.id,p]));
- for(const p of f.payments){const project=projects.get(p.projectId!);assert.ok(project&&isSigned(project.stage!));assert.equal(p.currency,project.quoteCurrency);assert.equal(p.status==="settled",!!p.settledOn);assert.equal(p.settledAmount!==null&&p.settledAmount!==undefined,p.status==="settled");}
+ for(const p of f.payments){const project=projects.get(p.projectId!);assert.ok(project&&isSigned(project.stage!));assert.equal(p.currency,project.quoteCurrency);assert.equal(p.status==="settled",f.receipts.some(r=>r.paymentId===p.id));}
  for(const event of f.events){if(event.projectId)assert.ok(isSigned(projects.get(event.projectId)!.stage!));assert.ok(parseDateInput(event.startDate));assert.ok(event.startDate>="2026-10-01"&&event.startDate<="2026-11-30");assert.equal(!!event.endDate,!!event.endTime);assert.equal(!!event.endDate,!!event.endTimeZone);}
  assert.deepEqual([...new Set(f.payments.map(p=>p.currency))].sort(),["EUR","GBP","HKD","JPY","TWD","USD"].sort());
  assert.ok(f.projects.every(p=>p.title.startsWith("範例｜")));

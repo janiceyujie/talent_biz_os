@@ -14,7 +14,7 @@ Make a separate OAuth client for each place the app runs — local, staging, pro
 
 ## Local development
 
-1. **Create a project** at <https://console.cloud.google.com> (e.g. "Talent Biz OS – dev").
+1. **Create a project** at <https://console.cloud.google.com> (e.g. "Taloox – dev").
 2. **Google Auth Platform → Branding.** App name, user support email, developer contact email. Leave the logo empty for now (a logo triggers brand verification).
 3. **Audience.** User type **External**. Publishing status stays **Testing**; add yourself (and anyone else testing) under **Test users** — only they can sign in while testing (up to 100).
 4. **Data access.** Add `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile`. Nothing else.

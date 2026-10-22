@@ -44,6 +44,8 @@ export async function changeMark(talentId: string, personId: string): Promise<st
   const [row] = await db.execute<{ mark: string }>(sql`
     select md5(concat_ws('|',
       ${sql.join(parts, sql`, `)},
+      (select max(created_at)::text from grant_change),
+      (select max(greatest(read_at,snoozed_until))::text from notification_state where person_id=${personId}),
       (select updated_at::text from talent where id = ${talentId}),
       (select concat_ws(',', status, last_synced_at, sync_requested_at) from mail_connection where talent_id = ${talentId}),
       (select max(s.last_imported_at)::text from calendar_import_source s join calendar_connection c on c.id = s.connection_id

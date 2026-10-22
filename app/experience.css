@@ -596,6 +596,53 @@ button:disabled {
     opacity: 0.6;
   }
 }
+/* The model's answer: its own line breaks, nothing else. */
+.assistant-reply {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* What a question is about: the whole workspace or one project. */
+.assistant-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.assistant-scope select {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 200px;
+  font-size: var(--text-meta);
+}
+.assistant-scope small {
+  flex-basis: 100%;
+}
+.assistant-input textarea {
+  min-width: 0;
+  flex: 1;
+  align-self: stretch;
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-meta);
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+}
+.assistant-input:focus-within {
+  border-color: var(--accent);
+}
+.assistant-input textarea:focus,
+.assistant-input textarea:focus-visible {
+  outline: none;
+  box-shadow: none; /* the box's own border shows focus */
+}
 /* The assistant in a corner (components/app/assistant-dock.tsx): the page beside it stays usable. */
 .assistant-dock {
   position: fixed;

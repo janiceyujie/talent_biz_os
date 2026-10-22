@@ -1,5 +1,5 @@
 // The assistant's answers worked out in code, without a model (decision 0023):
-// the quick prompts' schedule and money questions. Pure functions over the
+// the quick prompts' schedule and money questions; and the shape of every answer. Pure functions over the
 // same helpers the calendar and Today's money widget use, so the answers
 // match those screens. The server fetches the rows (lib/assistant/data.ts).
 import { planItems, plusDays, type PlanSource } from "@/lib/calendar/planner";
@@ -8,6 +8,8 @@ import { countedPayments, paymentRemaining } from "@/lib/domain/workflow";
 import type { CalendarKind, Payment, ProjectSummary } from "@/lib/types";
 
 export const assistantIntents = ["today", "tomorrow", "receivable", "payable"] as const;
+/** The longest question in the person's own words. */
+export const QUESTION_MAX = 2000;
 export type AssistantIntent = (typeof assistantIntents)[number];
 
 /** Lines an answer lists; past it, it says how many more there are rather than dropping them silently. */
@@ -25,6 +27,7 @@ export type MoneyLine = { label: string; project: string; dueDate: string | null
 export type Totals = { currency: Currency; amount: number }[];
 
 export type AssistantAnswer =
+  | { kind: "text"; text: string } // the model's answer to a question in the person's own words, shown as plain text
   | { kind: "schedule"; date: string; timeZone: string; lines: ScheduleLine[]; more: number }
   | { kind: "money"; direction: "in" | "out"; today: string; totals: Totals; overdue: Totals; lines: MoneyLine[]; more: number };
 

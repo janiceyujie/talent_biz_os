@@ -5,7 +5,7 @@ import type { AssistantAnswer } from "@/lib/assistant/answers";
 import { useLabels } from "@/lib/i18n/labels";
 import { useMoney, useMoneyTotals } from "@/lib/i18n/format";
 
-/** An answer worked out in code: a short summary line, then its items. Plain text and lists, nothing clickable. */
+/** An answer: the model's plain text, or one worked out in code as a summary line and its items. Nothing clickable. */
 export function AnswerView({ answer }: { answer: AssistantAnswer }) {
   const t = useTranslations("assistant.answer");
   const locale = useLocale();
@@ -14,6 +14,9 @@ export function AnswerView({ answer }: { answer: AssistantAnswer }) {
   const totals = useMoneyTotals();
   const day = (date: string) =>
     new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", weekday: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+
+  // The model's words: plain text only, never HTML, links, or images (decision 0023).
+  if (answer.kind === "text") return <p className="assistant-reply">{answer.text}</p>;
 
   if (answer.kind === "schedule") {
     if (!answer.lines.length) return <p>{t("scheduleEmpty", { date: day(answer.date) })}</p>;

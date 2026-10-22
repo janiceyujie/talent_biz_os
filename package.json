@@ -17,6 +17,7 @@
     "i18n:check": "node scripts/i18n-check.mjs && tsx scripts/registry-labels-check.mts",
     "eval:extraction": "tsx --conditions=react-server scripts/eval-extraction.mts",
     "eval:relevance": "tsx --conditions=react-server scripts/eval-relevance.mts",
+    "eval:assistant": "tsx --conditions=react-server scripts/eval-assistant.mts",
     "test": "tsx --test 'lib/**/*.test.ts'"
   },
   "dependencies": {

@@ -11,7 +11,7 @@ import { pairKey } from "@/lib/domain/organizations";
 import { inboxOverview } from "./inbox";
 import { summaryOf } from "./projects";
 import { changeMark } from "./changes";
-import { calendarItemsOf, externalEventsOf, paymentsOf } from "./rows";
+import { calendarItemsOf, contractsOf, externalEventsOf, paymentsOf } from "./rows";
 import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, membership, notificationState, payment, paymentReceipt, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { mailConfigured } from "@/lib/mail/connect";
@@ -246,17 +246,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
       archived: t.archivedAt !== null,
     })),
     drafts: [],
-    contracts: contractRows.map((c) => ({
-      id: c.id,
-      projectId: c.projectId,
-      messageId: c.messageId,
-      version: c.versionNumber,
-      status: c.status,
-      terms: c.terms,
-      diff: c.diff ?? [],
-      against: c.supersedesId ? ("version" as const) : ("project" as const),
-      createdAt: c.createdAt.toISOString(),
-    })),
+    contracts: contractsOf(contractRows),
     inbox: inboxRows,
   };
 });

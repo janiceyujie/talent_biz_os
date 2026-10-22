@@ -9,13 +9,16 @@ import { aiCall } from "@/lib/db/schema";
 // cheap, and not the person's action), nor do calls stopped before reaching a model (a file it
 // can't read, nothing configured, a missing recording). Limits come from
 // the environment until plans and billing exist. A mailbox's own calls have
-// their own daily cap (canScore).
+// their own daily cap (canScore), and the assistant's are counted per person
+// (assistantUsage, decision 0023).
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Failures raised before anything was sent: they cost nothing.
 const neverSent = ["unsupported_file", "not_configured", "replay_missing"];
 // Run by the mailbox on its own, not by the person.
 const mailboxTasks = ["relevance", "payment_notice"];
+// Not the talent's analyses: the assistant has its own per-person limits.
+const notAnalysis = [...mailboxTasks, "assistant"];
 const counted = () => and(eq(aiCall.replayed, false), or(isNull(aiCall.failureCode), notInArray(aiCall.failureCode, neverSent)));
 export const dailyLimit = () => Number(process.env.AI_DAILY_ANALYSES || 50);
 const perMessageLimit = () => Number(process.env.AI_MAX_ANALYSES_PER_MESSAGE || 4);
@@ -26,7 +29,7 @@ export async function dailyUsage(talentId: string) {
     .select({ used: count() })
     .from(aiCall)
     .where(
-      and(eq(aiCall.talentId, talentId), counted(), notInArray(aiCall.task, mailboxTasks), gt(aiCall.createdAt, new Date(Date.now() - DAY_MS))),
+      and(eq(aiCall.talentId, talentId), counted(), notInArray(aiCall.task, notAnalysis), gt(aiCall.createdAt, new Date(Date.now() - DAY_MS))),
     );
   const limit = dailyLimit();
   return { used: row.used, limit, remaining: Math.max(0, limit - row.used) };
@@ -61,4 +64,24 @@ export async function canScore(talentId: string) {
     .from(aiCall)
     .where(and(eq(aiCall.talentId, talentId), counted(), inArray(aiCall.task, mailboxTasks), gt(aiCall.createdAt, new Date(Date.now() - DAY_MS))));
   return row.used < dailyMailboxLimit();
+}
+
+/** The assistant's questions a person may ask a month (AI_MONTHLY_ASSISTANT), and a day (AI_DAILY_ASSISTANT): the second stops a burst using up the month. */
+export const assistantLimits = () => ({ month: Number(process.env.AI_MONTHLY_ASSISTANT || 600), day: Number(process.env.AI_DAILY_ASSISTANT || 100) });
+
+/**
+ * The assistant's model calls this person made this calendar month and in the last 24 hours,
+ * across every talent they work on (decision 0023). `monthStart` is the 1st, in the zone the person
+ * is working in. Plans will set the limits; until billing exists everyone has the same ones.
+ */
+export async function assistantUsage(personId: string, monthStart: Date) {
+  const since = new Date(Math.min(monthStart.getTime(), Date.now() - DAY_MS));
+  const rows = await db
+    .select({ at: aiCall.createdAt })
+    .from(aiCall)
+    .where(and(eq(aiCall.personId, personId), eq(aiCall.task, "assistant"), counted(), gt(aiCall.createdAt, since)));
+  const limits = assistantLimits();
+  const month = rows.filter((r) => r.at >= monthStart).length;
+  const day = rows.filter((r) => r.at.getTime() > Date.now() - DAY_MS).length;
+  return { month, day, limits, left: Math.max(0, Math.min(limits.month - month, limits.day - day)), monthLeft: Math.max(0, limits.month - month) };
 }

@@ -337,6 +337,13 @@
       "when": 1792640501359,
       "tag": "0047_drop_settled_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1792649742786,
+      "tag": "0048_ai_call_flags",
+      "breakpoints": true
     }
   ]
 }

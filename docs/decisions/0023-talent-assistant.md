@@ -1,6 +1,6 @@
 # 0023 — The assistant: personal conversations over a fixed, read-only snapshot
 
-**Status:** Proposed (2026-10-21).
+**Status:** Accepted (2026-10-22).
 
 ## Context
 
@@ -33,9 +33,10 @@ Porting it raises questions the prototype didn't have to answer:
 
 ### Usage is counted per person, limited by plan
 
-- **A daily limit per person**, across every talent they work on, separate from inbox analysis (which stays per talent, since mail belongs to the talent). An artist's questions never use a manager's allowance, or the reverse.
-- **The limit comes from the person's plan.** Until billing exists, an environment setting per plan, with everyone on the individual plan's limit.
-- **Calls are counted, not tokens**, from `ai_call` (`task = 'assistant'`), like analysis. Each call's cost is bounded instead: a cap on context size, on conversation history sent, and on the answer's length, so calls × the per-call maximum bounds a person's daily cost.
+- **A monthly allowance per person**, across every talent they work on, separate from inbox analysis (which stays per talent, since mail belongs to the talent). An artist's questions never use a manager's allowance, or the reverse. It's the number a person sees ("120 questions left this month") and what plans will differ by; it resets on the 1st where the talent is, and will follow the billing period once there is one.
+- **A daily cap on top**, so a burst (a script, a loop) can't use up the month in a day.
+- **The limits come from the person's plan.** Until billing exists, environment settings (`AI_MONTHLY_ASSISTANT`, default 600; `AI_DAILY_ASSISTANT`, default 100), with everyone on the same limits.
+- **Calls are counted, not tokens or money**, from `ai_call` (`task = 'assistant'`), like analysis. Each call's cost is bounded instead: a cap on the snapshot's size, on conversation history sent, and on the answer's length, so calls × the per-call maximum bounds a person's monthly cost. A money budget would need the same caps to mean anything, and people can't read their allowance in dollars.
 - **Not counted:** questions answered in code (no model call) and failures before anything was sent (`neverSent` in `lib/ai/usage.ts`).
 - **One request at a time per person**, held with a Postgres advisory lock so it works across machines.
 - **An app-wide pause and a total spending cap** (decision 0008, before real users) cover the assistant: when paused, questions answered in code still work and the rest say AI is paused.
@@ -43,7 +44,7 @@ Porting it raises questions the prototype didn't have to answer:
 ### What the model sees: a fixed snapshot, built in code
 
 - **Code builds one bounded snapshot per turn** from the scope; the model has no tools and no way to ask for more. A question the snapshot can't answer gets "that isn't in your data here".
-- **Workspace scope:** today's date, time zone, and language; money received, expected, paid, and owed, **per currency, never summed across currencies**; overdue counts; the next 14 days of events; active projects (title, stage, counterparty, next step and its date), capped with a count of what was left out.
+- **Workspace scope:** today's date and time zone; money still to come in and still to pay, with what's overdue, **per currency, never summed across currencies**, counted as Today's money widget counts it (signed work only, decision 0018); the next 14 days of events; active projects (title, stage, counterparty, next step and its date), capped with a count of what was left out.
 - **Project scope:** the project's confirmed details (deliverables, rights, travel, open questions), its payments and events, the names and roles of its people and companies, contract status, and its notes.
 - **Never sent:** original message text (a project's offer text, timeline summaries), contact email addresses and phone numbers, bank accounts and payment links, anything from another talent.
 - **Queries fetch only this** (decision 0011), not the whole workspace.
@@ -52,7 +53,7 @@ Porting it raises questions the prototype didn't have to answer:
 ### Untrusted text: the layers of decision 0007
 
 - **Data and instructions stay apart.** Fixed instructions; the snapshot inside a `<workspace_data>` block marked as data; the person's question as its own message.
-- **Every string in the snapshot is cleaned** with `stripInvisible`; text fields are also checked with `findInstructions`, and a hit is recorded in `ai_call` for follow-up, not shown as a warning (the text is the person's own or confirmed by them, so a warning would mostly be noise).
+- **Every string in the snapshot is cleaned** with `stripInvisible`; text fields are also checked with `findInstructions`, and a hit is recorded in `ai_call.flags` by kind and field (`instructions_to_ai:project.notes`), never the text, for follow-up, not shown as a warning (the text is the person's own or confirmed by them, so a warning would mostly be noise).
 - **Answers are shown as plain text.** No HTML, no images, no links made clickable. If formatting is added later, only emphasis and lists: an image or link in an answer can carry data out of the page.
 - **History comes from the database**, never from the browser, so earlier turns can't be forged.
 - **Drafts stay drafts.** The assistant can suggest wording; it can't send, save, or change anything.
@@ -60,7 +61,7 @@ Porting it raises questions the prototype didn't have to answer:
 
 ### Through the one seam
 
-- The call goes through `lib/ai/model.ts`, which gains a free-text call next to `generateObject` and an `assistant` role (a mid-size model by default, per provider). It gets the primary and backup, recorded responses, and `ai_call` logging like every other call; development uses the paid providers (decision 0022).
+- The call goes through `lib/ai/model.ts`, which gains a free-text call next to `generateObject` and an `assistant` role (the small model by default: Haiku, or Luna on OpenAI; the assistant eval, `npm run eval:assistant`, decides whether it should change). It gets the primary and backup, recorded responses, and `ai_call` logging like every other call; development uses the paid providers (decision 0022).
 
 ## Alternatives considered
 
@@ -81,3 +82,9 @@ Porting it raises questions the prototype didn't have to answer:
 - An ex-manager keeps what the assistant told them while they had access. A talent who wants that gone deletes their account; a retention rule can come later.
 - Answers are only as complete as the snapshot: a question about something left out (an old archived project, the wording of an email) gets "not in your data here" rather than a guess.
 - **Porting from the prototype:** keep the conversation flow, the floating panel, the scope rules of its context builder and their tests, the in-code answers, and its eval questions (as made-up fixtures). Rebuild storage, the model call, limits, and the snapshot on the seams above. Leave out its cost and pricing pages, per-message token costs, the sample-data switch (samples belong to the preview mode), and its unrelated changes to sign-in and access.
+
+## Implementation notes (2026-10-22)
+
+- **Slice 1** (quick prompts answered in code): `POST /api/assistant/messages` with `{ intent }`, `lib/assistant/answers.ts`, the corner panel and the Assistant page.
+- **Slice 2** (questions in the person's own words, one at a time): the same endpoint with `{ text, projectId? }`. `lib/assistant/snapshot.ts` builds and cleans the snapshot; `lib/assistant/data.ts` fetches its rows; `lib/assistant/prompt.ts` holds the instructions, fingerprinted as `ASSISTANT_PROMPT_VERSION`; `generateText` in `lib/ai/model.ts` asks for a single `answer` string through the structured path, so the backup, recordings, and logging are the same as every call. One question per person at a time is a transaction-scoped advisory lock, as calendar sync uses. Received and paid money aren't in the overview yet; the snapshot says so (`notIncluded`).
+- **First eval** (20 made-up cases, prompt 1544eee4d6b3, `claude-haiku-5-5`): 20/20 cases, 88/88 checks, about $0.01 a run, about 1,850 input tokens a question. It covers currency handling, scheduling, saying what isn't in the data, an injected instruction in a project's notes, a prompt-leak request, a link-exfiltration request, a request to act, naming no data fields, and the answer's language. Two lessons from getting there: the screens an answer points to are named from the message catalogs, so a Chinese answer names the Finance screen as the Chinese interface does, not in English; and the snapshot states tax in words, since a model shown `taxIncluded: false` quoted the flag back.

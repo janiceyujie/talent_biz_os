@@ -962,7 +962,7 @@
   },
   "assistant": {
     "status": "Answers only · never acts on your behalf",
-    "intro": "Ask about today's or tomorrow's schedule, or money still to come in or to pay. Answers come from your own records.",
+    "intro": "Pick a question below, or ask in your own words about your schedule, money, or a project. Answers come from your own records.",
     "prompt": {
       "today": "What do I need to do today?",
       "tomorrow": "What's on tomorrow?",
@@ -970,8 +970,7 @@
       "payable": "What do I still have to pay?"
     },
     "input": "Message to assistant",
-    "placeholder": "Typing your own question is coming soon",
-    "comingSoon": "For now, pick a question above. Asking in your own words is coming soon.",
+    "placeholder": "Ask about your projects, calendar, or money…",
     "send": "Send",
     "dockTitle": "Assistant",
     "openChat": "Open the assistant",
@@ -980,7 +979,6 @@
     "conversation": "Conversation with the assistant",
     "you": "You",
     "working": "Looking it up…",
-    "failed": "Couldn't get an answer.",
     "retry": "Try again",
     "answer": {
       "schedule": "{date} · times in {zone}",
@@ -997,6 +995,20 @@
       "late": "overdue",
       "signedOnly": "Signed deals only, as on Today.",
       "moneyMore": "{count, plural, one {# more payment} other {# more payments}} not shown. See Finance for all of them."
+    },
+    "note": "For now each question is answered on its own, from your records only. Answers can be wrong: check anything important.",
+    "monthLeft": "{count, plural, one {# question} other {# questions}} left this month.",
+    "scope": "About",
+    "scopeOverview": "Your whole workspace",
+    "scopeProject": "The chosen project",
+    "scopeRecent": "Showing the 200 most recently updated projects.",
+    "error": {
+      "busy": "Still answering your last question. Try again in a moment.",
+      "month_limit": "You've used this month's questions. The quick prompts above still work.",
+      "day_limit": "You've asked a lot today. Try again tomorrow; the quick prompts above still work.",
+      "unavailable": "The assistant can't answer right now. Try again in a moment.",
+      "not_found": "That project isn't available any more. Choose another.",
+      "failed": "Couldn't get an answer."
     }
   },
   "calendar": {

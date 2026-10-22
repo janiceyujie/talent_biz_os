@@ -75,6 +75,11 @@ projects:
                 sync: false
               - key: OPENAI_API_KEY
                 sync: false
+              # Cloud KMS (decision 0016): the key's name, and a credential that may only encrypt.
+              - key: KMS_KEY
+                sync: false
+              - key: GCP_KMS_CREDENTIALS
+                sync: false
           - type: pserv
             name: taloox-worker-staging
             runtime: docker
@@ -123,6 +128,11 @@ projects:
               - key: PUBSUB_SUBSCRIPTION
                 sync: false
               - key: GCP_PUBSUB_CREDENTIALS
+                sync: false
+              # Cloud KMS: the same key's name, and a credential that may only decrypt.
+              - key: KMS_KEY
+                sync: false
+              - key: GCP_KMS_CREDENTIALS
                 sync: false
 
       - name: production
@@ -183,6 +193,11 @@ projects:
                 sync: false
               - key: OPENAI_API_KEY
                 sync: false
+              # Cloud KMS (decision 0016): the key's name, and a credential that may only encrypt.
+              - key: KMS_KEY
+                sync: false
+              - key: GCP_KMS_CREDENTIALS
+                sync: false
           - type: pserv
             name: taloox-worker
             runtime: docker
@@ -230,4 +245,9 @@ projects:
               - key: PUBSUB_SUBSCRIPTION
                 sync: false
               - key: GCP_PUBSUB_CREDENTIALS
+                sync: false
+              # Cloud KMS: the same key's name, and a credential that may only decrypt.
+              - key: KMS_KEY
+                sync: false
+              - key: GCP_KMS_CREDENTIALS
                 sync: false

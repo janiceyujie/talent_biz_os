@@ -15,6 +15,34 @@ Each environment needs its own of each of these (launch checklist, sections 3 an
 - A Google Cloud project with an OAuth client ([google-sign-in.md](google-sign-in.md)), and a Pub/Sub topic and subscription ([gmail.md](gmail.md), "Push"). The worker refuses to start in production without Pub/Sub.
 - An SMTP provider, a storage bucket and its keys, and Anthropic and OpenAI keys with spending caps.
 - A new `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), never reused between environments: it encrypts stored Google tokens.
+- A Cloud KMS key and two credentials for it ("Cloud KMS" below). The worker refuses to start in a deployed environment without them, as it does without Pub/Sub.
+
+## Cloud KMS
+
+Each mailbox's refresh token is encrypted with its own data key, and the data key is wrapped by a master key that never leaves Cloud KMS ([decision 0016](../decisions/0016-mailbox-tokens-and-key-management.md)). The web service may only encrypt with it (when someone connects a mailbox); the worker may only decrypt (when it reads mail). Per environment, in the Google Cloud project that already holds the OAuth client and Pub/Sub:
+
+```sh
+P=<project>; L=asia-southeast1
+gcloud kms keyrings create taloox --location $L --project $P
+gcloud kms keys create mailbox-tokens --keyring taloox --location $L --purpose encryption --project $P
+
+gcloud iam service-accounts create kms-web --project $P
+gcloud iam service-accounts create kms-worker --project $P
+gcloud kms keys add-iam-policy-binding mailbox-tokens --keyring taloox --location $L --project $P \
+  --member serviceAccount:kms-web@$P.iam.gserviceaccount.com --role roles/cloudkms.cryptoKeyEncrypter
+gcloud kms keys add-iam-policy-binding mailbox-tokens --keyring taloox --location $L --project $P \
+  --member serviceAccount:kms-worker@$P.iam.gserviceaccount.com --role roles/cloudkms.cryptoKeyDecrypter
+
+gcloud iam service-accounts keys create kms-web.json --iam-account kms-web@$P.iam.gserviceaccount.com
+gcloud iam service-accounts keys create kms-worker.json --iam-account kms-worker@$P.iam.gserviceaccount.com
+```
+
+- On both Render services, `KMS_KEY` = `projects/$P/locations/asia-southeast1/keyRings/taloox/cryptoKeys/mailbox-tokens`.
+- `GCP_KMS_CREDENTIALS`: the contents of `kms-web.json` on the web service, of `kms-worker.json` on the worker. Then delete both files from your machine.
+- The roles are granted on the key alone, not the project: neither account can touch any other key.
+- **Audit log**: Cloud KMS records decrypts only once Data Access logs are on (IAM & Admin → Audit Logs → Cloud Key Management Service → Data Read and Data Write). Turn them on, so every time the worker opens a token shows up.
+- **Kill switch**: `gcloud kms keys versions disable 1 --key mailbox-tokens --keyring taloox --location $L --project $P` stops every mailbox at once; nothing can be decrypted until it's enabled again.
+- Rotating the key (`gcloud kms keys versions create …`, or a rotation schedule) needs no change here: each wrapped data key carries the version that wrapped it.
 
 ## Creating the services
 

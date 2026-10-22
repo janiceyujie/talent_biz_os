@@ -38,7 +38,7 @@ Do this **once**, as late as possible (right before creating the production data
 - [ ] A strong `BETTER_AUTH_SECRET` per environment, never reused from development. It encrypts stored Google tokens (decision 0009); changing it later forces everyone to reconnect Google.
 - [ ] `BETTER_AUTH_URL` set to the production address.
 - [ ] No test settings in production: `GOOGLE_TEST_STUB`, `AI_REPLAY`, `GOOGLE_CALENDAR_API_URL`, `GOOGLE_OAUTH_REVOKE_URL`, `NEXT_DIST_DIR`, `GMAIL_API_URL`, `GOOGLE_OAUTH_TOKEN_URL`, `MAIL_KEY_DEV` unset; `APP_ENV=production`.
-- [ ] Cloud KMS key in Singapore; an encrypt-only credential on the web service and a decrypt-only one on the worker ([decision 0016](../decisions/0016-mailbox-tokens-and-key-management.md)).
+- [ ] Cloud KMS key in Singapore; an encrypt-only credential on the web service and a decrypt-only one on the worker ([decision 0016](../decisions/0016-mailbox-tokens-and-key-management.md)). The code is in (`lib/keys/provider.ts`); the setup per environment is in [render.md](render.md), "Cloud KMS", with Data Access audit logs on.
 - [ ] Email: a real SMTP provider (architecture doc, "Transactional email").
 - [ ] Storage: a production bucket and keys (`STORAGE_*`).
 - [ ] `STORAGE_*` also set wherever `npm run db:migrate` runs on deploy: after the migrations it publishes the contract and quote templates, uploading their Word files ([decision 0020](../decisions/0020-document-templates-are-data.md)).

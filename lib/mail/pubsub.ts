@@ -1,6 +1,5 @@
 import "server-only";
-import { createSign } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readServiceAccount, tokenSource } from "@/lib/google/service-account";
 import { PUSH_SETTINGS } from "./push-mode";
 import { readNotice, type GmailNotice } from "./push-notice";
 
@@ -31,59 +30,25 @@ export class PubSubError extends Error {
   }
 }
 
-type ServiceAccount = { client_email: string; private_key: string; token_uri?: string };
-
-function credentials(): ServiceAccount {
-  const raw = process.env.GCP_PUBSUB_CREDENTIALS ?? "";
-  return JSON.parse(raw.trim().startsWith("{") ? raw : readFileSync(raw, "utf8"));
-}
-
 /** At startup: the key can be read and looks like a service account's. Throws without its content. */
 export function checkCredentials() {
-  let sa: Partial<ServiceAccount>;
-  try {
-    sa = credentials();
-  } catch (e) {
-    // The file error's code (ENOENT) or the parse error's name; never the key's text.
-    throw new Error(`GCP_PUBSUB_CREDENTIALS can't be read as a service account's JSON key (${(e as NodeJS.ErrnoException)?.code ?? (e as Error)?.name})`);
-  }
-  if (!sa.client_email || !sa.private_key) throw new Error("GCP_PUBSUB_CREDENTIALS isn't a service account's key: no client_email or private_key");
+  readServiceAccount("GCP_PUBSUB_CREDENTIALS");
 }
 
-const b64url = (data: string | Buffer) => Buffer.from(data).toString("base64url");
-
-let cached: { token: string; until: number } | null = null;
-
-/** An access token for Pub/Sub: a service account's signed request, exchanged at Google (cached for its hour). */
-async function accessToken() {
-  if (cached && cached.until > Date.now()) return cached.token;
-  const sa = credentials();
-  const tokenUri = sa.token_uri || "https://oauth2.googleapis.com/token";
-  const now = Math.floor(Date.now() / 1000);
-  const unsigned = `${b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }))}.${b64url(
-    JSON.stringify({ iss: sa.client_email, scope: "https://www.googleapis.com/auth/pubsub", aud: tokenUri, iat: now, exp: now + 3600 }),
-  )}`;
-  const signature = createSign("RSA-SHA256").update(unsigned).sign(sa.private_key).toString("base64url");
-  const res = await fetch(tokenUri, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: `${unsigned}.${signature}` }),
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) throw new PubSubError(res.status);
-  const json = (await res.json()) as { access_token: string; expires_in: number };
-  cached = { token: json.access_token, until: Date.now() + (json.expires_in - 60) * 1000 };
-  return json.access_token;
-}
+const auth = tokenSource({
+  account: () => readServiceAccount("GCP_PUBSUB_CREDENTIALS"),
+  scope: "https://www.googleapis.com/auth/pubsub",
+  fail: (status) => new PubSubError(status),
+});
 
 async function call<T>(path: string, body: unknown, timeoutMs = 15_000): Promise<T> {
   const res = await fetch(`${api()}/${path}`, {
     method: "POST",
-    headers: { authorization: `Bearer ${await accessToken()}`, "content-type": "application/json" },
+    headers: { authorization: `Bearer ${await auth.token()}`, "content-type": "application/json" },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
-  if (res.status === 401) cached = null; // the next call signs in again
+  if (res.status === 401) auth.reset(); // the next call signs in again
   if (!res.ok) throw new PubSubError(res.status);
   return (await res.json().catch(() => ({}))) as T;
 }

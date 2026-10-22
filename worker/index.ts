@@ -23,6 +23,10 @@ async function main() {
   const { startPush } = await import("./push");
   const { schedule } = await import("./schedule");
   const { liveness } = await import("./liveness");
+  const { appEnv } = await import("@/lib/app-env");
+  const { keyProvider } = await import("@/lib/keys");
+  // Reading a mailbox needs the master key. Deployed, that's Cloud KMS: refuse to start without it (decision 0016).
+  if (appEnv() === "production") keyProvider();
   const { pushMode } = await import("@/lib/mail/push-mode");
   const { checkCredentials } = await import("@/lib/mail/pubsub");
   // Push is required in production, and half set up is refused anywhere: refuse to start.

@@ -31,6 +31,7 @@
     "expandMenu": "Expand sidebar"
   },
   "shell": {
+    "searching": "Searching…",
     "clearSearch": "Clear search",
     "searchRefine": "Showing the first {count}. Type more to narrow it.",
     "searchSuggestions": "Recent and suggested",

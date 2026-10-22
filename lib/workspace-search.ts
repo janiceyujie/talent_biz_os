@@ -1,5 +1,5 @@
-// The ⌘K search over the workspace, ranked: pure, so it runs on what the layout already has. Once
-// projects leave the layout (decision 0011), the same ranking moves behind a server endpoint.
+// How the ⌘K search ranks what matches, and reads the picks the browser remembers. Pure: the server
+// runs it on what the database matched (lib/data/search.ts).
 
 export type SearchItem = {
   id: string; // "<kind>:<id>", unique across kinds; recent picks are remembered by it

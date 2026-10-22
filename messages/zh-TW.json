@@ -31,6 +31,7 @@
     "expandMenu": "展開側欄"
   },
   "shell": {
+    "searching": "搜尋中…",
     "clearSearch": "清除搜尋",
     "searchRefine": "只顯示前 {count} 筆，請輸入更多字縮小範圍。",
     "searchSuggestions": "最近開啟與建議",

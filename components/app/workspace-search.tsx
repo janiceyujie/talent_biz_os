@@ -3,19 +3,22 @@
 import { BriefcaseBusiness, Building2, CalendarDays, FileText, Search, UserRound, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { SEARCH_SHORTCUT } from "@/lib/brand";
 import { useLabels } from "@/lib/i18n/labels";
-import { readSearchHistory, RECENT_MAX, searchWorkspace, type SearchItem } from "@/lib/workspace-search";
+import type { SearchHit } from "@/lib/data/search";
+import { readSearchHistory, RECENT_MAX } from "@/lib/workspace-search";
 import { useAppData } from "./app-data";
 
 const icons = { project: BriefcaseBusiness, contact: UserRound, organization: Building2, calendar: CalendarDays, template: FileText };
-const SHOWN = 30; // results listed; more says to narrow the search
+const PAUSE = 150; // ms after the last keystroke before asking
+
+type Found = { items: SearchHit[]; total: number; more: boolean };
 
 /**
  * The search in the top bar (⌘K): type and pick from the list under it, by mouse or the arrow keys.
  * Before typing it suggests recent picks, remembered in this browser by id only, for this person and
- * workspace. It searches what the layout carries: projects, contacts, organizations, calendar
+ * workspace. The server searches (app/api/search): projects, contacts, organizations, calendar
  * items, and reply templates.
  */
 export function WorkspaceSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -32,28 +35,38 @@ export function WorkspaceSearch({ open, onOpenChange }: { open: boolean; onOpenC
   const [recent, setRecent] = useState<string[]>([]);
   const storageKey = `taloox-search:${data.talent.id}:${data.person.email}`;
 
-  const items = useMemo<SearchItem[]>(
-    () => [
-      ...data.projects
-        .filter((p) => !p.archived)
-        .map((p) => ({ id: `project:${p.id}`, kind: "project" as const, label: p.title, detail: t("resultProject", { counterparty: p.counterparty }), href: `/projects?id=${encodeURIComponent(p.id)}` })),
-      ...data.contacts
-        .filter((c) => !c.archived)
-        .map((c) => ({ id: `contact:${c.id}`, kind: "contact" as const, label: c.name, detail: [labels.contactRole(c.role), c.company].filter(Boolean).join(" · "), keywords: c.email, href: "/contacts" })),
-      ...data.organizations
-        .filter((o) => !o.archived)
-        .map((o) => ({ id: `organization:${o.id}`, kind: "organization" as const, label: o.name, detail: t("resultOrganization"), href: `/contacts/organizations/${encodeURIComponent(o.id)}` })),
-      ...data.calendar
-        .filter((c) => !c.archived)
-        .map((c) => ({ id: `calendar:${c.id}`, kind: "calendar" as const, label: c.title, detail: t("resultCalendar", { date: c.date }), href: `/calendar?day=${encodeURIComponent(c.date)}` })),
-      ...data.templates
-        .filter((tpl) => !tpl.archived)
-        .map((tpl) => ({ id: `template:${tpl.id}`, kind: "template" as const, label: tpl.title, detail: t("resultTemplate"), href: "/drafts" })),
-    ],
-    [data, labels, t],
-  );
-  const matches = searchWorkspace(items, query, recent);
-  const results = matches.slice(0, SHOWN);
+  const [found, setFound] = useState<{ key: string; result: Found } | null>(null);
+  const key = `${query.trim()}|${recent.join(",")}`;
+  // Ask once typing pauses; a newer question cancels an older one still on its way.
+  useEffect(() => {
+    if (!open) return;
+    const abort = new AbortController();
+    const timer = setTimeout(
+      () =>
+        fetch(`/api/search?${new URLSearchParams({ q: query.trim(), recent: recent.join(",") })}`, { signal: abort.signal })
+          .then((r) => (r.ok ? (r.json() as Promise<Found>) : Promise.reject(r.status)))
+          .then((result) => setFound({ key, result }))
+          .catch(() => {}), // offline or aborted: the last results stay
+      query.trim() ? PAUSE : 0,
+    );
+    return () => {
+      clearTimeout(timer);
+      abort.abort();
+    };
+  }, [open, key]); // eslint-disable-line react-hooks/exhaustive-deps -- `key` stands for the query and recent picks
+  const results = found?.result.items ?? [];
+  const total = found?.result.total ?? 0;
+  const searching = !!query.trim() && found?.key !== key;
+  const detailOf = (hit: SearchHit) =>
+    hit.kind === "project"
+      ? t("resultProject", { counterparty: hit.detail })
+      : hit.kind === "contact"
+        ? [labels.contactRole(hit.role as Parameters<typeof labels.contactRole>[0]), hit.detail].filter(Boolean).join(" · ")
+        : hit.kind === "organization"
+          ? t("resultOrganization")
+          : hit.kind === "calendar"
+            ? t("resultCalendar", { date: hit.detail })
+            : t("resultTemplate");
   const expanded = open && (query.trim().length > 0 || results.length > 0);
 
   const close = () => {
@@ -69,7 +82,7 @@ export function WorkspaceSearch({ open, onOpenChange }: { open: boolean; onOpenC
     onOpenChange(true);
     setActive(-1);
   };
-  const choose = (item: SearchItem) => {
+  const choose = (item: SearchHit) => {
     const next = [item.id, ...recent.filter((r) => r !== item.id)].slice(0, RECENT_MAX);
     try {
       localStorage.setItem(storageKey, JSON.stringify(next));
@@ -169,7 +182,7 @@ export function WorkspaceSearch({ open, onOpenChange }: { open: boolean; onOpenC
       </div>
       {expanded && (
         <div className="workspace-search-dropdown">
-          <div className="workspace-search-caption">{query.trim() ? t("searchMatches", { count: matches.length }) : t("searchSuggestions")}</div>
+          <div className="workspace-search-caption">{searching ? t("searching") : query.trim() ? t("searchMatches", { count: total }) : t("searchSuggestions")}</div>
           <div id={`${id}-results`} ref={list} role="listbox" aria-label={t("searchTitle")} className="workspace-search-list">
             {results.map((item, index) => {
               const Icon = icons[item.kind];
@@ -188,18 +201,18 @@ export function WorkspaceSearch({ open, onOpenChange }: { open: boolean; onOpenC
                   <Icon size={18} aria-hidden="true" />
                   <span>
                     <strong title={item.label}>{item.label}</strong>
-                    <small title={item.detail}>{item.detail}</small>
+                    <small title={detailOf(item)}>{detailOf(item)}</small>
                   </span>
                 </button>
               );
             })}
           </div>
-          {!results.length && query.trim() && <p className="workspace-search-empty">{t("noResults")}</p>}
-          {matches.length > SHOWN && <p className="workspace-search-empty">{t("searchRefine", { count: SHOWN })}</p>}
+          {!results.length && query.trim() && !searching && <p className="workspace-search-empty">{t("noResults")}</p>}
+          {(total > results.length || found?.result.more) && <p className="workspace-search-empty">{t("searchRefine", { count: results.length })}</p>}
         </div>
       )}
       <span className="sr-only" role="status" aria-live="polite">
-        {expanded ? (query.trim() ? t("searchMatches", { count: matches.length }) : t("searchSuggestions")) : ""}
+        {expanded && !searching ? (query.trim() ? t("searchMatches", { count: total }) : t("searchSuggestions")) : ""}
       </span>
     </div>
   );

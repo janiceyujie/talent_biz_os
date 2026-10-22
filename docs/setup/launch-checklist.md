@@ -9,7 +9,7 @@ What has to happen before the first production deploy and before real users. Eac
 - [ ] `Dockerfile` and `render.yaml`; the worker on the session-mode pooler.
 - [ ] Staging and production as separate Render services and Supabase projects, each with its own Google project, KMS key, bucket, and Pub/Sub ([decision 0025](../decisions/0025-environments-and-deployment.md)).
 - [ ] Deploy workflows: `main` to staging, a `vX.Y.Z` release to production, each running migrate → worker → web → smoke check; Render auto-deploy off; a tag ruleset so only the builder creates `v*` tags.
-- [ ] Secrets in one Render Environment Group per environment; GitHub holds only the Render API key and service ids.
+- [ ] Secrets on each Render service as `sync: false`, non-secret settings in each environment's group; GitHub holds only the Render API key and service ids.
 - [ ] CI: migrations applied to an empty Postgres, Dependabot, CodeQL, and secret scanning with push protection.
 - [x] Move message analysis off `after()` to the queue (decision 0008).
 - [x] Move Google Calendar sync off `after()` to the queue (decision 0009); `lib/calendar/google/sync.ts` first needs its `next/*` imports moved out (decision 0014).

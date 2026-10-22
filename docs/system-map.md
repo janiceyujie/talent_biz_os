@@ -12,6 +12,7 @@ How the running pieces connect: the web app, the worker, the database and its jo
 - [Google Calendar: today and later](#google-calendar-today-and-later)
 - [Contract and quote templates: today and later](#contract-and-quote-templates-today-and-later)
 - [Opportunities: today and later](#opportunities-today-and-later)
+- [Environments, deploys, and releases](#environments-deploys-and-releases)
 - [Recovery paths](#recovery-paths)
 - [Timings at a glance](#timings-at-a-glance)
 
@@ -199,12 +200,16 @@ flowchart LR
   QR -->|work or not sure| QF
   QF -->|the message| QA
 
-  Queues --> WK["Worker pool<br/>4 jobs at once (WORKER_CONCURRENCY)<br/>heartbeat every 30 s<br/>no job past 10 min"]
+  Queues --> LP["Light pool: 4 jobs at once (WORKER_CONCURRENCY)<br/>sync, relevance, disconnect, calendar, the schedule"]
+  Queues --> HP["Heavy pool: 2 jobs at once (WORKER_HEAVY_CONCURRENCY)<br/>message.analyze, mail.fetch"]
+  LP --- WK["One worker process<br/>both pools share 6 queue connections (WORKER_PG_POOL)<br/>heartbeat every 30 s, no job past 10 min"]
+  HP --- WK
 ```
 
 - Scoring has its own queue, apart from syncing, so scoring a month of mail never holds up the next sync.
 - Every job must be **safe to run twice**: a job can run again after a crash or a deploy.
 - Retries: up to 5 tries for the mail and analysis jobs. A job that gives up is kept 14 days, then cleanup deletes it.
+- **Two pools in one worker.** The memory-heavy jobs (`heavyJobs` in `lib/queue/jobs.ts`) run in their own pool, so a burst of analyses can't exhaust the worker's memory or hold up syncs. Each pool fetches only the job names it handles.
 - **Any number of workers** can run at once, including the overlap during a deploy. `npm run dev` starts one, plus the web app. Production plans one to start ([decision 0014](decisions/0014-hosting-and-job-queue.md)).
 
 ## Deciding what's work
@@ -584,6 +589,77 @@ flowchart TB
 | A tracked page whose titles stop matching | Missed without an error | Listed for a person in the review queue |
 | Following | Follow, stages, to-dos, link to a project; unfollow at Preparing (open to-dos dismissed) | Preparation to-dos when preparation is designed |
 | What's announced | A followed call's dates changing | Push notifications, with the port follow-ups |
+
+## Environments, deploys, and releases
+
+dev is the builder's machine. Staging and production each have their own Render services, Supabase project, and Google project, sharing nothing ([decision 0025](decisions/0025-environments-and-deployment.md); setup in [setup/render.md](setup/render.md)).
+
+```mermaid
+flowchart TD
+  subgraph GH["GitHub"]
+    REPO["repo: main"]
+    GENV["Environments staging / production<br/>secret RENDER_API_KEY, vars: service ids, WEB_URL<br/>production: v* tags only"]
+  end
+  subgraph ST["Render staging (Singapore)"]
+    SG["env group: settings + generated WORKER_SECRET"]
+    SW["web<br/>secrets: DATABASE_URL, keys (sync: false)"]
+    SK["worker (private service)<br/>secrets + PUBSUB_*"]
+  end
+  subgraph PR["Render production (Singapore)"]
+    PW["web"]
+    PK["worker"]
+  end
+  GENV -->|"deploy a commit (Render API)"| ST
+  GENV -->|"releases only"| PR
+  SG -.-> SW
+  SG -.-> SK
+  SW --> SDB[("Supabase staging")]
+  SK --> SDB
+  PW --> PDB[("Supabase production")]
+  PK --> PDB
+```
+
+GitHub holds only what deploying needs; database URLs and API keys live on the Render services.
+
+```mermaid
+flowchart TD
+  MAIN["merge to main"] --> CI["CI: lint, types, tests, translations,<br/>worker bundle, next build"]
+  CI -->|"passes, RENDER_DEPLOYS=on"| DS["deploy.yml: staging"]
+  REL["release vX.Y.Z published"] --> CHK["release.yml: tag form,<br/>commit on main, deployed to staging"]
+  CHK -->|"all pass"| DP["deploy.yml: production"]
+  DS --> RD["scripts/render-deploy.mjs"]
+  DP --> RD
+  RD --> W1["1. worker: pre-deploy checks the queue, then migrates"]
+  W1 -->|"live"| W2["2. web"]
+  W2 -->|"live"| W3["3. /api/health answers with this commit"]
+  W1 -->|"fails"| KEEP["stop: the previous version keeps running"]
+  W3 -->|"wrong commit"| KEEP
+```
+
+During a deploy the old and new versions run side by side for about a minute:
+
+```mermaid
+sequenceDiagram
+  participant GA as GitHub Actions
+  participant NK as new worker
+  participant OK as old worker
+  participant DB as Postgres
+  participant NW as new web
+  participant BR as browser
+  GA->>NK: deploy the commit
+  NK->>DB: pre-deploy: any queued jobs this version can't run? (then stop)
+  NK->>DB: migrations (add before remove)
+  Note over NK,OK: both take jobs for about 60 s
+  OK->>DB: takes only job names it knows (never a new .v2)
+  Note over OK: SIGTERM: stops taking jobs, finishes its own (up to 5 min)
+  GA->>NW: deploy web once the worker is live
+  BR->>NW: a page from the previous deploy
+  NW-->>BR: different deployment id: full reload
+  GA->>NW: smoke check
+```
+
+- A shipped job's payload never changes; a new shape is a new job name (`lib/queue/jobs.ts`, `payloads.json`).
+- Something broken in production: roll back in Render first, then fix forward with a patch release ([setup/render.md](setup/render.md), "Fixes and rollbacks").
 
 ## Recovery paths
 

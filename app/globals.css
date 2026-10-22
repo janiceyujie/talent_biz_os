@@ -5293,3 +5293,17 @@ p.gmail-skipped {
   color: var(--muted);
   text-decoration: line-through;
 }
+.reminder-snooze-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.reminder-snooze-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+  width: 100%;
+}

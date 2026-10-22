@@ -61,6 +61,7 @@ From [decision 0008](../decisions/0008-ai-operations.md):
 - [x] A switch to pause AI app-wide (`AI_PAUSED`), and a daily spending cap that pauses it on its own (`AI_DAILY_SPEND_CAP_USD`).
 - [ ] A monthly spending limit and usage alerts set in the Anthropic and OpenAI consoles for the production keys (around $300 a month to start): the hard cap behind the app's estimate.
 - [ ] `AI_ALERT_EMAIL` set, so a tripped spending cap reaches someone.
+- [ ] Pause and resume tried once on the deployed web service and worker: with `AI_PAUSED=1`, paste a made-up message and see it wait as Paused; unset it and see the message analyzed within about 5 minutes. Then set `AI_DAILY_SPEND_CAP_USD` below the day's spend and see the alert email arrive. (Done locally for PR #28; the deployed run checks the real worker and mail provider.)
 
 ## 6. Operations
 

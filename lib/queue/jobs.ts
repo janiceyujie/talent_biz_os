@@ -9,8 +9,9 @@ import { locales } from "@/lib/i18n/config";
 // A job's payload never changes once it has shipped. During a deploy the old
 // worker still takes jobs for a minute, and its strict schema fails a payload
 // it doesn't know. A new shape is a new job name ("message.analyze.v2"): the
-// old worker never takes a name it doesn't know. Keep the old name's handler
-// until its jobs have drained, then remove it; the deploy refuses while any
+// old worker never takes a name it doesn't know. Mark the old name
+// `@deprecated` (replaced by which) and keep its handler until its jobs have
+// drained; remove it in a later pull request. The deploy refuses while any
 // remain (scripts/migrate.mts). payloads.json records every shape that has
 // shipped, and jobs.test.ts holds each name to it.
 

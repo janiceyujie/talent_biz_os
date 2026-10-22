@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { useInboxDetail } from "@/components/app/inbox-detail";
 import { InboxReaderLayout } from "@/components/app/inbox-reader-layout";
+import { ListMore } from "@/components/app/list-more";
 import { useListPages } from "@/components/app/list-pages";
 import { InfoHint } from "@/components/app/info-hint";
 import { MoreMenu } from "./more-menu";
@@ -207,7 +208,7 @@ export function InboxView() {
                     </button>
                   </div>
                 ))}
-                <PageMore list={list} />
+                <ListMore list={list} failedText={t("listFailed")} />
                 {historyCount > 0 && (
                   <details className="history-group" onToggle={(e) => setHistoryOpen(e.currentTarget.open)}>
                     <summary>
@@ -233,7 +234,7 @@ export function InboxView() {
                         <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
                       </button>
                     ))}
-                    {historyOpen && <PageMore list={history} />}
+                    {historyOpen && <ListMore list={history} failedText={t("listFailed")} />}
                   </details>
                 )}
               </>
@@ -292,39 +293,6 @@ function fallbackTitle(m: InboxMessage, t: ReturnType<typeof useTranslations<"in
 /** The same, for a row of the list, which has the subject and first line but not the body. */
 function summaryTitle(m: InboxSummary, t: ReturnType<typeof useTranslations<"inbox">>) {
   return m.subject || m.firstLine.slice(0, 80) || (m.fileCount ? t("filesCount", { count: m.fileCount }) : t("untitled"));
-}
-
-/**
- * The end of a list: the next page loads as it scrolls into view (a button too, for keyboards
- * and if scrolling doesn't trigger it), or a failure to retry — never a list that silently stops short.
- */
-function PageMore({ list }: { list: { loading: boolean; failed: boolean; hasMore: boolean; loadMore: () => void; retry: () => void } }) {
-  const t = useTranslations("inbox");
-  const end = useRef<HTMLDivElement>(null);
-  const { loadMore, hasMore } = list;
-  useEffect(() => {
-    const target = end.current;
-    if (!target) return;
-    const watch = new IntersectionObserver((seen) => seen.some((e) => e.isIntersecting) && loadMore(), { rootMargin: "600px 0px" });
-    watch.observe(target);
-    return () => watch.disconnect();
-  }, [loadMore, hasMore]);
-  if (list.failed)
-    return (
-      <p className="notice error" role="alert">
-        {t("listFailed")}{" "}
-        <button className="text-button" onClick={list.retry}>
-          {t("retry")}
-        </button>
-      </p>
-    );
-  return hasMore ? (
-    <div ref={end} className="deal-list-more">
-      <button className="text-button" disabled={list.loading} onClick={loadMore}>
-        {list.loading ? t("loading") : t("loadMore")}
-      </button>
-    </div>
-  ) : null;
 }
 
 function StatusChip({ status }: { status: InboxMessage["status"] }) {

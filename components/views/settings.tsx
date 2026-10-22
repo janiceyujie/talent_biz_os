@@ -75,7 +75,7 @@ export function SettingsView() {
         </SettingsRow>
         <SettingsRow label={tRoles("settingsTitle")} hint={[tRoles("settingsBody")]}>
           <span>{tRoles(`${data.person.role}.label`)}</span>
-          <Link className="secondary" href="/role">
+          <Link className="secondary" href="/role?returnTo=%2Fsettings">
             {tRoles("change")}
           </Link>
         </SettingsRow>

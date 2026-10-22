@@ -31,9 +31,14 @@
     "expandMenu": "展開側欄"
   },
   "shell": {
+    "searching": "搜尋中…",
+    "clearSearch": "清除搜尋",
+    "searchRefine": "只顯示前 {count} 筆，請輸入更多字縮小範圍。",
+    "searchSuggestions": "最近開啟與建議",
+    "searchMatches": "{count} 筆結果",
+    "resultOrganization": "組織",
     "searchPlaceholder": "搜尋案件、合作方、行程、範本…",
     "searchTitle": "搜尋工作區",
-    "searchInput": "輸入關鍵字",
     "noResults": "沒有符合的結果。",
     "notifications": "{count, plural, =0 {通知} other {通知 · # 則}}",
     "notificationsEmpty": "目前沒有通知。近期行程、待辦期限與待收付款項會自動出現在這裡。",
@@ -574,6 +579,7 @@
     }
   },
   "workflow": {
+    "allFiles": "在素材歸檔查看全部 {count} 個檔案",
     "section": "案件流程與收款",
     "toConfirm": "本案要確認的資訊",
     "payments": "收款",
@@ -635,10 +641,7 @@
     "emptyTitle": "這裡還沒有邀約",
     "emptyBody": "按「貼上邀約文字」匯入第一則邀約。",
     "pick": "選擇一則訊息查看內容。",
-    "loading": "載入中…",
-    "loadMore": "載入更多",
     "listFailed": "無法載入訊息清單。",
-    "retry": "再試一次",
     "opening": "開啟中…",
     "openFailed": "無法開啟這則訊息，請再點一次重試。",
     "replyTodo": "回覆：{title}",
@@ -925,6 +928,8 @@
     "noOrganizations": "沒有符合的公司。"
   },
   "files": {
+    "listFailed": "無法載入檔案。",
+    "untitled": "（未命名）",
     "title": "保存每個合作案的檔案",
     "intro": "上傳 Offer、合約、素材或發票，與合作案一起保存。歸檔後仍可還原。檔案上傳功能開發中。",
     "search": "搜尋素材",
@@ -1709,6 +1714,7 @@
     "yourWorkspace": "YOUR WORKSPACE"
   },
   "roles": {
+    "cancelChange": "不變更並關閉",
     "musician": {
       "label": "音樂人",
       "description": "演出與音樂合作"
@@ -2021,5 +2027,10 @@
       "artsLaw": "Arts Law：演出合約檢查清單",
       "ftc": "美國 FTC：代言與網紅規範"
     }
+  },
+  "list": {
+    "loading": "載入中…",
+    "loadMore": "載入更多",
+    "retry": "再試一次"
   }
 }

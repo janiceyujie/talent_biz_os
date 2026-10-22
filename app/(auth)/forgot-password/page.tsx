@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
         // Same message whether or not the email has an account.
         <FormMessage tone="info">{t("resetSent")}</FormMessage>
       ) : (
-        <form onSubmit={onSubmit}>
+        <form method="post" onSubmit={onSubmit}>
           <Field label={t("email")} name="email" type="email" autoComplete="email" required />
           {error && <FormMessage tone="error">{error}</FormMessage>}
           <button type="submit" className={buttonClass} disabled={pending}>

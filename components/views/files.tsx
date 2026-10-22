@@ -1,8 +1,13 @@
 "use client";
 
 import { useFormatter, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { ListMore } from "@/components/app/list-more";
+import { useListPages } from "@/components/app/list-pages";
+import type { ListPage } from "@/lib/domain/list-page";
+import type { StoredFile } from "@/lib/types";
 import { useLabels } from "@/lib/i18n/labels";
 import { DocumentLibrary } from "./document-library";
 
@@ -12,15 +17,12 @@ export function FilesView() {
   const tEyebrow = useTranslations("eyebrow");
   const labels = useLabels();
   const format = useFormatter();
-  const [projectId, setProjectId] = useState("");
+  const [projectId, setProjectId] = useState(useSearchParams().get("project") ?? ""); // ?project= from a project's screen
   const [q, setQ] = useState("");
   const [archived, setArchived] = useState(false);
-  const files = data.files.filter(
-    (f) =>
-      f.archived === archived &&
-      (!projectId || f.projectId === projectId) &&
-      f.filename.toLowerCase().includes(q.toLowerCase()),
-  );
+  // A page at a time (decision 0011); a search waits for typing to pause.
+  const list = useListPages<ListPage<StoredFile>>("/api/files", { project: projectId, q, archived: String(archived) }, data);
+  const files = list.items;
 
   return (
     <>
@@ -66,7 +68,9 @@ export function FilesView() {
               {files.map((f) => (
                 <tr key={f.id}>
                   <td>
-                    <strong>{f.filename}</strong>
+                    <a href={`/api/files/${f.id}`} target="_blank" rel="noopener">
+                      <strong>{f.filename || t("untitled")}</strong>
+                    </a>
                     <small>{format.dateTime(new Date(f.createdAt), { dateStyle: "medium" })}</small>
                   </td>
                   <td>{data.projects.find((p) => p.id === f.projectId)?.title || labels.unlinked()}</td>
@@ -76,7 +80,8 @@ export function FilesView() {
             </tbody>
           </table>
         </div>
-        {!files.length && <p className="empty">{t("empty")}</p>}
+        <ListMore list={list} failedText={t("listFailed")} />
+        {!files.length && !list.loading && !list.failed && <p className="empty">{t("empty")}</p>}
       </section>
     </>
   );

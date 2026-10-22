@@ -62,7 +62,15 @@ function PeopleView({ adding, doneAdding }: { adding: boolean; doneAdding: () =>
   const t = useTranslations("contacts");
   const labels = useLabels();
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [q, setQ] = useState("");
+  // The search lives in the address (?q=), so a link (⌘K's) opens the list on someone, and a reload keeps it.
+  const address = useSearchParams();
+  const q = address.get("q") ?? "";
+  const setQ = (value: string) => {
+    const next = new URLSearchParams(address.toString());
+    if (value) next.set("q", value);
+    else next.delete("q");
+    window.history.replaceState(null, "", `${window.location.pathname}${next.size ? `?${next}` : ""}`);
+  };
   const [role, setRole] = useState("all");
   const [archived, setArchived] = useState(false);
   const [pending, startTransition] = useTransition();

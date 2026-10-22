@@ -1,6 +1,8 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Field, FormMessage } from "@/components/form";
 import { LocaleSwitch } from "@/components/locale-switch";
@@ -20,8 +22,10 @@ export function RolePicker({
   mode,
   initial,
   action,
+  returnHref = "/",
 }: {
   mode: "onboarding" | "change";
+  returnHref?: string; // where Change role's close button goes: the page it was opened from
   initial: { role: Role; appearance: Appearance; vertical: Vertical; name?: string };
   action: (state: RolePickerState, formData: FormData) => Promise<RolePickerState>;
 }) {
@@ -37,6 +41,19 @@ export function RolePicker({
   return (
     <main className="onboarding">
       <header className="onboarding-brand">
+        {/* Changing role is optional: closing leaves everything as it was. Onboarding has nowhere to go back to. */}
+        {mode === "change" && (
+          <Link
+            href={returnHref}
+            className="icon-button role-close"
+            aria-label={t("cancelChange")}
+            title={t("cancelChange")}
+            aria-disabled={pending}
+            onClick={(e) => pending && e.preventDefault()}
+          >
+            <X size={20} aria-hidden="true" />
+          </Link>
+        )}
         <LocaleSwitch compact />
         <span className="monogram">{PRODUCT_MONOGRAM}</span>
         <span>{PRODUCT_NAME}</span>

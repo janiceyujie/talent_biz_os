@@ -6,12 +6,17 @@ import { financeInsights, partnerInsights } from "./insights";
 import { quote, splitPayments, totalsByCurrency } from "./money";
 import { projectSettlement, summarize } from "./workflow";
 
-const payment = (over: Partial<Payment> = {}): Payment =>
-  ({
+// A settled one received its settled amount, or its whole total, on its settled date: one receipt.
+const payment = ({ settledAmount = null, ...over }: Partial<Payment> & { settledAmount?: number | null } = {}): Payment => {
+  const p = {
     id: "x", projectId: "p1", projectType: "gig", direction: "in", installment: "regular", label: "", amount: 1000, currency: "TWD",
-    taxRate: 0, taxIncluded: true, recordedDate: "2026-10-01", dueDate: null, status: "settled", settledAmount: null,
-    settledDate: "2026-10-02", invoiceRef: "", notes: "", voided: false, ...over,
-  }) as Payment;
+    taxRate: 0, taxIncluded: true, recordedDate: "2026-10-01", dueDate: null, status: "settled",
+    settledDate: "2026-10-02", invoiceRef: "", notes: "", voided: false, receipts: [], ...over,
+  } as Payment;
+  const cash = settledAmount ?? quote(p.amount, p.taxRate, p.taxIncluded, p.currency).total;
+  const receipt = { id: `${p.id}-r`, date: p.settledDate!, cash, withheld: 0, note: "", replacesId: null, withdrawn: false, recordedAt: "" };
+  return over.receipts || p.status !== "settled" ? p : { ...p, receipts: [receipt] };
+};
 const project = (over: Partial<ProjectSummary> = {}): ProjectSummary =>
   ({ id: "p1", title: "Tokyo show", stage: "signed", archived: false, quotedAmount: 3000, currency: "TWD", taxRate: 0, taxIncluded: true, clientId: "o1", ...over }) as ProjectSummary;
 const data = (payments: Payment[], projects: ProjectSummary[] = [project()]) =>

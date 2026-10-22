@@ -417,7 +417,8 @@ export const paymentInstallments = ["regular", "deposit", "balance"] as const;
 export const paymentStatuses = ["expected", "settled", "cancelled"] as const;
 
 // Money in or out, usually for a project. `amount` is as entered (see
-// `taxIncluded`); `settledAmount` is what actually arrived or was paid.
+// `taxIncluded`); what actually arrived or was paid is its receipts (paymentReceipt). `status` is
+// settled once they cover it, or once the person closes it short (decision 0021).
 // Dates are calendar days in the talent's time zone.
 export const payment = pgTable(
   "payment",
@@ -437,8 +438,6 @@ export const payment = pgTable(
     recordedOn: date().notNull(), // recorded on
     dueOn: date(),
     status: text({ enum: paymentStatuses }).notNull().default("expected"),
-    settledAmount: numeric({ precision: 12, scale: 2, mode: "number" }),
-    settledOn: date(),
     method: text(),
     invoiceRef: text(),
     notes: text(),
@@ -455,8 +454,39 @@ export const payment = pgTable(
     check("payment_status_check", oneOf(t.status, paymentStatuses)),
     check("payment_currency_check", oneOf(t.currency, supportedCurrencies)),
     check("payment_tax_rate_check", sql`${t.taxRate} between 0 and 100`),
-    check("payment_amount_check", sql`${t.amount} >= 0 and (${t.settledAmount} is null or ${t.settledAmount} >= 0)`),
-    check("payment_settled_check", sql`(${t.status} = 'settled') = (${t.settledOn} is not null)`),
+    check("payment_amount_check", sql`${t.amount} >= 0`),
+  ],
+).enableRLS();
+
+// Money that arrived or was paid against a payment, one row each time (decision 0021): a payment
+// can arrive in parts, with some withheld (income tax, the NHI premium). Rows are only added: a
+// correction is a new row naming the one it replaces, a withdrawal a row with `withdrawn`. What a
+// payment has received is worked out from its active rows, never stored on the payment.
+export const paymentReceipt = pgTable(
+  "payment_receipt",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    paymentId: uuid()
+      .notNull()
+      .references(() => payment.id, { onDelete: "cascade" }),
+    receivedOn: date().notNull(), // a calendar day in the talent's time zone
+    cash: numeric({ precision: 12, scale: 2, mode: "number" }).notNull(),
+    withheld: numeric({ precision: 12, scale: 2, mode: "number" }).notNull().default(0),
+    note: text(),
+    replacesId: uuid().references((): AnyPgColumn => paymentReceipt.id, { onDelete: "cascade" }),
+    withdrawn: boolean().notNull().default(false),
+    recordedBy: uuid().references(() => person.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("payment_receipt_payment_idx").on(t.paymentId),
+    // Replaced once: two corrections of the same receipt at the same time can't both land.
+    uniqueIndex("payment_receipt_replaces_once").on(t.replacesId),
+    check("payment_receipt_amounts_check", sql`${t.cash} >= 0 and ${t.withheld} >= 0`),
+    check("payment_receipt_withdrawn_check", sql`not ${t.withdrawn} or (${t.replacesId} is not null and ${t.cash} = 0 and ${t.withheld} = 0)`),
   ],
 ).enableRLS();
 

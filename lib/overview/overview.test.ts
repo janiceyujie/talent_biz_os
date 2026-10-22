@@ -1,6 +1,7 @@
 // Today's widgets: arrangement and each widget's data. Run: npm test
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { quote } from "@/lib/domain/money";
 import type { Payment, Project } from "@/lib/types";
 import { monthIncome } from "./income";
 import { outstandingMoney } from "./money";
@@ -13,12 +14,17 @@ const ZONE = "Asia/Taipei";
 
 const project = (over: Partial<Project> = {}): Project =>
   ({ id: "p1", title: "Zepp 春季巡演", stage: "negotiating", archived: false, updatedAt: "2026-09-20T02:00:00Z", ...over }) as Project;
-const payment = (over: Partial<Payment> = {}): Payment =>
-  ({
+// A settled one received its settled amount, or its whole total, on its settled date: one receipt.
+const payment = ({ settledAmount = null, ...over }: Partial<Payment> & { settledAmount?: number | null } = {}): Payment => {
+  const p = {
     id: "x", projectId: null, projectType: "gig", direction: "in", installment: "regular", label: "", amount: 1000, currency: "TWD",
-    taxRate: 0, taxIncluded: true, recordedDate: "2026-10-01", dueDate: null, status: "settled", settledAmount: null,
-    settledDate: "2026-10-02", invoiceRef: "", notes: "", voided: false, ...over,
-  }) as Payment;
+    taxRate: 0, taxIncluded: true, recordedDate: "2026-10-01", dueDate: null, status: "settled",
+    settledDate: "2026-10-02", invoiceRef: "", notes: "", voided: false, receipts: [], ...over,
+  } as Payment;
+  const cash = settledAmount ?? quote(p.amount, p.taxRate, p.taxIncluded, p.currency).total;
+  const receipt = { id: `${p.id}-r`, date: p.settledDate!, cash, withheld: 0, note: "", replacesId: null, withdrawn: false, recordedAt: "" };
+  return over.receipts || p.status !== "settled" ? p : { ...p, receipts: [receipt] };
+};
 
 describe("overviewLayout", () => {
   test("defaults per role, split into columns", () => {

@@ -175,12 +175,26 @@ export type Payment = {
   taxIncluded: boolean;
   recordedDate: string; // recorded on
   dueDate: string | null;
+  // Expected: still open, nothing or part arrived. Settled: closed, its receipts cover it or the
+  // person closed it short (decision 0021).
   status: "expected" | "settled" | "cancelled";
-  settledAmount: number | null; // what actually arrived or was paid; null = the full total
-  settledDate: string | null;
+  receipts: PaymentReceipt[]; // every one recorded, oldest first, corrected and withdrawn ones too
+  settledDate: string | null; // the day its last active receipt arrived, once settled
   invoiceRef: string;
   notes: string;
   voided: boolean; // Void: a mistaken or duplicate entry, out of every total
+};
+
+/** Money that arrived or was paid, once. Only added: a correction is a new one naming the one it replaces. */
+export type PaymentReceipt = {
+  id: string;
+  date: string;
+  cash: number;
+  withheld: number; // income tax, the NHI premium: kept back by the payer, claimable
+  note: string;
+  replacesId: string | null;
+  withdrawn: boolean; // it never arrived
+  recordedAt: string;
 };
 
 export type ReplyTemplate = {

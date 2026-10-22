@@ -4,14 +4,15 @@ import { Check, ChevronRight, Circle, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
-import { calendarRecord, projectRecord, toRecord, type Editor } from "@/components/app/record-editor";
+import { ReceiptDialog } from "@/components/app/receipt-dialog";
+import { calendarRecord, projectRecord, type Editor } from "@/components/app/record-editor";
 import { setTodoDone } from "@/lib/actions/calendar";
 import { calendarPoints } from "@/lib/calendar/points";
 import { dateInZone } from "@/lib/domain/dates";
 import { isSigned } from "@/lib/domain/phases";
 import { projectSettlement } from "@/lib/domain/workflow";
 import { useMoney } from "@/lib/i18n/format";
-import type { Project, ProjectSummary } from "@/lib/types";
+import type { Payment, Project, ProjectSummary } from "@/lib/types";
 import { useClosingChecks, type ClosingCheck } from "./project-workflow-panel";
 import { useDue } from "./use-due";
 
@@ -48,6 +49,7 @@ export function ProjectActions({
   const due = useDue();
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [receiptFor, setReceiptFor] = useState<Payment | null>(null);
   // Ticked here and not back from the server yet: shown ticked, then gone.
   const [ticked, setTicked] = useState<Set<string>>(new Set());
   const live = !project.archived;
@@ -96,8 +98,7 @@ export function ProjectActions({
       });
     else if (f.kind === "received" && f.paymentId) {
       const payment = data.payments.find((p) => p.id === f.paymentId);
-      // Recording money that came in starts at its status (expected → received).
-      if (payment) edit({ kind: "payment", item: toRecord(payment), focus: "status" });
+      if (payment) setReceiptFor(payment); // what came in, as a receipt (decision 0021)
     } else if (f.kind === "schedule") showTab("travel");
     else showTab("money");
   };
@@ -199,6 +200,7 @@ export function ProjectActions({
           {error}
         </p>
       )}
+      {receiptFor && <ReceiptDialog payment={receiptFor} onClose={() => setReceiptFor(null)} />}
     </section>
   );
 }

@@ -232,7 +232,7 @@ export function RecordEditor({
     kind === "project" && data.id && data.currency !== fromCurrency
       ? data$.payments.filter((p) => p.projectId === data.id && p.currency === fromCurrency && !p.voided)
       : [];
-  const hasCents = (p: Payment) => !Number.isInteger(p.amount) || (p.settledAmount !== null && !Number.isInteger(p.settledAmount));
+  const hasCents = (p: Payment) => [p.amount, ...p.receipts.flatMap((r) => [r.cash, r.withheld])].some((n) => !Number.isInteger(n));
   const canMove = (p: Payment) => data.currency !== "JPY" || !hasCents(p);
   const moving = oldCurrencyPayments.filter((p) => canMove(p) && (movePicks[p.id] ?? p.direction === "in"));
 
@@ -317,6 +317,7 @@ export function RecordEditor({
   );
   // Income is collected, a cost is paid: the payment form's words follow the direction.
   const out = data.direction === "out";
+  const saved = kind === "payment" && data.id ? data$.payments.find((p) => p.id === data.id) : undefined;
 
   return (
     <Modal title={t(editor.item?.id ? "titleEdit" : "titleNew", { kind })} onClose={requestClose}>
@@ -530,16 +531,28 @@ export function RecordEditor({
               <fieldset className="form-section">
                 <legend>{t(out ? "section.paying" : "section.collecting")}</legend>
                 <div className="form-grid">
-                  {field(
-                    "status",
-                    t(out ? "field.statusOut" : "field.statusIn"),
-                    "text",
-                    true,
-                    options(["expected", "settled"] as const, (status) => labels.paymentStatus({ status, direction: out ? "out" : "in" })),
+                  {/* A new entry may already have come in; an existing one's money moves through its receipts (decision 0021). */}
+                  {saved ? (
+                    <div>
+                      <span>{t(out ? "field.statusOut" : "field.statusIn")}</span>
+                      <p>
+                        <strong>{labels.paymentStatus(saved)}</strong>
+                        <br />
+                        <small className="muted">{t("receiptsElsewhere", { direction: saved.direction })}</small>
+                      </p>
+                    </div>
+                  ) : (
+                    field(
+                      "status",
+                      t(out ? "field.statusOut" : "field.statusIn"),
+                      "text",
+                      true,
+                      options(["expected", "settled"] as const, (status) => labels.paymentStatus({ status, direction: out ? "out" : "in" })),
+                    )
                   )}
                   {field("installment", t("field.installment"), "text", true, options(["regular", "deposit", "balance"] as const, labels.installment))}
-                  {data.status === "settled" && field("settledDate", t(out ? "field.settledDateOut" : "field.settledDateIn"), "date", true)}
-                  {data.status === "settled" && field("settledAmount", t("field.settledAmount"), "number")}
+                  {!saved && data.status === "settled" && field("settledDate", t(out ? "field.settledDateOut" : "field.settledDateIn"), "date", true)}
+                  {!saved && data.status === "settled" && field("settledAmount", t("field.settledAmount"), "number")}
                   {field("dueDate", t(out ? "field.dueDateOut" : "field.dueDateIn"), "date")}
                   {field("recordedDate", t("field.recordedDate"), "date", true)}
                 </div>

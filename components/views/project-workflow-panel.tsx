@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { DateTimeInput } from "@/components/app/date-time-input";
 import { Modal } from "@/components/app/modal";
+import { ReceiptDialog } from "@/components/app/receipt-dialog";
 import { DealCard } from "./deal-card";
 import { toRecord, type Editor } from "@/components/app/record-editor";
 import { createPaymentPlan } from "@/lib/actions/payments";
@@ -15,7 +16,7 @@ import { useMoney, useMoneyTotals } from "@/lib/i18n/format";
 import { isOpenStage } from "@/lib/domain/phases";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
-import type { Project } from "@/lib/types";
+import type { Payment, Project } from "@/lib/types";
 
 /**
  * What a check is about, which decides how it's fixed: a field of the
@@ -92,6 +93,7 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
   const [balanceDue, setBalanceDue] = useState(project.nextAction?.dueDate || today);
   const [pending, startTransition] = useTransition();
   const [planError, setPlanError] = useState<string | null>(null);
+  const [receiptFor, setReceiptFor] = useState<Payment | null>(null);
   const settlement = projectSettlement(data, project);
   const payments = data.payments.filter((p) => p.projectId === project.id && !p.voided);
   const hasIncome = payments.some((p) => p.direction === "in");
@@ -113,6 +115,7 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
             [t("quoted"), settlement.quoted ?? tProjects("quoteNotSet")],
             [t("billed"), settlement.billed],
             [t("received"), settlement.received],
+            ...(settlement.withheld > 0 ? [[t("withheld"), settlement.withheld] as const] : []),
             [t("outstanding"), settlement.pending],
             ...(settlement.shortfall > 0 ? [[t("shortfall"), settlement.shortfall] as const] : []),
             // Income in another currency can't be set against the quote until amounts convert.
@@ -163,6 +166,11 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
                   <small>{labels.paymentStatus(p)}</small>
                   <strong>{money(p.amount, p.currency)}</strong>
                 </button>
+                {(p.status === "expected" || p.receipts.length > 0) && (
+                  <button type="button" className="text-button" onClick={() => setReceiptFor(p)}>
+                    {p.status === "expected" ? t("recordReceipt", { direction: p.direction }) : t("receipts")}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -181,6 +189,7 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
           <p className="muted">{t("allClear")}</p>
         )}
       </DealCard>
+      {receiptFor && <ReceiptDialog payment={receiptFor} onClose={() => setReceiptFor(null)} />}
       {plan && (
         <Modal title={t("planTitle")} onClose={() => setPlan(false)}>
           <form

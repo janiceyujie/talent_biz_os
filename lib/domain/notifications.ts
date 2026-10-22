@@ -6,7 +6,7 @@ import type { AppData, CalendarKind, NotificationState } from "@/lib/types";
 import { dateInZone, exactInstant } from "./dates";
 import type { Currency } from "./money";
 import { isSigned } from "./phases";
-import { countedPayments, paymentTotal } from "./workflow";
+import { countedPayments, paymentRemaining } from "./workflow";
 
 /** Most urgent first: timed and within two hours, then overdue, then today, then the rest. */
 export const urgencies = ["soon", "overdue", "today", "upcoming"] as const;
@@ -98,7 +98,7 @@ export function notifications(data: AppData, now = new Date()): Notification[] {
       id: `payment:${p.id}:${p.dueDate}`,
       kind: p.direction === "in" ? "receivable" : "payable",
       title: p.label,
-      amount: paymentTotal(p),
+      amount: paymentRemaining(p), // what's left, when part has arrived
       currency: p.currency,
       date: p.dueDate!,
       time: "",

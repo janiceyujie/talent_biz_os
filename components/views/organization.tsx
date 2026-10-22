@@ -10,7 +10,7 @@ import { ContactPicker, type ContactValue } from "@/components/app/contact-picke
 import { Modal } from "@/components/app/modal";
 import { addOrganizationPerson, archiveOrganization, removeOrganizationPerson, saveOrganization } from "@/lib/actions/organizations";
 import type { OrganizationProject } from "@/lib/data/organizations";
-import { countedPayments, paymentCash, paymentTotal } from "@/lib/domain/workflow";
+import { countedPayments, paymentCash, paymentRemaining, paymentTotal } from "@/lib/domain/workflow";
 import { totalsByCurrency } from "@/lib/domain/money";
 import { useMoney, useMoneyTotals } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
@@ -44,7 +44,7 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
   // Expected money only from signed deals (decision 0018); what was received, always.
   const payments = countedPayments(data.payments, data.projects).filter((p) => p.projectId && clientOf.has(p.projectId) && p.direction === "in" && !p.voided && p.status !== "cancelled");
   const received = totalsByCurrency(payments, paymentCash);
-  const outstanding = totalsByCurrency(payments.filter((p) => p.status === "expected"), paymentTotal);
+  const outstanding = totalsByCurrency(payments.filter((p) => p.status === "expected"), paymentRemaining);
   const titleOf = (projectId: string | null) => projects.find((p) => p.projectId === projectId)?.title ?? "";
 
   return (

@@ -21,12 +21,12 @@ import { getProject } from "@/lib/data/projects";
 import { db } from "@/lib/db";
 import { auditLog, calendarEvent, contact, contract, message, messageAnalysis, payment, person as personTable, project, projectContact, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
-import { supportedCurrencies, type Currency } from "@/lib/domain/money";
+import { supportedCurrencies } from "@/lib/domain/money";
 import { initialEdit, intakeContext, keptFields, proposeChanges, withField, type Change, type ChangeRecord, type IntakeContext } from "@/lib/domain/intake";
 import { isSigned } from "@/lib/domain/phases";
-import { paymentTotal } from "@/lib/domain/workflow";
 import { projectType, projectTypeKeys } from "@/lib/project-types";
 import { stages, type ProjectDate, type ProjectDetails, type Stage } from "@/lib/types";
+import { addReceipt, lockPayment, settle } from "./receipt-rows";
 import { errorText } from "./validation";
 
 const day = z.iso.date();
@@ -225,38 +225,34 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
         case "stage":
           break;
         case "settlePayment": {
-          const [p] = await tx
-            .select()
-            .from(payment)
-            .where(and(eq(payment.id, c.paymentId), eq(payment.talentId, talent.id), eq(payment.projectId, target.id), eq(payment.status, "expected")))
-            .for("update");
-          if (!p) return fail("proposalChanged");
-          const total = paymentTotal({ ...p, currency: p.currency as Currency });
-          await tx
-            .update(payment)
-            .set({
-              status: "settled",
-              settledOn: c.settledOn,
-              settledAmount: c.amount === total ? null : c.amount, // null = the full total
-              invoiceRef: p.invoiceRef || c.invoiceRef || null,
-            })
-            .where(eq(payment.id, p.id));
+          const p = await lockPayment(tx, talent.id, c.paymentId);
+          if (!p || p.projectId !== target.id || p.status !== "expected") return fail("proposalChanged");
+          // The amount stated, as one receipt, and it's closed: less than what's left shows as short
+          // until the person corrects the receipt, with what was withheld say (decision 0021).
+          await addReceipt(tx, p, { date: c.settledOn, cash: c.amount, recordedBy: person.personId });
+          await settle(tx, p, "closed");
+          if (!p.invoiceRef && c.invoiceRef) await tx.update(payment).set({ invoiceRef: c.invoiceRef }).where(eq(payment.id, p.id));
           break;
         }
         case "newPayment": {
-          const settled = c.label === "received";
-          await tx.insert(payment).values({
-            talentId: talent.id,
-            projectId: target.id,
-            direction: "in",
-            label: t(`payment.${c.label}`, { title: target.title }).slice(0, 200),
-            amount: c.amount,
-            currency: c.currency ?? target.currency,
-            taxIncluded: true,
-            recordedOn: c.date,
-            status: settled ? "settled" : "expected",
-            settledOn: settled ? c.date : null,
-          });
+          const [created] = await tx
+            .insert(payment)
+            .values({
+              talentId: talent.id,
+              projectId: target.id,
+              direction: "in",
+              label: t(`payment.${c.label}`, { title: target.title }).slice(0, 200),
+              amount: c.amount,
+              currency: c.currency ?? target.currency,
+              taxIncluded: true,
+              recordedOn: c.date,
+            })
+            .returning({ id: payment.id });
+          if (c.label === "received") {
+            const p = (await lockPayment(tx, talent.id, created.id))!;
+            await addReceipt(tx, p, { date: c.date, cash: c.amount, recordedBy: person.personId });
+            await settle(tx, p, "closed");
+          }
           break;
         }
         case "paymentNote": {

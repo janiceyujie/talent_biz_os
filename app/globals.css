@@ -1569,7 +1569,7 @@ small {
   gap: 16px;
   margin: 18px 0;
 }
-.editor-form input:not([type="checkbox"]),
+.editor-form input:not([type="checkbox"]):not([type="radio"]),
 .editor-form select {
   width: 100%;
 }
@@ -5286,4 +5286,10 @@ p.gmail-skipped {
     width: 40px;
     height: 40px;
   }
+}
+
+/* A receipt that a correction replaced or that was withdrawn: kept, struck through (decision 0021). */
+.struck {
+  color: var(--muted);
+  text-decoration: line-through;
 }

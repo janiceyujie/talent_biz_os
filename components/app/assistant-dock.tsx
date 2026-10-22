@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Maximize2, MessageCircle, X } from "lucide-react";
+import { Maximize2, MessageCircle, Plus, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { AssistantView } from "@/components/views/assistant";
 import { useAssistantConversation } from "./assistant-provider";
@@ -15,12 +15,17 @@ export function AssistantDock({ open, setOpen, hidden }: { open: boolean; setOpe
   const t = useTranslations("assistant");
   const launcher = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
-  const { pending } = useAssistantConversation();
+  const { pending, conversationId, lines, resume, newConversation } = useAssistantConversation();
   const visible = open && !hidden;
   const close = () => {
     setOpen(false);
     launcher.current?.focus();
   };
+
+  // Opened with nothing showing: pick up this tab's conversation, as it was before a reload.
+  useEffect(() => {
+    if (visible && !conversationId && !lines.length) resume();
+  }, [visible, conversationId, lines.length, resume]);
 
   useEffect(() => {
     if (!visible) return;
@@ -44,7 +49,16 @@ export function AssistantDock({ open, setOpen, hidden }: { open: boolean; setOpe
           <div className="assistant-dock-heading">
             <h2 id="assistant-dock-title">{t("dockTitle")}</h2>
             <div>
-              <Link className="assistant-dock-action" href="/assistant" aria-label={t("expand")} title={t("expand")} onClick={() => setOpen(false)}>
+              <button type="button" className="assistant-dock-action" aria-label={t("history.new")} title={t("history.new")} onClick={newConversation} disabled={pending || !lines.length}>
+                <Plus size={19} aria-hidden="true" />
+              </button>
+              <Link
+                className="assistant-dock-action"
+                href={conversationId ? `/assistant?c=${conversationId}` : "/assistant"}
+                aria-label={t("expand")}
+                title={t("expand")}
+                onClick={() => setOpen(false)}
+              >
                 <Maximize2 size={18} aria-hidden="true" />
               </Link>
               <button type="button" className="assistant-dock-action" aria-label={t("minimize")} title={t("minimize")} onClick={close}>

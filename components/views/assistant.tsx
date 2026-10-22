@@ -5,27 +5,26 @@ import { useTranslations } from "next-intl";
 import { useAppData } from "@/components/app/app-data";
 import { useAssistantConversation, type Question } from "@/components/app/assistant-provider";
 import { RoleAvatar } from "@/components/role/role-portrait";
-import { assistantIntents, QUESTION_MAX, type AssistantIntent } from "@/lib/assistant/answers";
+import { assistantIntents, promptKeys, QUESTION_MAX } from "@/lib/assistant/answers";
 import { AnswerView } from "./assistant-answer";
-
-const promptKey = { today: "today", tomorrow: "tomorrow", receivable: "unpaid", payable: "payable" } as const satisfies Record<AssistantIntent, string>;
 
 /**
  * The assistant (decision 0023): quick prompts answered from the person's own records, and questions
- * in their own words answered by the model from the workspace or one project. Each question stands
- * on its own until conversations are saved.
+ * in their own words answered by the model from the workspace or one project, with the conversation's
+ * last turns. Every answered question is saved to the conversation.
  */
 export function AssistantView({ compact = false }: { compact?: boolean }) {
   const t = useTranslations("assistant");
   const tEyebrow = useTranslations("eyebrow");
   const { person } = useAppData();
-  const { lines, pending, ask, projectId, setProjectId, projects, loadProjects, monthLeft } = useAssistantConversation();
+  const { lines, pending, ask, readOnly, projectId, setProjectId, projects, loadProjects, monthLeft } = useAssistantConversation();
   const [draft, setDraft] = useState("");
   const end = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLTextAreaElement>(null);
   const noteId = useId();
   const scopeId = useId();
-  const asked = (q: Question) => ("intent" in q ? t(`prompt.${promptKey[q.intent]}`) : q.text);
+  const asked = (q: Question) => ("intent" in q ? t(`prompt.${promptKeys[q.intent]}`) : q.text);
+  const off = pending || readOnly;
 
   useEffect(loadProjects, [loadProjects]); // the scope picker's projects, once per talent
 
@@ -56,10 +55,14 @@ export function AssistantView({ compact = false }: { compact?: boolean }) {
       <div className="message-list" role="log" aria-label={t("conversation")} aria-live="polite" aria-busy={pending}>
         {!lines.length && <p className="message">{t("intro")}</p>}
         {lines.map((line) =>
-          line.role === "user" ? (
+          "unreadable" in line ? (
+            <div key={line.id} className={`message ${line.role === "user" ? "user" : ""}`} role="group">
+              <p className="muted">{t("unreadable")}</p>
+            </div>
+          ) : line.role === "user" ? (
             <div key={line.id} className="message user" role="group" aria-label={t("you")}>
               <p>{asked(line.question)}</p>
-              {line.error && (
+              {"error" in line && (
                 <small className="assistant-error">
                   {t(`error.${line.error}`)}{" "}
                   {(line.error === "failed" || line.error === "unavailable" || line.error === "busy") && (
@@ -92,14 +95,14 @@ export function AssistantView({ compact = false }: { compact?: boolean }) {
       </div>
       <div className="quick-prompts">
         {assistantIntents.map((intent) => (
-          <button type="button" key={intent} disabled={pending} onClick={() => void ask({ intent })}>
-            {t(`prompt.${promptKey[intent]}`)}
+          <button type="button" key={intent} disabled={off} onClick={() => void ask({ intent })}>
+            {t(`prompt.${promptKeys[intent]}`)}
           </button>
         ))}
       </div>
       <div className="assistant-scope">
         <label htmlFor={scopeId}>{t("scope")}</label>
-        <select id={scopeId} value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={pending}>
+        <select id={scopeId} value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={off}>
           <option value="">{t("scopeOverview")}</option>
           {(projects?.items ?? []).map((p) => (
             <option key={p.id} value={p.id}>
@@ -123,7 +126,7 @@ export function AssistantView({ compact = false }: { compact?: boolean }) {
           rows={compact ? 1 : 2}
           value={draft}
           maxLength={QUESTION_MAX}
-          readOnly={pending}
+          readOnly={off}
           aria-label={t("input")}
           aria-describedby={noteId}
           placeholder={t("placeholder")}
@@ -136,13 +139,13 @@ export function AssistantView({ compact = false }: { compact?: boolean }) {
             }
           }}
         />
-        <button aria-label={t("send")} disabled={pending || !draft.trim()}>
+        <button aria-label={t("send")} disabled={off || !draft.trim()}>
           ↑
         </button>
       </form>
       <small id={noteId} className="assistant-notice">
-        {t("note")}
-        {monthLeft !== null && ` ${t("monthLeft", { count: monthLeft })}`}
+        {readOnly ? t("readOnly") : t("note")}
+        {!readOnly && monthLeft !== null && ` ${t("monthLeft", { count: monthLeft })}`}
       </small>
     </section>
   );

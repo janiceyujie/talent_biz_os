@@ -1,9 +1,12 @@
 import { sql } from "drizzle-orm";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { generateText, ModelError } from "@/lib/ai/model";
 import { stripInvisible } from "@/lib/ai/safety";
 import { assistantUsage } from "@/lib/ai/usage";
-import { assistantIntents, dayOf, moneyAnswer, QUESTION_MAX, scheduleAnswer } from "@/lib/assistant/answers";
+import { assistantIntents, dayOf, moneyAnswer, promptKeys, QUESTION_MAX, scheduleAnswer, type AssistantAnswer } from "@/lib/assistant/answers";
+import { historyFor } from "@/lib/assistant/content";
+import { canContinue, getConversation, saveTurn } from "@/lib/assistant/conversations";
 import { moneySource, overviewSource, projectSource, scheduleSource, talentOf } from "@/lib/assistant/data";
 import { ASSISTANT_PROMPT_VERSION, assistantPrompt, assistantSystem } from "@/lib/assistant/prompt";
 import { cleanSnapshot, overviewSnapshot, projectSnapshot } from "@/lib/assistant/snapshot";
@@ -14,11 +17,12 @@ import { toLocale } from "@/lib/i18n/config";
 
 // A quick prompt's intent, answered in code; or a question in the person's own
 // words, answered by the model from a snapshot of the workspace or of one
-// project (decision 0023). One question at a time, no history yet: saved
-// conversations come next.
+// project, with the conversation's last turns (decision 0023). Each answered
+// question is saved to the conversation named, or to a new one.
+const conversation = { conversationId: z.uuid().optional() };
 const body = z.union([
-  z.object({ intent: z.enum(assistantIntents) }),
-  z.object({ text: z.string().trim().min(1).max(QUESTION_MAX), projectId: z.uuid().optional() }),
+  z.object({ intent: z.enum(assistantIntents), ...conversation }),
+  z.object({ text: z.string().trim().min(1).max(QUESTION_MAX), projectId: z.uuid().optional(), ...conversation }),
 ]);
 
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "private, no-store" } });
@@ -35,17 +39,28 @@ export async function POST(req: Request) {
   if (!req.headers.get("content-type")?.startsWith("application/json")) return new Response("Unsupported Media Type", { status: 415 });
   const parsed = body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return json({ error: "invalid" }, 400);
+  const { conversationId } = parsed.data;
+  // Only the person's own conversation about this talent: anything else is "not found".
+  if (conversationId && !(await canContinue(session.personId, current.id, conversationId))) return json({ error: "not_found" }, 404);
   const { timeZone } = await talentOf(current.id);
   const today = dateInZone(timeZone);
+  const save = (tx: Parameters<typeof saveTurn>[0], question: Parameters<typeof saveTurn>[1]["question"], answer: AssistantAnswer, title: string) =>
+    saveTurn(tx, { personId: session.personId, talentId: current.id, conversationId, question, answer, title });
 
   if ("intent" in parsed.data) {
     const { intent } = parsed.data;
+    let answer: AssistantAnswer;
     if (intent === "today" || intent === "tomorrow") {
       const day = dayOf(intent, today);
-      return json({ answer: scheduleAnswer(await scheduleSource(current.id, session.personId, day, day), day) });
+      answer = scheduleAnswer(await scheduleSource(current.id, session.personId, day, day), day);
+    } else {
+      const { payments, projects } = await moneySource(current.id);
+      answer = moneyAnswer(payments, projects, today, intent === "receivable" ? "in" : "out");
     }
-    const { payments, projects } = await moneySource(current.id);
-    return json({ answer: moneyAnswer(payments, projects, today, intent === "receivable" ? "in" : "out") });
+    // Titled as the button reads, in the person's language.
+    const t = await getTranslations({ locale: toLocale(session.locale), namespace: "assistant.prompt" });
+    const id = await db.transaction((tx) => save(tx, { intent }, answer, t(promptKeys[intent])));
+    return json({ conversationId: id, answer });
   }
 
   const { text, projectId } = parsed.data;
@@ -62,15 +77,22 @@ export async function POST(req: Request) {
 
     const source = projectId ? await projectSource(current.id, session.personId, projectId, today) : await overviewSource(current.id, session.personId, today);
     if (!source) return json({ error: "not_found" }, 404); // not this talent's project: the same answer as one that doesn't exist
-    const { snapshot, flags } = cleanSnapshot("project" in source ? projectSnapshot(source) : overviewSnapshot(source));
+    // Earlier turns are cleaned and checked like the snapshot: they may quote what a message said.
+    const earlier = conversationId ? historyFor((await getConversation(session.personId, current.id, conversationId))?.lines ?? []) : [];
+    const workspace = cleanSnapshot("project" in source ? projectSnapshot(source) : overviewSnapshot(source));
+    const history = cleanSnapshot({ history: earlier });
+    const flags = [...workspace.flags, ...history.flags];
+    const question = stripInvisible(text).text;
     try {
-      const { text: answer } = await generateText({
+      const { text: reply } = await generateText({
         role: "assistant",
         system: assistantSystem(toLocale(session.locale)),
-        prompt: assistantPrompt(snapshot, stripInvisible(text).text),
+        prompt: assistantPrompt(workspace.snapshot, question, history.snapshot.history),
         trace: { task: "assistant", promptVersion: ASSISTANT_PROMPT_VERSION, talentId: current.id, personId: session.personId, flags },
       });
-      return json({ answer: { kind: "text", text: answer.trim() }, monthLeft: usage.monthLeft - 1 });
+      const answer: AssistantAnswer = { kind: "text", text: reply.trim() };
+      const id = await save(tx, { text: question, ...(projectId ? { projectId } : {}) }, answer, question);
+      return json({ conversationId: id, answer, monthLeft: usage.monthLeft - 1 });
     } catch (e) {
       // Ids and codes only: never the question or the data.
       console.error("assistant failed", session.personId, e instanceof ModelError ? e.code : (e as Error)?.name);

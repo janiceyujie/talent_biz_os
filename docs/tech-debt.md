@@ -46,3 +46,11 @@ Shortcuts taken on purpose, and gaps we know about: what happens today, why it's
 
 **Fix.** Read-only tools the model can call (projects, payments, a date range), scoped to the person's access, each call logged. It needs its own decision record amending 0007. Start when the questions people actually ask show the snapshot falling short.
 
+### Someone with no workspace left can't reach their old conversations
+
+**Today.** A person who loses access to a talent can read their conversations about it, read-only, from the Assistant page of another talent they work on (decision 0023). A person with no talent left is sent to onboarding and has no way to reach them, though they're still kept.
+
+**Why for now.** Today a person works on one talent, so losing it means losing the app; a page outside any workspace would mean changing where sign-in sends people, for a case that barely happens yet.
+
+**Fix.** A way to export one's own conversations from the account, outside any workspace, which data-protection rules also expect. Start with the manager's multi-talent view, or when someone asks.
+

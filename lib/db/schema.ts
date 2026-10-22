@@ -740,6 +740,52 @@ export const aiCall = pgTable(
   ],
 ).enableRLS();
 
+// The assistant's conversations (decision 0023). A conversation belongs to the
+// person who had it: only they read it, scoped to the talent it's about (a
+// portfolio across talents later). A message's content is JSON with its own
+// version, validated when read (lib/assistant/content.ts): a question as asked,
+// or an answer as data, so code-worked answers show in the current language.
+export const assistantConversationScopes = ["talent", "portfolio"] as const;
+export const assistantMessageRoles = ["user", "assistant"] as const;
+
+export const assistantConversation = pgTable(
+  "assistant_conversation",
+  {
+    id: id(),
+    personId: uuid()
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    scope: text({ enum: assistantConversationScopes }).notNull().default("talent"),
+    talentId: uuid().references(() => talent.id, { onDelete: "cascade" }), // the talent it's about; null only for a portfolio
+    title: text().notNull(), // its first question, cut short
+    createdAt: createdAt(),
+    updatedAt: updatedAt(), // its latest message: the list's order
+  },
+  (t) => [
+    index("assistant_conversation_person_talent_updated_idx").on(t.personId, t.talentId, t.updatedAt, t.id),
+    check("assistant_conversation_scope_check", oneOf(t.scope, assistantConversationScopes)),
+    check("assistant_conversation_talent_check", sql`(${t.scope} = 'talent') = (${t.talentId} is not null)`),
+  ],
+).enableRLS();
+
+export const assistantMessage = pgTable(
+  "assistant_message",
+  {
+    id: id(),
+    conversationId: uuid()
+      .notNull()
+      .references(() => assistantConversation.id, { onDelete: "cascade" }),
+    role: text({ enum: assistantMessageRoles }).notNull(),
+    content: jsonb().$type<unknown>().notNull(), // { v, question } or { v, answer }; parsed on read
+    projectId: uuid().references(() => project.id, { onDelete: "set null" }), // the project a question was about, if any
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("assistant_message_conversation_created_idx").on(t.conversationId, t.createdAt),
+    check("assistant_message_role_check", oneOf(t.role, assistantMessageRoles)),
+  ],
+).enableRLS();
+
 export const todoTypes = [
   "reply",
   "follow_up",

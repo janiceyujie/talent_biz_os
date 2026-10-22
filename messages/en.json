@@ -574,6 +574,7 @@
     }
   },
   "workflow": {
+    "allFiles": "All {count} files, in Files",
     "section": "Project workflow and payments",
     "toConfirm": "What to confirm for this project",
     "payments": "Payments",
@@ -635,10 +636,7 @@
     "emptyTitle": "No offers here yet",
     "emptyBody": "Use “Paste an offer” to bring in your first one.",
     "pick": "Pick a message to see it.",
-    "loading": "Loading…",
-    "loadMore": "Load more",
     "listFailed": "Couldn't load the messages.",
-    "retry": "Try again",
     "opening": "Opening…",
     "openFailed": "Couldn't open this message. Pick it again to retry.",
     "replyTodo": "Reply: {title}",
@@ -925,6 +923,8 @@
     "noOrganizations": "No matching organizations."
   },
   "files": {
+    "listFailed": "Couldn't load the files.",
+    "untitled": "(No name)",
     "title": "Keep each project's files together",
     "intro": "Upload offers, contracts, assets, or invoices and keep them with the project. Archived files can be restored. File upload is in development.",
     "search": "Search files",
@@ -2021,5 +2021,10 @@
       "artsLaw": "Arts Law: booking agreement checklist",
       "ftc": "FTC: endorsements and influencers"
     }
+  },
+  "list": {
+    "loading": "Loading…",
+    "loadMore": "Load more",
+    "retry": "Try again"
   }
 }

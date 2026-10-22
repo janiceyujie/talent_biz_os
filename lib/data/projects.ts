@@ -100,7 +100,7 @@ const withContact = (contactId: string) =>
   );
 
 /** `%` and `_` typed in a search are literal characters, not patterns. */
-const likeText = (q: string) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+export const likeText = (q: string) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
 
 /**

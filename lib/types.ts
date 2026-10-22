@@ -345,7 +345,6 @@ export type AppData = {
   payments: Payment[];
   templates: ReplyTemplate[];
   drafts: ReplyDraft[];
-  files: StoredFile[];
   inbox: InboxOverview;
   contracts: Contract[]; // newest version first
   notificationState: NotificationState; // this person's read and snooze marks

@@ -342,7 +342,6 @@ export const getAppData = cache(async (): Promise<AppData> => {
       archived: t.archivedAt !== null,
     })),
     drafts: [],
-    files: [],
     contracts: contractRows.map((c) => ({
       id: c.id,
       projectId: c.projectId,

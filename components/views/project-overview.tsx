@@ -2,14 +2,17 @@
 
 import { ArrowRight, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { useListPages } from "@/components/app/list-pages";
 import { calendarRecord, projectRecord, toRecord, type Editor } from "@/components/app/record-editor";
 import { keptFields, projectField } from "@/lib/domain/intake";
 import { phaseOf, type Phase } from "@/lib/domain/phases";
 import { useLabels } from "@/lib/i18n/labels";
-import type { Project, ProjectDetail } from "@/lib/types";
+import type { ListPage } from "@/lib/domain/list-page";
+import type { Project, ProjectDetail, StoredFile } from "@/lib/types";
 import { DealCard } from "./deal-card";
 import { ProjectPeople } from "./project-people";
 
@@ -94,7 +97,9 @@ export function ProjectOverview({
       !(next && c.source === "todo" && c.id === next.id),
   );
   const drafts = data.drafts.filter((d) => d.projectId === project.id && !d.archived);
-  const files = data.files.filter((f) => f.projectId === project.id && !f.archived);
+  // The project's files come a page at a time, like Files; past the first page, Files lists the rest.
+  const fileList = useListPages<ListPage<StoredFile>>("/api/files", { project: project.id }, data);
+  const files = fileList.items;
 
   const cards: Record<Card, ReactNode> = {
     partners: <ProjectPeople key="partners" project={project} people={people} organizations={organizations} />,
@@ -221,9 +226,18 @@ export function ProjectOverview({
           ))}
           {files.map((f) => (
             <li key={f.id} className="deal-record">
-              <span>{tWorkflow("fileItem", { name: f.filename })}</span>
+              <a href={`/api/files/${f.id}`} target="_blank" rel="noopener">
+                {tWorkflow("fileItem", { name: f.filename })}
+              </a>
             </li>
           ))}
+          {fileList.hasMore && (
+            <li>
+              <Link className="text-button" href={`/files?project=${project.id}`}>
+                {tWorkflow("allFiles", { count: fileList.total ?? files.length })}
+              </Link>
+            </li>
+          )}
         </ul>
       </DealCard>
     ),

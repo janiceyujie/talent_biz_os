@@ -1888,25 +1888,6 @@ summary {
   color: var(--muted);
   margin-top: 5px;
 }
-.search-results {
-  margin-top: 15px;
-  display: grid;
-}
-.search-results > button {
-  text-align: left;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  background: transparent;
-  padding: 15px 5px;
-}
-.search-results strong,
-.search-results small {
-  display: block;
-}
-.search-results small {
-  color: var(--muted);
-  margin-top: 4px;
-}
 .preview-list {
   padding-left: 20px;
 }
@@ -5166,5 +5147,143 @@ p.gmail-skipped {
   }
   .document-toolbar .row-actions {
     flex-basis: 100%;
+  }
+}
+
+/* The search in the top bar (components/app/workspace-search.tsx): a field, with its results in a list under it. */
+.workspace-search {
+  position: relative;
+  min-width: 0;
+}
+.workspace-search-field {
+  cursor: text;
+}
+.workspace-search-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.workspace-search-field > svg {
+  flex-shrink: 0;
+}
+.workspace-search-field input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  font: inherit;
+}
+.workspace-search-field input:focus,
+.workspace-search-field input:focus-visible {
+  border: 0;
+  outline: none;
+  box-shadow: none; /* the field around it shows the focus */
+}
+.workspace-search-field input::placeholder {
+  color: var(--muted);
+}
+.workspace-search-clear {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+.workspace-search-clear:hover {
+  background: var(--paper);
+}
+.workspace-search-dropdown {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 12px 32px #203f3520;
+}
+.workspace-search-caption {
+  padding: 12px 16px 8px;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.workspace-search-list {
+  max-height: min(420px, calc(100dvh - 200px));
+  padding: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.workspace-search-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.workspace-search-option > svg {
+  flex: none;
+  color: var(--muted);
+}
+.workspace-search-option > span {
+  flex: 1;
+  min-width: 0;
+}
+.workspace-search-option strong,
+.workspace-search-option small {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.workspace-search-option strong {
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+.workspace-search-option small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.workspace-search-option:hover,
+.workspace-search-option[aria-selected="true"] {
+  background: var(--accent-soft);
+}
+.workspace-search-empty {
+  margin: 0;
+  padding: 12px 16px 16px;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+@media (max-width: 600px) {
+  .workspace-search {
+    flex: 1;
+  }
+  .workspace-search-field input {
+    font-size: 16px; /* below 16px, iOS zooms the page when the field is focused */
+  }
+  .workspace-search-clear {
+    width: 40px;
+    height: 40px;
   }
 }

@@ -31,9 +31,13 @@
     "expandMenu": "Expand sidebar"
   },
   "shell": {
+    "clearSearch": "Clear search",
+    "searchRefine": "Showing the first {count}. Type more to narrow it.",
+    "searchSuggestions": "Recent and suggested",
+    "searchMatches": "{count, plural, one {# result} other {# results}}",
+    "resultOrganization": "Organization",
     "searchPlaceholder": "Search projects, partners, calendar, templates…",
     "searchTitle": "Search workspace",
-    "searchInput": "Keyword",
     "noResults": "No matching results.",
     "notifications": "{count, plural, =0 {Notifications} one {Notifications · # item} other {Notifications · # items}}",
     "notificationsEmpty": "No notifications. Upcoming events, to-do deadlines, and payments due in or out will show up here.",

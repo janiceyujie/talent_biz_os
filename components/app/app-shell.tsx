@@ -1,12 +1,11 @@
 "use client";
 
-import { Bell, Menu, PanelLeftClose, PanelLeftOpen, Search, X } from "lucide-react";
+import { Bell, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { COLLAPSE_SHORTCUT, PRODUCT_MONOGRAM, PRODUCT_NAME, PRODUCT_TAGLINE, SEARCH_SHORTCUT } from "@/lib/brand";
-import { useLabels } from "@/lib/i18n/labels";
+import { COLLAPSE_SHORTCUT, PRODUCT_MONOGRAM, PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/brand";
 import { AccountMenu } from "./account-menu";
 import { Companion } from "./companion";
 import { LiveRefresh } from "./live-refresh";
@@ -14,6 +13,7 @@ import { NotificationList, ReminderToast, useNotifications } from "./notificatio
 import { useAppData } from "./app-data";
 import { Modal } from "./modal";
 import { isActive, nav } from "./nav";
+import { WorkspaceSearch } from "./workspace-search";
 
 // Collapsing the sidebar to its icons is a per-browser preference (wide screens only; phones use the drawer).
 const COLLAPSED_KEY = "talent-biz-os.sidebar-collapsed";
@@ -29,7 +29,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const data = useAppData();
   const t = useTranslations("shell");
   const tNav = useTranslations("nav");
-  const labels = useLabels();
   const pathname = usePathname();
   const router = useRouter();
   const [mobile, setMobile] = useState(false);
@@ -37,7 +36,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [companionOpen, setCompanionOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const sidebar = useRef<HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [tip, setTip] = useState<{ label: string; top: number } | null>(null);
@@ -109,10 +107,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setShowSearch(true);
-      }
       if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
         e.preventDefault();
         setCollapsed((c) => {
@@ -128,25 +122,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { unread } = useNotifications();
   // Messages waiting for the person: analyzed and not yet filed or dismissed.
   const toReview = data.inbox.counts.analyzed + data.inbox.counts.error;
-  const results = [
-    ...data.projects
-      .filter((p) => !p.archived)
-      .map((p) => ({ id: p.id, label: p.title, detail: t("resultProject", { counterparty: p.counterparty }), href: `/projects?id=${p.id}` })),
-    ...data.contacts
-      .filter((c) => !c.archived)
-      .map((c) => ({ id: c.id, label: c.name, detail: `${labels.contactRole(c.role)} · ${c.company}`, href: "/contacts" })),
-    ...data.calendar
-      .filter((c) => !c.archived)
-      .map((c) => ({ id: c.id, label: c.title, detail: t("resultCalendar", { date: c.date }), href: `/calendar?day=${c.date}` })),
-    ...data.templates
-      .filter((tpl) => !tpl.archived)
-      .map((tpl) => ({ id: tpl.id, label: tpl.title, detail: t("resultTemplate"), href: "/drafts" })),
-  ]
-    .filter((r) => `${r.label} ${r.detail}`.toLowerCase().includes(query.toLowerCase()))
-    .slice(0, 30);
 
   const open = (href: string) => {
-    setShowSearch(false);
     setShowNotifications(false);
     router.push(href);
   };
@@ -240,11 +217,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               {collapsed ? <PanelLeftOpen size={19} aria-hidden="true" /> : <PanelLeftClose size={19} aria-hidden="true" />}
             </button>
-            <button className="global-search" onClick={() => setShowSearch(true)}>
-              <Search size={17} />
-              <span>{t("searchPlaceholder")}</span>
-              <kbd>{SEARCH_SHORTCUT}</kbd>
-            </button>
+            <WorkspaceSearch open={showSearch} onOpenChange={setShowSearch} />
           </div>
           <Companion
             key={data.person.role}
@@ -272,26 +245,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
       <LiveRefresh />
       <ReminderToast onOpen={() => setShowNotifications(true)} suppress={showNotifications || showSearch || companionOpen} />
-      {showSearch && (
-        <Modal title={t("searchTitle")} onClose={() => setShowSearch(false)}>
-          <input
-            autoFocus
-            aria-label={t("searchTitle")}
-            placeholder={t("searchInput")}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <div className="search-results">
-            {results.map((r) => (
-              <button key={r.id} onClick={() => open(r.href)}>
-                <strong>{r.label}</strong>
-                <small>{r.detail}</small>
-              </button>
-            ))}
-            {!results.length && <p className="empty">{t("noResults")}</p>}
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { and, count, sql, desc, eq, getTableColumns, inArray, isNull } from "dri
 import { cache } from "react";
 import { inboxOverview } from "./inbox";
 import { relevanceQueue } from "@/lib/queue/jobs";
-import { keepsData, modelFor, freeTierOk } from "@/lib/ai/model";
+import { aiPaused } from "@/lib/ai/pause";
 import { dailyUsage } from "@/lib/ai/usage";
 import { CALENDAR_SCOPE, hasScopes, IMPORT_SCOPES } from "@/lib/calendar/google/scope";
 import { isGoogleConfigured, isGoogleEnabled, requireTalent } from "@/lib/auth";
@@ -17,13 +17,14 @@ import { readPreferences } from "@/lib/preferences";
 import { pairKey } from "@/lib/domain/organizations";
 import { summaryOf } from "./projects";
 import { changeMark } from "./changes";
-import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailDecision, mailSenderRule, mailConnection, externalEvent, contact, membership, notificationState, grantApplication, grantTask, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { externalEventsOf, paymentsOf } from "./rows";
+import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, membership, notificationState, grantApplication, grantTask, payment, paymentReceipt, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { mailPipelineEnabled } from "@/lib/mail/config";
 import { mailConfigured } from "@/lib/mail/connect";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
-import { calendarKinds, type AppData, type CalendarItem, type CalendarKind, type Payment, type TravelDetails } from "@/lib/types";
+import { calendarKinds, type AppData, type CalendarItem, type CalendarKind, type TravelDetails } from "@/lib/types";
 
 
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : "");
@@ -38,7 +39,7 @@ const eventKind = (k: string): CalendarKind => (calendarKinds.includes(k as Cale
 export const getAppData = cache(async (): Promise<AppData> => {
   const { person, talent: current } = await requireTalent();
   const changes = await changeMark(current.id, person.personId);
-  const [[talentRow], [memberRow], projectRows, contactRows, organizationRows, distinctRows, clientRows, projectPeopleRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows, inboxStats, preferenceRows] = await Promise.all([
+  const [[talentRow], [memberRow], projectRows, contactRows, organizationRows, distinctRows, clientRows, projectPeopleRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows, inboxStats, preferenceRows, receiptRows] = await Promise.all([
     db
       .select({ id: talent.id, name: talent.name, timeZone: talent.timeZone, vertical: talent.vertical })
       .from(talent)
@@ -88,8 +89,8 @@ export const getAppData = cache(async (): Promise<AppData> => {
       .select({ key: preference.key, value: preference.value })
       .from(preference)
       .where(and(eq(preference.personId, person.personId), eq(preference.talentId, current.id))),
+    db.select().from(paymentReceipt).where(eq(paymentReceipt.talentId, current.id)).orderBy(paymentReceipt.createdAt),
   ]);
-
   const contractRows = await db
     .select()
     .from(contract)
@@ -239,26 +240,9 @@ export const getAppData = cache(async (): Promise<AppData> => {
       workspaceOwner: current.role === "owner", // only owners change the workspace's name and zone
     },
     calendarFeed: Boolean(memberRow?.feedHash),
-    // The provider paste and upload actually use (AI_PRIMARY, or AI_PROVIDER in development).
-    aiDataNotice: keepsData(modelFor("analysis", false).provider) ? aiServiceName(modelFor("analysis", false).provider) : null,
     aiUsage: await dailyUsage(current.id),
-    externalEvents: importedRows.map((e) => {
-      const source = importSources.find((x) => x.id === e.sourceId)!;
-      return {
-        id: e.id,
-        calendar: source.name,
-        color: source.color,
-        title: e.title,
-        date: e.startDate,
-        time: hhmm(e.startTime),
-        endDate: e.endDate ?? "",
-        endTime: hhmm(e.endTime),
-        timeZone: e.timeZone,
-        location: e.location ?? "",
-        link: e.htmlLink ?? "",
-        series: source.own && e.seriesId ? { id: e.seriesId, projectId: seriesLinks.find((l) => l.seriesId === e.seriesId)?.projectId ?? null } : null,
-      };
-    }),
+    aiPaused: !!(await aiPaused()),
+    externalEvents: externalEventsOf(importedRows, importSources, seriesLinks),
     googleCalendar: {
       available: isGoogleConfigured,
       importGranted: hasScopes(accountRows.find((a) => a.providerId === "google")?.scope, IMPORT_SCOPES),
@@ -276,7 +260,6 @@ export const getAppData = cache(async (): Promise<AppData> => {
     gmail: {
       reviewEnabled: mailPipelineEnabled() && mailbox?.status === "connected",
       available: mailConfigured(),
-      freeTier: keepsData(modelFor("relevance").provider) && freeTierOk(),
       connection: mailbox
         ? {
             accountEmail: mailbox.accountEmail,
@@ -324,26 +307,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     distinctOrganizations: distinctRows.map((r) => pairKey(r.a, r.b)),
     projectPeople: projectPeopleRows,
     calendar,
-    payments: paymentRows.map((p) => ({
-      id: p.id,
-      projectId: p.projectId,
-      projectType: p.projectType && isProjectType(p.projectType) ? p.projectType : "other",
-      direction: p.direction,
-      installment: p.installment,
-      label: p.label,
-      amount: p.amount,
-      currency: p.currency as Payment["currency"],
-      taxRate: p.taxRate,
-      taxIncluded: p.taxIncluded,
-      recordedDate: p.recordedOn,
-      dueDate: p.dueOn,
-      status: p.status,
-      settledAmount: p.settledAmount,
-      settledDate: p.settledOn,
-      invoiceRef: p.invoiceRef ?? "",
-      notes: p.notes ?? "",
-      voided: p.voidedAt !== null,
-    })),
+    payments: paymentsOf(paymentRows, receiptRows),
     templates: templateRows.map((t) => ({
       id: t.id,
       projectType: isProjectType(t.projectType) ? t.projectType : "other",
@@ -371,8 +335,3 @@ export const getAppData = cache(async (): Promise<AppData> => {
     inboxOverview: inboxStats,
   };
 });
-
-/** How the AI service is named to people, for the data notice. */
-function aiServiceName(provider: string | undefined) {
-  return ({ gemini: "Google Gemini", anthropic: "Anthropic Claude", openai: "OpenAI", ollama: "Ollama" } as Record<string, string>)[provider ?? ""] ?? "AI";
-}

@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
@@ -16,6 +16,7 @@ import { isPersonalDomain } from "@/lib/mail/relevance/rules";
 import { queue } from "@/lib/queue";
 import { mailQueue, syncJobKey } from "@/lib/queue/jobs";
 import { checkProjectLink } from "./project-link";
+import { addReceipt, lockPayment, settle } from "./receipt-rows";
 import { errorText, firstIssue } from "./validation";
 
 // The connected mailbox (decision 0013): Sync now, disconnect, and sender
@@ -164,6 +165,29 @@ export async function markWasWork(decisionId: string): Promise<string | null> {
   return null;
 }
 
+/** Try again, on an email in Waiting that couldn't be brought in: it's queued once more. */
+export async function retryFetch(decisionId: string): Promise<string | null> {
+  const { talent } = await requireTalent();
+  const fail = await errorText();
+  if (!z.uuid().safeParse(decisionId).success) return fail("invalid");
+  const [d] = await db
+    .select({ id: mailDecision.id, connectionId: mailDecision.connectionId })
+    .from(mailDecision)
+    .where(
+      and(
+        eq(mailDecision.id, decisionId),
+        eq(mailDecision.talentId, talent.id),
+        inArray(mailDecision.outcome, ["work", "unsure"]),
+        isNull(mailDecision.messageId),
+        isNotNull(mailDecision.fetchFailure),
+      ),
+    );
+  if (!d) return fail("invalid");
+  await queueFetch(d.connectionId, d.id);
+  refresh();
+  return null;
+}
+
 /** "It's work", on an email flagged Not sure: the flag goes; the decision records the answer. */
 export async function markSureWork(messageId: string): Promise<string | null> {
   const { talent } = await requireTalent();
@@ -195,7 +219,7 @@ const recordInput = z.union([z.strictObject({ paymentId: z.uuid() }), z.strictOb
  * what arrived and when. The notice stays, filed, with its fields.
  */
 export async function recordNoticePayment(messageId: string, target: { paymentId: string } | { projectId: string }): Promise<string | null> {
-  const { talent } = await requireTalent();
+  const { person, talent } = await requireTalent();
   const fail = await errorText();
   const parsed = recordInput.safeParse(target);
   if (!z.uuid().safeParse(messageId).success || !parsed.success) return fail("invalid");
@@ -225,24 +249,10 @@ export async function recordNoticePayment(messageId: string, target: { paymentId
         .where(and(eq(message.id, messageId), eq(message.status, "analyzed")))
         .returning({ id: message.id });
       if (!claimed) return "invalid" as const;
-      let p: { id: string; projectId: string | null } | undefined;
-      if ("paymentId" in target_) {
-        [p] = await tx
-          .update(payment)
-          .set({ status: "settled", settledAmount: n.amount, settledOn })
-          .where(
-            and(
-              eq(payment.id, target_.paymentId),
-              eq(payment.talentId, talent.id),
-              eq(payment.direction, "in"),
-              eq(payment.status, "expected"),
-              isNull(payment.voidedAt),
-            ),
-          )
-          .returning({ id: payment.id, projectId: payment.projectId });
-        if (!p) throw new Refused("paymentNotFound"); // undoes the claim above
-      } else {
-        [p] = await tx
+      let id: string;
+      if ("paymentId" in target_) id = target_.paymentId;
+      else
+        [{ id }] = await tx
           .insert(payment)
           .values({
             talentId: talent.id,
@@ -250,14 +260,18 @@ export async function recordNoticePayment(messageId: string, target: { paymentId
             direction: "in",
             label: n.payer ? t("newLabelFrom", { payer: n.payer }) : t("newLabel"),
             amount: n.amount,
+            currency: n.currency,
             taxIncluded: true,
             recordedOn: today,
-            status: "settled",
-            settledAmount: n.amount,
-            settledOn,
           })
-          .returning({ id: payment.id, projectId: payment.projectId });
-      }
+          .returning({ id: payment.id });
+      const p = await lockPayment(tx, talent.id, id);
+      // Income still open, in the notice's currency: the amount received is in it.
+      if (!p || p.direction !== "in" || p.status !== "expected" || p.currency !== n.currency || p.voidedAt)
+        throw new Refused("paymentNotFound"); // undoes the claim above
+      // One receipt of what arrived, and it's closed: a fee taken on the way shows as short (decision 0021).
+      await addReceipt(tx, p, { date: settledOn, cash: n.amount, recordedBy: person.personId });
+      await settle(tx, p, "coming");
       await tx
         .update(message)
         .set({ projectId: p.projectId, notice: { ...n, paymentId: p.id } })

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { dateInZone } from "@/lib/domain/dates";
@@ -12,26 +11,27 @@ import { savePayment } from "@/lib/actions/payments";
 import { saveProject } from "@/lib/actions/projects";
 import { saveTemplate } from "@/lib/actions/templates";
 import { localeNames, locales, toLocale } from "@/lib/i18n/config";
-import { placeholderKeys, placeholderName, toDisplay, toStored } from "@/lib/templates/placeholders";
+import { placeholderKeys, placeholderName, toDisplay } from "@/lib/templates/placeholders";
 import { isOpenStage } from "@/lib/domain/phases";
 import { supportedCurrencies } from "@/lib/domain/money";
+import { useCurrencyName, useMoney } from "@/lib/i18n/format";
 import { placeSuggestions } from "@/lib/calendar/places";
 import {
   calendarKinds,
   contactRoles,
   stages,
   transportModes,
-  type ReplyTemplate,
   type CalendarItem,
+  type Payment,
   type Project,
   type Stage,
   type TransportMode,
 } from "@/lib/types";
-import { useAppData, usePreviewTemplates } from "./app-data";
+import { useAppData } from "./app-data";
 import { ContactPicker, type NewContact } from "./contact-picker";
 import { OrganizationPicker } from "./organization-picker";
-import { DateTimeInput } from "./date-time-input";
 import { TimeZonePicker } from "./time-zone-picker";
+import { DateTimeInput } from "./date-time-input";
 import { Modal } from "./modal";
 
 export type RecordData = Record<string, string | number | boolean>;
@@ -75,6 +75,8 @@ const savers: Partial<Record<EditorKind, Saver>> = {
 
 // Kinds stored as to-dos; the rest are calendar events. Kept in step with lib/actions/calendar.
 const todoKinds: readonly string[] = ["todo", "deliverable", "payment"];
+// Amount fields: whole numbers only in JPY.
+const moneyFields = new Set(["amount", "quotedAmount", "settledAmount"]);
 
 /**
  * One add/edit dialog for every record kind. Saving goes through the kind's
@@ -90,10 +92,7 @@ export function RecordEditor({
   onSaved?: (data: RecordData) => void;
 }) {
   const data$ = useAppData();
-  const localTemplates = usePreviewTemplates();
-  const tPreview = useTranslations("preview");
   const t = useTranslations("editor");
-  const tFinance = useTranslations("finance");
   const tProjects = useTranslations("projects");
   const tTone = useTranslations("tone");
   const labels = useLabels();
@@ -212,7 +211,10 @@ export function RecordEditor({
       ...d,
       [key]: value,
       ...(key === "status" ? { settledDate: value === "settled" ? d.settledDate || today : "" } : {}),
-      ...(key === "projectId" && value ? { currency: data$.projects.find((p) => p.id === String(value))?.currency ?? d.currency } : {}),
+      // A payment put on a deal starts in the deal's currency; it can still be changed.
+      ...(key === "projectId" && value && kind === "payment"
+        ? { currency: data$.projects.find((p) => p.id === value)?.currency ?? d.currency }
+        : {}),
       // An arrival or check-out usually happens in the same zone; start from it.
       ...(key === "endDate" && value ? { endTimeZone: d.endTimeZone || d.timeZone } : {}),
       // A trip's arrival or a stay's check-out isn't another kind's end time: drop it on switching.
@@ -221,16 +223,33 @@ export function RecordEditor({
         : {}),
     }));
 
-  function field(key: string, label: string, type = "text", required = false, options?: Option[], list?: string, disabled = false) {
-    if (type === "date" || type === "time") {
-      return <DateTimeInput key={key} kind={type} label={label} value={String(data[key] ?? "")} onChange={value => change(key,value)} today={today} required={required} disabled={disabled} field={key}/>;
-    }
+  // Changing a deal's currency: its payments still in the old one, to put in the new one too.
+  // Income starts ticked (usually the same mistake), costs not (often really in another currency).
+  const money = useMoney();
+  const [movePicks, setMovePicks] = useState<Record<string, boolean>>({});
+  const fromCurrency = String(initialData.currency ?? "");
+  const oldCurrencyPayments =
+    kind === "project" && data.id && data.currency !== fromCurrency
+      ? data$.payments.filter((p) => p.projectId === data.id && p.currency === fromCurrency && !p.voided)
+      : [];
+  const hasCents = (p: Payment) => [p.amount, ...p.receipts.flatMap((r) => [r.cash, r.withheld])].some((n) => !Number.isInteger(n));
+  const canMove = (p: Payment) => data.currency !== "JPY" || !hasCents(p);
+  const moving = oldCurrencyPayments.filter((p) => canMove(p) && (movePicks[p.id] ?? p.direction === "in"));
+
+  const currencyName = useCurrencyName();
+  const currencyOptions = supportedCurrencies.map((c) => [c, `${c} · ${currencyName(c)}`] as const);
+
+  function field(key: string, label: string, type = "text", required = false, options?: Option[], list?: string) {
+    if (type === "date" || type === "time")
+      return (
+        <DateTimeInput key={key} kind={type} label={label} field={key} required={required} today={today} value={String(data[key] ?? "")} onChange={(v) => change(key, v)} />
+      );
     return (
       <label key={key}>
         {label}
         {required ? " *" : ""}
         {options ? (
-          <select aria-label={label} data-field={key} value={String(data[key])} disabled={disabled} onChange={(e) => change(key, e.target.value)}>
+          <select aria-label={label} data-field={key} value={String(data[key])} onChange={(e) => change(key, e.target.value)}>
             {options.map(([value, text]) => (
               <option key={value} value={value}>
                 {text}
@@ -255,7 +274,7 @@ export function RecordEditor({
             data-field={key}
             type={type}
             required={required}
-            step={type === "number" ? (key === "amount" || key === "quotedAmount" || key === "settledAmount") && data.currency === "JPY" ? "1" : "0.01" : undefined}
+            step={type === "number" ? (data.currency === "JPY" && moneyFields.has(key) ? "1" : "0.01") : undefined}
             min={type === "number" ? 0 : undefined}
             max={key === "taxRate" ? 100 : undefined}
             maxLength={200}
@@ -280,27 +299,25 @@ export function RecordEditor({
         ...data$.projects
           .filter((p) => (!p.archived && isOpenStage(p.stage)) || p.id === data.projectId)
           .map((p) => [p.id, p.title] as const),
-      ], undefined, Boolean(kind === "calendar" && data.grantApplicationId))}
-      {kind === "calendar" && data.grantApplicationId ? <Link className="text-button" href={`/grants?application=${data.grantApplicationId}`}>{t("grantSource")}</Link> : <small className="muted">{t("openOnly")}</small>}
+      ])}
+      <small className="muted">{t("openOnly")}</small>
     </div>
   );
 
-  const currencyOptions = supportedCurrencies.map((currency) => [currency, `${currency} · ${tFinance(`currencyNames.${currency}`)}`] as const);
-  const projectCurrencyLocked = kind === "project" && Boolean(data.id) && data$.payments.some((p) => p.projectId === data.id);
   const pricing = (amountKey: string, amountRequired = true, legend = t("section.amount"), amountLabel = t("field.amount")) => (
     <fieldset className="form-section">
       <legend>{legend}</legend>
       <div className="form-grid">
         {field(amountKey, amountLabel, "number", amountRequired)}
-        {field("currency", t("field.currency"), "text", true, currencyOptions, undefined, amountKey === "quotedAmount" && projectCurrencyLocked)}
+        {field("currency", t("field.currency"), "text", true, currencyOptions)}
         {field("taxRate", t("field.taxRate"), "number", true)}
         {field("taxIncluded", t("field.taxIncluded"), "checkbox")}
       </div>
-      {amountKey === "quotedAmount" && projectCurrencyLocked && <small className="muted">{t("projectCurrencyLocked")}</small>}
     </fieldset>
   );
   // Income is collected, a cost is paid: the payment form's words follow the direction.
   const out = data.direction === "out";
+  const saved = kind === "payment" && data.id ? data$.payments.find((p) => p.id === data.id) : undefined;
 
   return (
     <Modal title={t(editor.item?.id ? "titleEdit" : "titleNew", { kind })} onClose={requestClose}>
@@ -310,19 +327,14 @@ export function RecordEditor({
         onSubmit={async (e) => {
           e.preventDefault();
           if (!onSave) return;
-          if (data$.preview) {
-            if (kind !== "template") { setError(tPreview("readOnly")); return; }
-            localTemplates.save({...data, id: String(data.id || crypto.randomUUID()), body: toStored(String(data.body)), archived: false} as ReplyTemplate);
-            onSaved?.(data);
-            onClose();
-            return;
-          }
           setPending(true);
           // A typed main contact who isn't a contact yet is added as one, with any details given.
           const typedContact = kind === "project" && !data.counterpartyId && String(data.contactName ?? "").trim();
-          const failure = await onSave(
-            typedContact ? { ...data, newContact: { email: "", phone: "", ...newContact, name: typedContact } } : data,
-          );
+          const failure = await onSave({
+            ...data,
+            ...(typedContact ? { newContact: { email: "", phone: "", ...newContact, name: typedContact } } : {}),
+            ...(kind === "project" ? { paymentsToCurrency: moving.map((p) => p.id) } : {}),
+          });
           setPending(false);
           if (failure) setError(failure);
           else {
@@ -372,6 +384,26 @@ export function RecordEditor({
               </fieldset>
               {pricing("quotedAmount", false, t("section.quote"), t("field.quotedAmount"))}
               <p className="muted">{t("quoteHelp")}</p>
+              {oldCurrencyPayments.length > 0 && (
+                <fieldset className="form-section">
+                  <legend>{t("moveCurrency.legend", { from: fromCurrency })}</legend>
+                  <p className="muted">{t("moveCurrency.note", { to: String(data.currency) })}</p>
+                  {oldCurrencyPayments.map((p) => (
+                    <label key={p.id} className="check-line">
+                      <input
+                        type="checkbox"
+                        disabled={!canMove(p)}
+                        checked={moving.includes(p)}
+                        onChange={(e) => setMovePicks((m) => ({ ...m, [p.id]: e.target.checked }))}
+                      />
+                      <span>
+                        {p.label} · {t(p.direction === "in" ? "moveCurrency.income" : "moveCurrency.cost")} · {money(p.amount, p.currency)}
+                        {!canMove(p) && <small className="muted"> · {t("moveCurrency.hasCents")}</small>}
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+              )}
               {/* Can be filled in later; collapsing keeps what's typed. */}
               <details className="form-details" open={editor.focus ? true : undefined}>
                 <summary>{t("section.dealDetails")}</summary>
@@ -499,16 +531,28 @@ export function RecordEditor({
               <fieldset className="form-section">
                 <legend>{t(out ? "section.paying" : "section.collecting")}</legend>
                 <div className="form-grid">
-                  {field(
-                    "status",
-                    t(out ? "field.statusOut" : "field.statusIn"),
-                    "text",
-                    true,
-                    options(["expected", "settled"] as const, (status) => labels.paymentStatus({ status, direction: out ? "out" : "in" })),
+                  {/* A new entry may already have come in; an existing one's money moves through its receipts (decision 0021). */}
+                  {saved ? (
+                    <div>
+                      <span>{t(out ? "field.statusOut" : "field.statusIn")}</span>
+                      <p>
+                        <strong>{labels.paymentStatus(saved)}</strong>
+                        <br />
+                        <small className="muted">{t("receiptsElsewhere", { direction: saved.direction })}</small>
+                      </p>
+                    </div>
+                  ) : (
+                    field(
+                      "status",
+                      t(out ? "field.statusOut" : "field.statusIn"),
+                      "text",
+                      true,
+                      options(["expected", "settled"] as const, (status) => labels.paymentStatus({ status, direction: out ? "out" : "in" })),
+                    )
                   )}
                   {field("installment", t("field.installment"), "text", true, options(["regular", "deposit", "balance"] as const, labels.installment))}
-                  {data.status === "settled" && field("settledDate", t(out ? "field.settledDateOut" : "field.settledDateIn"), "date", true)}
-                  {data.status === "settled" && field("settledAmount", t("field.settledAmount"), "number")}
+                  {!saved && data.status === "settled" && field("settledDate", t(out ? "field.settledDateOut" : "field.settledDateIn"), "date", true)}
+                  {!saved && data.status === "settled" && field("settledAmount", t("field.settledAmount"), "number")}
                   {field("dueDate", t(out ? "field.dueDateOut" : "field.dueDateIn"), "date")}
                   {field("recordedDate", t("field.recordedDate"), "date", true)}
                 </div>
@@ -564,7 +608,6 @@ export function RecordEditor({
             {error}
           </p>
         )}
-        {data$.preview && <p className="muted">{tPreview(kind === "template" ? "localTemplates" : "readOnly")}</p>}
         {!onSave && <p className="muted">{t("notWired")}</p>}
         {confirming ? (
           <footer className="modal-actions" role="alertdialog" aria-label={t("unsaved")}>
@@ -581,7 +624,7 @@ export function RecordEditor({
             <button type="button" className="secondary" disabled={pending} onClick={requestClose}>
               {t("cancel")}
             </button>
-            <button disabled={!onSave || pending || (!!data$.preview && kind !== "template")} type="submit" className="primary">
+            <button disabled={!onSave || pending} type="submit" className="primary">
               {pending ? t("saving") : t("save")}
             </button>
           </footer>

@@ -59,6 +59,6 @@ test("budget reserves before calls, serializes processes and retains uncertain c
 });
 
 test("actual settled cash is never taxed twice",()=>{
- const d=assistantSamples();d.payments[0].settledAmount=49000;
+ const d=assistantSamples();d.payments[0].receipts[0].cash=49000;
  assert.equal(assistantContext(d,"brand",true,"2026-10-07").money.received,49000);
 });

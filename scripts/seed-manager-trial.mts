@@ -34,7 +34,8 @@ await db.transaction(async tx=>{
   for(let n=0;n<6;n++){
    await tx.insert(s.message).values({id:id(`message:${letter}:${n}`),talentId,projectId,submittedBy:personId,channel:"paste",receivedAt:new Date(Date.UTC(2026,9,2+n*2,8)),bodyText:`${name} — Sample collaboration inquiry ${n+1}\nPlease confirm scope, dates and the proposed fee.\n${note}`,dedupKey:id(`dedup:${letter}:${n}`),status:"confirmed"}).onConflictDoNothing();
    const currency=index===1?"USD":index===2?"HKD":"TWD",amount=(index===1?500:6000)+n*100;
-   await tx.insert(s.payment).values({id:id(`payment:${letter}:${n}`),talentId,projectId,label:`Sample ${n%2===0?"booking fee":"production expense"}`,direction:n%2===0?"in":"out",amount,currency,recordedOn:`2026-10-${String(2+n).padStart(2,"0")}`,status:n<3?"settled":"expected",settledOn:n<3?`2026-10-${String(4+n).padStart(2,"0")}`:null,settledAmount:n<3?amount:null,dueOn:n>=3?`2026-11-${String(n+2).padStart(2,"0")}`:null,notes:note}).onConflictDoNothing();
+   await tx.insert(s.payment).values({id:id(`payment:${letter}:${n}`),talentId,projectId,label:`Sample ${n%2===0?"booking fee":"production expense"}`,direction:n%2===0?"in":"out",amount,currency,recordedOn:`2026-10-${String(2+n).padStart(2,"0")}`,status:n<3?"settled":"expected",dueOn:n>=3?`2026-11-${String(n+2).padStart(2,"0")}`:null,notes:note}).onConflictDoNothing();
+   if(n<3)await tx.insert(s.paymentReceipt).values({id:id(`receipt:${letter}:${n}`),talentId,paymentId:id(`payment:${letter}:${n}`),receivedOn:`2026-10-${String(4+n).padStart(2,"0")}`,cash:amount,withheld:0,recordedBy:personId}).onConflictDoNothing();
   }
  }
  const [opportunity]=await tx.select({id:s.grantOpportunity.id}).from(s.grantOpportunity).where(eq(s.grantOpportunity.source,"moc")).limit(1);

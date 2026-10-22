@@ -191,7 +191,7 @@ export function NoticeDetail({
                         <option value="">{t("pickPayment")}</option>
                         {others.map((p) => (
                           <option key={p.id} value={p.id}>
-                            {nameOf(p)} · {money(expectedTotal(p))}
+                            {nameOf(p)} · {money(expectedTotal(p), p.currency)}
                           </option>
                         ))}
                       </select>
@@ -221,7 +221,7 @@ export function NoticeDetail({
                   </span>
                 </label>
               </div>
-              {choice.kind === "match" && match && match.shortBy > 0 && <p className="match-note">{t("shortBy", { amount: money(match.shortBy) })}</p>}
+              {choice.kind === "match" && match && match.shortBy > 0 && <p className="match-note">{t("shortBy", { amount: money(match.shortBy, notice.currency) })}</p>}
             </>
           )}
           {error && (
@@ -274,7 +274,7 @@ export function NoticeDetail({
   );
 
   function expectedLine(p: Payment) {
-    const total = money(expectedTotal(p));
+    const total = money(expectedTotal(p), p.currency);
     return p.dueDate ? t("expectedDue", { amount: total, date: format.dateTime(new Date(`${p.dueDate}T12:00:00Z`), { month: "numeric", day: "numeric", timeZone: "UTC" }) }) : t("expected", { amount: total });
   }
 }

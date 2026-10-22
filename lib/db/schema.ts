@@ -24,6 +24,9 @@ import {
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
 import { supportedCurrencies } from "../domain/money";
+import { locales } from "../i18n/config";
+import { roles } from "../roles";
+import { templateKinds, type TemplateContent } from "../templates/content";
 import { historyModes } from "../mail/history";
 import type { SyncFields } from "@/lib/calendar/google/two-way";
 import type { NoticeFields } from "../mail/payment-notice/fields";
@@ -325,6 +328,34 @@ export const projectContact = pgTable(
   (t) => [unique("project_contact_project_contact").on(t.projectId, t.contactId), index("project_contact_project_idx").on(t.projectId)],
 ).enableRLS();
 
+// Who the person corresponds with on a project (decision 0019): the other side
+// of each message filed on it — a received email's sender, the recipients of
+// the person's own reply, the email a pasted message gives — whether or not
+// they were added as a contact. Matching a new message reads it by email.
+// `lastAt`: when they last wrote (or were written to), which orders projects
+// that tie. Kept when contacts change; removed with the project.
+export const projectCorrespondent = pgTable(
+  "project_correspondent",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    projectId: uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    email: text().notNull(), // lowercased
+    name: text().notNull().default(""), // as the message last gave it
+    lastAt: timestamp({ withTimezone: true }).notNull(),
+    messageCount: integer().notNull().default(1),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("project_correspondent_project_email").on(t.projectId, t.email),
+    index("project_correspondent_talent_email_idx").on(t.talentId, t.email),
+  ],
+).enableRLS();
+
 // Who confirmed or changed what, and when.
 // Per-person read and snooze state of derived notifications. Notifications
 // themselves are computed on read, never stored; their ids are stable
@@ -386,7 +417,8 @@ export const paymentInstallments = ["regular", "deposit", "balance"] as const;
 export const paymentStatuses = ["expected", "settled", "cancelled"] as const;
 
 // Money in or out, usually for a project. `amount` is as entered (see
-// `taxIncluded`); `settledAmount` is what actually arrived or was paid.
+// `taxIncluded`); what actually arrived or was paid is its receipts (paymentReceipt). `status` is
+// settled once they cover it, or once the person closes it short (decision 0021).
 // Dates are calendar days in the talent's time zone.
 export const payment = pgTable(
   "payment",
@@ -406,8 +438,6 @@ export const payment = pgTable(
     recordedOn: date().notNull(), // recorded on
     dueOn: date(),
     status: text({ enum: paymentStatuses }).notNull().default("expected"),
-    settledAmount: numeric({ precision: 12, scale: 2, mode: "number" }),
-    settledOn: date(),
     method: text(),
     invoiceRef: text(),
     notes: text(),
@@ -424,8 +454,39 @@ export const payment = pgTable(
     check("payment_status_check", oneOf(t.status, paymentStatuses)),
     check("payment_currency_check", oneOf(t.currency, supportedCurrencies)),
     check("payment_tax_rate_check", sql`${t.taxRate} between 0 and 100`),
-    check("payment_amount_check", sql`${t.amount} >= 0 and (${t.settledAmount} is null or ${t.settledAmount} >= 0)`),
-    check("payment_settled_check", sql`(${t.status} = 'settled') = (${t.settledOn} is not null)`),
+    check("payment_amount_check", sql`${t.amount} >= 0`),
+  ],
+).enableRLS();
+
+// Money that arrived or was paid against a payment, one row each time (decision 0021): a payment
+// can arrive in parts, with some withheld (income tax, the NHI premium). Rows are only added: a
+// correction is a new row naming the one it replaces, a withdrawal a row with `withdrawn`. What a
+// payment has received is worked out from its active rows, never stored on the payment.
+export const paymentReceipt = pgTable(
+  "payment_receipt",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    paymentId: uuid()
+      .notNull()
+      .references(() => payment.id, { onDelete: "cascade" }),
+    receivedOn: date().notNull(), // a calendar day in the talent's time zone
+    cash: numeric({ precision: 12, scale: 2, mode: "number" }).notNull(),
+    withheld: numeric({ precision: 12, scale: 2, mode: "number" }).notNull().default(0),
+    note: text(),
+    replacesId: uuid().references((): AnyPgColumn => paymentReceipt.id, { onDelete: "cascade" }),
+    withdrawn: boolean().notNull().default(false),
+    recordedBy: uuid().references(() => person.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("payment_receipt_payment_idx").on(t.paymentId),
+    // Replaced once: two corrections of the same receipt at the same time can't both land.
+    uniqueIndex("payment_receipt_replaces_once").on(t.replacesId),
+    check("payment_receipt_amounts_check", sql`${t.cash} >= 0 and ${t.withheld} >= 0`),
+    check("payment_receipt_withdrawn_check", sql`not ${t.withdrawn} or (${t.replacesId} is not null and ${t.cash} = 0 and ${t.withheld} = 0)`),
   ],
 ).enableRLS();
 
@@ -538,7 +599,7 @@ export const message = pgTable(
   },
   (t) => [
     unique("message_talent_dedup_key").on(t.talentId, t.dedupKey),
-    index("message_talent_received_id_idx").on(t.talentId,t.receivedAt,t.id),
+    index("message_talent_received_idx").on(t.talentId, t.receivedAt, t.id), // Intake's list, a page at a time
     index("message_talent_status_idx").on(t.talentId, t.status),
     index("message_project_idx").on(t.projectId),
     index("message_connection_thread_idx").on(t.connectionId, t.providerThreadId),
@@ -566,7 +627,7 @@ export const messageAnalysis = pgTable(
     intent: text({ enum: intentKeys }).notNull(), // what the message is doing — lib/ai/extraction/intents.ts
     analysis: jsonb().$type<MessageAnalysis>().notNull(), // summary, facts, asks, missing — lib/ai/analysis.ts
     confidence: numeric({ precision: 4, scale: 3, mode: "number" }).notNull(),
-    modelVersion: text().notNull(), // provider and model, e.g. "gemini:gemini-3.5-flash"
+    modelVersion: text().notNull(), // provider and model, e.g. "anthropic:claude-sonnet-5-5"
     promptVersion: text().notNull(), // fingerprint of the prompt and field definitions — lib/ai/prompts.ts
     createdAt: createdAt(), // latest row wins
   },
@@ -656,7 +717,7 @@ export const aiCall = pgTable(
     talentId: uuid().references(() => talent.id, { onDelete: "cascade" }), // null for evals and scripts
     personId: uuid().references(() => person.id, { onDelete: "set null" }),
     messageId: uuid().references(() => message.id, { onDelete: "set null" }),
-    task: text().notNull(), // 'extract', 'eval', later 'draft'
+    task: text().notNull(), // 'extract', 'relevance', 'payment_notice', 'assistant', 'eval'
     provider: text().notNull(),
     model: text().notNull(),
     promptVersion: text(),
@@ -666,12 +727,62 @@ export const aiCall = pgTable(
     outputTokens: integer(),
     latencyMs: integer().notNull(),
     replayed: boolean().notNull().default(false),
+    // What the deterministic checks found in what was sent (decision 0023): a kind and where, e.g.
+    // "instructions_to_ai:project.notes". Never the text itself.
+    flags: text().array(),
     createdAt: createdAt(),
   },
   (t) => [
     index("ai_call_talent_created_idx").on(t.talentId, t.createdAt),
+    index("ai_call_person_created_idx").on(t.personId, t.createdAt), // the assistant's per-person limits
     index("ai_call_message_idx").on(t.messageId),
     check("ai_call_status_check", oneOf(t.status, aiCallStatuses)),
+  ],
+).enableRLS();
+
+// The assistant's conversations (decision 0023). A conversation belongs to the
+// person who had it: only they read it, scoped to the talent it's about (a
+// portfolio across talents later). A message's content is JSON with its own
+// version, validated when read (lib/assistant/content.ts): a question as asked,
+// or an answer as data, so code-worked answers show in the current language.
+export const assistantConversationScopes = ["talent", "portfolio"] as const;
+export const assistantMessageRoles = ["user", "assistant"] as const;
+
+export const assistantConversation = pgTable(
+  "assistant_conversation",
+  {
+    id: id(),
+    personId: uuid()
+      .notNull()
+      .references(() => person.id, { onDelete: "cascade" }),
+    scope: text({ enum: assistantConversationScopes }).notNull().default("talent"),
+    talentId: uuid().references(() => talent.id, { onDelete: "cascade" }), // the talent it's about; null only for a portfolio
+    title: text().notNull(), // its first question, cut short
+    createdAt: createdAt(),
+    updatedAt: updatedAt(), // its latest message: the list's order
+  },
+  (t) => [
+    index("assistant_conversation_person_talent_updated_idx").on(t.personId, t.talentId, t.updatedAt, t.id),
+    check("assistant_conversation_scope_check", oneOf(t.scope, assistantConversationScopes)),
+    check("assistant_conversation_talent_check", sql`(${t.scope} = 'talent') = (${t.talentId} is not null)`),
+  ],
+).enableRLS();
+
+export const assistantMessage = pgTable(
+  "assistant_message",
+  {
+    id: id(),
+    conversationId: uuid()
+      .notNull()
+      .references(() => assistantConversation.id, { onDelete: "cascade" }),
+    role: text({ enum: assistantMessageRoles }).notNull(),
+    content: jsonb().$type<unknown>().notNull(), // { v, question } or { v, answer }; parsed on read
+    projectId: uuid().references(() => project.id, { onDelete: "set null" }), // the project a question was about, if any
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("assistant_message_conversation_created_idx").on(t.conversationId, t.createdAt),
+    check("assistant_message_role_check", oneOf(t.role, assistantMessageRoles)),
   ],
 ).enableRLS();
 
@@ -824,7 +935,7 @@ export const calendarImportSource = pgTable(
     color: text(), // Google's background colour for the calendar, as #rrggbb
     lastImportedAt: timestamp({ withTimezone: true }),
     syncToken: text(), // tells whether the calendar changed since the last read; null = not known yet
-    // Our own Talent Biz OS calendar's repeating events, read-only like a chosen calendar (decision 0017).
+    // Our own Taloox calendar's repeating events, read-only like a chosen calendar (decision 0017).
     own: boolean().notNull().default(false),
     createdAt: createdAt(),
   },
@@ -853,7 +964,7 @@ export const externalEvent = pgTable(
   (t) => [unique("external_event_source_event").on(t.sourceId, t.externalEventId), index("external_event_source_start_idx").on(t.sourceId, t.startDate)],
 ).enableRLS();
 
-// A repeating event made in our own Talent Biz OS calendar, added to a project as a whole (decision
+// A repeating event made in our own Taloox calendar, added to a project as a whole (decision
 // 0017): every occurrence shows on it. The series stays read-only here, edited in Google.
 export const calendarSeriesProject = pgTable(
   "calendar_series_project",
@@ -874,28 +985,27 @@ export const calendarSeriesProject = pgTable(
   (t) => [unique("calendar_series_project_connection_series").on(t.connectionId, t.seriesId)],
 ).enableRLS();
 
-// A connected mailbox (decision 0013): one per talent for now, any Google
-// account the person picks. Only the refresh token is stored, encrypted with
-// its own data key, which the master key wraps (decision 0016). The mailbox's
-// account never becomes a way to sign in. `disconnecting` waits for the worker
-// to revoke the token at Google and delete the row.
+// The contract and quote template library (decision 0020): one shared catalog, not any workspace's,
+// with no customer data. Each version is a row and never changes; one per scenario, kind, and language
+// is published. Its Word file is in Storage under `storageKey`, which includes the content hash.
+// `source`: where the version came from; "repository" is published on deploy (scripts/publish-templates.mts),
+// and the online editor will add its own.
+export const templateSources = ["repository"] as const;
 export const documentTemplate = pgTable(
   "document_template",
   {
     id: id(),
-    scenario: text().notNull(),
-    role: text().notNull(),
-    kind: text({ enum: ["contract", "quote"] }).notNull(),
-    locale: text({ enum: ["en", "zh-TW"] }).notNull(),
+    scenario: text().notNull(), // live, license, brand…
+    role: text({ enum: roles }).notNull(), // who it's written for, to filter by
+    kind: text({ enum: templateKinds }).notNull(),
+    locale: text({ enum: locales }).notNull(),
     version: integer().notNull(),
     title: text().notNull(),
-    intro: text().notNull(),
-    sections: jsonb().$type<string[][]>().notNull(),
-    body: text().notNull(),
+    content: jsonb().$type<TemplateContent>().notNull(), // lib/templates/content.ts
+    contentHash: char({ length: 64 }).notNull(), // content, the file's note, and the generator's version
     storageKey: text().notNull(),
-    filename: text().notNull(),
     sizeBytes: integer().notNull(),
-    contentHash: char({ length: 64 }).notNull(),
+    source: text({ enum: templateSources }).notNull().default("repository"),
     published: boolean().notNull().default(false),
     createdAt: createdAt(),
   },
@@ -903,13 +1013,19 @@ export const documentTemplate = pgTable(
     unique("document_template_version").on(t.scenario, t.kind, t.locale, t.version),
     unique("document_template_content").on(t.scenario, t.kind, t.locale, t.contentHash),
     uniqueIndex("document_template_published").on(t.scenario, t.kind, t.locale).where(sql`${t.published}`),
-    check("document_template_kind_check", oneOf(t.kind, ["contract", "quote"])),
-    check("document_template_locale_check", oneOf(t.locale, ["en", "zh-TW"])),
+    check("document_template_role_check", oneOf(t.role, roles)),
+    check("document_template_kind_check", oneOf(t.kind, templateKinds)),
+    check("document_template_locale_check", oneOf(t.locale, locales)),
+    check("document_template_source_check", oneOf(t.source, templateSources)),
     check("document_template_version_check", sql`${t.version} > 0`),
-    check("document_template_size_check", sql`${t.sizeBytes} > 0`),
   ],
 ).enableRLS();
 
+// A connected mailbox (decision 0013): one per talent for now, any Google
+// account the person picks. Only the refresh token is stored, encrypted with
+// its own data key, which the master key wraps (decision 0016). The mailbox's
+// account never becomes a way to sign in. `disconnecting` waits for the worker
+// to revoke the token at Google and delete the row.
 // A connected mailbox (decision 0013): one per talent for now, any Google
 // account the person picks. Only the refresh token is stored, encrypted with
 // its own data key, which the master key wraps (decision 0016). The mailbox's
@@ -963,7 +1079,8 @@ export const mailDecisionOutcomes = ["work", "skipped", "pending", "unsure", "no
 // Who decided: a rule (lib/mail/relevance/rules.ts), the model, the person with
 // a sender rule, `gone` when the email was deleted in Gmail before the model saw it, or
 // `expired` when a payment notice was left unhandled for 30 days.
-export const mailDecisionDeciders = [...ruleIds, "model", "analysis", "person", "gone", "expired"] as const;
+// "too_large": its text and markup are past what's read of a message (lib/mail/gmail/limits.ts), so it can't be brought in.
+export const mailDecisionDeciders = [...ruleIds, "model", "analysis", "person", "gone", "expired", "too_large"] as const;
 
 export const mailDecision = pgTable(
   "mail_decision",
@@ -987,6 +1104,7 @@ export const mailDecision = pgTable(
     importStatus: text({enum:["idle","queued","imported","error"]}).notNull().default("idle"),
     importFailure: text(),
     requestedBy: uuid().references(()=>person.id,{onDelete:"set null"}), // the message it became, once brought in
+    fetchFailure: text(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

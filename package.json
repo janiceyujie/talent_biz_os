@@ -12,7 +12,7 @@
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate && tsx scripts/queue-migrate.mts",
+    "db:migrate": "drizzle-kit migrate && tsx scripts/queue-migrate.mts && tsx --conditions=react-server scripts/publish-templates.mts",
     "db:studio": "drizzle-kit studio",
     "i18n:check": "node scripts/i18n-check.mjs && tsx scripts/registry-labels-check.mts",
     "eval:extraction": "tsx --conditions=react-server scripts/eval-extraction.mts",
@@ -40,7 +40,8 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.5",
+    "docx": "9.8.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

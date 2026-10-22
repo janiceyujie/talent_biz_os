@@ -1,4 +1,5 @@
 import "server-only";
+import {receiptCashSql,receiptCoveredSql} from "@/lib/manager/receipt-sql";
 import {getManagerCapability,requireManagerCapability,managerPlanAccess} from "./manager-entitlement";
 import {and,asc,desc,eq,inArray,isNull,sql} from "drizzle-orm";
 import {db} from "@/lib/db";
@@ -41,9 +42,9 @@ export async function getManagerOverview(personId:string,requested:string[]|unde
     db.select({id:message.id,artistId:message.talentId,receivedAt:message.receivedAt,status:message.status,body:message.bodyText}).from(message)
       .innerJoin(membership,and(eq(membership.talentId,message.talentId),access))
       .where(and(inArray(message.talentId,ids),sql`${message.receivedAt}>=${start}::date and ${message.receivedAt}<(${end}::date + interval '1 day')`,sql`${message.status}<>'dismissed'`)).orderBy(desc(message.receivedAt)).limit(151),
-    db.select({talentId:payment.talentId,currency:payment.currency,amount:payment.amount,settledAmount:payment.settledAmount,direction:payment.direction,status:payment.status,taxRate:payment.taxRate,taxIncluded:payment.taxIncluded,voidedAt:payment.voidedAt}).from(payment)
+    db.select({talentId:payment.talentId,currency:payment.currency,amount:payment.amount,settledAmount:receiptCashSql(start,end),covered:receiptCoveredSql(),inRange:sql<boolean>`coalesce(${payment.dueOn},${payment.recordedOn}) between ${start} and ${end}`,direction:payment.direction,status:payment.status,taxRate:payment.taxRate,taxIncluded:payment.taxIncluded,voidedAt:payment.voidedAt}).from(payment)
       .innerJoin(membership,and(eq(membership.talentId,payment.talentId),access))
-      .where(and(inArray(payment.talentId,ids),sql`(${payment.status} <> 'expected' or ${payment.projectId} is null or exists(select 1 from project p where p.id=${payment.projectId} and p.talent_id=${payment.talentId} and p.stage in ('signed','in_progress','collecting_payment','closed')))`,isNull(payment.voidedAt),sql`(case when ${payment.status}='settled' then ${payment.settledOn} else coalesce(${payment.dueOn},${payment.recordedOn}) end) between ${start} and ${end}`)),
+      .where(and(inArray(payment.talentId,ids),sql`(${receiptCoveredSql()}>0 or ${payment.status} <> 'expected' or ${payment.projectId} is null or exists(select 1 from project p where p.id=${payment.projectId} and p.talent_id=${payment.talentId} and p.stage in ('signed','in_progress','collecting_payment','closed')))`,isNull(payment.voidedAt),sql`(coalesce(${payment.dueOn},${payment.recordedOn}) between ${start} and ${end} or ${receiptCashSql(start,end)} > 0)`)),
   ]);
   const currentCapability=await requireManagerCapability(personId);
   selectManagedArtists(await getManagerRoster(personId),ids,currentCapability.artistLimit);

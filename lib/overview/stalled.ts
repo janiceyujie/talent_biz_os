@@ -3,7 +3,7 @@
 import { dateInZone } from "@/lib/domain/dates";
 import { daysBetween } from "@/lib/domain/insights";
 import { phaseOf } from "@/lib/domain/phases";
-import type { InboxMessage, ProjectSummary } from "@/lib/types";
+import type { ProjectSummary } from "@/lib/types";
 
 /** How long without news before a deal counts as quiet (phase 3 makes it a setting). */
 export const STALLED_DAYS = 7;
@@ -12,25 +12,23 @@ export type StalledDeal = { project: ProjectSummary; lastActivity: string; quiet
 
 export function stalledDeals({
   projects,
-  inbox,
+  latestActivity,
   today,
   timeZone,
   days = STALLED_DAYS,
-  latestActivity = {},
 }: {
   projects: ProjectSummary[];
-  inbox: InboxMessage[];
+  latestActivity: Record<string, string>; // each project's latest message, by project id
   today: string;
   timeZone: string;
   days?: number;
-  latestActivity?: Record<string, string>;
 }): StalledDeal[] {
   const localDate = (iso: string) => dateInZone(timeZone, 0, new Date(iso));
   return projects
     .filter((p) => !p.archived && phaseOf(p.stage) === "negotiation")
     .map((project) => {
-      const messages = inbox.filter((m) => m.projectId === project.id).map((m) => m.receivedAt);
-      const lastActivity = [project.updatedAt, ...(latestActivity[project.id] ? [latestActivity[project.id]] : []), ...messages].map(localDate).sort().at(-1)!;
+      const message = latestActivity[project.id];
+      const lastActivity = [project.updatedAt, ...(message ? [message] : [])].map(localDate).sort().at(-1)!;
       return { project, lastActivity, quietDays: daysBetween(lastActivity, today) };
     })
     .filter((d) => d.quietDays >= days)

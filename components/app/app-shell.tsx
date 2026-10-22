@@ -47,6 +47,7 @@ function ShellContent({ children }: { children: ReactNode }) {
   const [narrow, setNarrow] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [companionOpen, setCompanionOpen] = useState(false);
   const sidebar = useRef<HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -260,7 +261,7 @@ function ShellContent({ children }: { children: ReactNode }) {
         </Modal>
       )}
       <LiveRefresh />
-      <AssistantDock hidden={mobile || showNotifications} />
+      <AssistantDock open={assistantOpen} setOpen={setAssistantOpen} hidden={mobile || showNotifications || pathname === "/assistant"} />
       <ReminderToast onOpen={() => setShowNotifications(true)} suppress={portfolioActive || showNotifications || showSearch || companionOpen || pathname.startsWith("/grants") || pathname === "/manager" || pathname.startsWith("/manager/")} />
 
     </div>

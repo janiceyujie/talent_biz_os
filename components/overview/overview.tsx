@@ -4,7 +4,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ANALYSIS_POLL_MS } from "@/components/app/paste-dialog";
+import { ANALYSIS_POLL_MS, PAUSED_POLL_MS } from "@/components/app/paste-dialog";
 import { Toast } from "@/components/app/toast";
 import { overviewLayout } from "@/lib/overview/layout";
 import { useOverviewContext } from "./context";
@@ -25,13 +25,14 @@ export function Overview() {
   const [customizing, setCustomizing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   // A message imported from the header is analyzed in the background: look again until it lands.
-  const analyzing = ctx.data.inboxOverview ? ctx.data.inboxOverview.counts.pending > 0 : ctx.data.inbox.some((m) => m.status === "pending");
+  const analyzing = ctx.data.inboxOverview!.counts.pending > 0;
+  const paused = ctx.data.aiPaused;
   const router = useRouter();
   useEffect(() => {
     if (!analyzing) return;
-    const timer = setInterval(() => router.refresh(), ANALYSIS_POLL_MS);
+    const timer = setInterval(() => router.refresh(), paused ? PAUSED_POLL_MS : ANALYSIS_POLL_MS);
     return () => clearInterval(timer);
-  }, [analyzing, router]);
+  }, [analyzing, paused, router]);
   const nothingShown = !layout.main.length && !layout.side.length;
   return (
     <>

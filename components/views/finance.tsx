@@ -1,36 +1,33 @@
 "use client";
 
-import { DateTimeInput } from "@/components/app/date-time-input";
-import { InfoHint } from "@/components/app/info-hint";
-
-import { usePreviewAction } from "@/components/app/preview-action";
-
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
-import { CashScenario } from "./cash-scenario";
+import { DateTimeInput } from "@/components/app/date-time-input";
 import { FinanceInsights } from "./finance-insights";
+import { ReceiptDialog } from "@/components/app/receipt-dialog";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
-import { voidPayment as voidPaymentRemote } from "@/lib/actions/payments";
+import { voidPayment } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
-import { quote, supportedCurrencies } from "@/lib/domain/money";
-import { useMoney } from "@/lib/i18n/format";
-import { paymentCash, paymentDate, paymentTotal, summarize } from "@/lib/domain/workflow";
+import { quote, supportedCurrencies, type Currency } from "@/lib/domain/money";
+import { useCurrencyName, useMoney } from "@/lib/i18n/format";
+import { paymentCash, paymentDate, paymentRemaining, paymentShort, paymentTotal, paymentWithheld, summarize } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
-import type { AppData } from "@/lib/types";
+import type { AppData, Payment } from "@/lib/types";
 
 export function Metric({ label, value, note, tone = "plain" }: { label: string; value: string; note: string; tone?: string }) {
   return (
     <article className={`metric-card tone-${tone}`}>
-      <p>{label} <InfoHint label={label} notes={[note]} /></p>
+      <p>{label}</p>
       <strong>{value}</strong>
+      <span>{note}</span>
     </article>
   );
 }
 
 const donutColors = ["var(--lime)", "var(--orange)", "var(--blue)", "var(--violet)", "#80887c"];
 
-export function Revenue({ data, from = "", to = "9999-12-31", currency = "TWD" }: { data: AppData; from?: string; to?: string; currency?: (typeof supportedCurrencies)[number] }) {
+export function Revenue({ data, from = "", to = "9999-12-31", currency = "TWD" }: { data: AppData; from?: string; to?: string; currency?: Currency }) {
   const t = useTranslations("finance");
   const tEyebrow = useTranslations("eyebrow");
   const labels = useLabels();
@@ -95,35 +92,35 @@ function csvCell(v: unknown) {
   return `"${(/^[=+@\-\t\r]/.test(s) ? "'" : "") + s.replaceAll('"', '""')}"`;
 }
 
-export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
-  const voidPayment = usePreviewAction(voidPaymentRemote);
+export function FinanceView({readOnly=false}:{readOnly?:boolean}) {
   const data = useAppData();
-  const tPortfolio=useTranslations("portfolio");
   const t = useTranslations("finance");
   const tEyebrow = useTranslations("eyebrow");
   const labels = useLabels();
   const money = useMoney();
+  const currencyName = useCurrencyName();
+  // Totals are per currency (no conversion yet); the ledger and every figure follow this choice.
+  const [currency, setCurrency] = useState<Currency>("TWD");
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [receiptFor, setReceiptFor] = useState<Payment | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [base, setBase] = useState(50000);
   const [rate, setRate] = useState(5);
   const [included, setIncluded] = useState(false);
-  const [currency, setCurrency] = useState<(typeof supportedCurrencies)[number]>("TWD");
   const [showVoided, setShowVoided] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const today = data.previewDate ?? dateInZone(data.talent.timeZone);
-  const financeData = { ...data, payments: data.payments.filter((p) => p.currency === currency) };
-  const s = summarize(financeData, from, to || "9999-12-31", currency);
+  const today = dateInZone(data.talent.timeZone);
+  const s = summarize(data, from, to || "9999-12-31", currency);
   const q = quote(Math.max(0, base || 0), Math.max(0, Math.min(100, rate || 0)), included, currency);
   const rows = showVoided
-    ? financeData.payments.filter((p) => p.voided && paymentDate(p) >= from && paymentDate(p) <= (to || "9999-12-31"))
+    ? data.payments.filter((p) => p.voided && p.currency === currency && paymentDate(p) >= from && paymentDate(p) <= (to || "9999-12-31"))
     : s.rows;
 
   function exportCsv() {
     const table = [
-      (["recorded", "settled", "installment", "name", "direction", "category", "currency", "net", "tax", "total", "status", "due", "invoice"] as const).map(
+      (["recorded", "settled", "installment", "name", "direction", "category", "currency", "net", "tax", "total", "received", "withheld", "status", "due", "invoice"] as const).map(
         (column) => t(`csv.${column}`),
       ),
       ...rows.map((p) => {
@@ -139,24 +136,27 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
           amounts.net,
           amounts.tax,
           amounts.total,
+          paymentCash(p),
+          paymentWithheld(p),
           labels.paymentStatus(p),
           p.dueDate,
           p.invoiceRef,
         ];
       }),
     ];
-    if(readOnly){table[0].unshift(tPortfolio("artist"));rows.forEach((row,index)=>table[index+1].unshift(row.artistName||""));}
     download("﻿" + table.map((row) => row.map(csvCell).join(",")).join("\r\n"), t("csv.filename", { currency }));
   }
 
   return (
     <div className="finance-workspace">
-      <div className="toolbar wrap finance-toolbar">
+      <div className="toolbar wrap">
         <label>
           {t("currency")}
-          <select value={currency} onChange={(event) => setCurrency(event.target.value as (typeof supportedCurrencies)[number])}>
+          <select value={currency} onChange={(e) => setCurrency(e.target.value as Currency)}>
             {supportedCurrencies.map((c) => (
-              <option key={c} value={c}>{c} · {t(`currencyNames.${c}`)}</option>
+              <option key={c} value={c}>
+                {c} · {currencyName(c)}
+              </option>
             ))}
           </select>
         </label>
@@ -175,11 +175,8 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
         <Metric label={t("metricPayable")} value={money(s.payable, currency)} note={t("metricPayableNote")} />
       </section>
       <FinanceInsights currency={currency} />
-      <details className="surface padded compact-disclosure finance-tools">
-        <summary>{t("toolsTitle")}</summary>
-      <div className="finance-tools-body">
       <div className="finance-grid">
-        <Revenue data={financeData} from={from} to={to || "9999-12-31"} currency={currency} />
+        <Revenue data={data} from={from} to={to || "9999-12-31"} currency={currency} />
         <section className="surface tax-card">
           <div className="section-header">
             <div>
@@ -215,32 +212,29 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
               </div>
             ))}
           </dl>
-          {!readOnly&&<button
-            className="secondary full"
+          <button
+            className="secondary full" disabled={readOnly}
             onClick={() =>
               setEditor({ kind: "payment", item: { label: t("quoteRecordLabel"), amount: base, currency, taxRate: rate, taxIncluded: included } })
             }
           >
             {t("useInLedger")}
-          </button>}
+          </button>
         </section>
       </div>
-      </div>
-      </details>
-      <CashScenario key={`${data.talent.id}:${data.portfolio?.artists.map(artist=>artist.id).join(":")||"own"}:${Boolean(data.preview)}:${currency}`} currency={currency} payments={financeData.payments} />
       <section className="surface ledger-card">
         <div className="section-header">
           <div>
             <span>{tEyebrow("ledger")}</span>
-            <h2>{t("ledgerTitle")} <InfoHint label={t("ledgerTitle")} notes={readOnly?[tPortfolio("ledgerHint")]:[t("voidHelp"), t("footnote")]} /></h2>
+            <h2>{t("ledgerTitle")}</h2>
           </div>
-          {!readOnly&&<button className="primary" onClick={() => setEditor({ kind: "payment", item: { currency } })}>{t("newEntry")}</button>}
+          <button disabled={readOnly} className="primary" onClick={() => setEditor({ kind: "payment", item: { currency } })}>{t("newEntry")}</button>
         </div>
         <label className="check-line">
           <input type="checkbox" checked={showVoided} onChange={(e) => setShowVoided(e.target.checked)} />
           {t("showVoided")}
         </label>
-
+        <p className="muted">{t("voidHelp")}</p>
         {error && (
           <p className="notice error" role="alert">
             {error}
@@ -250,18 +244,16 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
           <table>
             <thead>
               <tr>
-                {readOnly&&<th>{tPortfolio("artist")}</th>}
                 <th>{t("colDateName")}</th>
                 <th>{t("colCategory")}</th>
                 <th>{t("colStatus")}</th>
                 <th>{t("colTotal")}</th>
-                {!readOnly&&<th>{t("colActions")}</th>}
+                <th>{t("colActions")}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((p) => (
                 <tr key={p.id}>
-                  {readOnly&&<td><span className="portfolio-record-artist">{p.artistName}</span></td>}
                   <td>
                     <strong>{p.label}</strong>
                     <small>
@@ -280,25 +272,25 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
                   </td>
                   <td>
                     {money(paymentTotal(p), p.currency)}
-                    {p.status === "settled" && paymentCash(p) !== paymentTotal(p) && (
+                    {paymentCash(p) + paymentWithheld(p) > 0 && paymentCash(p) !== paymentTotal(p) && (
                       <small>
-                        {t("settledGap", { direction: p.direction, cash: money(paymentCash(p), p.currency), gap: money(paymentTotal(p) - paymentCash(p), p.currency) })}
+                        {t("receivedSoFar", { direction: p.direction, cash: money(paymentCash(p), p.currency) })}
+                        {paymentWithheld(p) > 0 && ` · ${t("withheldSoFar", { amount: money(paymentWithheld(p), p.currency) })}`}
                       </small>
                     )}
+                    {paymentRemaining(p) > 0 && paymentRemaining(p) !== paymentTotal(p) && (
+                      <small>{t("left", { direction: p.direction, amount: money(paymentRemaining(p), p.currency) })}</small>
+                    )}
+                    {paymentShort(p) > 0 && <small>{t("short", { amount: money(paymentShort(p), p.currency) })}</small>}
                   </td>
-                  {!readOnly&&<td>
+                  <td>
                     <div className="row-actions">
-                      <button className="secondary compact" onClick={() => setEditor({ kind: "payment", item: toRecord(p) })}>
+                      <button disabled={readOnly} className="secondary compact" onClick={() => setEditor({ kind: "payment", item: toRecord(p) })}>
                         {t("edit")}
                       </button>
-                      {p.status === "expected" && !p.voided && (
-                        <button
-                          className="secondary compact"
-                          onClick={() =>
-                            setEditor({ kind: "payment", item: { ...toRecord(p), status: "settled", settledDate: today } })
-                          }
-                        >
-                          {t("markSettled", { direction: p.direction })}
+                      {!p.voided && (p.status === "expected" || p.receipts.length > 0) && (
+                        <button disabled={readOnly} className="secondary compact" onClick={() => setReceiptFor(p)}>
+                          {p.status === "expected" ? t("markSettled", { direction: p.direction }) : t("receipts")}
                         </button>
                       )}
                       <button
@@ -309,7 +301,7 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
                         {p.voided ? t("restore") : t("void")}
                       </button>
                     </div>
-                  </td>}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -317,7 +309,11 @@ export function FinanceView({readOnly=false}:{readOnly?:boolean}={}) {
         </div>
         {!rows.length && <p className="empty">{t("empty")}</p>}
       </section>
-      {!readOnly&&editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
+      <p className="finance-note">
+        {t("footnote")}
+      </p>
+      {!readOnly && editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
+      {!readOnly && receiptFor && <ReceiptDialog payment={receiptFor} onClose={() => setReceiptFor(null)} />}
     </div>
   );
 }

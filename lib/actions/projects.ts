@@ -5,13 +5,14 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { auditLog, calendarEvent, contact, organization, payment, project, talent as talentTable, todo } from "@/lib/db/schema";
+import { auditLog, calendarEvent, contact, organization, payment, paymentReceipt, project, talent as talentTable, todo } from "@/lib/db/schema";
 import { requestCalendarSync } from "@/lib/calendar/google/sync";
 import { dateInZone } from "@/lib/domain/dates";
-import { quote } from "@/lib/domain/money";
+import { supportedCurrencies, type Currency } from "@/lib/domain/money";
+import { phaseOf } from "@/lib/domain/phases";
+import { activeReceipts, paymentRemaining } from "@/lib/domain/workflow";
 import { organizationNamed, setClient } from "@/lib/data/organizations";
 import { projectTypeKeys } from "@/lib/project-types";
-import { supportedCurrencies } from "@/lib/domain/money";
 import { stages, type Stage } from "@/lib/types";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
@@ -46,7 +47,10 @@ const projectInput = z
       ])
       .optional()
       .transform((v) => (v === "" || v === undefined ? null : v)),
+    // The deal's own currency: what its quote is in. Its payments may be in any currency.
     currency: z.enum(supportedCurrencies),
+    // Payments of this deal still in its old currency, put in the new one with it (amounts unchanged).
+    paymentsToCurrency: z.array(z.uuid()).max(500).default([]),
     taxRate: z.coerce.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
     taxIncluded: z.boolean(),
     deliverables: optionalText,
@@ -55,7 +59,8 @@ const projectInput = z
     contractNotes: optionalText,
     notes: optionalText,
   })
-  .refine((p) => p.organizationId || p.organizationName || p.counterparty, { message: "clientRequired" });
+  .refine((p) => p.organizationId || p.organizationName || p.counterparty, { message: "clientRequired" })
+  .refine((p) => p.currency !== "JPY" || p.quotedAmount === null || Number.isInteger(p.quotedAmount), { message: "amountWholeYen" });
 
 /** Create or update a project. Returns an error message, or null on success. */
 export async function saveProject(data: Record<string, unknown>): Promise<string | null> {
@@ -135,14 +140,23 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
       return null;
     }
     const [existing] = await tx
-      .select({ stage: project.stage, details: project.details, quoteCurrency: project.quoteCurrency })
+      .select({ stage: project.stage, currency: project.quoteCurrency, details: project.details })
       .from(project)
-      .where(and(eq(project.id, input.id), eq(project.talentId, talent.id)));
+      .where(and(eq(project.id, input.id), eq(project.talentId, talent.id)))
+      .for("update");
     if (!existing) return fail("projectNotFound");
-    if (existing.quoteCurrency !== input.currency) {
-      const [linkedPayment] = await tx.select({ id: payment.id }).from(payment)
-        .where(and(eq(payment.projectId, input.id), eq(payment.talentId, talent.id))).limit(1);
-      if (linkedPayment) return fail("projectCurrencyLocked");
+    if (existing.currency !== input.currency) {
+      const moved = await movePayments(tx, talent.id, input.id, input.paymentsToCurrency, existing.currency, input.currency);
+      if (moved === null) return fail("paymentsChanged");
+      if (moved === "wholeYen") return fail("amountWholeYen");
+      await tx.insert(auditLog).values({
+        talentId: talent.id,
+        actorPersonId: person.personId,
+        action: "project.currency_changed",
+        targetType: "project",
+        targetId: input.id,
+        details: { from: existing.currency, to: input.currency, payments: moved },
+      });
     }
     // The form edits only some details; keep the rest (deal fields, dates, to-confirm list from messages).
     const details = { ...existing.details, ...values.details };
@@ -154,6 +168,37 @@ export async function saveProject(data: Record<string, unknown>): Promise<string
   });
   if (!failure) refresh();
   return failure;
+}
+
+/**
+ * A deal's currency was set wrong: put the picked payments in the new one too, amounts as they are
+ * (a correction, not a conversion). Only this deal's live payments still in the old currency; null
+ * when one of them isn't any more (edited meanwhile), "wholeYen" when an amount has cents.
+ */
+async function movePayments(tx: Tx, talentId: string, projectId: string, ids: string[], from: string, to: Currency) {
+  if (!ids.length) return [];
+  const rows = await tx
+    .select({ id: payment.id, amount: payment.amount })
+    .from(payment)
+    .where(
+      and(
+        inArray(payment.id, ids),
+        eq(payment.talentId, talentId),
+        eq(payment.projectId, projectId),
+        eq(payment.currency, from),
+        isNull(payment.voidedAt),
+      ),
+    )
+    .for("update");
+  if (rows.length !== new Set(ids).size) return null;
+  const receipts = await tx
+    .select({ cash: paymentReceipt.cash, withheld: paymentReceipt.withheld })
+    .from(paymentReceipt)
+    .where(inArray(paymentReceipt.paymentId, ids));
+  if (to === "JPY" && [...rows.map((r) => r.amount), ...receipts.flatMap((r) => [r.cash, r.withheld])].some((n) => !Number.isInteger(n)))
+    return "wholeYen";
+  await tx.update(payment).set({ currency: to }).where(and(inArray(payment.id, ids), eq(payment.talentId, talentId)));
+  return rows.map((r) => r.id);
 }
 
 // Talking about the deal goes on after it ends (declining politely, say); the rest of its plan doesn't.
@@ -191,7 +236,18 @@ async function openItems(tx: Pick<typeof db, "select">, talentId: string, projec
         ),
       ),
   ]);
-  return { payments, todos, events };
+  // Part may have arrived already: that stays (money that moved), and only what's left is listed.
+  const receiptRows = payments.length
+    ? await tx.select().from(paymentReceipt).where(inArray(paymentReceipt.paymentId, payments.map((p) => p.id))).orderBy(paymentReceipt.createdAt)
+    : [];
+  const withReceipts = payments.map((p) => {
+    const receipts = receiptRows
+      .filter((r) => r.paymentId === p.id)
+      .map((r) => ({ id: r.id, date: r.receivedOn, cash: r.cash, withheld: r.withheld, note: "", replacesId: r.replacesId, withdrawn: r.withdrawn, recordedAt: "" }));
+    const row = { ...p, currency: p.currency as Currency, receipts, status: "expected" as const };
+    return { ...p, remaining: paymentRemaining(row), started: activeReceipts(row).length > 0 };
+  });
+  return { payments: withReceipts, todos, events };
 }
 
 const todayFor = async (talentId: string) => {
@@ -207,7 +263,7 @@ export async function openDealItems(id: string): Promise<OpenDealItems | null> {
   if (!owned) return null;
   const { payments, todos, events } = await openItems(db, talent.id, id, await todayFor(talent.id));
   return {
-    payments: payments.map((p) => ({ label: p.label, amount: quote(p.amount, p.taxRate, p.taxIncluded).total, currency: p.currency, dueDate: p.dueDate })),
+    payments: payments.map((p) => ({ label: p.label, amount: p.remaining, currency: p.currency, dueDate: p.dueDate })),
     todos: todos.map(({ title, dueDate }) => ({ title, dueDate })),
     events: events.map(({ title, date, time }) => ({ title, date, time: time ? time.slice(0, 5) : null })),
   };
@@ -233,9 +289,11 @@ export async function setProjectStage(id: string, stage: Stage, { cancelOpen = f
     if (existing.stage === stage) return null;
     await tx.update(project).set({ stage }).where(and(eq(project.id, id), eq(project.talentId, talent.id)));
     await logStageChange(tx, talent.id, person.personId, id, existing.stage, stage);
-    if (cancelOpen && (stage === "declined" || stage === "cancelled")) {
+    if (cancelOpen && phaseOf(stage) === "ended") {
       const open = await openItems(tx, talent.id, id, today);
-      if (open.payments.length) await tx.update(payment).set({ status: "cancelled" }).where(inArray(payment.id, open.payments.map((p) => p.id)));
+      // Started ones close short, keeping what arrived; the rest are cancelled (decision 0021).
+      for (const [status, rows] of [["settled", open.payments.filter((p) => p.started)], ["cancelled", open.payments.filter((p) => !p.started)]] as const)
+        if (rows.length) await tx.update(payment).set({ status }).where(inArray(payment.id, rows.map((p) => p.id)));
       if (open.todos.length) await tx.update(todo).set({ status: "dismissed" }).where(inArray(todo.id, open.todos.map((t) => t.id)));
       if (open.events.length) await tx.update(calendarEvent).set({ status: "cancelled" }).where(inArray(calendarEvent.id, open.events.map((e) => e.id)));
       eventsCancelled = open.events.length > 0;

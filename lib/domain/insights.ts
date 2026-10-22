@@ -1,9 +1,10 @@
-// Currency-aware finance and partner reports over AppData. Pure functions; run anywhere.
+// Finance and partner reports over AppData. Each figure is in one currency;
+// currencies are never added together. Pure functions; run anywhere.
 import type { AppData, Organization, Payment, ProjectSummary } from "@/lib/types";
 import { dateInZone } from "./dates";
 import { minorUnitFactor, minorUnits, totalsByCurrency, type Currency } from "./money";
 import { isSigned } from "./phases";
-import { countedPayments, paymentCash, paymentTotal, projectQuoteTotal } from "./workflow";
+import { paymentCash, paymentRemaining, paymentTotal, projectQuoteTotal } from "./workflow";
 
 const live = (p: Payment) => !p.voided && p.status !== "cancelled";
 
@@ -16,12 +17,13 @@ export const agingBuckets = ["notDue", "late1to30", "late31plus", "noDueDate"] a
 /**
  * Contract totals for live signed projects (not tied to a date range: a
  * contract isn't income), outstanding income by age, and six months of cash
- * actually moved.
+ * actually moved, all in one currency: projects quoted in it and payments
+ * recorded in it.
  */
 export function financeInsights(data: AppData, now = new Date(), currency: Currency = "TWD") {
   const today = dateInZone(data.talent.timeZone, 0, now);
-  const factor = minorUnitFactor(currency);
   const units = (n: number) => minorUnits(n, currency);
+  const factor = minorUnitFactor(currency);
   const payments = data.payments.filter((p) => live(p) && p.currency === currency);
   const signed = data.projects.filter((p) => !p.archived && p.currency === currency && isSigned(p.stage));
   const quoted = signed.filter((p) => p.quotedAmount !== null);
@@ -31,20 +33,19 @@ export function financeInsights(data: AppData, now = new Date(), currency: Curre
   const unbilled = quoted.reduce((n, p) => n + Math.max(0, units(projectQuoteTotal(p)!) - billedFor(p)), 0);
 
   const aging = Object.fromEntries(agingBuckets.map((b) => [b, 0])) as Record<(typeof agingBuckets)[number], number>;
-  for (const p of countedPayments(payments, data.projects).filter((x) => x.direction === "in" && x.status === "expected")) {
+  for (const p of payments.filter((x) => x.direction === "in" && x.status === "expected")) {
     const late = p.dueDate ? daysBetween(p.dueDate, today) : null;
     const bucket = late === null ? "noDueDate" : late <= 0 ? "notDue" : late <= 30 ? "late1to30" : "late31plus";
-    aging[bucket] += units(paymentTotal(p));
+    aging[bucket] += units(paymentRemaining(p));
   }
 
   const monthly = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(`${today.slice(0, 7)}-01T12:00:00Z`);
     d.setUTCMonth(d.getUTCMonth() - 5 + i);
     const month = d.toISOString().slice(0, 7);
+    // Each receipt in its own month: money in two parts lands in two (decision 0021).
     const cash = (direction: Payment["direction"]) =>
-      payments
-        .filter((x) => x.direction === direction && x.status === "settled" && (x.settledDate ?? "").startsWith(month))
-        .reduce((n, x) => n + units(paymentCash(x)), 0) / factor;
+      payments.filter((x) => x.direction === direction).reduce((n, x) => n + units(paymentCash(x, `${month}-01`, `${month}-31`)), 0) / factor;
     return { month, received: cash("in"), paid: cash("out") };
   });
 
@@ -80,7 +81,7 @@ export function partnerInsights(data: AppData, now = new Date()) {
           ...x,
           projectTitle: titles.get(x.projectId!)!,
           total: paymentTotal(x),
-          currency: x.currency,
+          remaining: paymentRemaining(x),
           lateDays: x.dueDate
             ? Math.max(0, daysBetween(x.dueDate, x.status === "settled" ? (x.settledDate ?? today) : today))
             : null,
@@ -98,7 +99,7 @@ export function partnerInsights(data: AppData, now = new Date()) {
         onTimeRate: paid.length ? Math.round(((paid.length - late.length) / paid.length) * 100) : null,
         averageLateDays: late.length ? Math.round(late.reduce((n, x) => n + x.lateDays!, 0) / late.length) : 0,
         overdueCount: overdue.length,
-        overdueByCurrency: totalsByCurrency(overdue, (x) => x.total),
+        overdueAmount: totalsByCurrency(overdue, (x) => x.remaining), // one total per currency
         unknownDue: rows.filter((x) => !x.dueDate).length,
         evidence: (paid.length < 3
           ? "tooFew"

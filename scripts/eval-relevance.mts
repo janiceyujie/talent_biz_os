@@ -3,11 +3,10 @@
 // it against the thresholds. Recall comes first: real work filtered out is the
 // costly miss (decision 0013).
 //
-//   npm run eval:relevance                                 # the relevance provider and model from .env.local
-//   npm run eval:relevance -- --provider anthropic         # a paid provider, its model per role
+//   npm run eval:relevance                                 # the primary provider from .env.local
+//   npm run eval:relevance -- --provider openai            # another provider, its relevance model
+//   npm run eval:relevance -- --model gpt-6-luna           # another model for the relevance role
 //   npm run eval:relevance -- --max-calls 50 --max-cost 1  # the run's budget (default 200 calls, $2)
-//   npm run eval:relevance -- --provider gemini
-//   npm run eval:relevance -- --provider ollama --model qwen3:8b
 //   npm run eval:relevance -- --only zh                    # cases whose id contains "zh"
 //
 // Results are saved to evals/results/ (not committed).
@@ -20,14 +19,12 @@ const arg = (name: string) => {
   const i = process.argv.indexOf(`--${name}`);
   return i > 0 ? process.argv[i + 1] : undefined;
 };
-// --provider alone uses that provider's own model for the role, not the one .env.local sets.
-if (arg("provider")) {
-  process.env.AI_MAILBOX_PROVIDER = arg("provider");
-  delete process.env.AI_MAILBOX_MODEL;
-}
-if (arg("model")) process.env.AI_MAILBOX_MODEL = arg("model");
+// --provider names the primary; --model replaces its model for the relevance role.
+if (arg("provider")) process.env.AI_PRIMARY = arg("provider");
+if (arg("model")) process.env[`AI_MODEL_${(process.env.AI_PRIMARY || "anthropic").toUpperCase()}_RELEVANCE`] = arg("model");
+delete process.env.AI_BACKUP; // an eval measures one provider
 const only = arg("only");
-const pause = Number(arg("pause") ?? (process.env.AI_MAILBOX_PROVIDER === "gemini" ? 4000 : 0)); // free tiers limit requests a minute
+const pause = Number(arg("pause") ?? 0); // milliseconds between calls, if a provider's rate limit needs it
 
 const { scoreMail } = await import("../lib/mail/relevance/score");
 const { evalBudget, evalSpend, spendLine } = await import("../lib/ai/spend");
@@ -38,7 +35,7 @@ const { RELEVANCE_PROMPT_VERSION } = await import("../lib/mail/relevance/prompt"
 
 const tabLabel = { Primary: "CATEGORY_PERSONAL", Promotions: "CATEGORY_PROMOTIONS", Updates: "CATEGORY_UPDATES", Social: "CATEGORY_SOCIAL" } as const;
 const t = thresholds();
-const { provider, models } = modelFor("relevance");
+const { provider, model } = modelFor("relevance");
 const selected = cases.filter((c) => !only || c.id.includes(only));
 const results: { id: string; work: boolean; score: number | null; kind: string | null; expectedKind?: string; steered?: boolean; error?: string }[] = [];
 
@@ -57,7 +54,6 @@ for (const [i, c] of selected.entries()) {
     const out = await scoreMail(
       { from: parseAddress(c.from), subject: c.subject, labels: ["INBOX", tabLabel[c.tab]], snippet: c.snippet },
       { task: "eval" },
-      false, // made-up cases, not a mailbox
     );
     // The same cap the worker applies: an email that tries to steer the check is at most "Not sure".
     const score = out.steered ? Math.min(out.score, t.high - 0.001) : out.score;
@@ -85,7 +81,7 @@ const at = (low: number, high: number) => ({
   falseWork: notWork.filter((r) => r.score! >= high).length,
 });
 
-console.log(`\nprompt ${RELEVANCE_PROMPT_VERSION} · ${provider}:${models.join(",")} · thresholds ${t.low}/${t.high}`);
+console.log(`\nprompt ${RELEVANCE_PROMPT_VERSION} · ${provider}:${model} · thresholds ${t.low}/${t.high}`);
 const now = at(t.low, t.high);
 console.log(`work kept (recall)      ${rate(now.kept, work.length)}   ← must be 100%`);
 console.log(`work marked sure        ${rate(now.sure, work.length)}`);
@@ -104,9 +100,9 @@ for (const low of [0.1, 0.2, 0.3, 0.4]) {
 }
 
 mkdirSync("evals/results", { recursive: true });
-const file = `evals/results/${new Date().toISOString().replace(/[:.]/g, "-")}-relevance-${models.join("_").replace(/[^\w.-]+/g, "_")}.json`;
+const file = `evals/results/${new Date().toISOString().replace(/[:.]/g, "-")}-relevance-${model.replace(/[^\w.-]+/g, "_")}.json`;
 const spend = await evalSpend(runStarted);
 console.log(`\n${spendLine(spend)}${stopped ? `\n${stopped}` : ""}`);
-writeFileSync(file, JSON.stringify({ promptVersion: RELEVANCE_PROMPT_VERSION, provider, models, thresholds: t, spend, stopped, results }, null, 2));
+writeFileSync(file, JSON.stringify({ promptVersion: RELEVANCE_PROMPT_VERSION, provider, model, thresholds: t, spend, stopped, results }, null, 2));
 console.log(`saved ${file}`);
 process.exit(0);

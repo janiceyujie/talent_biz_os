@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { MessageAnalysis } from "@/lib/ai/analysis";
 import type { CalendarItem, Contact, ContractTerms, Payment, Project } from "@/lib/types";
-import { diffTerms, parseAmount, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext } from "./intake";
+import { diffTerms, parseAmount, preselect, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext } from "./intake";
 
 const analysis = (over: Partial<MessageAnalysis> = {}): MessageAnalysis => ({
   intent: "inquiry",
@@ -77,7 +77,7 @@ const payment = (over: Partial<Payment> = {}): Payment => ({
   recordedDate: "2026-09-01",
   dueDate: "2026-11-30",
   status: "expected",
-  settledAmount: null,
+  receipts: [],
   settledDate: null,
   invoiceRef: "",
   notes: "",
@@ -112,7 +112,8 @@ const ctx = (over: Partial<IntakeContext> = {}): IntakeContext => ({
   calendar: [],
   receivedOn: "2026-10-04",
   replyWithinDays: 2,
-  filed: [],
+  correspondents: [],
+  earlierDates: {},
   contracts: [],
   projectPeople: [],
   thread: { projectId: null, replied: false, newer: false },
@@ -141,17 +142,45 @@ describe("suggestTargets", () => {
     assert.equal(suggestTargets(analysis({ counterparty: { name: "", company: "Blue Room", email: "", phone: "" } }), c)[0]?.projectId, "p1");
   });
 
-  test("an earlier message from the same sender filed on the project counts, with its dates", () => {
-    // The project was renamed and has no contact; its first message came from Blue Room on 11/14.
+  test("a sender who corresponds on the project counts as much as its contact, without being one", () => {
+    // The project was renamed and has no contact; Maya has written there before (decision 0019).
     const c = ctx({
       contacts: [],
       projects: [project({ title: "abc", counterparty: "abcd", counterpartyId: null })],
-      filed: [{ projectId: "p1", counterparty: { name: "Blue Room", company: "Blue Room", email: "" }, dates: [{ what: "演出日期", date: "2026-11-14", time: "", timeZone: "" }] }],
+      correspondents: [{ projectId: "p1", lastAt: "2026-09-01T00:00:00Z" }],
     });
-    const [s] = suggestTargets(analysis({ intent: "negotiation", counterparty: { name: "Maya", company: "Blue Room", email: "", phone: "" } }), c);
-    assert.deepEqual(s?.reasons[0], { kind: "earlier", value: "Blue Room" });
-    const byDate = suggestTargets(analysis({ counterparty: { name: "", company: "", email: "", phone: "" }, dates: [date("2026-11-14")] }), c)[0];
-    assert.ok(byDate?.reasons.some((r) => r.kind === "date"));
+    const [s] = suggestTargets(analysis({ intent: "negotiation" }), c);
+    assert.deepEqual([s?.score, s?.reasons[0]], [5, { kind: "earlier", value: "maya@blueroom.example" }]);
+  });
+
+  test("who it's from counts once: a contact who also corresponds there isn't counted twice", () => {
+    const c = ctx({ correspondents: [{ projectId: "p1", lastAt: "2026-09-01T00:00:00Z" }] });
+    const [s] = suggestTargets(analysis({ title: "x" }), c);
+    assert.deepEqual([s.score, s.reasons.map((r) => r.kind)], [5, ["contact"]]);
+  });
+
+  test("a long-term partner's projects tie on who; the one they last wrote on comes first, and none is ticked", () => {
+    const projects = [project({ id: "old", title: "a" }), project({ id: "recent", title: "b" }), project({ id: "older", title: "c" })];
+    const correspondents = [
+      { projectId: "old", lastAt: "2026-05-01T00:00:00Z" },
+      { projectId: "recent", lastAt: "2026-10-01T00:00:00Z" },
+      { projectId: "older", lastAt: "2026-01-01T00:00:00Z" },
+    ];
+    const got = suggestTargets(analysis({ title: "x" }), ctx({ projects, correspondents }));
+    assert.deepEqual(got.map((s) => [s.projectId, s.score]), [["recent", 5], ["old", 5], ["older", 5]]);
+    assert.equal(preselect(got), null);
+  });
+
+  test("a date tells a long-term partner's projects apart, and the one it matches is ticked", () => {
+    const projects = [project({ id: "a", title: "a" }), project({ id: "b", title: "b", details: { dates: [{ what: "", date: "2026-11-14", time: "", timeZone: "" }] } })];
+    const got = suggestTargets(analysis({ title: "x", dates: [date("2026-11-14")] }), ctx({ projects }));
+    assert.deepEqual(got.map((s) => [s.projectId, s.score]), [["b", 8], ["a", 5]]);
+    assert.equal(preselect(got), "b");
+  });
+
+  test("the only suggestion is ticked; none, nothing is", () => {
+    assert.equal(preselect([{ projectId: "p1", score: 3, reasons: [], lastAt: "" }]), "p1");
+    assert.equal(preselect([]), null);
   });
 
   test("a similar title alone isn't enough", () => {
@@ -182,7 +211,13 @@ describe("suggestTargets", () => {
   test("a payment notice matches an expected payment of that amount", () => {
     const c = ctx({ contacts: [], projects: [project({ counterpartyId: null, counterparty: "X", stage: "collecting_payment" })], payments: [payment()] });
     const a = analysis({ intent: "payment", counterparty: { name: "", company: "", email: "", phone: "" }, details: { amountDue: { value: "NT$19,950", asStated: "" } } });
-    assert.deepEqual(suggestTargets(a, c)[0]?.reasons.find((r) => r.kind === "payment"), { kind: "payment", value: 21000 });
+    assert.deepEqual(suggestTargets(a, c)[0]?.reasons.find((r) => r.kind === "payment"), { kind: "payment", value: 21000, currency: "TWD" });
+  });
+
+  test("an amount in another currency doesn't match a payment of the same number", () => {
+    const c = ctx({ contacts: [], projects: [project({ counterpartyId: null, counterparty: "X", stage: "collecting_payment" })], payments: [payment()] });
+    const a = analysis({ intent: "payment", counterparty: { name: "", company: "", email: "", phone: "" }, details: { amountDue: { value: "US$21,000", asStated: "" } } });
+    assert.equal(suggestTargets(a, c)[0]?.reasons.find((r) => r.kind === "payment"), undefined);
   });
 });
 
@@ -243,12 +278,12 @@ describe("proposeChanges", () => {
   });
 
   test("a date an earlier message gave is the one being confirmed, though the project doesn't keep it", () => {
-    const filed = [{ projectId: "p1", counterparty: { name: "", company: "Blue Room", email: "" }, dates: [{ what: "演出日期", date: "2026-11-14", time: "", timeZone: "" }] }];
+    const earlierDates = { p1: [{ what: "演出日期", date: "2026-11-14", time: "", timeZone: "" }] };
     const a = analysis({ intent: "confirmation", dates: [date("2026-11-14", "20:00", "演出")] });
-    const d = one(proposeChanges(a, project(), ctx({ filed })).changes, "date");
+    const d = one(proposeChanges(a, project(), ctx({ earlierDates })).changes, "date");
     assert.deepEqual([d.from?.date, d.to.time, d.earlier, d.index, d.ticked], ["2026-11-14", "20:00", true, null, true]);
     // A second inquiry with the same date still offers to keep it on the project.
-    const again = proposeChanges(analysis({ dates: [date("2026-11-14")] }), project(), ctx({ filed })).changes;
+    const again = proposeChanges(analysis({ dates: [date("2026-11-14")] }), project(), ctx({ earlierDates })).changes;
     assert.equal(one(again, "date").earlier, true);
   });
 
@@ -279,6 +314,28 @@ describe("proposeChanges", () => {
     const { changes } = proposeChanges(a, project({ details: { fields: { venue: "Blue Room" } } }), ctx());
     assert.deepEqual(byKind(changes, "fee"), []);
     assert.deepEqual(byKind(changes, "field").map((c) => c.kind === "field" && c.key), ["setLength"]);
+  });
+
+  test("in a USD project, a fee with no currency stated is read in USD; one in TWD isn't proposed", () => {
+    const usd = project({ currency: "USD", quotedAmount: 1000 });
+    const unstated = proposeChanges(analysis({ intent: "confirmation", money: { amount: 1200, currency: "", taxIncluded: null, asStated: "1,200" } }), usd, ctx());
+    assert.deepEqual([one(unstated.changes, "fee").to, one(unstated.changes, "fee").currency], [1200, "USD"]);
+    const twd = proposeChanges(analysis({ intent: "confirmation", money: { amount: 36000, currency: "TWD", taxIncluded: null, asStated: "NT$36,000" } }), usd, ctx());
+    assert.equal(twd.changes.some((c) => c.kind === "fee"), false);
+  });
+
+  test("payment sent in another currency: the payment is offered unticked at its own total, saying which currency the message named", () => {
+    const a = analysis({ intent: "payment", details: { paymentStatus: { value: "paid", asStated: "" }, amountDue: { value: "US$650", asStated: "" } } });
+    const { changes } = proposeChanges(a, project({ stage: "collecting_payment" }), ctx({ payments: [payment()] }));
+    const settle = one(changes, "settlePayment");
+    assert.deepEqual([settle.ticked, settle.amount, settle.currency, settle.statedIn], [false, 21000, "TWD", "USD"]);
+    assert.equal(one(changes, "stage").ticked, false);
+  });
+
+  test("payment sent with nothing expected: a new payment in the stated currency", () => {
+    const a = analysis({ intent: "payment", details: { paymentStatus: { value: "paid", asStated: "" }, amountDue: { value: "HK$5,000", asStated: "" } } });
+    const pay = one(proposeChanges(a, project({ stage: "collecting_payment" }), ctx()).changes, "newPayment");
+    assert.deepEqual([pay.amount, pay.currency], [5000, "HKD"]);
   });
 
   test("payment sent: the one expected payment is settled with the shortfall, and the project closes", () => {
@@ -359,12 +416,22 @@ describe("proposeNewProject", () => {
     assert.equal(p.project.quotedAmount, 30000);
   });
 
-  test("creates a contact from the sender when none matches; a foreign amount isn't the quote", () => {
+  test("creates a contact from the sender when none matches; a fee in a recorded currency is the quote, in that currency", () => {
     const a = analysis({ counterparty: { name: "Ken", company: "Tokyo Live", email: "", phone: "" }, money: { amount: 200000, currency: "JPY", taxIncluded: null, asStated: "" } });
     const p = proposeNewProject(a, "", ctx({ contacts: [] }));
     assert.deepEqual(p.contact, { create: { name: "Ken", company: "Tokyo Live", email: "", phone: "" } });
-    assert.equal(p.project.quotedAmount, null);
-    assert.deepEqual(p.foreignAmount, { amount: 200000, currency: "JPY" });
+    assert.deepEqual([p.project.quotedAmount, p.project.currency, p.foreignAmount], [200000, "JPY", null]);
+  });
+
+  test("a fee in a currency we don't record isn't the quote; it goes in the notes", () => {
+    const p = proposeNewProject(analysis({ money: { amount: 5000, currency: "CNY", taxIncluded: null, asStated: "" } }), "", ctx());
+    assert.deepEqual([p.project.quotedAmount, p.project.currency], [null, "TWD"]);
+    assert.deepEqual(p.foreignAmount, { amount: 5000, currency: "CNY" });
+  });
+
+  test("a fee with no currency stated is taken as TWD", () => {
+    const p = proposeNewProject(analysis({ money: { amount: 30000, currency: "", taxIncluded: null, asStated: "30,000" } }), "", ctx());
+    assert.deepEqual([p.project.quotedAmount, p.project.currency], [30000, "TWD"]);
   });
 });
 
@@ -486,5 +553,5 @@ test("thread facts loaded with a paged message survive an empty layout inbox", a
   assert.equal(ctx.thread.projectId,"thread-project");
   assert.equal(ctx.thread.replied,true);
   assert.equal(ctx.thread.newer,true);
-  assert.equal(ctx.filed[0].projectId,"thread-project");
+
 });

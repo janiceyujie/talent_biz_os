@@ -129,7 +129,7 @@ export async function syncMyGoogleCalendar({ force = false } = {}): Promise<stri
 }
 
 /**
- * The person's Google calendars to choose from (not our own Talent Biz OS calendar). `grant`: the
+ * The person's Google calendars to choose from (not our own Taloox calendar). `grant`: the
  * token can't read calendars after all (a reconnect that asked for less), so ask Google again.
  */
 export async function listGoogleCalendars(): Promise<{ calendars: GoogleCalendarChoice[] } | { error: string } | { grant: true }> {
@@ -189,7 +189,7 @@ export async function saveGoogleCalendarChoice(calendars: z.input<typeof choice>
 }
 
 /**
- * Add a repeating event in our own Talent Biz OS calendar to a project, as a whole (decision 0017):
+ * Add a repeating event in our own Taloox calendar to a project, as a whole (decision 0017):
  * every occurrence shows on it; the series stays read-only, edited in Google. The same project
  * check as any other link (project-link.ts).
  */
@@ -199,7 +199,7 @@ export async function fileGoogleSeries(seriesId: string, projectId: string): Pro
   if (!z.string().min(1).max(1024).safeParse(seriesId).success || !z.uuid().safeParse(projectId).success) return fail("invalid");
   const c = await myConnection();
   if (!c) return fail("calendarNotConnected");
-  // Only a series read from this person's own Talent Biz OS calendar.
+  // Only a series read from this person's own Taloox calendar.
   const [seen] = await db
     .select({ id: externalEvent.id })
     .from(externalEvent)

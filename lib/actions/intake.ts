@@ -5,25 +5,28 @@
 // as it is now; the browser only says which items are ticked and how their
 // values were edited. Nothing the message proposes is applied unticked.
 
-import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { upgradeAnalysis } from "@/lib/ai/analysis";
 import { requestCalendarSync } from "@/lib/calendar/google/sync";
 import { requireTalent } from "@/lib/auth";
-import { inboxDetail } from "@/lib/data/inbox";
 import { getAppData } from "@/lib/data";
+import { recordCorrespondents } from "@/lib/data/correspondents";
+import { inboxDetail } from "@/lib/data/inbox";
+import { getProjectDetail } from "@/lib/data/project-detail";
 import { organizationNamed, setClient } from "@/lib/data/organizations";
 import { getProject } from "@/lib/data/projects";
 import { db } from "@/lib/db";
 import { auditLog, calendarEvent, contact, contract, message, messageAnalysis, payment, person as personTable, project, projectContact, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
+import { supportedCurrencies } from "@/lib/domain/money";
 import { initialEdit, intakeContext, keptFields, proposeChanges, withField, type Change, type ChangeRecord, type IntakeContext } from "@/lib/domain/intake";
 import { isSigned } from "@/lib/domain/phases";
-import { paymentTotal } from "@/lib/domain/workflow";
 import { projectType, projectTypeKeys } from "@/lib/project-types";
 import { stages, type ProjectDate, type ProjectDetails, type Stage } from "@/lib/types";
+import { addReceipt, lockPayment, settle } from "./receipt-rows";
 import { errorText } from "./validation";
 
 const day = z.iso.date();
@@ -79,12 +82,17 @@ export async function fileThread(raw: { messageIds: string[]; projectId: string 
   const fail = await errorText();
   const parsed = z.object({ messageIds: z.array(z.uuid()).min(1).max(50), projectId: z.uuid() }).safeParse(raw);
   if (!parsed.success) return { error: fail("invalid") };
-  const {talent} = await requireTalent();
-  const order = await db.select({id:message.id,connectionId:message.connectionId,threadId:message.providerThreadId}).from(message)
-    .where(and(eq(message.talentId,talent.id),inArray(message.id,[...new Set(parsed.data.messageIds)]),eq(message.kind,"message"),eq(message.status,"analyzed")))
-    .orderBy(message.receivedAt,message.id);
-  if (!order.length || !order[0].connectionId || !order[0].threadId || order.some(m=>m.connectionId!==order[0].connectionId || m.threadId!==order[0].threadId)) return {error:fail("invalid")};
-  let left = parsed.data.messageIds.length - order.length;
+  const { talent } = await requireTalent();
+  const ids = [...new Set(parsed.data.messageIds)];
+  // Those still waiting for review, oldest first; the rest count as left.
+  const order = await db
+    .select({ id: message.id, connectionId: message.connectionId, threadId: message.providerThreadId })
+    .from(message)
+    .where(and(eq(message.talentId, talent.id), inArray(message.id, ids), eq(message.status, "analyzed"), eq(message.kind, "message")))
+    .orderBy(asc(message.receivedAt), asc(message.id));
+  // File all is for one email thread: anything else is refused, not filed together.
+  if (order.some((m) => !m.threadId || m.connectionId !== order[0].connectionId || m.threadId !== order[0].threadId)) return { error: fail("invalid") };
+  let left = ids.length - order.length;
   for (const m of order) {
     const failure = await apply({ messageId: m.id, projectId: parsed.data.projectId, items: {}, stage: null }, { defaults: true });
     if (failure === "skipped") left++;
@@ -119,9 +127,10 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
   if (!row || row.status !== "analyzed") return fail("messageNotFound");
 
   const timeZone = data.talent.timeZone;
-  const listed = await inboxDetail(talent.id, input.messageId);
+  const [listed, detail] = await Promise.all([inboxDetail(talent.id, input.messageId), getProjectDetail(talent.id, target.id)]);
   if (!listed) return fail("messageNotFound");
-  const ctx: IntakeContext = { ...intakeContext(data, listed), receivedOn: receivedOn(row.receivedAt, timeZone) };
+  const earlierDates = { [target.id]: detail?.earlierDates ?? [] }; // as the review screen had them, with the project's detail
+  const ctx: IntakeContext = { ...intakeContext(data, listed, { earlierDates }), receivedOn: receivedOn(row.receivedAt, timeZone) };
   const { changes, question } = proposeChanges(upgradeAnalysis(row.analysis), target, ctx);
   if (defaults) {
     if (question) return "skipped";
@@ -152,6 +161,8 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
   const today = dateInZone(timeZone);
   if (ticked.some((c) => (c.kind === "settlePayment" && c.settledOn > today) || (c.kind === "newPayment" && c.date > today)))
     return fail("settledDateFuture");
+  if (ticked.some((c) => (c.kind === "settlePayment" || c.kind === "newPayment") && c.currency === "JPY" && !Number.isInteger(c.amount)))
+    return fail("amountWholeYen");
 
   const t = await getTranslations("intake");
   const signedAfter = isSigned(finalStage);
@@ -163,6 +174,7 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
       .where(and(eq(message.id, input.messageId), eq(message.talentId, talent.id), eq(message.status, "analyzed")))
       .returning({ id: message.id });
     if (!filed.length) return fail("messageNotFound");
+    await recordCorrespondents(tx, talent.id, target.id, input.messageId);
     const [current] = await tx
       .select({ details: project.details, stage: project.stage })
       .from(project)
@@ -213,37 +225,34 @@ async function apply(input: z.infer<typeof applyInput>, { defaults = false } = {
         case "stage":
           break;
         case "settlePayment": {
-          const [p] = await tx
-            .select()
-            .from(payment)
-            .where(and(eq(payment.id, c.paymentId), eq(payment.talentId, talent.id), eq(payment.projectId, target.id), eq(payment.status, "expected")))
-            .for("update");
-          if (!p) return fail("proposalChanged");
-          const total = paymentTotal({ ...p, currency: "TWD" });
-          await tx
-            .update(payment)
-            .set({
-              status: "settled",
-              settledOn: c.settledOn,
-              settledAmount: c.amount === total ? null : c.amount, // null = the full total
-              invoiceRef: p.invoiceRef || c.invoiceRef || null,
-            })
-            .where(eq(payment.id, p.id));
+          const p = await lockPayment(tx, talent.id, c.paymentId);
+          if (!p || p.projectId !== target.id || p.status !== "expected") return fail("proposalChanged");
+          // The amount stated, as one receipt, and it's closed: less than what's left shows as short
+          // until the person corrects the receipt, with what was withheld say (decision 0021).
+          await addReceipt(tx, p, { date: c.settledOn, cash: c.amount, recordedBy: person.personId });
+          await settle(tx, p, "coming");
+          if (!p.invoiceRef && c.invoiceRef) await tx.update(payment).set({ invoiceRef: c.invoiceRef }).where(eq(payment.id, p.id));
           break;
         }
         case "newPayment": {
-          const settled = c.label === "received";
-          await tx.insert(payment).values({
-            talentId: talent.id,
-            projectId: target.id,
-            direction: "in",
-            label: t(`payment.${c.label}`, { title: target.title }).slice(0, 200),
-            amount: c.amount,
-            taxIncluded: true,
-            recordedOn: c.date,
-            status: settled ? "settled" : "expected",
-            settledOn: settled ? c.date : null,
-          });
+          const [created] = await tx
+            .insert(payment)
+            .values({
+              talentId: talent.id,
+              projectId: target.id,
+              direction: "in",
+              label: t(`payment.${c.label}`, { title: target.title }).slice(0, 200),
+              amount: c.amount,
+              currency: c.currency ?? target.currency,
+              taxIncluded: true,
+              recordedOn: c.date,
+            })
+            .returning({ id: payment.id });
+          if (c.label === "received") {
+            const p = (await lockPayment(tx, talent.id, created.id))!;
+            await addReceipt(tx, p, { date: c.date, cash: c.amount, recordedBy: person.personId });
+            await settle(tx, p, "coming");
+          }
           break;
         }
         case "paymentNote": {
@@ -381,6 +390,7 @@ const newProjectInput = z.object({
     type: z.enum(projectTypeKeys, "typeRequired"),
     counterparty: optional(200),
     quotedAmount: z.number().min(0).max(1e10).multipleOf(0.01).nullable(),
+    currency: z.enum(supportedCurrencies),
     taxRate: z.number().min(0).max(100, "taxRateRange").multipleOf(0.01),
     taxIncluded: z.boolean(),
     fields: z.record(z.string(), z.string().trim().max(1000)),
@@ -420,6 +430,7 @@ export async function createProjectFromMessage(raw: NewProjectInput): Promise<{ 
   }
   const input = parsed.data;
   const p = input.project;
+  if (p.currency === "JPY" && p.quotedAmount !== null && !Number.isInteger(p.quotedAmount)) return { error: fail("amountWholeYen") };
   // Only the type's own fields are kept; a field from another type would have no label or home.
   const allowed = new Set(keptFields(p.type));
   let details: ProjectDetails = { dates: p.dates, toConfirm: input.toConfirm };
@@ -469,6 +480,7 @@ export async function createProjectFromMessage(raw: NewProjectInput): Promise<{ 
         type: p.type,
         stage: "offer",
         quotedAmount: p.quotedAmount,
+        quoteCurrency: p.currency,
         taxRate: p.taxRate,
         taxIncluded: p.taxIncluded,
         details,
@@ -489,6 +501,7 @@ export async function createProjectFromMessage(raw: NewProjectInput): Promise<{ 
         .set({ organizationId: client.id })
         .where(and(eq(contact.id, counterpartyId), isNull(contact.organizationId)));
     await tx.update(message).set({ projectId: created.id, status: "confirmed" }).where(eq(message.id, input.messageId));
+    await recordCorrespondents(tx, talent.id, created.id, input.messageId);
     if (input.replyBy)
       await tx.insert(todo).values({
         talentId: talent.id,

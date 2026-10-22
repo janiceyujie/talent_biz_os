@@ -1582,7 +1582,7 @@ small {
   gap: 16px;
   margin: 18px 0;
 }
-.editor-form input:not([type="checkbox"]),
+.editor-form input:not([type="checkbox"]):not([type="radio"]),
 .editor-form select {
   width: 100%;
 }
@@ -1900,25 +1900,6 @@ summary {
   font-size: var(--text-meta);
   color: var(--muted);
   margin-top: 5px;
-}
-.search-results {
-  margin-top: 15px;
-  display: grid;
-}
-.search-results > button {
-  text-align: left;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  background: transparent;
-  padding: 15px 5px;
-}
-.search-results strong,
-.search-results small {
-  display: block;
-}
-.search-results small {
-  color: var(--muted);
-  margin-top: 4px;
 }
 .preview-list {
   padding-left: 20px;
@@ -2788,9 +2769,6 @@ a.disabled {
   font-size: 12px;
   text-align: center;
   overflow-wrap: anywhere;
-}
-.notice.data-notice {
-  font-size: 13px;
 }
 .message-analysis .assumed {
   display: block;
@@ -4006,10 +3984,6 @@ p.gmail-skipped {
   font-size: 13px;
   overflow-wrap: anywhere;
 }
-.notice.gmail-free-tier {
-  margin: 0;
-  font-size: 13px;
-}
 .gmail-rules h3 {
   margin: 20px 0 8px;
   font-size: 15px;
@@ -4538,6 +4512,11 @@ p.gmail-skipped {
 .today-action:hover strong {
   text-decoration: underline;
 }
+/* The rest of the review queue, after the messages Today lists. */
+.today-more {
+  display: inline-block;
+  margin: 14px 0 6px;
+}
 .today-action .reminder-status {
   flex: none;
   min-width: 76px; /* one width for every tag, so the titles line up */
@@ -4891,4 +4870,484 @@ p.gmail-skipped {
 .lost-deal-items small {
   grid-column: 1 / -1;
   color: var(--muted);
+}
+
+/* Date and time fields (components/app/date-time-input.tsx): typed, with a calendar or a list of times in a popover. */
+.date-time-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.date-time-field > label {
+  margin: 0;
+  font-size: inherit;
+}
+.date-time-control {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.date-time-control:focus-within {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.date-time-control input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 10px 12px;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.date-time-field .date-time-trigger {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+}
+.date-time-trigger:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.date-time-error {
+  color: var(--red);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.date-time-popover {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 8px 28px #24383320;
+}
+.date-time-popover header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 0 8px;
+  border: 0;
+}
+.date-time-popover header strong {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+.date-time-popover .icon-button {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+}
+.date-time-popover .text-button {
+  min-height: 32px;
+  padding: 4px 0;
+}
+.date-time-popover footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.date-time-popover .date-time-help {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.date-picker-weekdays,
+.date-picker-grid > [role="row"] {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.date-picker-weekdays {
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.date-picker-grid [role="gridcell"] {
+  display: grid;
+  place-items: center;
+}
+.date-time-popover .date-picker-grid button {
+  width: 36px;
+  height: 36px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.date-picker-grid button:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+.date-picker-grid button.outside,
+.date-picker-grid button:disabled {
+  color: var(--muted);
+}
+.date-picker-grid button.today {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.date-picker-grid button.selected {
+  background: var(--accent);
+  color: var(--surface);
+}
+.time-picker-options {
+  display: grid;
+  gap: 2px;
+  max-height: 212px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.date-time-popover .time-picker-options button {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+.time-picker-options button[aria-pressed="true"],
+.time-picker-options button:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+/* Inside a sentence, as the intake's proposals use them: a compact field on the line. */
+.date-time-field.inline {
+  display: inline-grid;
+  width: 150px;
+  vertical-align: middle;
+}
+.date-time-field.inline .date-time-control {
+  height: 36px;
+}
+@media (max-width: 600px) {
+  .date-time-popover {
+    max-width: calc(100vw - 24px);
+  }
+  .date-time-popover .date-picker-grid button {
+    width: 32px;
+  }
+}
+
+/* The contract and quote library (components/views/document-library.tsx): folded, secondary to the page. */
+.document-library {
+  margin-bottom: 24px;
+  overflow: visible;
+}
+.document-library-title {
+  margin: 0;
+}
+.document-library-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 24px;
+  border: 0;
+  border-radius: inherit;
+  background: var(--blue-soft);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 650;
+  text-align: start;
+  cursor: pointer;
+}
+.document-library-toggle:hover {
+  background: var(--paper);
+}
+.document-library-identity,
+.document-library-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.document-library-identity > svg {
+  flex-shrink: 0;
+  color: var(--ink-soft);
+}
+.document-library-toggle-label {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.document-library-body {
+  padding: 24px;
+  border-top: 1px solid var(--line);
+}
+.document-library-body[hidden] {
+  display: none;
+}
+.document-library-disclaimer {
+  margin: 0 0 16px;
+  line-height: 1.6;
+}
+.document-toolbar {
+  align-items: flex-end;
+  gap: 16px;
+}
+.document-toolbar > label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.document-toolbar select,
+.document-toolbar .row-actions button {
+  min-height: 44px;
+  margin: 0;
+}
+.document-toolbar .row-actions {
+  margin: 0;
+}
+.document-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+  align-items: start;
+  gap: 16px;
+}
+.document-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.document-card h3 {
+  min-height: 3em;
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+.document-card details {
+  margin-bottom: 16px;
+}
+.document-preview {
+  max-height: 24rem;
+  padding: 12px 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.document-card summary:focus-visible,
+.document-preview:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.document-library-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+@media (max-width: 600px) {
+  .document-library-toggle {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+  .document-library-body {
+    padding: 16px;
+  }
+  .document-toolbar > label {
+    flex: 1 1 140px;
+  }
+  .document-toolbar .row-actions {
+    flex-basis: 100%;
+  }
+}
+
+/* The search in the top bar (components/app/workspace-search.tsx): a field, with its results in a list under it. */
+.workspace-search {
+  position: relative;
+  min-width: 0;
+}
+.workspace-search-field {
+  cursor: text;
+}
+.workspace-search-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.workspace-search-field > svg {
+  flex-shrink: 0;
+}
+.workspace-search-field input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  font: inherit;
+}
+.workspace-search-field input:focus,
+.workspace-search-field input:focus-visible {
+  border: 0;
+  outline: none;
+  box-shadow: none; /* the field around it shows the focus */
+}
+.workspace-search-field input::placeholder {
+  color: var(--muted);
+}
+.workspace-search-clear {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+.workspace-search-clear:hover {
+  background: var(--paper);
+}
+.workspace-search-dropdown {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 12px 32px #203f3520;
+}
+.workspace-search-caption {
+  padding: 12px 16px 8px;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.workspace-search-list {
+  max-height: min(420px, calc(100dvh - 200px));
+  padding: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.workspace-search-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.workspace-search-option > svg {
+  flex: none;
+  color: var(--muted);
+}
+.workspace-search-option > span {
+  flex: 1;
+  min-width: 0;
+}
+.workspace-search-option strong,
+.workspace-search-option small {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.workspace-search-option strong {
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+.workspace-search-option small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.workspace-search-option:hover,
+.workspace-search-option[aria-selected="true"] {
+  background: var(--accent-soft);
+}
+.workspace-search-empty {
+  margin: 0;
+  padding: 12px 16px 16px;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+@media (max-width: 600px) {
+  .workspace-search {
+    flex: 1;
+  }
+  .workspace-search-field input {
+    font-size: 16px; /* below 16px, iOS zooms the page when the field is focused */
+  }
+  .workspace-search-clear {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* A receipt that a correction replaced or that was withdrawn: kept, struck through (decision 0021). */
+.struck {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.reminder-snooze-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.reminder-snooze-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+  width: 100%;
 }

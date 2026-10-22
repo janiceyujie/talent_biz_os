@@ -1,19 +1,18 @@
 "use client";
 
-import { usePreviewAction } from "@/components/app/preview-action";
-
 import { Check, ChevronRight, Circle, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
-import { calendarRecord, projectRecord, toRecord, type Editor } from "@/components/app/record-editor";
-import { setTodoDone as setTodoDoneRemote } from "@/lib/actions/calendar";
+import { ReceiptDialog } from "@/components/app/receipt-dialog";
+import { calendarRecord, projectRecord, type Editor } from "@/components/app/record-editor";
+import { setTodoDone } from "@/lib/actions/calendar";
 import { calendarPoints } from "@/lib/calendar/points";
 import { dateInZone } from "@/lib/domain/dates";
 import { isSigned } from "@/lib/domain/phases";
 import { projectSettlement } from "@/lib/domain/workflow";
 import { useMoney } from "@/lib/i18n/format";
-import type { Project, ProjectSummary } from "@/lib/types";
+import type { Payment, Project, ProjectSummary } from "@/lib/types";
 import { useClosingChecks, type ClosingCheck } from "./project-workflow-panel";
 import { useDue } from "./use-due";
 
@@ -44,13 +43,13 @@ export function ProjectActions({
   folded: boolean;
   onFold: (folded: boolean) => void;
 }) {
-  const setTodoDone = usePreviewAction(setTodoDoneRemote);
   const data = useAppData();
   const t = useTranslations("projects.actions");
   const tProjects = useTranslations("projects");
   const due = useDue();
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [receiptFor, setReceiptFor] = useState<Payment | null>(null);
   // Ticked here and not back from the server yet: shown ticked, then gone.
   const [ticked, setTicked] = useState<Set<string>>(new Set());
   const live = !project.archived;
@@ -92,14 +91,14 @@ export function ProjectActions({
           projectId: project.id,
           label: tProjects("paymentLabel", { title: project.title.slice(0, 190) }),
           amount: f.amount || "",
+          currency: project.currency, // what's left to bill is in the quote's currency
           taxRate: full.taxRate,
           taxIncluded: true,
         },
       });
     else if (f.kind === "received" && f.paymentId) {
       const payment = data.payments.find((p) => p.id === f.paymentId);
-      // Recording money that came in starts at its status (expected → received).
-      if (payment) edit({ kind: "payment", item: toRecord(payment), focus: "status" });
+      if (payment) setReceiptFor(payment); // what came in, as a receipt (decision 0021)
     } else if (f.kind === "schedule") showTab("travel");
     else showTab("money");
   };
@@ -201,6 +200,7 @@ export function ProjectActions({
           {error}
         </p>
       )}
+      {receiptFor && <ReceiptDialog payment={receiptFor} onClose={() => setReceiptFor(null)} />}
     </section>
   );
 }
@@ -247,13 +247,13 @@ export function ProjectGlance({
           <strong>{tProjects("quoteNotSet")}</strong>
         ) : signed ? (
           <>
-            <strong>{tWorkflow("receivedOf", { received: money(settlement.received), quoted: money(settlement.quoted) })}</strong>
+            <strong>{tWorkflow("receivedOf", { received: money(settlement.received, project.currency), quoted: money(settlement.quoted, project.currency) })}</strong>
             <span className="meter" aria-hidden="true">
               <span style={{ width: `${Math.min(100, settlement.quoted ? (settlement.received / settlement.quoted) * 100 : 0)}%` }} />
             </span>
           </>
         ) : (
-          <strong>{money(settlement.quoted)}</strong>
+          <strong>{money(settlement.quoted, project.currency)}</strong>
         )}
       </button>
       <button className="glance-card" onClick={() => showTab("travel")}>

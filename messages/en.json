@@ -54,7 +54,7 @@
       "today": "Today",
       "upcoming": "Coming up"
     },
-    "snooze": "Remind me in an hour",
+    "snooze": "Remind me later",
     "unsnooze": "Remind me now",
     "snoozedUntil": "Snoozed until {time}",
     "markAllRead": "Mark all as read",
@@ -68,10 +68,17 @@
     "importSent": "Sent for analysis; it will appear under “Needs you” when it’s done.",
     "importDuplicate": "This was imported before; see it in Intake.",
     "clearSearch": "Clear search",
-    "searchSuggestions": "Recent picks & workspace suggestions",
+    "searchSuggestions": "Recent and suggested",
     "searchMatches": "{count, plural, one {# result} other {# results}}",
-    "searchRefine": "Showing the first {count}. Keep typing to narrow your search.",
-    "resultOrganization": "Company"
+    "searchRefine": "Showing the first {count}. Type more to narrow it.",
+    "resultOrganization": "Organization",
+    "searching": "Searching…",
+    "snoozeHours": "{hours, plural, one {In an hour} other {In # hours}}",
+    "snoozePick": "Pick a time",
+    "snoozeDay": "Day",
+    "snoozeTime": "Time ({zone})",
+    "snoozeSave": "Remind me then",
+    "snoozePickInvalid": "That time doesn't exist on that day (a clock change). Pick another."
   },
   "locale": {
     "label": "Language",
@@ -118,7 +125,9 @@
       "settledIn": "Received",
       "expectedOut": "To pay",
       "settledOut": "Paid",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "partIn": "Partly received",
+      "partOut": "Partly paid"
     },
     "vertical": {
       "music": "Musician",
@@ -310,7 +319,7 @@
     "stalledNone": "{count, plural, one {The deal in negotiation has} other {All # deals in negotiation have}} had news in the last {days} days.",
     "stalledNoDeals": "No deals in negotiation right now.",
     "moneyNone": "Nothing to receive or pay.",
-    "reviewMore": "Review all {count} messages"
+    "reviewMore": "{count, plural, one {# more message} other {# more messages}} to review in Intake"
   },
   "finance": {
     "revenueTitle": "Revenue received",
@@ -359,9 +368,9 @@
     "settledOn": "Settled {date}",
     "overdue": "Overdue",
     "settledGap": "{direction, select, in {Received} other {Paid}} {cash} · gap {gap}",
-    "markSettled": "{direction, select, in {Mark received} other {Mark paid}}",
+    "markSettled": "{direction, select, in {Record received} other {Record paid}}",
     "empty": "No ledger entries match.",
-    "footnote": "Received and paid filter by settled date; outstanding and to-pay by recorded date. You set the tax rate per entry; withholding, exchange differences, and tax-filing adjustments aren't included. Choose a currency to see matching entries; currencies are kept separate and are not converted.",
+    "footnote": "Received and paid count each receipt on the day it arrived; outstanding and to-pay are what's left, by recorded date. You set the tax rate per entry; withheld amounts are shown apart and not counted as cash. Exchange differences and tax-filing adjustments aren't included.",
     "csv": {
       "recorded": "Recorded",
       "settled": "Settled",
@@ -376,7 +385,9 @@
       "status": "Status",
       "due": "Due",
       "invoice": "Invoice",
-      "filename": "talent-ledger-{currency}.csv"
+      "filename": "talent-ledger-{currency}.csv",
+      "received": "Received",
+      "withheld": "Withheld"
     },
     "edit": "Edit",
     "restore": "Restore",
@@ -461,7 +472,12 @@
       "exampleSummary": "14 sample entries: 6 incoming and 6 outgoing over 90 days, plus one overdue and one undated item shown as excluded.",
       "openPanel": "Forecast future cash",
       "closePanel": "Close cash-flow estimate"
-    }
+    },
+    "receivedSoFar": "{direction, select, in {Received} other {Paid}} {cash}",
+    "withheldSoFar": "withheld {amount}",
+    "left": "{amount} still {direction, select, in {to come} other {to pay}}",
+    "short": "Closed {amount} short",
+    "receipts": "Receipts"
   },
   "projects": {
     "search": "Search projects",
@@ -694,7 +710,12 @@
       "schedule": "Schedule or to-dos added",
       "billing": "Payments requested",
       "received": "Payments received in full"
-    }
+    },
+    "allFiles": "All {count} files, in Files",
+    "withheld": "Withheld",
+    "recordReceipt": "{direction, select, in {Record received} other {Record paid}}",
+    "receipts": "Receipts",
+    "otherCurrencies": "In other currencies"
   },
   "inbox": {
     "title": "Offers to review",
@@ -720,7 +741,8 @@
       "confirmed": "Filed",
       "dismissed": "Dismissed",
       "error": "Failed",
-      "history": "From your history"
+      "history": "From your history",
+      "paused": "Paused"
     },
     "channel": {
       "paste": "Pasted",
@@ -765,7 +787,7 @@
     "uploadHint": "Upload all the screenshots of one conversation together, in order (oldest first). Up to {files} files, {megabytes} MB in total.",
     "uploadOrder": "Files, in order",
     "uploadTotal": "{count, plural, one {# file} other {# files}} · {megabytes} MB",
-    "uploadUnsupported": "Only screenshots, photos (PNG, JPEG, WebP, HEIC), and PDFs can be sent in; other files were left out.",
+    "uploadUnsupported": "Only screenshots, photos (PNG, JPEG, WebP), and PDFs can be sent in; other files were left out.",
     "uploadFailed": "An upload didn't go through. Check your connection and try again.",
     "uploading": "Uploading…",
     "moveUp": "Move {name} up",
@@ -788,7 +810,8 @@
       "unsupported_file": "The current AI model can't read this kind of file.",
       "unexpected": "Something unexpected went wrong. Try “Analyze again”.",
       "replay_missing": "No recorded answer for this message, and this environment only replays recordings (AI_REPLAY=only).",
-      "usage_limit": "Today's AI analyses for this account are used up. Try “Analyze again” once it resets (within 24 hours)."
+      "usage_limit": "Today's AI analyses for this account are used up. Try “Analyze again” once it resets (within 24 hours).",
+      "paused": "AI is paused for now. This message is analyzed on its own once it resumes."
     },
     "transcriptWithheld": "The AI service wouldn't write out this file's text (it looks like published material), so there's no transcript.",
     "notWork": "This doesn't look like a work message. If you don't need it, dismiss it.",
@@ -834,7 +857,13 @@
     "historyCount": "{count, plural, one {# email} other {# emails}}",
     "unverifiedSenderPayment": "Gmail couldn't verify the sender, and this asks about payment or bank details: a common fraud. Don't pay or reply with details; confirm with them using contact details you already have.",
     "requestFailed": "That didn't go through: check your connection and try again.",
-    "gmailSource": "Gmail inbox source"
+    "gmailSource": "Gmail inbox source",
+    "listFailed": "Couldn't load the messages.",
+    "opening": "Opening…",
+    "openFailed": "Couldn't open this message. Pick it again to retry.",
+    "pausedBody": "AI is paused for now. This message is saved and is analyzed on its own once it resumes.",
+    "uploadHeic": "HEIC photos (the iPhone camera's format) can't be read yet and were left out. Save them as JPEG first, then send them in.",
+    "aiPaused": "AI is paused for now. New messages are saved and analyzed on their own once it resumes."
   },
   "intake": {
     "targetHeading": "File under a project",
@@ -933,7 +962,9 @@
     "contactNew": "New sender, not a contact yet",
     "threadWaiting": "{count, plural, one {# more from this thread is waiting} other {# more from this thread are waiting}}",
     "threadFileAll": "File all {count} here",
-    "threadLeft": "{count, plural, one {# needs your answer first: it's still in Messages} other {# need your answer first: they're still in Messages}}"
+    "threadLeft": "{count, plural, one {# needs your answer first: it's still in Messages} other {# need your answer first: they're still in Messages}}",
+    "pickOne": "Several projects fit. Pick the one this message is about.",
+    "otherCurrency": "The message states {stated}; this payment is in {currency}. Enter what arrived, in {currency}."
   },
   "timeline": {
     "heading": "Timeline",
@@ -1001,37 +1032,49 @@
     "colProject": "Project",
     "colSize": "Size",
     "empty": "No files yet. Upload offers, contracts, assets, or invoices.",
-    "uploadSoon": "General file uploads are not connected yet. Use Inbox to import offers or download a template above."
+    "uploadSoon": "General file uploads are not connected yet. Use Inbox to import offers or download a template above.",
+    "listFailed": "Couldn't load the files.",
+    "untitled": "(No name)"
   },
   "assistant": {
     "loadingOlder": "Loading earlier messages…",
     "loadOlder": "Load earlier messages",
-    "status": "Luna · Local testing",
-    "intro": "Ask about recorded payments, select a project for a reply draft, or turn on sample data to explore. I can explain and draft; I cannot change records or send messages.",
+    "status": "Answers only · never acts on your behalf",
+    "intro": "Pick a question below, or ask in your own words about your schedule, money, or a project. Answers come from your own records.",
     "prompt": {
       "today": "Today's schedule",
       "tomorrow": "Tomorrow's schedule",
       "unpaid": "Outstanding payments",
       "draft": "Draft a polite follow-up for the selected project.",
-      "payable": "Payments due"
+      "payable": "What do I still have to pay?"
     },
     "input": "Message to assistant",
-    "placeholder": "Ask Talent Assistant…",
+    "placeholder": "Ask about your projects, calendar, or money…",
     "send": "Send",
     "sample": "Use prototype sample data",
-    "scope": "Project context",
+    "scope": "About",
     "overview": "Workspace overview",
     "clear": "New conversation",
     "sampleNotice": "Synthetic portfolio: 5 prototype projects and 8 payments, dated October 7, 2026. No sample records are written to your database.",
     "privacy": "Simple lookups use your workspace records without calling AI. Other questions and selected context are sent to OpenAI. No automatic actions. Conversations are saved on this computer.",
-    "conversation": "Assistant conversation",
+    "conversation": "Conversation with the assistant",
     "you": "You",
-    "working": "Preparing a reply…",
+    "working": "Looking it up…",
     "usage": "Input {input} · Output {output} · Total {total} tokens (reasoning {reasoning}, included in output) · Estimated US${cost}",
-    "history": "Enter to send · Shift+Enter for a new line · Sends the latest 8 messages. Conversations are saved locally.",
+    "history": {
+      "title": "Conversations",
+      "new": "New conversation",
+      "empty": "No saved conversations yet.",
+      "readOnly": "read only",
+      "more": "Show more",
+      "delete": "Delete “{title}”",
+      "deleteTitle": "Delete this conversation?",
+      "deleteBody": "“{title}” and everything in it will be deleted for good.",
+      "deleteConfirm": "Delete"
+    },
     "budget": "Local experiment used US${spent} / US$5",
     "error": {
-      "busy": "Another request is running, or requests are too frequent. Try again shortly.",
+      "busy": "Still answering your last question. Try again in a moment.",
       "rate_limited": "OpenAI rejected this request due to rate or quota limits. Check API usage before retrying.",
       "blocked": "Please verify your email before using the assistant.",
       "too_long": "The request or answer is too long. Shorten it and try again.",
@@ -1039,7 +1082,13 @@
       "invalid_output": "The model returned an unusable answer. No records were changed.",
       "not_configured": "This local AI experiment is not enabled or its credentials are missing.",
       "unexpected": "The request failed. Your draft is still here; please try again.",
-      "usage_limit": "The daily AI allowance or shared US$5 experiment budget has been reached. The experiment budget does not reset automatically."
+      "usage_limit": "The daily AI allowance or shared US$5 experiment budget has been reached. The experiment budget does not reset automatically.",
+      "month_limit": "You've used this month's questions. The quick prompts above still work.",
+      "day_limit": "You've asked a lot today. Try again tomorrow; the quick prompts above still work.",
+      "unavailable": "The assistant can't answer right now. Try again in a moment.",
+      "paused": "AI is paused for now, so only the quick prompts above can answer. Try your question again later.",
+      "not_found": "That project isn't available any more. Choose another.",
+      "failed": "Couldn't get an answer."
     },
     "loadingHistory": "Loading conversation history…",
     "historyError": "Conversation history could not be loaded or saved. Keep a copy of this reply before refreshing.",
@@ -1059,7 +1108,7 @@
     "recordTime": "{time} UTC",
     "localUsage": "Local lookup · Input 0 · Output 0 · Total 0 tokens · US$0",
     "failed": "Reply failed; your message is kept here.",
-    "retry": "Retry",
+    "retry": "Try again",
     "local": {
       "test": "Test received. Your message arrived successfully. What would you like to check?",
       "greeting": "Hello! I can look up your schedule and payments, or help with a question about your work.",
@@ -1084,9 +1133,32 @@
     "options": "Conversation settings",
     "workspace": "My workspace",
     "dockTitle": "Assistant",
-    "expand": "Open full conversation",
-    "minimize": "Minimize conversation",
-    "openChat": "Chat with your assistant"
+    "expand": "Open as a full page",
+    "minimize": "Close the assistant",
+    "openChat": "Open the assistant",
+    "answer": {
+      "schedule": "{date} · times in {zone}",
+      "scheduleEmpty": "Nothing left to do on {date}.",
+      "untimed": "No set time",
+      "scheduleMore": "{count, plural, one {# more item} other {# more items}} not shown. See Calendar for the whole day.",
+      "in": "Still to come in: {totals}",
+      "out": "Still to pay: {totals}",
+      "inEmpty": "Nothing is waiting to come in.",
+      "outEmpty": "Nothing is waiting to be paid.",
+      "overdue": "Overdue: {totals}",
+      "due": "due {date}",
+      "noDue": "no due date",
+      "late": "overdue",
+      "signedOnly": "Signed deals only, as on Today.",
+      "moneyMore": "{count, plural, one {# more payment} other {# more payments}} not shown. See Finance for all of them."
+    },
+    "note": "Answers come from your records only, and the last few questions in this conversation. They can be wrong: check anything important.",
+    "monthLeft": "{count, plural, one {# question} other {# questions}} left this month.",
+    "scopeOverview": "Your whole workspace",
+    "scopeProject": "The chosen project",
+    "scopeRecent": "Showing the 200 most recently updated projects.",
+    "unreadable": "This message can't be shown.",
+    "readOnly": "This conversation is about a workspace you no longer have access to. You can read it, but not continue it."
   },
   "calendar": {
     "prevMonth": "Previous month",
@@ -1200,7 +1272,7 @@
     "grantSource": "Open grant application",
     "noProject": "Not in a project",
     "addToProject": "Add to a project",
-    "repeatingFromGoogle": "Repeating, from your Talent Biz OS calendar in Google: change it there.",
+    "repeatingFromGoogle": "Repeating, from your Taloox calendar in Google: change it there.",
     "openInGoogle": "Open in Google Calendar",
     "changeProject": "Change",
     "seriesNote": "Adding it to a project adds every occurrence of the series.",
@@ -1247,8 +1319,8 @@
     "confirmDisableBody": "Calendars that added this link stop updating. You can make a new link any time."
   },
   "googleCalendar": {
-    "calendarName": "Talent Biz OS · {talent}",
-    "calendarDescription": "Events created by Talent Biz OS. Change them here or in Talent Biz OS: both stay up to date.",
+    "calendarName": "Taloox · {talent}",
+    "calendarDescription": "Events created by Taloox. Change them here or in Taloox: both stay up to date.",
     "title": "Google Calendar",
     "notConfigured": "Google isn't set up in this environment.",
     "needGoogle": "Connect your Google account under “Sign in with Google” above first",
@@ -1269,7 +1341,7 @@
     },
     "disconnectTitle": "Disconnect Google Calendar?",
     "disconnectBody": "Syncing stops, and the app's access to your Google account is withdrawn (Google sign-in keeps working).",
-    "deleteCalendar": "Also delete the “Talent Biz OS” calendar in Google",
+    "deleteCalendar": "Also delete the “Taloox” calendar in Google",
     "confirmDisconnect": "Disconnect",
     "cancel": "Cancel",
     "importTitle": "Show here",
@@ -1281,9 +1353,9 @@
     "chooseSave": "Save",
     "saving": "Saving…",
     "sendTitle": "Sync with Google",
-    "sendTo": "Your events ⇄ the “Talent Biz OS” calendar in Google",
+    "sendTo": "Your events ⇄ the “Taloox” calendar in Google",
     "importNone": "None chosen",
-    "aboutSend": "Send to Google: confirmed events go into a dedicated “Talent Biz OS” calendar in your Google account, updated as soon as you save. This app only creates and changes that calendar; it sends the title, time, place, and project. To-dos and payments aren’t sent.",
+    "aboutSend": "Send to Google: confirmed events go into a dedicated “Taloox” calendar in your Google account, updated as soon as you save. This app only creates and changes that calendar; it sends the title, time, place, and project. To-dos and payments aren’t sent.",
     "aboutShow": "Show here: the Google calendars you tick appear read-only in the calendar here, visible only to you, so clashes with personal plans show. This app reads only the calendars you tick.",
     "notConnected": "Not connected",
     "syncedAgo": "Synced {when}",
@@ -1293,11 +1365,11 @@
     "done": "Done",
     "syncedJustNow": "Synced just now",
     "sendNote": "A change on either side updates the other.",
-    "notesMarker": "── Notes (synced with Talent Biz OS) ──"
+    "notesMarker": "── Notes (synced with Taloox) ──"
   },
   "gmail": {
     "title": "Gmail",
-    "aboutRead": "Connect the mailbox your work email comes to. Talent Biz OS gets read-only access: it can't send, delete, or change anything in it.",
+    "aboutRead": "Connect the mailbox your work email comes to. Taloox gets read-only access: it can't send, delete, or change anything in it.",
     "aboutDecide": "For each new email it first looks at the sender, subject, and preview, and reads the full email only when it looks like work: offers, contracts, logistics, payments.",
     "aboutMembers": "Work email brought in belongs to this workspace, so its members, including a manager, see it. Email that isn't work isn't kept.",
     "notConfigured": "Gmail isn't set up in this environment.",
@@ -1329,7 +1401,7 @@
     "accountNote": "Pick the account your offers come to.",
     "continue": "Continue to Google",
     "disconnectTitle": "Disconnect Gmail?",
-    "disconnectBody": "Talent Biz OS stops reading this mailbox and withdraws its access at Google. Your Google sign-in isn't affected.",
+    "disconnectBody": "Taloox stops reading this mailbox and withdraws its access at Google. Your Google sign-in isn't affected.",
     "confirmDisconnect": "Disconnect",
     "result": {
       "connected": "Gmail connected.",
@@ -1389,7 +1461,8 @@
       "pending": "No rule matched. A later check will decide.",
       "model": "The model",
       "gone": "Deleted in Gmail before it was checked",
-      "analysis": "The analysis found it isn't work"
+      "analysis": "The analysis found it isn't work",
+      "too_large": "Too large to bring in: its text and formatting are over 10 MB. Open it in Gmail and paste what matters into Intake."
     },
     "peekError": {
       "reconnect": "Reconnect Gmail in Settings to see senders and subjects.",
@@ -1447,7 +1520,10 @@
     "connectToSee": "Connect Gmail to sort your email here: work email waits for you, the rest is filtered out.",
     "reconnectInSettings": "Gmail needs reconnecting",
     "reconnectWhy": "Google's access expired, so new mail isn't coming in.",
-    "reconnectGo": "Reconnect in Settings"
+    "reconnectGo": "Reconnect in Settings",
+    "fetchFailedChip": "Couldn't bring in",
+    "fetchFailed": "This email couldn't be brought in, even after several tries (Gmail or the connection failed). Try again, or open it in Gmail.",
+    "tryAgain": "Try again"
   },
   "paymentNotice": {
     "chip": "Payment",
@@ -1633,8 +1709,8 @@
       "paying": "Payment",
       "other": "Other details"
     },
-    "paymentHelpIn": "Record each installment separately. Keep it as Outstanding until it is received. Received income is reported by the date received. If less arrives than billed (withholding tax, the NHI supplementary premium), enter the amount received — the gap is shown separately.",
-    "paymentHelpOut": "Record each installment separately. Keep it as To pay until it is paid. Paid expenses are reported by the date paid.",
+    "paymentHelpIn": "One entry is one amount billed. Keep it as Outstanding until it's all in: money that arrives in parts, or with some withheld (withholding tax, the NHI supplementary premium), is recorded with Record received. Received income is reported by the date each part arrived.",
+    "paymentHelpOut": "One entry is one amount owed. Keep it as To pay until it's all paid: paying in parts is recorded with Record paid. Paid expenses are reported by the date each part was paid.",
     "contactCreate": "+ Add “{name}” as a contact",
     "contactPlaceholder": "Search contacts, or type a new name",
     "clientField": "Client (organization)",
@@ -1651,7 +1727,15 @@
     "contactAlreadyHere": "“{name}” is already here. Add another contact with the same name?",
     "contactSameNameElsewhere": "There's a “{name}” at {org}; this adds a different contact with the same name here.",
     "grantSource": "Open grant application",
-    "openOnly": "Any project still going can be linked, signed or not; only signed ones count in expected money and reminders. Linking is optional."
+    "openOnly": "Any project still going can be linked, signed or not; only signed ones count in expected money and reminders. Linking is optional.",
+    "moveCurrency": {
+      "legend": "Payments in {from}",
+      "note": "Ticked payments change to {to} with the project. Amounts stay as they are: this corrects the currency, it doesn't convert.",
+      "income": "Income",
+      "cost": "Cost",
+      "hasCents": "has cents: make it a whole number of yen first"
+    },
+    "receiptsElsewhere": "Record or correct what {direction, select, in {arrived from Record received} other {was paid from Record paid}}, on Finance or on the project."
   },
   "tone": {
     "natural": "Natural and professional",
@@ -1820,7 +1904,7 @@
     "pasteRequired": "Paste the message text first.",
     "pasteTooLong": "That's too long to analyze — paste at most {max} characters.",
     "messageNotFound": "Message not found, or it has already been handled.",
-    "uploadInvalid": "Send up to {files} screenshots, photos (PNG, JPEG, WebP, HEIC), or PDFs.",
+    "uploadInvalid": "Send up to {files} screenshots, photos (PNG, JPEG, WebP), or PDFs.",
     "uploadTooLarge": "That's too large — up to {files} files and {megabytes} MB in total.",
     "uploadMissing": "An upload didn't finish. Please try again.",
     "aiDailyLimit": "Today's AI analyses for this account are used up. It resets within 24 hours.",
@@ -1839,12 +1923,19 @@
     "clientRequired": "Enter the client organization.",
     "gmailNotConnected": "Gmail isn't connected.",
     "noticeCurrency": "Only NT$ payments can be recorded for now.",
-    "projectEnded": "This project was declined or cancelled, so it can't take new items."
+    "projectEnded": "This project was declined or cancelled, so it can't take new items.",
+    "amountWholeYen": "Amounts in yen are whole numbers.",
+    "paymentsChanged": "Payments on this project changed while you were editing. Close the form, open it again, and pick them again.",
+    "receiptEmpty": "Enter what arrived or was withheld.",
+    "receiptChanged": "This receipt was corrected or withdrawn meanwhile. Close and look again.",
+    "paymentNotOpen": "This entry is voided or cancelled, so nothing can be recorded on it.",
+    "snoozeTime": "Pick a time later than now, within 30 days.",
+    "aiPaused": "AI is paused for now. Try again later."
   },
   "emails": {
-    "resetSubject": "Reset your Talent Biz OS password",
+    "resetSubject": "Reset your Taloox password",
     "resetBody": "Click this link to reset your password (valid for 1 hour):\n\n{url}\n\nIf you didn't ask to reset your password, you can ignore this email.",
-    "verifySubject": "Confirm your Talent Biz OS email",
+    "verifySubject": "Confirm your Taloox email",
     "verifyBody": "Click this link to confirm your email (valid for 1 hour):\n\n{url}"
   },
   "meta": {
@@ -1918,7 +2009,7 @@
     "change": "Change role",
     "settingsTitle": "Role and assistant",
     "settingsBody": "Your role shapes wording and suggestions, never what you can access. Change it, or the assistant's look, any time.",
-    "cancelChange": "Cancel role change",
+    "cancelChange": "Close without changing",
     "saveNotice": "Changes apply only after you save."
   },
   "itinerary": {
@@ -2126,21 +2217,21 @@
   },
   "documentLibrary": {
     "general": "General-purpose",
-    "title": "Contracts and quotations",
+    "title": "Contract and quote templates",
     "intro": "Choose a scenario to preview, copy, or download an editable Word document.",
     "notice": "These are editable starting templates, not lawyer-reviewed agreements. Review the terms for your project and jurisdiction before signing.",
     "all": "All roles",
-    "role": "Role",
-    "language": "Document language",
+    "role": "For",
+    "language": "Language",
     "contract": "Contract",
-    "quote": "Quotation",
-    "preview": "Preview content",
+    "quote": "Quote",
+    "preview": "Preview",
     "download": "Download Word",
     "copy": "Copy text",
-    "copied": "Copied",
-    "copyFailed": "Copy failed. Select and copy the preview text manually.",
-    "sources": "Reference material",
-    "empty": "No templates have been published yet.",
+    "copied": "Copied: {title}",
+    "copyFailed": "Couldn't copy. Select the text in the preview and copy it.",
+    "sources": "Where the wording comes from",
+    "empty": "No templates yet.",
     "roles": {
       "musician": "Music artist",
       "manager": "Manager",
@@ -2469,10 +2560,21 @@
     "commonPaper": "Common Paper open professional services agreement",
     "freelancersUnion": "Freelancers Union contract essentials",
     "loading": "Loading templates…",
-    "loadFailed": "Templates could not be loaded.",
+    "loadFailed": "Couldn't load the templates.",
     "retry": "Try again",
     "noticeShort": "Starting templates — review the terms before signing.",
-    "noMatch": "No templates for this role yet."
+    "noMatch": "None for this role yet.",
+    "disclaimer": "These are templates for reference only, not legal advice, and haven't been reviewed by a lawyer. Check every term for your deal and where you work, and use them at your own responsibility: you're responsible for what you sign. For anything that matters, ask a lawyer.",
+    "fileNotice": "Template for reference only, not legal advice. Taloox isn't a law firm and hasn't reviewed this for your deal. Check every term, fill in the brackets, and use it at your own responsibility; for anything that matters, ask a lawyer. Delete this note before you send it.",
+    "allRoles": "Every role",
+    "kind": "Document",
+    "source": {
+      "commonPaper": "Common Paper: professional services agreement",
+      "freelancersUnion": "Freelancers Union: contract essentials",
+      "mu": "Musicians' Union: standard contracts",
+      "artsLaw": "Arts Law: booking agreement checklist",
+      "ftc": "FTC: endorsements and influencers"
+    }
   },
   "assistantCosts": {
     "title": "Assistant usage and pricing",
@@ -2670,10 +2772,10 @@
   "dateTimeInput": {
     "datePlaceholder": "YYYY/MM/DD",
     "timePlaceholder": "HH:mm",
-    "dateHint": "Type 20261012 or 2026/10/12. Arrow keys move; Enter selects.",
-    "timeHint": "Type 930 or 1530; any valid minute is allowed.",
+    "dateHint": "Type 20261012 or 2026/10/12. Arrow keys move; Enter picks.",
+    "timeHint": "Type 930 or 1530; any minute works.",
     "invalidDate": "Enter a real date, for example 20261012 or 2026/10/12.",
-    "invalidTime": "Enter a valid time, for example 930 or 15:30.",
+    "invalidTime": "Enter a time, for example 930 or 15:30.",
     "required": "This field is required.",
     "openDate": "Choose date: {label}",
     "openTime": "Choose time: {label}",
@@ -2682,7 +2784,7 @@
     "nextMonth": "Next month",
     "today": "Today",
     "clear": "Clear",
-    "close": "Close picker"
+    "close": "Close"
   },
   "creatorPlatforms": {
     "title": "Creator platform analytics",
@@ -2950,5 +3052,37 @@
     "keep": "Only mark it, keep these",
     "cancelDeclined": "Mark as declined and cancel these",
     "cancelCancelled": "Mark as cancelled and cancel these"
+  },
+  "receipts": {
+    "title": "{direction, select, in {Record money received} other {Record money paid}}",
+    "correctTitle": "Correct a receipt",
+    "summary": "Total {total} · in so far {cash} · withheld {withheld}",
+    "dateReceived": "Received on",
+    "datePaid": "Paid on",
+    "cashReceived": "Amount received",
+    "cashPaid": "Amount paid",
+    "withheld": "Withheld",
+    "addRate": "+{rate}%",
+    "withheldHelp": "Withheld is what the payer kept back for you (income tax, the NHI supplementary premium). It counts toward the total and can be claimed at tax time; it isn't cash.",
+    "note": "Note",
+    "restLegend": "{amount} still left",
+    "restComing": "More is coming: keep it outstanding",
+    "restClosed": "Nothing more will come: close it short",
+    "restComingOut": "More to pay: keep it to pay",
+    "restClosedOut": "Nothing more to pay: close it",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saveCorrection": "Save correction",
+    "history": "Recorded so far",
+    "withheldAmount": "withheld {amount}",
+    "correctedLabel": "Corrected",
+    "withdrawnLabel": "Withdrawn",
+    "correct": "Correct",
+    "withdraw": "Withdraw"
+  },
+  "list": {
+    "loading": "Loading…",
+    "loadMore": "Load more",
+    "retry": "Try again"
   }
 }

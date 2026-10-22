@@ -6,10 +6,12 @@ import { z } from "zod";
 import { requirePerson } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notificationState } from "@/lib/db/schema";
-import { notificationIdPattern } from "@/lib/domain/notifications";
+import { notificationIdPattern, SNOOZE_HOURS } from "@/lib/domain/notifications";
 import { errorText } from "./validation";
 
-const SNOOZE_MS = 3600_000; // "remind me in an hour"
+const SNOOZE_MAX_MS = 30 * 86_400_000; // a time picked: up to 30 days ahead
+// Hours from now, a time picked (an instant), or false to end the snooze.
+const snoozeInput = z.union([z.literal(false), z.literal([...SNOOZE_HOURS]), z.iso.datetime({ offset: true })]);
 const ids = z.array(z.string().max(120).regex(notificationIdPattern)).min(1).max(200);
 
 /** Mark notifications read. Reading one also ends its snooze. */
@@ -31,12 +33,18 @@ export async function markNotificationsRead(notificationIds: string[]): Promise<
   return null;
 }
 
-/** Snooze one notification for an hour, or end its snooze. The deadline is the server's clock. */
-export async function snoozeNotification(notificationId: string, snooze: boolean): Promise<string | null> {
+/**
+ * Snooze one notification for some hours or until a time picked, or end its snooze. Hours count
+ * from the server's clock; a time picked must be ahead, and within 30 days.
+ */
+export async function snoozeNotification(notificationId: string, snooze: false | (typeof SNOOZE_HOURS)[number] | string): Promise<string | null> {
   const person = await requirePerson();
   const fail = await errorText();
-  if (!ids.safeParse([notificationId]).success) return fail("invalid");
-  const snoozedUntil = snooze ? new Date(Date.now() + SNOOZE_MS) : null;
+  const parsed = snoozeInput.safeParse(snooze);
+  if (!ids.safeParse([notificationId]).success || !parsed.success) return fail("invalid");
+  const now = Date.now();
+  const snoozedUntil = parsed.data === false ? null : new Date(typeof parsed.data === "number" ? now + parsed.data * 3600_000 : parsed.data);
+  if (snoozedUntil && (snoozedUntil.getTime() <= now || snoozedUntil.getTime() > now + SNOOZE_MAX_MS)) return fail("snoozeTime");
   await db
     .insert(notificationState)
     .values({ personId: person.personId, notificationId, snoozedUntil })

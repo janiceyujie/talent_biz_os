@@ -143,7 +143,7 @@ export function ProjectsView({readOnly=false}:{readOnly?:boolean}={}) {
   useEffect(()=>{if(priorArtistScope.current!==artistScope){priorArtistScope.current=artistScope;queueMicrotask(()=>{setSelected("");setDetailOpen(false);});}},[artistScope]);
   const quoteText = (p: ProjectSummary) => {
     const total = projectQuoteTotal(p);
-    return total === null ? t("quoteNotSet") : money(total,p.currency);
+    return total === null ? t("quoteNotSet") : money(total, p.currency);
   };
   // Near the end of the list, the next page: watched in the list's own scroll area on wide screens, the page on narrow ones.
   const panel = useRef<HTMLElement>(null);

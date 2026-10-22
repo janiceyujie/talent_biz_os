@@ -10,3 +10,8 @@ test("manager finance sums cents exactly and does not add tax twice to tax-inclu
   assert.equal(managerFinance([{...row,amount:.1,taxRate:0},{...row,amount:.2,taxRate:0}])[0].receivable,.3);
   assert.equal(managerFinance([{...row,amount:105,taxIncluded:true}])[0].receivable,105);
 });
+
+test("receipt-backed manager totals separate withheld tax and cash from the open balance",()=>{
+ const result=managerFinance([{...row,amount:1000,taxRate:0,settledAmount:400,covered:500,inRange:true},{...row,talentId:"B",amount:1000,taxRate:0,settledAmount:200,covered:800,inRange:false}]);
+ assert.deepEqual(result,[{artistId:"A",currency:"TWD",received:400,paid:0,receivable:500,payable:0},{artistId:"B",currency:"TWD",received:200,paid:0,receivable:0,payable:0}]);
+});

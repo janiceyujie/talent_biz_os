@@ -1,0 +1,107 @@
+{
+  "scenario": "podcast-guest",
+  "role": "other",
+  "kind": "quote",
+  "locale": "en",
+  "title": "Podcast guest recording Quotation",
+  "blocks": [
+    {
+      "type": "paragraph",
+      "text": "Quote number [ID]. Issued [date]. Valid until [date]. Currency [currency]. Subject to written confirmation; this quotation does not itself reserve dates or grant rights."
+    },
+    {
+      "type": "heading",
+      "text": "Parties"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Client [legal name, address, contact and email]",
+        "Service provider [legal name, address, contact and email]",
+        "Project [name]. Agreement date [date]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Scope and schedule"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Record an interview on [topic] for [program] at [time and location], with agreed fee or no-fee arrangement [choice]. Define excluded topics, attribution and review rights before recording."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Price breakdown"
+    },
+    {
+      "type": "paragraph",
+      "text": "For each item, enter scope, quantity, unit, unit price and amount. If commission applies, specify the calculation basis and rate. Identify estimates separately from fixed fees."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Item",
+        "Qty / unit",
+        "Unit price",
+        "Amount"
+      ],
+      "rows": [
+        [
+          "Guest fee or no-fee basis",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Approved travel expenses",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Separately approved reuse",
+          "[___]",
+          "[___]",
+          "[___]"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Fees and payment"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Subtotal excluding tax [amount]",
+        "Discount [amount]",
+        "Tax rate and tax [rate and amount]",
+        "Total including tax [amount and currency]",
+        "Deposit [amount and due date]",
+        "Balance [amount and payment terms]"
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Usage and special terms"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Guest permits recording, editing and publishing on [channels, territory and term], including clips up to [length] for program promotion. Separate approval is required for paid endorsement, unrelated advertising, voice cloning or AI training. Each party clears materials they supply; sensitive personal information needs explicit approval."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Quotation conditions"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Unlisted deliverables, extra revisions, travel and usage rights are excluded. Scope changes or acceptance after expiry require a revised price and availability check. Confirm cancellation, acceptance, rights and full engagement terms in writing before work begins."
+      ]
+    }
+  ]
+}

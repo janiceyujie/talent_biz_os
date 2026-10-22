@@ -1,16 +1,17 @@
 // Money: money still expected, at a glance — what's overdue, due this week, and outstanding in total.
 import { plusDays } from "@/lib/calendar/planner";
-import { paymentTotal } from "@/lib/domain/workflow";
 import { totalsByCurrency } from "@/lib/domain/money";
+import { paymentRemaining } from "@/lib/domain/workflow";
 import type { Payment } from "@/lib/types";
 
 export const MONEY_WEEK_DAYS = 7; // "this week": today and the six days after
 
+/** Each figure is one total per currency, empty when nothing is open. */
 export function outstandingMoney(payments: Payment[], today: string) {
   const open = payments.filter((p) => !p.voided && p.status === "expected");
   const incoming = open.filter((p) => p.direction === "in");
   const weekEnd = plusDays(today, MONEY_WEEK_DAYS - 1);
-  const total = (rows: Payment[]) => totalsByCurrency(rows, paymentTotal);
+  const total = (rows: Payment[]) => totalsByCurrency(rows, paymentRemaining); // what's left, when part has arrived
   return {
     overdue: total(incoming.filter((p) => p.dueDate && p.dueDate < today)),
     thisWeek: total(incoming.filter((p) => p.dueDate && p.dueDate >= today && p.dueDate <= weekEnd)),

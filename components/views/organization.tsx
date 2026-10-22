@@ -1,7 +1,5 @@
 "use client";
 
-import { usePreviewAction } from "@/components/app/preview-action";
-
 import { ChevronRight, Mail, Phone, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -10,11 +8,11 @@ import { useAppData } from "@/components/app/app-data";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { ContactPicker, type ContactValue } from "@/components/app/contact-picker";
 import { Modal } from "@/components/app/modal";
-import { addOrganizationPerson as addOrganizationPersonRemote, archiveOrganization as archiveOrganizationRemote, removeOrganizationPerson as removeOrganizationPersonRemote, saveOrganization } from "@/lib/actions/organizations";
+import { addOrganizationPerson, archiveOrganization, removeOrganizationPerson, saveOrganization } from "@/lib/actions/organizations";
 import type { OrganizationProject } from "@/lib/data/organizations";
-import { countedPayments, paymentCash, paymentTotal } from "@/lib/domain/workflow";
+import { countedPayments, paymentCash, paymentRemaining, paymentTotal } from "@/lib/domain/workflow";
 import { totalsByCurrency } from "@/lib/domain/money";
-import { useMoney } from "@/lib/i18n/format";
+import { useMoney, useMoneyTotals } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { DealCard } from "./deal-card";
 import { DistinctFrom } from "./organization-duplicates";
@@ -25,14 +23,13 @@ import { MoreMenu } from "./more-menu";
  * role there, and the money on the projects it's the client of.
  */
 export function OrganizationView({ id, projects }: { id: string; projects: OrganizationProject[] }) {
-  const archiveOrganization = usePreviewAction(archiveOrganizationRemote);
-  const removeOrganizationPerson = usePreviewAction(removeOrganizationPersonRemote);
   const data = useAppData();
   const t = useTranslations("organizations");
   const tNav = useTranslations("nav");
   const tContacts = useTranslations("contacts");
   const labels = useLabels();
   const money = useMoney();
+  const moneyTotals = useMoneyTotals();
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [leaving, setLeaving] = useState<{ id: string; name: string } | null>(null);
@@ -44,9 +41,10 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
   if (!org) return <p className="notice">{t("missing")}</p>;
   const people = data.contacts.filter((c) => c.organizationId === id);
   const clientOf = new Set(projects.filter((p) => p.primary).map((p) => p.projectId));
-  const payments = data.payments.filter((p) => p.projectId && clientOf.has(p.projectId) && p.direction === "in" && !p.voided && p.status !== "cancelled");
+  // Expected money only from signed deals (decision 0018); what was received, always.
+  const payments = countedPayments(data.payments, data.projects).filter((p) => p.projectId && clientOf.has(p.projectId) && p.direction === "in" && !p.voided && p.status !== "cancelled");
   const received = totalsByCurrency(payments, paymentCash);
-  const outstanding = totalsByCurrency(countedPayments(payments, data.projects).filter((p) => p.status === "expected"), paymentTotal);
+  const outstanding = totalsByCurrency(payments.filter((p) => p.status === "expected"), paymentRemaining);
   const titleOf = (projectId: string | null) => projects.find((p) => p.projectId === projectId)?.title ?? "";
 
   return (
@@ -156,11 +154,11 @@ export function OrganizationView({ id, projects }: { id: string; projects: Organ
             <dl className="deal-facts">
               <div>
                 <dt>{t("received")}</dt>
-                <dd>{received.map((item) => money(item.amount, item.currency)).join(" · ") || money(0)}</dd>
+                <dd>{moneyTotals(received)}</dd>
               </div>
               <div>
                 <dt>{t("outstanding")}</dt>
-                <dd className={outstanding.length ? "owed" : ""}>{outstanding.map((item) => money(item.amount, item.currency)).join(" · ") || money(0)}</dd>
+                <dd className={outstanding.length ? "owed" : ""}>{moneyTotals(outstanding)}</dd>
               </div>
             </dl>
             {payments.length > 0 && (
@@ -218,8 +216,6 @@ export function EditOrganization({
   onSaved?: (id: string) => void;
 }) {
   const t = useTranslations("organizations");
-  const { preview } = useAppData();
-  const tPreview = useTranslations("preview");
   const [values, setValues] = useState({ name, notes });
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -230,7 +226,6 @@ export function EditOrganization({
         onSubmit={(e) => {
           e.preventDefault();
           startTransition(async () => {
-            if (preview) return setError(tPreview("readOnly"));
             const result = await saveOrganization({ id, ...values });
             if ("error" in result) return setError(result.error);
             onSaved?.(result.id);
@@ -267,7 +262,6 @@ export function EditOrganization({
 
 /** Someone works here: pick a contact (they move here) or add a new one. */
 function AddPerson({ organizationId, taken, onDone }: { organizationId: string; taken: string[]; onDone: () => void }) {
-  const addOrganizationPerson = usePreviewAction(addOrganizationPersonRemote);
   const data = useAppData();
   const t = useTranslations("organizations");
   const [value, setValue] = useState<ContactValue>({ name: "", contactId: "", newContact: null });

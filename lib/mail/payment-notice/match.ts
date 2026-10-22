@@ -2,15 +2,15 @@
 // amount within a fee's difference below the expected total, then the payer's
 // name as the tiebreaker. Only ever a suggestion: the person presses Mark as
 // received. Pure, no server-only imports: the Intake screen runs it.
-import { quote } from "@/lib/domain/money";
+import { paymentRemaining } from "@/lib/domain/workflow";
 import type { Payment } from "@/lib/types";
 import type { NoticeFields } from "./fields";
 
 /** A transfer fee taken out on the way: up to NT$30, or 1% of a larger payment. */
 export const feeTolerance = (expected: number) => Math.max(30, expected * 0.01);
 
-/** What's expected in full for a payment, tax included. */
-export const expectedTotal = (p: Pick<Payment, "amount" | "taxRate" | "taxIncluded">) => quote(p.amount, p.taxRate, p.taxIncluded).total;
+/** What's still expected on a payment, tax included: its total, less what's arrived already (decision 0021). */
+export const expectedTotal = (p: Payment) => paymentRemaining(p);
 
 /** Payments a notice could settle: income still expected, in the notice's currency. */
 export const openIncome = (payments: Payment[], currency: string) =>

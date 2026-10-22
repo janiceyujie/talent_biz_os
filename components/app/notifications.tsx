@@ -7,11 +7,14 @@ import { markNotificationsRead, snoozeNotification } from "@/lib/actions/notific
 import {
   isUnread,
   notifications,
+  SNOOZE_HOURS,
   withState,
   type StatefulNotification,
   type Urgency,
 } from "@/lib/domain/notifications";
+import { dateInZone, exactInstant } from "@/lib/domain/dates";
 import { useAppData } from "./app-data";
+import { DateTimeInput } from "./date-time-input";
 import { useNotificationText } from "./notification-text";
 import { YourTime } from "./your-time";
 
@@ -46,28 +49,87 @@ export function ReminderStatus({ urgency }: { urgency: Urgency }) {
   return <span className={`reminder-status urgency-${urgency}`}>{t(`urgency.${urgency}`)}</span>;
 }
 
-/** "Remind me in an hour", or the snooze deadline and a way to end it early. */
+/**
+ * "Remind me later": in one, two, or three hours, or at a time picked (in the talent's time zone,
+ * up to 30 days ahead). Snoozed, it shows until when, and a way to end it early.
+ */
 export function ReminderControls({ n }: { n: StatefulNotification }) {
   const data = useAppData();
   const t = useTranslations("shell");
   const locale = useLocale();
+  const zone = data.talent.timeZone;
+  const today = dateInZone(zone);
   const [pending, startTransition] = useTransition();
+  const [choosing, setChoosing] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [day, setDay] = useState(today);
+  const [time, setTime] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const snooze = (value: Parameters<typeof snoozeNotification>[1]) =>
+    startTransition(async () => {
+      const failure = await snoozeNotification(n.id, value);
+      setError(failure);
+      if (!failure) {
+        setChoosing(false);
+        setPicking(false);
+      }
+    });
+  // Today it's the time alone; another day, the date too.
   const until =
     n.snoozedUntil &&
-    new Intl.DateTimeFormat(locale, { timeZone: data.talent.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(
-      new Date(n.snoozedUntil),
-    );
+    new Intl.DateTimeFormat(locale, {
+      timeZone: zone,
+      ...(dateInZone(zone, 0, new Date(n.snoozedUntil)) === today ? {} : { month: "short", day: "numeric" }),
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(new Date(n.snoozedUntil));
   return (
     <div className="reminder-controls">
-      {until && <span>{t("snoozedUntil", { time: `${until} · ${data.talent.timeZone}` })}</span>}
+      {until && <span>{t("snoozedUntil", { time: `${until} · ${zone}` })}</span>}
       <button
         type="button"
         className="secondary"
         disabled={pending || data.preview}
-        onClick={() => startTransition(async () => void (await snoozeNotification(n.id, !n.snoozedUntil)))}
+        aria-expanded={n.snoozedUntil ? undefined : choosing}
+        onClick={() => (n.snoozedUntil ? snooze(false) : setChoosing(!choosing))}
       >
         {n.snoozedUntil ? t("unsnooze") : t("snooze")}
       </button>
+      {choosing && !n.snoozedUntil && (
+        <div className="reminder-snooze-options" role="group" aria-label={t("snooze")}>
+          {SNOOZE_HOURS.map((hours) => (
+            <button key={hours} type="button" className="secondary" disabled={pending} onClick={() => snooze(hours)}>
+              {t("snoozeHours", { hours })}
+            </button>
+          ))}
+          <button type="button" className="text-button" aria-expanded={picking} onClick={() => setPicking(!picking)}>
+            {t("snoozePick")}
+          </button>
+          {picking && (
+            <form
+              className="reminder-snooze-pick"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const at = exactInstant(day, time, zone);
+                if (at === null) setError(t("snoozePickInvalid"));
+                else snooze(new Date(at).toISOString());
+              }}
+            >
+              <DateTimeInput kind="date" required label={t("snoozeDay")} value={day} min={today} today={today} onChange={setDay} />
+              <DateTimeInput kind="time" required label={t("snoozeTime", { zone })} value={time} today={day} onChange={setTime} />
+              <button type="submit" className="secondary" disabled={pending}>
+                {t("snoozeSave")}
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

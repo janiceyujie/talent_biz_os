@@ -54,7 +54,7 @@
       "today": "今天",
       "upcoming": "即將到期"
     },
-    "snooze": "一小時後提醒",
+    "snooze": "稍後提醒",
     "unsnooze": "恢復提醒",
     "snoozedUntil": "稍後提醒至 {time}",
     "markAllRead": "全部標為已讀",
@@ -68,10 +68,17 @@
     "importSent": "已送出分析，完成後會出現在「需要你處理」。",
     "importDuplicate": "這段內容先前已匯入過，可在「進件分類」查看。",
     "clearSearch": "清除搜尋",
-    "searchSuggestions": "最近開啟與工作區建議",
+    "searchSuggestions": "最近開啟與建議",
     "searchMatches": "{count} 筆結果",
-    "searchRefine": "目前顯示前 {count} 筆，繼續輸入可縮小範圍。",
-    "resultOrganization": "公司"
+    "searchRefine": "只顯示前 {count} 筆，請輸入更多字縮小範圍。",
+    "resultOrganization": "組織",
+    "searching": "搜尋中…",
+    "snoozeHours": "{hours} 小時後",
+    "snoozePick": "選擇時間",
+    "snoozeDay": "日期",
+    "snoozeTime": "時間（{zone}）",
+    "snoozeSave": "到時提醒我",
+    "snoozePickInvalid": "這一天沒有這個時間（遇到日光節約時間調整），請換一個時間。"
   },
   "locale": {
     "label": "語言",
@@ -118,7 +125,9 @@
       "settledIn": "已收",
       "expectedOut": "待付",
       "settledOut": "已付",
-      "cancelled": "已取消"
+      "cancelled": "已取消",
+      "partIn": "部分已收",
+      "partOut": "部分已付"
     },
     "vertical": {
       "music": "音樂人",
@@ -310,7 +319,7 @@
     "stalledNone": "{count, plural, =1 {洽談中的合作案} other {洽談中的 # 案都}}在 {days} 天內有進展。",
     "stalledNoDeals": "目前沒有洽談中的合作案。",
     "moneyNone": "沒有待收或待付的款項。",
-    "reviewMore": "查看全部 {count} 封待確認訊息"
+    "reviewMore": "Intake 還有 {count} 則訊息待審"
   },
   "finance": {
     "revenueTitle": "已收營收分布",
@@ -359,9 +368,9 @@
     "settledOn": "實際收付 {date}",
     "overdue": "逾期",
     "settledGap": "實{direction, select, in {收} other {付}} {cash} · 差額 {gap}",
-    "markSettled": "記為{direction, select, in {已收} other {已付}}",
+    "markSettled": "{direction, select, in {記錄收款} other {記錄付款}}",
     "empty": "沒有符合條件的內帳紀錄。",
-    "footnote": "已收／已付按實際收付日期，待收／待付按登錄日期篩選。稅率由你依交易設定；未包含扣繳、匯差與正式稅務申報調整。請選擇幣別查看對應帳目；各幣別分開計算，不會自動換匯。",
+    "footnote": "已收／已付按每筆收付紀錄的日期計算，待收／待付是剩下的金額，按登錄日期篩選。稅率由你依交易設定；扣繳另外列出，不算成現金。未包含匯差與正式稅務申報調整。",
     "csv": {
       "recorded": "登錄日期",
       "settled": "實際收付日期",
@@ -376,7 +385,9 @@
       "status": "狀態",
       "due": "付款期限",
       "invoice": "發票",
-      "filename": "內帳-{currency}.csv"
+      "filename": "內帳-{currency}.csv",
+      "received": "實收付",
+      "withheld": "扣繳"
     },
     "edit": "編輯",
     "restore": "還原",
@@ -461,7 +472,12 @@
       "exampleSummary": "14 筆範例：90 天內 6 筆待收、6 筆待付，另有 1 筆逾期及 1 筆未填日期，會顯示為未納入。",
       "openPanel": "試算未來現金",
       "closePanel": "關閉現金流試算"
-    }
+    },
+    "receivedSoFar": "實{direction, select, in {收} other {付}} {cash}",
+    "withheldSoFar": "扣繳 {amount}",
+    "left": "還有 {amount} {direction, select, in {待收} other {待付}}",
+    "short": "結案，短收 {amount}",
+    "receipts": "收付紀錄"
   },
   "projects": {
     "search": "搜尋合作案",
@@ -694,7 +710,12 @@
       "schedule": "已有行程或待辦",
       "billing": "請款已建立",
       "received": "款項已收齊"
-    }
+    },
+    "allFiles": "在素材歸檔查看全部 {count} 個檔案",
+    "withheld": "已扣繳",
+    "recordReceipt": "{direction, select, in {記錄收款} other {記錄付款}}",
+    "receipts": "收付紀錄",
+    "otherCurrencies": "其他幣別"
   },
   "inbox": {
     "title": "待確認的邀約",
@@ -720,7 +741,8 @@
       "confirmed": "已建檔",
       "dismissed": "已略過",
       "error": "分析失敗",
-      "history": "過往信件"
+      "history": "過往信件",
+      "paused": "暫停中"
     },
     "channel": {
       "paste": "貼上",
@@ -765,7 +787,7 @@
     "uploadHint": "同一段對話的截圖請一起上傳，並依對話順序排列（最早的在前）。最多 {files} 個檔案、共 {megabytes} MB。",
     "uploadOrder": "檔案順序",
     "uploadTotal": "{count} 個檔案 · {megabytes} MB",
-    "uploadUnsupported": "只能上傳截圖、照片（PNG、JPEG、WebP、HEIC）或 PDF，其他檔案已略過。",
+    "uploadUnsupported": "只能上傳截圖、照片（PNG、JPEG、WebP）或 PDF，其他檔案已略過。",
     "uploadFailed": "有檔案沒有上傳成功，請確認網路後再試一次。",
     "uploading": "上傳中…",
     "moveUp": "上移 {name}",
@@ -788,7 +810,8 @@
       "unsupported_file": "目前的 AI 模型無法讀取這種檔案。",
       "unexpected": "分析時發生未預期的錯誤，請按「重新分析」。",
       "replay_missing": "這個環境只使用錄製的 AI 回覆（AI_REPLAY=only），而這則訊息沒有錄製檔。",
-      "usage_limit": "這個帳號今天的 AI 分析次數已用完，24 小時內重置後可按「重新分析」。"
+      "usage_limit": "這個帳號今天的 AI 分析次數已用完，24 小時內重置後可按「重新分析」。",
+      "paused": "AI 目前暫停中，恢復後會自動分析這則訊息。"
     },
     "transcriptWithheld": "AI 服務不提供這份檔案的文字轉錄（看起來像已發表的內容），因此沒有轉錄。",
     "notWork": "這看起來不是工作上的訊息。如果不需要，可以按「略過」。",
@@ -834,7 +857,13 @@
     "historyCount": "{count} 封",
     "unverifiedSenderPayment": "Gmail 無法驗證寄件者，而這封信提到付款或匯款資料：這是常見的詐騙手法。請先別付款或回覆資料，用你原本就有的聯絡方式向對方確認。",
     "requestFailed": "沒有送出成功，請確認網路連線後再試一次。",
-    "gmailSource": "Gmail 收件來源"
+    "gmailSource": "Gmail 收件來源",
+    "listFailed": "無法載入訊息清單。",
+    "opening": "開啟中…",
+    "openFailed": "無法開啟這則訊息，請再點一次重試。",
+    "pausedBody": "AI 目前暫停中。這則訊息已保存，恢復後會自動分析。",
+    "uploadHeic": "目前還無法讀取 HEIC 照片（iPhone 相機的格式），這些檔案已略過。請先轉存成 JPEG 再上傳。",
+    "aiPaused": "AI 目前暫停中。新訊息仍會保存，恢復後會自動分析。"
   },
   "intake": {
     "targetHeading": "歸入合作案",
@@ -933,7 +962,9 @@
     "contactNew": "新的寄件者，還不是聯絡人",
     "threadWaiting": "這個信件串還有 {count} 封等待中",
     "threadFileAll": "全部 {count} 封歸入此案",
-    "threadLeft": "有 {count} 封需要你先回答，仍在訊息中"
+    "threadLeft": "有 {count} 封需要你先回答，仍在訊息中",
+    "pickOne": "有幾個合作案都可能符合，請選這則訊息屬於哪一個。",
+    "otherCurrency": "訊息寫的是 {stated}，這筆款項以 {currency} 記錄；請填入實際收到的 {currency} 金額。"
   },
   "timeline": {
     "heading": "時間軸",
@@ -1001,37 +1032,49 @@
     "colProject": "合作案",
     "colSize": "大小",
     "empty": "還沒有檔案。可上傳 Offer、合約、素材或發票。",
-    "uploadSoon": "一般素材上傳尚未開放。邀約可從進件分類匯入，合約與報價單可在上方下載。"
+    "uploadSoon": "一般素材上傳尚未開放。邀約可從進件分類匯入，合約與報價單可在上方下載。",
+    "listFailed": "無法載入檔案。",
+    "untitled": "（未命名）"
   },
   "assistant": {
     "loadingOlder": "正在載入較早的訊息…",
     "loadOlder": "載入較早的訊息",
-    "status": "Luna · 本機測試",
-    "intro": "可以問已登錄的款項、選擇案件請我擬稿，或切換範例資料試用。我可以解釋與擬稿，不會修改資料或寄出訊息。",
+    "status": "只回答，不會替你執行任何動作",
+    "intro": "可以點下方的問題，或用自己的話問行程、款項或某個合作案。答案都來自你自己的紀錄。",
     "prompt": {
       "today": "今日行程",
       "tomorrow": "明日行程",
       "unpaid": "待收款項",
       "draft": "幫我替選取的案件擬一段自然的追蹤訊息。",
-      "payable": "待付款項"
+      "payable": "我還有哪些款項要付？"
     },
     "input": "助理訊息",
-    "placeholder": "問問 Talent Assistant…",
+    "placeholder": "問問你的合作案、行程或款項…",
     "send": "送出問題",
     "sample": "使用 prototype 範例資料",
-    "scope": "案件內容",
+    "scope": "範圍",
     "overview": "工作區總覽",
     "clear": "開始新對話",
     "sampleNotice": "範例包含 prototype 的 5 個案件與 8 筆款項，以 2026 年 10 月 7 日為基準。範例不會寫入你的資料庫。",
     "privacy": "簡單查詢直接讀取工作區資料，不呼叫 AI；其他問題與選定範圍資料會傳送至 OpenAI。不會自動執行操作，對話保存在這台電腦。",
-    "conversation": "助理對話",
+    "conversation": "與助理的對話",
     "you": "你",
-    "working": "正在整理回覆…",
+    "working": "正在查詢…",
     "usage": "輸入 {input} · 輸出 {output} · 總計 {total} tokens（推理 {reasoning}，已含於輸出）· 估計 US${cost}",
-    "history": "Enter 送出 · Shift+Enter 換行 · 傳送最近 8 則訊息；對話紀錄保存在本機。",
+    "history": {
+      "title": "對話紀錄",
+      "new": "新對話",
+      "empty": "還沒有存下的對話。",
+      "readOnly": "唯讀",
+      "more": "顯示更多",
+      "delete": "刪除「{title}」",
+      "deleteTitle": "要刪除這段對話嗎？",
+      "deleteBody": "「{title}」和其中所有內容都會永久刪除。",
+      "deleteConfirm": "刪除"
+    },
     "budget": "本機實驗已用 US${spent} / US$5",
     "error": {
-      "busy": "有其他請求正在執行，或送出太頻繁，請稍後再試。",
+      "busy": "上一個問題還在回答中，請稍後再試。",
       "rate_limited": "OpenAI 的速率或帳戶額度受到限制，請先確認 API 用量。",
       "blocked": "請先完成電子郵件驗證再使用助理。",
       "too_long": "問題或回答過長，請縮短後重試。",
@@ -1039,7 +1082,13 @@
       "invalid_output": "模型沒有傳回可用答案，沒有修改任何資料。",
       "not_configured": "本機 AI 實驗尚未啟用，或缺少憑證。",
       "unexpected": "這次請求未完成，輸入內容仍保留，可稍後重試。",
-      "usage_limit": "已達每日 AI 額度或共用 US$5 實驗上限；實驗上限不會自動重設。"
+      "usage_limit": "已達每日 AI 額度或共用 US$5 實驗上限；實驗上限不會自動重設。",
+      "month_limit": "本月的提問次數已經用完，上方的快速問題仍然可以使用。",
+      "day_limit": "今天問得比較多，請明天再試；上方的快速問題仍然可以使用。",
+      "unavailable": "助理暫時無法回答，請稍後再試。",
+      "paused": "AI 目前暫停中，只有上方的快速問題可以回答，請稍後再問。",
+      "not_found": "這個合作案已經無法使用，請改選其他合作案。",
+      "failed": "沒能取得答案。"
     },
     "loadingHistory": "正在載入對話紀錄…",
     "historyError": "對話紀錄載入或儲存失敗。重新整理前，請先保留這次回覆。",
@@ -1084,9 +1133,32 @@
     "options": "對話設定",
     "workspace": "我的工作區",
     "dockTitle": "個人助理",
-    "expand": "展開完整對話",
-    "minimize": "收起對話",
-    "openChat": "與個人助理對話"
+    "expand": "展開成完整頁面",
+    "minimize": "收起個人助理",
+    "openChat": "開啟個人助理",
+    "answer": {
+      "schedule": "{date}・時間以 {zone} 顯示",
+      "scheduleEmpty": "{date} 沒有待完成的行程。",
+      "untimed": "未定時間",
+      "scheduleMore": "還有 {count} 項沒有列出，完整內容請看「行程」。",
+      "in": "還沒收到：{totals}",
+      "out": "還要付出：{totals}",
+      "inEmpty": "目前沒有待收的款項。",
+      "outEmpty": "目前沒有待付的款項。",
+      "overdue": "已逾期：{totals}",
+      "due": "{date} 到期",
+      "noDue": "未設到期日",
+      "late": "已逾期",
+      "signedOnly": "只計已簽約的案件，與「今日總覽」相同。",
+      "moneyMore": "還有 {count} 筆沒有列出，完整內容請看「內帳分析」。"
+    },
+    "note": "答案只根據你的紀錄，以及這段對話裡最近的幾個問題。回答可能有誤，重要的事請再確認。",
+    "monthLeft": "本月還可以問 {count} 次。",
+    "scopeOverview": "整個工作區",
+    "scopeProject": "已選的合作案",
+    "scopeRecent": "只列出最近更新的 200 個合作案。",
+    "unreadable": "這則訊息無法顯示。",
+    "readOnly": "這段對話屬於你已無法存取的工作區，可以閱讀，但無法繼續提問。"
   },
   "calendar": {
     "prevMonth": "上個月",
@@ -1200,7 +1272,7 @@
     "grantSource": "查看補助申請",
     "noProject": "未歸入合作案",
     "addToProject": "加到合作案",
-    "repeatingFromGoogle": "週期性行程，來自 Google 上的 Talent Biz OS 日曆；請在 Google 修改。",
+    "repeatingFromGoogle": "週期性行程，來自 Google 上的 Taloox 日曆；請在 Google 修改。",
     "openInGoogle": "在 Google 日曆開啟",
     "changeProject": "更換",
     "seriesNote": "加到合作案時，會連同這個系列的每一次一起加入。",
@@ -1247,8 +1319,8 @@
     "confirmDisableBody": "已加入這個連結的行事曆將停止更新。之後可以隨時建立新連結。"
   },
   "googleCalendar": {
-    "calendarName": "Talent Biz OS · {talent}",
-    "calendarDescription": "由 Talent Biz OS 建立的行程。在這裡或 Talent Biz OS 修改，兩邊都會更新。",
+    "calendarName": "Taloox · {talent}",
+    "calendarDescription": "由 Taloox 建立的行程。在這裡或 Taloox 修改，兩邊都會更新。",
     "title": "Google 日曆",
     "notConfigured": "這個環境尚未設定 Google。",
     "needGoogle": "請先在上方「以 Google 登入」連結 Google 帳號",
@@ -1269,7 +1341,7 @@
     },
     "disconnectTitle": "中斷 Google 日曆連結？",
     "disconnectBody": "之後不再同步，並撤銷本服務對你 Google 帳號的存取權（Google 登入不受影響）。",
-    "deleteCalendar": "同時刪除 Google 上的「Talent Biz OS」日曆",
+    "deleteCalendar": "同時刪除 Google 上的「Taloox」日曆",
     "confirmDisconnect": "中斷連結",
     "cancel": "取消",
     "importTitle": "在這裡顯示",
@@ -1281,9 +1353,9 @@
     "chooseSave": "儲存",
     "saving": "儲存中…",
     "sendTitle": "與 Google 同步",
-    "sendTo": "你的行程 ⇄ Google 上的「Talent Biz OS」日曆",
+    "sendTo": "你的行程 ⇄ Google 上的「Taloox」日曆",
     "importNone": "尚未選擇",
-    "aboutSend": "傳送到 Google：已確認的行程會放進你 Google 帳號中專屬的「Talent Biz OS」日曆，儲存後隨即更新。本服務只會建立與修改這個日曆；同步標題、時間、地點與所屬合作案，待辦與款項不會同步。",
+    "aboutSend": "傳送到 Google：已確認的行程會放進你 Google 帳號中專屬的「Taloox」日曆，儲存後隨即更新。本服務只會建立與修改這個日曆；同步標題、時間、地點與所屬合作案，待辦與款項不會同步。",
     "aboutShow": "在這裡顯示：你勾選的 Google 日曆會唯讀顯示在這裡的行事曆中，只有你看得到，方便看出和私人行程的衝突。本服務只讀取你勾選的日曆。",
     "notConnected": "未連結",
     "syncedAgo": "{when}同步",
@@ -1293,11 +1365,11 @@
     "done": "完成",
     "syncedJustNow": "剛剛同步",
     "sendNote": "在任一邊修改，另一邊也會跟著更新。",
-    "notesMarker": "── 備註（與 Talent Biz OS 同步）──"
+    "notesMarker": "── 備註（與 Taloox 同步）──"
   },
   "gmail": {
     "title": "Gmail",
-    "aboutRead": "連結收工作信的信箱。Talent Biz OS 只取得唯讀權限：無法寄信、刪信，也無法更改信箱裡的任何內容。",
+    "aboutRead": "連結收工作信的信箱。Taloox 只取得唯讀權限：無法寄信、刪信，也無法更改信箱裡的任何內容。",
     "aboutDecide": "每封新信會先看寄件者、主旨和預覽，看起來是工作信（邀約、合約、行程安排、款項）時才讀取全文。",
     "aboutMembers": "收進來的工作信屬於這個工作區，所有成員（包括經紀人）都看得到。不是工作的信不會保留。",
     "notConfigured": "這個環境尚未設定 Gmail。",
@@ -1329,7 +1401,7 @@
     "accountNote": "請選收邀約信的帳號。",
     "continue": "前往 Google",
     "disconnectTitle": "中斷 Gmail 連結？",
-    "disconnectBody": "Talent Biz OS 會停止讀取這個信箱，並撤銷在 Google 的存取權。Google 登入不受影響。",
+    "disconnectBody": "Taloox 會停止讀取這個信箱，並撤銷在 Google 的存取權。Google 登入不受影響。",
     "confirmDisconnect": "中斷連結",
     "result": {
       "connected": "已連結 Gmail。",
@@ -1389,7 +1461,8 @@
       "pending": "沒有符合的規則，之後會再判斷。",
       "model": "模型",
       "gone": "檢查前已在 Gmail 刪除",
-      "analysis": "分析判斷不是工作信"
+      "analysis": "分析判斷不是工作信",
+      "too_large": "太大，無法匯入：信件的文字和排版超過 10 MB。請在 Gmail 開啟，把需要的內容貼到進件分類。"
     },
     "peekError": {
       "reconnect": "請到「設定」重新連結 Gmail，才能看到寄件者與主旨。",
@@ -1447,7 +1520,10 @@
     "connectToSee": "連結 Gmail 後，信件會在這裡分類：工作信等你確認，其他的會被過濾。",
     "reconnectInSettings": "Gmail 需要重新連結",
     "reconnectWhy": "Google 的授權已失效，新信暫時進不來。",
-    "reconnectGo": "到設定重新連結"
+    "reconnectGo": "到設定重新連結",
+    "fetchFailedChip": "無法匯入",
+    "fetchFailed": "這封信試了幾次仍無法匯入（Gmail 或連線出錯）。請再試一次，或在 Gmail 開啟。",
+    "tryAgain": "再試一次"
   },
   "paymentNotice": {
     "chip": "收款",
@@ -1633,8 +1709,8 @@
       "paying": "付款資訊",
       "other": "其他資料"
     },
-    "paymentHelpIn": "一筆紀錄代表一筆款項。分次收款請分筆登錄；尚未收到時保持「待收」。已收報表依實際收款日期計算。實際入帳少於應收（例如扣繳、二代健保）時，填寫實收金額，差額會另外顯示。",
-    "paymentHelpOut": "一筆紀錄代表一筆款項。分次付款請分筆登錄；尚未支付時保持「待付」。已付報表依實際付款日期計算。",
+    "paymentHelpIn": "一筆紀錄代表一筆應收款項。全部收到前保持「待收」：分次入帳，或被扣繳（例如所得稅、二代健保）時，用「記錄收款」記下每一次。已收報表依每次實際收款日期計算。",
+    "paymentHelpOut": "一筆紀錄代表一筆應付款項。全部付清前保持「待付」：分次付款用「記錄付款」記下每一次。已付報表依每次實際付款日期計算。",
     "contactCreate": "＋ 新增聯絡人「{name}」",
     "contactPlaceholder": "搜尋聯絡人，或輸入新名稱",
     "clientField": "客戶（公司）",
@@ -1651,7 +1727,15 @@
     "contactAlreadyHere": "「{name}」已經在這裡了；確定要再新增一位同名的聯絡人嗎？",
     "contactSameNameElsewhere": "{org} 已經有一位「{name}」；這會在這裡新增另一位同名的聯絡人。",
     "grantSource": "查看補助申請",
-    "openOnly": "進行中的合作案都可以關聯，不論是否簽約；簽約後才會算進預計收支與提醒。也可不關聯。"
+    "openOnly": "進行中的合作案都可以關聯，不論是否簽約；簽約後才會算進預計收支與提醒。也可不關聯。",
+    "moveCurrency": {
+      "legend": "幣別為 {from} 的款項",
+      "note": "勾選的款項會跟著合作案改成 {to}。金額不變：這是更正幣別，不是換算匯率。",
+      "income": "收入",
+      "cost": "支出",
+      "hasCents": "有小數：請先改成整數日圓"
+    },
+    "receiptsElsewhere": "{direction, select, in {收款請在「內帳分析」或合作案頁的「記錄收款」} other {付款請在「內帳分析」或合作案頁的「記錄付款」}}裡記錄或更正。"
   },
   "tone": {
     "natural": "自然專業",
@@ -1820,7 +1904,7 @@
     "pasteRequired": "請先貼上訊息內容。",
     "pasteTooLong": "內容太長，最多可貼上 {max} 個字元。",
     "messageNotFound": "找不到這則訊息，或已經處理過了。",
-    "uploadInvalid": "最多可傳 {files} 個檔案，限截圖、照片（PNG、JPEG、WebP、HEIC）或 PDF。",
+    "uploadInvalid": "最多可傳 {files} 個檔案，限截圖、照片（PNG、JPEG、WebP）或 PDF。",
     "uploadTooLarge": "檔案太大，最多 {files} 個、總共 {megabytes} MB。",
     "uploadMissing": "有檔案沒有上傳完成，請再試一次。",
     "aiDailyLimit": "這個帳號今天的 AI 分析次數已用完，24 小時內會重置。",
@@ -1839,12 +1923,19 @@
     "clientRequired": "請填寫客戶（公司）。",
     "gmailNotConnected": "尚未連結 Gmail。",
     "noticeCurrency": "目前只能記錄新台幣款項。",
-    "projectEnded": "這個合作案已婉拒或已取消，不能再加入新的項目。"
+    "projectEnded": "這個合作案已婉拒或已取消，不能再加入新的項目。",
+    "amountWholeYen": "日圓金額須為整數。",
+    "paymentsChanged": "編輯期間這個合作案的款項有變動。請關閉表單後重新開啟，再選一次要一起改的款項。",
+    "receiptEmpty": "請填入實收或扣繳金額。",
+    "receiptChanged": "這筆收款紀錄剛剛已被更正或撤回，請關閉後重新查看。",
+    "paymentNotOpen": "這筆紀錄已作廢或取消，不能再記錄收款。",
+    "snoozeTime": "請選現在之後、30 天內的時間。",
+    "aiPaused": "AI 目前暫停中，請稍後再試。"
   },
   "emails": {
-    "resetSubject": "重設 Talent Biz OS 密碼",
+    "resetSubject": "重設 Taloox 密碼",
     "resetBody": "請點擊以下連結重設密碼（1 小時內有效）：\n\n{url}\n\n如果你沒有要求重設密碼，請忽略這封信。",
-    "verifySubject": "確認你的 Talent Biz OS 電子郵件",
+    "verifySubject": "確認你的 Taloox 電子郵件",
     "verifyBody": "請點擊以下連結確認你的電子郵件（1 小時內有效）：\n\n{url}"
   },
   "meta": {
@@ -1918,7 +2009,7 @@
     "change": "變更角色",
     "settingsTitle": "角色與助理",
     "settingsBody": "角色只影響介面用語與建議，不會限制任何功能或權限。可隨時變更角色或助理造型。",
-    "cancelChange": "取消變更角色",
+    "cancelChange": "不變更並關閉",
     "saveNotice": "按下儲存後才會變更角色。"
   },
   "itinerary": {
@@ -2131,16 +2222,16 @@
     "notice": "此為待填寫的起始範本，尚未經律師審核。簽署前請依案件與適用地區確認條款。",
     "all": "全部角色",
     "role": "適用角色",
-    "language": "文件語言",
+    "language": "語言",
     "contract": "合約",
     "quote": "報價單",
-    "preview": "預覽內容",
+    "preview": "預覽",
     "download": "下載 Word",
     "copy": "複製全文",
-    "copied": "已複製",
-    "copyFailed": "複製失敗，請在預覽中手動複製。",
-    "sources": "參考資料",
-    "empty": "目前尚未上架範本。",
+    "copied": "已複製：{title}",
+    "copyFailed": "無法複製，請在預覽中選取文字後複製。",
+    "sources": "條文參考來源",
+    "empty": "目前還沒有範本。",
     "roles": {
       "musician": "音樂人",
       "manager": "經紀人",
@@ -2429,7 +2520,7 @@
     "mu": "Musicians’ Union",
     "artsLaw": "Arts Law",
     "ftc": "FTC",
-    "expand": "展開範本",
+    "expand": "瀏覽範本",
     "collapse": "收合範本",
     "summary": "{scenarios} 種情境 · {documents} 份可編輯 Word · 中英文",
     "contractCommon": {
@@ -2469,10 +2560,21 @@
     "commonPaper": "Common Paper 開放服務合約",
     "freelancersUnion": "Freelancers Union 合約基本事項",
     "loading": "正在載入範本…",
-    "loadFailed": "目前無法載入範本。",
-    "retry": "重試",
+    "loadFailed": "無法載入範本。",
+    "retry": "再試一次",
     "noticeShort": "範本僅供起草，簽署前請確認條款。",
-    "noMatch": "目前沒有這個角色的範本。"
+    "noMatch": "這個角色目前還沒有範本。",
+    "disclaimer": "以下僅為參考範本，不構成法律建議，也未經律師審閱。請依你的合作內容與適用地區逐條確認，並自行承擔使用責任；簽署的內容由你負責。重要事項請諮詢律師。",
+    "fileNotice": "本文件僅為參考範本，不構成法律建議。Taloox 並非律師事務所，未針對你的合作審閱本文件。請逐條確認、填寫括號內容，並自行承擔使用責任；重要事項請諮詢律師。寄出前請刪除本段說明。",
+    "allRoles": "全部角色",
+    "kind": "文件類型",
+    "source": {
+      "commonPaper": "Common Paper：專業服務合約",
+      "freelancersUnion": "Freelancers Union：合約基本事項",
+      "mu": "英國音樂家工會：標準合約",
+      "artsLaw": "Arts Law：演出合約檢查清單",
+      "ftc": "美國 FTC：代言與網紅規範"
+    }
   },
   "assistantCosts": {
     "title": "AI 用量與定價分析",
@@ -2682,7 +2784,7 @@
     "nextMonth": "下個月",
     "today": "今天",
     "clear": "清除",
-    "close": "關閉選擇器"
+    "close": "關閉"
   },
   "creatorPlatforms": {
     "title": "創作平台數據",
@@ -2950,5 +3052,37 @@
     "keep": "只標記，保留這些項目",
     "cancelDeclined": "標記為已婉拒，並取消這些項目",
     "cancelCancelled": "標記為已取消，並取消這些項目"
+  },
+  "receipts": {
+    "title": "{direction, select, in {記錄收款} other {記錄付款}}",
+    "correctTitle": "更正收款紀錄",
+    "summary": "總額 {total} · 目前已收 {cash} · 已扣繳 {withheld}",
+    "dateReceived": "收款日",
+    "datePaid": "付款日",
+    "cashReceived": "實收金額",
+    "cashPaid": "實付金額",
+    "withheld": "扣繳",
+    "addRate": "+{rate}%",
+    "withheldHelp": "扣繳是付款方替你預扣的金額（所得稅、二代健保補充保費）。會算進總額，報稅時可以扣抵，但不是現金。",
+    "note": "備註",
+    "restLegend": "還剩 {amount}",
+    "restComing": "還會再付：維持待收",
+    "restClosed": "不會再付了：結案，差額記為短收",
+    "restComingOut": "還要再付：維持待付",
+    "restClosedOut": "不用再付了：結案",
+    "cancel": "取消",
+    "save": "儲存",
+    "saveCorrection": "儲存更正",
+    "history": "收款紀錄",
+    "withheldAmount": "扣繳 {amount}",
+    "correctedLabel": "已更正",
+    "withdrawnLabel": "已撤回",
+    "correct": "更正",
+    "withdraw": "撤回"
+  },
+  "list": {
+    "loading": "載入中…",
+    "loadMore": "載入更多",
+    "retry": "再試一次"
   }
 }

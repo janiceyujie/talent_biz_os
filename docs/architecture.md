@@ -746,17 +746,35 @@ create table payment (
   due_on             date,
   status             text not null default 'expected'
                        check (status in ('expected','settled','cancelled')),  -- 待收・待付 / 已收・已付
-  settled_amount     numeric(12,2),                 -- what actually arrived or was paid
-  settled_on         date,                          -- set exactly when status = 'settled'
+                                                    -- settled: its receipts cover it, or closed short (0021)
   method             text,                          -- 'bank_transfer', 'cash', 'paypal'...
   invoice_ref        text,                          -- 發票／請款編號
   notes              text,
   voided_at          timestamptz,                   -- 作廢: entered by mistake or duplicated; out of every total
   created_at         timestamptz not null default now(),
-  updated_at         timestamptz not null default now(),
-  check ((status = 'settled') = (settled_on is not null))
+  updated_at         timestamptz not null default now()
 );
 create index payment_talent_status_due_idx on payment (talent_id, status, due_on);
+
+-- What arrived or was paid, once each time (decision 0021). Only added: a correction names the
+-- receipt it replaces; a withdrawal is a row with withdrawn set. A payment's received, withheld,
+-- left, and settled day are worked out from its active receipts, never stored.
+create table payment_receipt (
+  id           uuid primary key default gen_random_uuid(),
+  talent_id    uuid not null references talent(id) on delete cascade,
+  payment_id   uuid not null references payment(id) on delete cascade,
+  received_on  date not null,
+  cash         numeric(12,2) not null,
+  withheld     numeric(12,2) not null default 0,  -- income tax, the NHI premium: kept back, claimable
+  note         text,
+  replaces_id  uuid unique references payment_receipt(id) on delete cascade,
+  withdrawn    boolean not null default false,
+  recorded_by  uuid references person(id) on delete set null,
+  created_at   timestamptz not null default now(),
+  check (cash >= 0 and withheld >= 0),
+  check (not withdrawn or (replaces_id is not null and cash = 0 and withheld = 0))
+);
+create index payment_receipt_payment_idx on payment_receipt (payment_id);
 
 create table todo (
   id            uuid primary key default gen_random_uuid(),

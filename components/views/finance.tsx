@@ -5,14 +5,15 @@ import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { DateTimeInput } from "@/components/app/date-time-input";
 import { FinanceInsights } from "./finance-insights";
+import { ReceiptDialog } from "@/components/app/receipt-dialog";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
 import { voidPayment } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
 import { quote, supportedCurrencies, type Currency } from "@/lib/domain/money";
 import { useCurrencyName, useMoney } from "@/lib/i18n/format";
-import { paymentCash, paymentDate, paymentTotal, summarize } from "@/lib/domain/workflow";
+import { paymentCash, paymentDate, paymentRemaining, paymentShort, paymentTotal, paymentWithheld, summarize } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
-import type { AppData } from "@/lib/types";
+import type { AppData, Payment } from "@/lib/types";
 
 export function Metric({ label, value, note, tone = "plain" }: { label: string; value: string; note: string; tone?: string }) {
   return (
@@ -101,6 +102,7 @@ export function FinanceView() {
   // Totals are per currency (no conversion yet); the ledger and every figure follow this choice.
   const [currency, setCurrency] = useState<Currency>("TWD");
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [receiptFor, setReceiptFor] = useState<Payment | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [base, setBase] = useState(50000);
@@ -118,7 +120,7 @@ export function FinanceView() {
 
   function exportCsv() {
     const table = [
-      (["recorded", "settled", "installment", "name", "direction", "category", "currency", "net", "tax", "total", "status", "due", "invoice"] as const).map(
+      (["recorded", "settled", "installment", "name", "direction", "category", "currency", "net", "tax", "total", "received", "withheld", "status", "due", "invoice"] as const).map(
         (column) => t(`csv.${column}`),
       ),
       ...rows.map((p) => {
@@ -134,6 +136,8 @@ export function FinanceView() {
           amounts.net,
           amounts.tax,
           amounts.total,
+          paymentCash(p),
+          paymentWithheld(p),
           labels.paymentStatus(p),
           p.dueDate,
           p.invoiceRef,
@@ -268,25 +272,25 @@ export function FinanceView() {
                   </td>
                   <td>
                     {money(paymentTotal(p), p.currency)}
-                    {p.status === "settled" && paymentCash(p) !== paymentTotal(p) && (
+                    {paymentCash(p) + paymentWithheld(p) > 0 && paymentCash(p) !== paymentTotal(p) && (
                       <small>
-                        {t("settledGap", { direction: p.direction, cash: money(paymentCash(p), p.currency), gap: money(paymentTotal(p) - paymentCash(p), p.currency) })}
+                        {t("receivedSoFar", { direction: p.direction, cash: money(paymentCash(p), p.currency) })}
+                        {paymentWithheld(p) > 0 && ` · ${t("withheldSoFar", { amount: money(paymentWithheld(p), p.currency) })}`}
                       </small>
                     )}
+                    {paymentRemaining(p) > 0 && paymentRemaining(p) !== paymentTotal(p) && (
+                      <small>{t("left", { direction: p.direction, amount: money(paymentRemaining(p), p.currency) })}</small>
+                    )}
+                    {paymentShort(p) > 0 && <small>{t("short", { amount: money(paymentShort(p), p.currency) })}</small>}
                   </td>
                   <td>
                     <div className="row-actions">
                       <button className="secondary compact" onClick={() => setEditor({ kind: "payment", item: toRecord(p) })}>
                         {t("edit")}
                       </button>
-                      {p.status === "expected" && !p.voided && (
-                        <button
-                          className="secondary compact"
-                          onClick={() =>
-                            setEditor({ kind: "payment", item: { ...toRecord(p), status: "settled", settledDate: today } })
-                          }
-                        >
-                          {t("markSettled", { direction: p.direction })}
+                      {!p.voided && (p.status === "expected" || p.receipts.length > 0) && (
+                        <button className="secondary compact" onClick={() => setReceiptFor(p)}>
+                          {p.status === "expected" ? t("markSettled", { direction: p.direction }) : t("receipts")}
                         </button>
                       )}
                       <button
@@ -309,6 +313,7 @@ export function FinanceView() {
         {t("footnote")}
       </p>
       {editor && <RecordEditor editor={editor} onClose={() => setEditor(null)} />}
+      {receiptFor && <ReceiptDialog payment={receiptFor} onClose={() => setReceiptFor(null)} />}
     </div>
   );
 }

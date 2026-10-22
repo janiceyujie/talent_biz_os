@@ -9,16 +9,17 @@ import { isGoogleConfigured, isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { readPreferences } from "@/lib/preferences";
 import { pairKey } from "@/lib/domain/organizations";
+import { activeReceipts } from "@/lib/domain/workflow";
 import { inboxOverview } from "./inbox";
 import { summaryOf } from "./projects";
 import { changeMark } from "./changes";
-import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, membership, notificationState, payment, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
+import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, membership, notificationState, payment, paymentReceipt, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { mailConfigured } from "@/lib/mail/connect";
 import type { Currency } from "@/lib/domain/money";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
-import { calendarKinds, type AppData, type CalendarItem, type CalendarKind, type TravelDetails } from "@/lib/types";
+import { calendarKinds, type AppData, type CalendarItem, type PaymentReceipt, type CalendarKind, type TravelDetails } from "@/lib/types";
 
 
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : "");
@@ -34,7 +35,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
   const { person, talent: current } = await requireTalent();
   // Read before the data, so a change made while it loads moves the mark again and is caught next check.
   const changes = await changeMark(current.id, person.personId);
-  const [[talentRow], [memberRow], projectRows, contactRows, organizationRows, distinctRows, clientRows, projectPeopleRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows, inboxRows, preferenceRows] = await Promise.all([
+  const [[talentRow], [memberRow], projectRows, contactRows, organizationRows, distinctRows, clientRows, projectPeopleRows, paymentRows, eventRows, todoRows, templateRows, stateRows, accountRows, inboxRows, preferenceRows, receiptRows] = await Promise.all([
     db
       .select({ id: talent.id, name: talent.name, timeZone: talent.timeZone, vertical: talent.vertical })
       .from(talent)
@@ -84,7 +85,14 @@ export const getAppData = cache(async (): Promise<AppData> => {
       .select({ key: preference.key, value: preference.value })
       .from(preference)
       .where(and(eq(preference.personId, person.personId), eq(preference.talentId, current.id))),
+    db.select().from(paymentReceipt).where(eq(paymentReceipt.talentId, current.id)).orderBy(paymentReceipt.createdAt),
   ]);
+  const receiptsOf = new Map<string, PaymentReceipt[]>();
+  for (const r of receiptRows)
+    receiptsOf.set(r.paymentId, [
+      ...(receiptsOf.get(r.paymentId) ?? []),
+      { id: r.id, date: r.receivedOn, cash: r.cash, withheld: r.withheld, note: r.note ?? "", replacesId: r.replacesId, withdrawn: r.withdrawn, recordedAt: r.createdAt.toISOString() },
+    ]);
 
   const contractRows = await db
     .select()
@@ -311,26 +319,30 @@ export const getAppData = cache(async (): Promise<AppData> => {
     distinctOrganizations: distinctRows.map((r) => pairKey(r.a, r.b)),
     projectPeople: projectPeopleRows,
     calendar,
-    payments: paymentRows.map((p) => ({
-      id: p.id,
-      projectId: p.projectId,
-      projectType: p.projectType && isProjectType(p.projectType) ? p.projectType : "other",
-      direction: p.direction,
-      installment: p.installment,
-      label: p.label,
-      amount: p.amount,
-      currency: p.currency as Currency,
-      taxRate: p.taxRate,
-      taxIncluded: p.taxIncluded,
-      recordedDate: p.recordedOn,
-      dueDate: p.dueOn,
-      status: p.status,
-      settledAmount: p.settledAmount,
-      settledDate: p.settledOn,
-      invoiceRef: p.invoiceRef ?? "",
-      notes: p.notes ?? "",
-      voided: p.voidedAt !== null,
-    })),
+    payments: paymentRows.map((p) => {
+      const receipts = receiptsOf.get(p.id) ?? [];
+      return {
+        id: p.id,
+        projectId: p.projectId,
+        projectType: p.projectType && isProjectType(p.projectType) ? p.projectType : "other",
+        direction: p.direction,
+        installment: p.installment,
+        label: p.label,
+        amount: p.amount,
+        currency: p.currency as Currency,
+        taxRate: p.taxRate,
+        taxIncluded: p.taxIncluded,
+        recordedDate: p.recordedOn,
+        dueDate: p.dueOn,
+        status: p.status,
+        receipts,
+        // Worked out, never stored (decision 0021): the day the last receipt that counts arrived.
+        settledDate: p.status === "settled" ? (activeReceipts({ receipts }).map((r) => r.date).sort().at(-1) ?? null) : null,
+        invoiceRef: p.invoiceRef ?? "",
+        notes: p.notes ?? "",
+        voided: p.voidedAt !== null,
+      };
+    }),
     templates: templateRows.map((t) => ({
       id: t.id,
       projectType: isProjectType(t.projectType) ? t.projectType : "other",

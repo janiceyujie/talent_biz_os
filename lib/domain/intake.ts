@@ -8,7 +8,7 @@ import type { AppData, CalendarItem, Contact, Contract, ContractTerms, InboxMess
 import { dateInZone } from "./dates";
 import { isCurrency, type Currency } from "./money";
 import { isSigned } from "./phases";
-import { paymentTotal } from "./workflow";
+import { paymentRemaining } from "./workflow";
 
 export type IntakeContext = {
   projects: ProjectSummary[];
@@ -181,10 +181,10 @@ export function suggestTargets(a: MessageAnalysis, ctx: IntakeContext): TargetSu
 
     if (a.intent === "payment") {
       const stated = statedAmount(a);
-      const match = stated ? expectedIncome(project, ctx.payments).find((p) => readsAs(stated, p.currency) && near(paymentTotal(p), stated.amount)) : undefined;
+      const match = stated ? expectedIncome(project, ctx.payments).find((p) => readsAs(stated, p.currency) && near(paymentRemaining(p), stated.amount)) : undefined;
       if (match) {
         score += 2;
-        reasons.push({ kind: "payment", value: paymentTotal(match), currency: match.currency });
+        reasons.push({ kind: "payment", value: paymentRemaining(match), currency: match.currency });
       }
     }
 
@@ -455,10 +455,10 @@ function paymentChanges(a: MessageAnalysis, project: Project, ctx: IntakeContext
   const asStated = a.details.amountDue?.asStated || a.money.asStated;
   const paid = statusIs(a, /sent|paid|已匯|已付|已轉|已支付|匯出|入帳|付款完成/i);
   // Amounts are compared only within one currency.
-  const byAmount = amount ? expected.filter((p) => p.currency === currency && near(paymentTotal(p), amount)) : [];
+  const byAmount = amount ? expected.filter((p) => p.currency === currency && near(paymentRemaining(p), amount)) : [];
   /** Settle a payment with the stated amount, unless it's in another currency: then its own total, for the person to correct. */
   const settle = (p: Payment, ticked: boolean): Change => {
-    const total = paymentTotal(p);
+    const total = paymentRemaining(p);
     const other = amount !== null && p.currency !== currency;
     return {
       id: "payment",

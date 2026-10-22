@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import type { Intent } from "@/lib/ai/extraction/intents";
 import type { FlagKind } from "@/lib/ai/safety";
+import { activeReceipts } from "@/lib/domain/workflow";
 import { projectTypeKeys, type ProjectType } from "@/lib/project-types";
 import type { CalendarKind, ContactRole, Payment, Stage, TransportMode } from "@/lib/types";
 
@@ -18,10 +19,11 @@ export function useLabels() {
     transportMode: (m: TransportMode) => t(`transportMode.${m}`),
     direction: (d: Payment["direction"]) => t(`direction.${d}`),
     installment: (i: Payment["installment"]) => t(`installment.${i}`),
-    paymentStatus: (p: Pick<Payment, "direction" | "status">) =>
+    // With its receipts, an open payment that's had some money already reads as partly received.
+    paymentStatus: (p: Pick<Payment, "direction" | "status"> & Partial<Pick<Payment, "receipts">>) =>
       p.status === "cancelled"
         ? t("paymentStatus.cancelled")
-        : t(`paymentStatus.${p.status}${p.direction === "in" ? "In" : "Out"}`),
+        : t(`paymentStatus.${p.status === "expected" && p.receipts && activeReceipts({ receipts: p.receipts }).length ? "part" : p.status}${p.direction === "in" ? "In" : "Out"}`),
     projectType: (k: ProjectType) => t(`projectType.${k}.label`),
     intent: (k: Intent) => t(`intent.${k}`),
     flag: (k: FlagKind) => t(`flag.${k}`),

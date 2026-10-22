@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { useFitToWindow } from "@/components/app/use-fit-to-window";
 import { partnerInsights } from "@/lib/domain/insights";
 import { totalsByCurrency } from "@/lib/domain/money";
+import { paymentCash } from "@/lib/domain/workflow";
 import { useMoney, useMoneyTotals } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 
@@ -235,7 +236,7 @@ function PartnerReport({ report, onBack }: { report: Report; onBack: () => void 
               [...groups].map(([projectId, items]) => {
                 const project = projectOf(projectId);
                 const all = report.rows.filter((x) => x.projectId === projectId);
-                const received = totalsByCurrency(all.filter((x) => x.status === "settled"), (x) => x.total);
+                const received = totalsByCurrency(all, (x) => paymentCash(x)); // every receipt, parts too
                 const total = totalsByCurrency(all, (x) => x.total);
                 return (
                   <tbody key={projectId}>

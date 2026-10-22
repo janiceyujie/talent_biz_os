@@ -77,7 +77,7 @@ const payment = (over: Partial<Payment> = {}): Payment => ({
   recordedDate: "2026-09-01",
   dueDate: "2026-11-30",
   status: "expected",
-  settledAmount: null,
+  receipts: [],
   settledDate: null,
   invoiceRef: "",
   notes: "",

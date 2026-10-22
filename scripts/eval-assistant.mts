@@ -52,7 +52,7 @@ for (const c of selected) {
     const { text } = await generateText({
       role: "assistant",
       system: assistantSystem(c.locale),
-      prompt: assistantPrompt(snapshots[c.scope], c.question),
+      prompt: assistantPrompt(snapshots[c.scope], c.question, cleanSnapshot({ history: c.history ?? [] }).snapshot.history),
       trace: { task: "eval", promptVersion: ASSISTANT_PROMPT_VERSION },
     });
     const lower = text.toLowerCase();

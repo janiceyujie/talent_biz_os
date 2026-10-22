@@ -996,7 +996,7 @@
       "signedOnly": "Signed deals only, as on Today.",
       "moneyMore": "{count, plural, one {# more payment} other {# more payments}} not shown. See Finance for all of them."
     },
-    "note": "For now each question is answered on its own, from your records only. Answers can be wrong: check anything important.",
+    "note": "Answers come from your records only, and the last few questions in this conversation. They can be wrong: check anything important.",
     "monthLeft": "{count, plural, one {# question} other {# questions}} left this month.",
     "scope": "About",
     "scopeOverview": "Your whole workspace",
@@ -1009,6 +1009,19 @@
       "unavailable": "The assistant can't answer right now. Try again in a moment.",
       "not_found": "That project isn't available any more. Choose another.",
       "failed": "Couldn't get an answer."
+    },
+    "unreadable": "This message can't be shown.",
+    "readOnly": "This conversation is about a workspace you no longer have access to. You can read it, but not continue it.",
+    "history": {
+      "title": "Conversations",
+      "new": "New conversation",
+      "empty": "No saved conversations yet.",
+      "readOnly": "read only",
+      "more": "Show more",
+      "delete": "Delete “{title}”",
+      "deleteTitle": "Delete this conversation?",
+      "deleteBody": "“{title}” and everything in it will be deleted for good.",
+      "deleteConfirm": "Delete"
     }
   },
   "calendar": {

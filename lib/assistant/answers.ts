@@ -8,10 +8,11 @@ import { countedPayments, paymentRemaining } from "@/lib/domain/workflow";
 import type { CalendarKind, Payment, ProjectSummary } from "@/lib/types";
 
 export const assistantIntents = ["today", "tomorrow", "receivable", "payable"] as const;
+export type AssistantIntent = (typeof assistantIntents)[number];
+/** Each intent's button label, under assistant.prompt in the message catalogs. */
+export const promptKeys = { today: "today", tomorrow: "tomorrow", receivable: "unpaid", payable: "payable" } as const satisfies Record<AssistantIntent, string>;
 /** The longest question in the person's own words. */
 export const QUESTION_MAX = 2000;
-export type AssistantIntent = (typeof assistantIntents)[number];
-
 /** Lines an answer lists; past it, it says how many more there are rather than dropping them silently. */
 export const ANSWER_LINES = 30;
 

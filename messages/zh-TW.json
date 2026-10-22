@@ -672,6 +672,7 @@
     "showDismissed": "顯示已略過（{count}）",
     "status": {
       "pending": "分析中",
+      "paused": "暫停中",
       "analyzed": "待確認",
       "confirmed": "已建檔",
       "dismissed": "已略過",
@@ -686,6 +687,7 @@
       "gmail": "Gmail"
     },
     "pendingBody": "AI 正在整理這則訊息，完成後會自動顯示，通常不到一分鐘。",
+    "pausedBody": "AI 目前暫停中。這則訊息已保存，恢復後會自動分析。",
     "failed": "分析沒有完成：{reason}",
     "facts": "AI 整理的資訊",
     "field": {
@@ -745,7 +747,8 @@
       "unsupported_file": "目前的 AI 模型無法讀取這種檔案。",
       "unexpected": "分析時發生未預期的錯誤，請按「重新分析」。",
       "replay_missing": "這個環境只使用錄製的 AI 回覆（AI_REPLAY=only），而這則訊息沒有錄製檔。",
-      "usage_limit": "這個帳號今天的 AI 分析次數已用完，24 小時內重置後可按「重新分析」。"
+      "usage_limit": "這個帳號今天的 AI 分析次數已用完，24 小時內重置後可按「重新分析」。",
+      "paused": "AI 目前暫停中，恢復後會自動分析這則訊息。"
     },
     "transcriptWithheld": "AI 服務不提供這份檔案的文字轉錄（看起來像已發表的內容），因此沒有轉錄。",
     "notWork": "這看起來不是工作上的訊息。如果不需要，可以按「略過」。",
@@ -753,6 +756,7 @@
     "assumed": "AI 推定：{note}",
     "usageRemaining": "今日剩餘 AI 分析：{remaining}／{limit} 次",
     "usageExhausted": "今天的 {limit} 次 AI 分析已用完。新訊息仍會保存，重置後可再分析。",
+    "aiPaused": "AI 目前暫停中。新訊息仍會保存，恢復後會自動分析。",
     "factsWithAssumptions": "AI 整理的資訊（含 {count} 項推定）",
     "weekdayMismatch": "{date} 是{actual}，但訊息寫的是{stated}。",
     "listLabel": "訊息列表",
@@ -1007,6 +1011,7 @@
       "month_limit": "本月的提問次數已經用完，上方的快速問題仍然可以使用。",
       "day_limit": "今天問得比較多，請明天再試；上方的快速問題仍然可以使用。",
       "unavailable": "助理暫時無法回答，請稍後再試。",
+      "paused": "AI 目前暫停中，只有上方的快速問題可以回答，請稍後再問。",
       "not_found": "這個合作案已經無法使用，請改選其他合作案。",
       "failed": "沒能取得答案。"
     },
@@ -1783,6 +1788,7 @@
     "uploadTooLarge": "檔案太大，最多 {files} 個、總共 {megabytes} MB。",
     "uploadMissing": "有檔案沒有上傳完成，請再試一次。",
     "aiDailyLimit": "這個帳號今天的 AI 分析次數已用完，24 小時內會重置。",
+    "aiPaused": "AI 目前暫停中，請稍後再試。",
     "aiMessageLimit": "這則訊息已達重新分析的次數上限。",
     "proposalChanged": "合作案在你打開這則訊息後有變動，請重新檢查建議的更新。",
     "calendarNotGranted": "Google 沒有授權日曆存取，請再按一次「連結 Google 日曆」並允許。",

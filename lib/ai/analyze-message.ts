@@ -6,6 +6,8 @@ import { dateInZone } from "@/lib/domain/dates";
 import { isSigned } from "@/lib/domain/phases";
 import { toLocale, type Locale } from "@/lib/i18n/config";
 import { dropBroughtIn } from "@/lib/mail/not-work";
+import { queue } from "@/lib/queue";
+import { analysisQueue, analyzeJobKey } from "@/lib/queue/jobs";
 import { readBytes } from "@/lib/storage";
 import { notWork, proposesNothing, upgradeAnalysis, type MessageAnalysis } from "./analysis";
 import { extractMessage } from "./extract";
@@ -13,6 +15,10 @@ import type { ThreadNote } from "./prompts";
 import { stripInvisible } from "./safety";
 import { canAnalyze } from "./usage";
 import { ModelError } from "./model";
+import { aiPaused } from "./pause";
+
+/** While AI is paused, a message's analysis looks again this often. */
+const PAUSED_RETRY_MS = 5 * 60 * 1000;
 
 /**
  * Analyze one message and store a new analysis version. Marks the message analyzed, or error with the reason.
@@ -42,6 +48,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
     .innerJoin(talent, eq(talent.id, message.talentId))
     .where(eq(message.id, messageId));
   if (!row || row.status !== "pending" || row.kind !== "message") return; // a payment notice has only its fields
+  if (await aiPaused()) return waitWhilePaused(messageId, row.talentId, outputLocale);
   // Usage limits are checked here, where every analysis passes, not only in the actions.
   const allowed = await canAnalyze(row.talentId, messageId);
   if (!allowed.ok) {
@@ -101,6 +108,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
     if (gmail && !sent && notWork(analysis)) await dropBroughtIn(row.talentId, messageId, "analysis");
     if (sent) await fileWithThread(messageId, row, analysis);
   } catch (e) {
+    if (e instanceof ModelError && e.code === "paused") return waitWhilePaused(messageId, row.talentId, outputLocale); // paused since the check
     // The code is shown to the person in their language (inbox.failure.*); details go to the log.
     const failure = e instanceof ModelError ? e.code : "unexpected";
     console.error("analyzeMessage", messageId, e instanceof ModelError ? `${e.code}: ${e.message}` : e);
@@ -109,6 +117,24 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
       .set({ status: "error", failure: failure.slice(0, 500) })
       .where(and(eq(message.id, messageId), eq(message.status, "pending")));
   }
+}
+
+/** Still pending, marked paused, and this job again later: on the talent's queue, under its key, so it's never doubled. */
+async function waitWhilePaused(messageId: string, talentId: string, locale: Locale) {
+  await db.transaction(async (tx) => {
+    const [still] = await tx
+      .update(message)
+      .set({ failure: "paused" })
+      .where(and(eq(message.id, messageId), eq(message.status, "pending")))
+      .returning({ id: message.id });
+    if (still)
+      await queue.enqueue("message.analyze", { messageId, locale }, {
+        tx,
+        jobKey: analyzeJobKey(messageId),
+        queueName: analysisQueue(talentId),
+        runAt: new Date(Date.now() + PAUSED_RETRY_MS),
+      });
+  });
 }
 
 /**

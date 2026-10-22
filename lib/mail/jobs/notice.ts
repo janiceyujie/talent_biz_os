@@ -38,14 +38,14 @@ export async function pathFor(d: Decision, c: Connection, mail: MailProvider): P
   if (d.kind) return d.kind === "bank_notice" ? "notice" : "normal";
   const meta = await mail.getMetadata(d.providerMessageId, { snippet: true });
   if (!meta || !isBulk(meta)) return "normal"; // gone: the normal path records it when it finds nothing
-  if (!(await canScore(c.talentId))) return "wait"; // the mailbox's daily cap
+  if (!(await canScore(c.talentId))) return "wait"; // the mailbox's daily cap, or AI paused
   let scored;
   try {
     scored = await scoreMail(meta, { task: "relevance", talentId: c.talentId });
   } catch (e) {
     // Ids and codes only: never the subject or preview.
     console.error("mail.fetch kind failed", d.id, e instanceof ModelError ? e.code : (e as Error)?.name);
-    if (e instanceof ModelError && e.code === "not_configured") return "wait"; // retrying won't help
+    if (e instanceof ModelError && (e.code === "not_configured" || e.code === "paused")) return "wait"; // retrying now won't help
     throw e;
   }
   // As in the model step (./relevance.ts): a machine-sent payment email is treated as a notice.
@@ -60,7 +60,7 @@ export async function bringNotice(d: Decision, c: Connection, mail: MailProvider
     await db.update(mailDecision).set({ outcome: "skipped", decidedBy: "gone" }).where(eq(mailDecision.id, d.id));
     return;
   }
-  if (!(await canScore(c.talentId))) return; // the mailbox's daily cap: stays in Waiting for a later check
+  if (!(await canScore(c.talentId))) return; // the mailbox's daily cap, or AI paused: stays in Waiting for a later check
   const [t] = await db.select({ timeZone: talent.timeZone }).from(talent).where(eq(talent.id, c.talentId));
   const receivedOn = dateInZone(t.timeZone, 0, meta.receivedAt);
 
@@ -74,7 +74,7 @@ export async function bringNotice(d: Decision, c: Connection, mail: MailProvider
   } catch (e) {
     // Ids and codes only: never the notice's text.
     console.error("mail.fetch notice failed", d.id, e instanceof ModelError ? e.code : (e as Error)?.name);
-    if (e instanceof ModelError && e.code === "not_configured") return; // stays in Waiting; retrying won't help
+    if (e instanceof ModelError && (e.code === "not_configured" || e.code === "paused")) return; // stays in Waiting; retrying now won't help
     throw e;
   }
 

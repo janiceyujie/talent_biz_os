@@ -672,6 +672,7 @@
     "showDismissed": "Show dismissed ({count})",
     "status": {
       "pending": "Analyzing",
+      "paused": "Paused",
       "analyzed": "To review",
       "confirmed": "Filed",
       "dismissed": "Dismissed",
@@ -686,6 +687,7 @@
       "gmail": "Gmail"
     },
     "pendingBody": "The AI is reading this message; the result appears here on its own, usually within a minute.",
+    "pausedBody": "AI is paused for now. This message is saved and is analyzed on its own once it resumes.",
     "failed": "The analysis didn't finish: {reason}",
     "facts": "What the AI read",
     "field": {
@@ -745,7 +747,8 @@
       "unsupported_file": "The current AI model can't read this kind of file.",
       "unexpected": "Something unexpected went wrong. Try “Analyze again”.",
       "replay_missing": "No recorded answer for this message, and this environment only replays recordings (AI_REPLAY=only).",
-      "usage_limit": "Today's AI analyses for this account are used up. Try “Analyze again” once it resets (within 24 hours)."
+      "usage_limit": "Today's AI analyses for this account are used up. Try “Analyze again” once it resets (within 24 hours).",
+      "paused": "AI is paused for now. This message is analyzed on its own once it resumes."
     },
     "transcriptWithheld": "The AI service wouldn't write out this file's text (it looks like published material), so there's no transcript.",
     "notWork": "This doesn't look like a work message. If you don't need it, dismiss it.",
@@ -753,6 +756,7 @@
     "assumed": "AI assumed: {note}",
     "usageRemaining": "AI analyses left today: {remaining} of {limit}",
     "usageExhausted": "Today's {limit} AI analyses are used up. New messages are saved and can be analyzed once it resets.",
+    "aiPaused": "AI is paused for now. New messages are saved and analyzed on their own once it resumes.",
     "factsWithAssumptions": "What the AI read (with {count} assumptions)",
     "weekdayMismatch": "{date} is a {actual}, but the message says {stated}.",
     "listLabel": "Messages",
@@ -1007,6 +1011,7 @@
       "month_limit": "You've used this month's questions. The quick prompts above still work.",
       "day_limit": "You've asked a lot today. Try again tomorrow; the quick prompts above still work.",
       "unavailable": "The assistant can't answer right now. Try again in a moment.",
+      "paused": "AI is paused for now, so only the quick prompts above can answer. Try your question again later.",
       "not_found": "That project isn't available any more. Choose another.",
       "failed": "Couldn't get an answer."
     },
@@ -1783,6 +1788,7 @@
     "uploadTooLarge": "That's too large — up to {files} files and {megabytes} MB in total.",
     "uploadMissing": "An upload didn't finish. Please try again.",
     "aiDailyLimit": "Today's AI analyses for this account are used up. It resets within 24 hours.",
+    "aiPaused": "AI is paused for now. Try again later.",
     "aiMessageLimit": "This message has been analyzed the maximum number of times.",
     "proposalChanged": "The project changed after you opened this message. Check the proposed updates again.",
     "calendarNotGranted": "Google didn't grant calendar access. Press Connect Google Calendar again and allow it.",

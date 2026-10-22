@@ -55,14 +55,14 @@ export async function scoreDecision(decisionId: string) {
     return;
   }
 
-  if (!(await canScore(c.talentId))) return; // the mailbox's daily cap: stays "Not decided yet" for a later check
+  if (!(await canScore(c.talentId))) return; // the mailbox's daily cap, or AI paused: stays "Not decided yet" for a later check
   let scored;
   try {
     scored = await scoreMail(mail, { task: "relevance", talentId: c.talentId });
   } catch (e) {
     // Ids and codes only: never the subject or preview.
     console.error("mail.relevance failed", d.id, e instanceof ModelError ? e.code : (e as Error)?.name);
-    if (e instanceof ModelError && e.code === "not_configured") return; // stays pending; retrying won't help
+    if (e instanceof ModelError && (e.code === "not_configured" || e.code === "paused")) return; // stays pending; retrying now won't help
     throw e;
   }
 

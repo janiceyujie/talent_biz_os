@@ -44,3 +44,4 @@ When a choice is easy to get wrong later, was argued over, or trades something a
 | [0020](0020-document-templates-are-data.md) | Contract and quote templates are data, published on deploy and generated on the server | Accepted |
 | [0021](0021-payment-receipts.md) | Money received is a list of receipts, and a payment's total is worked out from them | Accepted |
 | [0022](0022-paid-providers-only.md) | Only the paid providers, in development too | Accepted |
+| [0023](0023-talent-assistant.md) | The assistant: personal conversations over a fixed, read-only snapshot | Proposed |

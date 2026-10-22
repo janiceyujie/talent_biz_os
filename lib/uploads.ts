@@ -6,6 +6,7 @@ export const UPLOAD_LIMITS = {
   files: 10,
   fileBytes: 10 * 1024 * 1024,
   totalBytes: 12 * 1024 * 1024,
-  types: ["image/png", "image/jpeg", "image/webp", "image/heic", "image/heif", "application/pdf"] as const,
+  // Only what both providers read: HEIC/HEIF photos aren't accepted (docs/tech-debt.md).
+  types: ["image/png", "image/jpeg", "image/webp", "application/pdf"] as const,
 };
 export type UploadType = (typeof UPLOAD_LIMITS.types)[number];

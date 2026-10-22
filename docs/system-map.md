@@ -159,7 +159,7 @@ sequenceDiagram
 ```
 
 - **Which model** follows the routing below: a PDF or a long text goes to `analysis_complex` at once; screenshots and short text start on `analysis`.
-- **Limits** (`lib/uploads.ts`): up to 10 files, 10 MB each, 12 MB together, since files go to the model inline. PNG, JPEG, WebP, HEIC/HEIF, and PDF.
+- **Limits** (`lib/uploads.ts`): up to 10 files, 10 MB each, 12 MB together, since files go to the model inline. PNG, JPEG, WebP, and PDF; HEIC/HEIF is refused for now (`docs/tech-debt.md`).
 - **Retry** queues the same `message.analyze` again; earlier analyses are kept.
 
 ## The job queue and the worker

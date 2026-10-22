@@ -42,3 +42,4 @@ When a choice is easy to get wrong later, was argued over, or trades something a
 | [0018](0018-anything-on-an-open-deal.md) | Anything can go on an open deal; only signed work counts | Accepted |
 | [0019](0019-match-messages-by-relationships.md) | Match a message to its project through who it's from, not through past messages | Accepted |
 | [0020](0020-document-templates-are-data.md) | Contract and quote templates are data, published on deploy and generated on the server | Accepted |
+| [0021](0021-payment-receipts.md) | Money received is a list of receipts, and a payment's total is worked out from them | Accepted |

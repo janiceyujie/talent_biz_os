@@ -1,14 +1,22 @@
 import type { NextRequest } from "next/server";
 import { getCurrentTalent, getSession } from "@/lib/auth";
-import { inboxListParams, listInbox } from "@/lib/data/inbox";
-import { InvalidCursor } from "@/lib/data/page-cursor";
+import { listInbox, inboxListParams } from "@/lib/data/inbox";
+
+
+
+/**
+ * One page of the signed-in talent's Intake list (decision 0011), newest
+ * first: messages to review and filed, dismissed ones too with
+ * `dismissed=true`, or those kept from the mailbox's history with
+ * `history=true`. Unknown values fall back to the defaults.
+ */
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return new Response("Unauthorized", { status: 401 });
   const current = await getCurrentTalent(session.personId);
   if (!current) return new Response("Not found", { status: 404 });
-  const params = inboxListParams.safeParse(Object.fromEntries(req.nextUrl.searchParams));
-  if (!params.success) return new Response("Invalid filters", { status: 400 });
-  try { return Response.json(await listInbox(current.id, params.data), { headers: { "Cache-Control": "private, no-store" } }); }
-  catch (error) { if (error instanceof InvalidCursor) return new Response("Invalid cursor", { status: 400 }); throw error; }
+
+  const parsed = inboxListParams.parse({ cursor: "", ...Object.fromEntries(req.nextUrl.searchParams) });
+  const page = await listInbox(current.id, parsed);
+  return Response.json(page, { headers: { "Cache-Control": "private, no-store" } });
 }

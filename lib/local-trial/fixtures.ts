@@ -48,7 +48,7 @@ export function trialFixtures(talentId: string, personId: string, startMonth: st
   const projects: (typeof s.project.$inferInsert)[] = deals.map(d=>({id:id(`project-${d.key}`),talentId,title:label(d.title),counterparty:organizations[d.org].name!,counterpartyId:contacts[d.org].id,type:d.type,stage:d.stage,quotedAmount:d.fee,quoteCurrency:d.currency,taxRate:d.currency==="TWD"?5:0,taxIncluded:false,notes:note,details:{deliverables:d.work,rights:d.type==="licensing"?d.work:"自然曝光使用 90 天，付費廣告另議",contractNotes:note,dates:[{what:d.work,date:date(d.month,d.day),time:"15:00",timeZone}],toConfirm:d.stage==="offer"||d.stage==="negotiating"?["確認預算、使用範圍、付款期限及交件時間"]:[]},createdAt:stamp(date(0,1)),updatedAt:stamp(date(0,Math.min(12,Math.max(1,d.day-5))))}));
   const projectOrganizations: (typeof s.projectOrganization.$inferInsert)[] = deals.map(d=>({id:id(`project-org-${d.key}`),talentId,projectId:id(`project-${d.key}`),organizationId:organizations[d.org].id!,role:"Client",isPrimary:true}));
   const projectContacts: (typeof s.projectContact.$inferInsert)[] = deals.map(d=>({id:id(`project-contact-${d.key}`),talentId,projectId:id(`project-${d.key}`),contactId:id("manager"),label:"Manager"}));
-  const payments: (typeof s.payment.$inferInsert)[] = [];
+  const payments: (typeof s.payment.$inferInsert & {settledOn?:string|null;settledAmount?:number|null})[] = [];
   const events: (typeof s.calendarEvent.$inferInsert)[] = [];
   const todos: (typeof s.todo.$inferInsert)[] = [];
   const contracts: (typeof s.contract.$inferInsert)[] = [];
@@ -91,5 +91,7 @@ export function trialFixtures(talentId: string, personId: string, startMonth: st
     templates.push({id:id(`reply-template-${type}-${language}`),talentId,projectType:type,kind:"template",language,title:language==="en"?`[Sample] ${type} scope and quote`:label(`${type} 確認合作與報價`),body:language==="en"?"Hi {{counterparty}}, thank you for the invitation. Please confirm the date, deliverables, usage rights and payment schedule. Once confirmed, I will prepare a quote. This is a local trial template.":"您好 {{counterparty}}，謝謝邀約。請提供合作日期、交付內容、使用範圍與付款安排，確認後我會整理報價供您參考。這是本機試用範本。",tone:"professional"});
     templates.push({id:id(`past-reply-${type}-${language}`),talentId,projectType:type,kind:"past_reply",language,title:language==="en"?`[Sample] ${type} past reply`:label(`${type} 過往回覆`),body:language==="en"?"Thank you for the details. The scope includes one delivery and two revision rounds. Paid advertising is quoted separately. Please confirm the deposit and balance dates. Synthetic past reply only.":"謝謝提供資訊。本次範圍包含一份交付內容與兩次修改，付費廣告使用另行報價。請協助確認訂金與尾款日期。此為虛構的過往回覆。",tone:"professional"});
   }
-  return {startMonth,secondMonth,note,id,date,deals,organizations,contacts,projects,projectOrganizations,projectContacts,payments,events,todos,contracts,messages,analyses,templates};
+  const receipts: (typeof s.paymentReceipt.$inferInsert)[] = payments.flatMap(p=>p.settledOn && p.settledAmount!=null ? [{id:id(`receipt-${p.id}`),talentId,paymentId:p.id!,receivedOn:p.settledOn,cash:p.settledAmount,withheld:0,recordedBy:personId}]:[]);
+  const canonicalPayments = payments.map(row=>{const p={...row};delete p.settledOn;delete p.settledAmount;return p;});
+  return {startMonth,secondMonth,note,id,date,deals,organizations,contacts,projects,projectOrganizations,projectContacts,payments:canonicalPayments,receipts,events,todos,contracts,messages,analyses,templates};
 }

@@ -16,7 +16,7 @@ In the project you made for sign-in:
 4. **Clients**: nothing changes — the same web client and redirect URI as sign-in.
 5. **`.env.local`**: nothing new for Google. Set a strong `BETTER_AUTH_SECRET` if you haven't: it encrypts the stored Google tokens, so changing it later means people reconnect.
 
-Then in the app: 設定 → 連結的服務 → Google 日曆 → 連結. Google asks for the calendar permission (with the "Google hasn't verified this app" screen while testing — **Advanced → Go to … (unsafe)** is expected for test users). A 「Talent Biz OS」 calendar appears in Google Calendar and fills with your events.
+Then in the app: 設定 → 連結的服務 → Google 日曆 → 連結. Google asks for the calendar permission (with the "Google hasn't verified this app" screen while testing — **Advanced → Go to … (unsafe)** is expected for test users). A 「Taloox」 calendar appears in Google Calendar and fills with your events.
 
 **Testing mode limits**, worth knowing before a demo: up to 100 test users; their consent (and so the refresh token) expires after **7 days**, after which the Google 日曆 row in 設定 shows 「Google 的授權已失效」 and 重新連結.
 
@@ -46,7 +46,7 @@ While the app is in Testing, only test users can connect. To open it up (**Audie
 
 - A **domain you own**, verified in Google Search Console and listed under **Branding → Authorized domains**.
 - **Home page, privacy policy, and terms** on that domain. The privacy policy must say what calendar data is read, stored, and shared, and how to remove it (decision 0009, "Storage and security").
-- A **reason for each scope** — e.g. "creates a dedicated calendar and keeps the user's bookings from Talent Biz OS in it".
+- A **reason for each scope** — e.g. "creates a dedicated calendar and keeps the user's bookings from Taloox in it".
 - A **demo video** (unlisted YouTube is fine) showing the consent screen and the feature using the data.
 - A **support email** on the consent screen: a Google Group or a Workspace address rather than a personal one.
 
@@ -64,4 +64,4 @@ As for sign-in: a production OAuth client (ideally its own project) with the pro
 | Google never asks for calendar access | The scope isn't added under Data access, or this Google account isn't the one linked in 設定 |
 | `access_denied` for a teammate | They aren't under Test users while the app is in Testing |
 | 「Google 的授權已失效」 after a week | Testing-mode consent expired (7 days), or access was removed at myaccount.google.com → Security → Third-party connections |
-| Events don't appear in Google | The 「Talent Biz OS」 calendar is hidden in Google Calendar's sidebar, or the Google 日曆 row in 設定 shows 上次同步失敗 (管理 has the details) |
+| Events don't appear in Google | The 「Taloox」 calendar is hidden in Google Calendar's sidebar, or the Google 日曆 row in 設定 shows 上次同步失敗 (管理 has the details) |

@@ -47,7 +47,8 @@ try{
    await tx.insert(s.membership).values({talentId:p.talentId,personId:p.personId,role:"owner",status:"active"});
    await tx.insert(s.project).values({id:p.projectId,talentId:p.talentId,title:`${p.name} signed work`,counterparty:"Fixture",type:"other",stage:"signed"});
    await tx.insert(s.calendarEvent).values({id:p.eventId,talentId:p.talentId,kind:"meeting",title:`${p.name} rehearsal`,startDate:"2026-10-21",startTime:"10:00",timeZone:"Asia/Taipei"});
-   await tx.insert(s.payment).values({talentId:p.talentId,label:`${p.name} fee`,direction:"in",currency:"TWD",amount:1000,recordedOn:"2026-10-12",status:"settled",settledOn:"2026-10-12",settledAmount:900});
+   const [seedPayment]=await tx.insert(s.payment).values({talentId:p.talentId,label:`${p.name} fee`,direction:"in",currency:"TWD",amount:1000,recordedOn:"2026-10-12",status:"settled"}).returning();
+   await tx.insert(s.paymentReceipt).values({talentId:p.talentId,paymentId:seedPayment.id,receivedOn:"2026-10-12",cash:900,withheld:100,recordedBy:p.personId});
   }
   await tx.insert(s.managerEntitlement).values({personId:manager.personId,plan:"manager",artistLimit:3,active:true,source:"local_trial"});
   for(const [i,p] of artists.entries())await tx.insert(s.membership).values({talentId:p.talentId,personId:manager.personId,role:"manager",status:i<3?"active":"invited"});

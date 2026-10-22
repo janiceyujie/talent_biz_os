@@ -3,16 +3,14 @@
 // field. Use it before and after changing the prompt, the field registry, or
 // the model, and compare.
 //
-//   npm run eval:extraction                         # provider and model from .env.local
-//   npm run eval:extraction -- --provider anthropic         # a paid provider, its model per role
+//   npm run eval:extraction                         # the primary provider from .env.local
+//   npm run eval:extraction -- --provider openai            # another provider, its model per role
 //   npm run eval:extraction -- --max-calls 50 --max-cost 1  # the run's budget (default 200 calls, $2)
-//   npm run eval:extraction -- --model gemini-3.5-flash-lite
-//   npm run eval:extraction -- --provider ollama --model qwen3:8b
 //   npm run eval:extraction -- --only gig            # cases whose id contains "gig"
 //   npm run eval:extraction -- --locale en           # the person's language (default zh-TW)
 //
 // Results are saved to evals/results/ (not committed). Only made-up messages
-// belong in the cases: a free-tier provider may keep what it's sent.
+// belong in the cases, never real mail (AGENTS.md).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import nextEnv from "@next/env";
 import { cases, RECEIVED, type EvalCase } from "../evals/extraction/cases";
@@ -22,14 +20,13 @@ const arg = (name: string) => {
   const i = process.argv.indexOf(`--${name}`);
   return i > 0 ? process.argv[i + 1] : undefined;
 };
-// --provider names the primary (anthropic, openai, gemini, ollama); --model sets a gemini or ollama model.
-// The paid providers use their model per role (lib/ai/model.ts), so the eval measures the routing too.
-if (arg("provider")) process.env.AI_PRIMARY = process.env.AI_PROVIDER = arg("provider");
-if (arg("model")) process.env.AI_MODEL = arg("model");
+// --provider names the primary (anthropic, openai). Each provider uses its model per role
+// (lib/ai/model.ts; AI_MODEL_<PROVIDER>_<ROLE> overrides one), so the eval measures the routing too.
+if (arg("provider")) process.env.AI_PRIMARY = arg("provider");
 delete process.env.AI_BACKUP; // an eval measures one provider
 const only = arg("only");
 const locale = arg("locale") === "en" ? "en" : "zh-TW";
-const pause = Number(arg("pause") ?? 4000); // free tiers limit requests per minute (~15)
+const pause = Number(arg("pause") ?? 0); // milliseconds between calls, if a provider's rate limit needs it
 
 const { extractMessage } = await import("../lib/ai/extract");
 const { evalBudget, evalSpend, spendLine } = await import("../lib/ai/spend");
@@ -138,14 +135,14 @@ for (const r of results)
 const all = results.flatMap((r) => r.checks);
 const passedCases = results.filter((r) => !r.error && r.checks.every((x) => x.pass)).length;
 const used = [...new Set(results.map((r) => r.modelVersion).filter(Boolean))].join(", ");
-console.log(`\nprompt ${promptVersion} · ${used || process.env.AI_PRIMARY || process.env.AI_PROVIDER} · output ${locale}`);
+console.log(`\nprompt ${promptVersion} · ${used || process.env.AI_PRIMARY || "anthropic"} · output ${locale}`);
 console.log(`cases fully right: ${passedCases}/${results.length} · checks: ${all.filter((x) => x.pass).length}/${all.length} · errors: ${results.filter((r) => r.error).length}`);
 for (const [field, s] of byField) console.log(`  ${field.padEnd(14)} ${s.pass}/${s.total}`);
 
 mkdirSync("evals/results", { recursive: true });
-const file = `evals/results/${new Date().toISOString().replace(/[:.]/g, "-")}-${(used || process.env.AI_MODEL || "").replace(/[^\w.-]+/g, "_")}.json`;
+const file = `evals/results/${new Date().toISOString().replace(/[:.]/g, "-")}-${(used || process.env.AI_PRIMARY || "anthropic").replace(/[^\w.-]+/g, "_")}.json`;
 const spend = await evalSpend(runStarted);
 console.log(`${spendLine(spend)}${stopped ? `\n${stopped}` : ""}`);
-writeFileSync(file, JSON.stringify({ promptVersion, provider: process.env.AI_PRIMARY || process.env.AI_PROVIDER, models: used, spend, stopped, results }, null, 2));
+writeFileSync(file, JSON.stringify({ promptVersion, provider: process.env.AI_PRIMARY || "anthropic", models: used, spend, stopped, results }, null, 2));
 console.log(`saved ${file}`);
 process.exit(0); // the database pool (ai_call logging) would keep the process open

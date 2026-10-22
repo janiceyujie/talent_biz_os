@@ -49,6 +49,7 @@ function ShellContent({ children }: { children: ReactNode }) {
   const [narrow, setNarrow] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [companionOpen, setCompanionOpen] = useState(false);
   const sidebar = useRef<HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -262,7 +263,7 @@ function ShellContent({ children }: { children: ReactNode }) {
         </Modal>
       )}
       <LiveRefresh />
-      <AssistantDock hidden={mobile || showNotifications || showSearch} />
+      <AssistantDock open={assistantOpen} setOpen={setAssistantOpen} hidden={mobile || showNotifications || pathname === "/assistant"} />
 
     </div>
   );

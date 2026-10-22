@@ -19,11 +19,11 @@ const initials = (name: string) => name.trim().slice(0, 2).toUpperCase();
  */
 export function AccountMenu() {
   const data = useAppData();
+  const pathname = usePathname(); // Change role closes back to this page
   const t = useTranslations("shell");
   const tLocale = useTranslations("locale");
   const current = useLocale();
   const router = useRouter();
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const menuId = useId();
@@ -81,7 +81,7 @@ export function AccountMenu() {
             <Settings size={16} aria-hidden="true" />
             {t("settings")}
           </Link>
-          <Link role="menuitem" href={`/role?returnTo=${encodeURIComponent(pathname)}`} onClick={() => close(false)}>
+          <Link role="menuitem" href={`/role?${new URLSearchParams({ returnTo: pathname })}`} onClick={() => close(false)}>
             <Palette size={16} aria-hidden="true" />
             {t("roleAndAssistant")}
           </Link>

@@ -3,20 +3,27 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { documentTemplate } from "@/lib/db/schema";
 import type { Locale } from "@/lib/i18n/config";
-import type { DocumentKind } from "@/lib/templates/documents";
-import type { CatalogDocument } from "@/lib/templates/catalog";
+import { templateFilename, type CatalogTemplate } from "@/lib/templates/catalog";
+import { templateText, type TemplateKind } from "@/lib/templates/content";
 
-// Global curated catalog only. Customer contracts belong to the scoped file/contract tables.
-export async function listDocumentTemplates(locale: Locale, kind: DocumentKind): Promise<CatalogDocument[]> {
-  return db.select({ id: documentTemplate.id, scenario: documentTemplate.scenario, role: documentTemplate.role,
-    kind: documentTemplate.kind, locale: documentTemplate.locale, version: documentTemplate.version,
-    title: documentTemplate.title, text: documentTemplate.body }).from(documentTemplate)
+// The contract and quote library (decision 0020): one shared catalog, the same for every workspace.
+// A person's own contracts are their workspace's files and contracts, not these.
+
+/** The published templates in one language and kind, by scenario. */
+export async function listDocumentTemplates(locale: Locale, kind: TemplateKind): Promise<CatalogTemplate[]> {
+  const rows = await db
+    .select({ id: documentTemplate.id, scenario: documentTemplate.scenario, role: documentTemplate.role, kind: documentTemplate.kind, locale: documentTemplate.locale, version: documentTemplate.version, title: documentTemplate.title, content: documentTemplate.content })
+    .from(documentTemplate)
     .where(and(eq(documentTemplate.locale, locale), eq(documentTemplate.kind, kind), eq(documentTemplate.published, true)))
-    .orderBy(asc(documentTemplate.scenario)).limit(100);
+    .orderBy(asc(documentTemplate.scenario));
+  return rows.map(({ content, ...r }) => ({ ...r, text: templateText(content) }));
 }
 
-export async function findDocumentTemplate(id: string) {
-  const [row] = await db.select({ storageKey: documentTemplate.storageKey, filename: documentTemplate.filename })
-    .from(documentTemplate).where(and(eq(documentTemplate.id, id), eq(documentTemplate.published, true))).limit(1);
-  return row ?? null;
+/** A published template's file, by its id: the browser never names a Storage key. */
+export async function findTemplateFile(id: string) {
+  const [row] = await db
+    .select({ storageKey: documentTemplate.storageKey, scenario: documentTemplate.scenario, kind: documentTemplate.kind, locale: documentTemplate.locale })
+    .from(documentTemplate)
+    .where(and(eq(documentTemplate.id, id), eq(documentTemplate.published, true)));
+  return row ? { storageKey: row.storageKey, filename: templateFilename(row) } : null;
 }

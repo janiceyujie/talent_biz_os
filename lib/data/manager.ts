@@ -1,8 +1,9 @@
 import "server-only";
+import {receiptCashSql,receiptCoveredSql} from "@/lib/manager/receipt-sql";
 import {getManagerCapability,requireManagerCapability,managerPlanAccess} from "./manager-entitlement";
 import {and,asc,desc,eq,inArray,isNull,sql} from "drizzle-orm";
 import {db} from "@/lib/db";
-import {calendarEvent,membership,message,payment,project,talent,todo} from "@/lib/db/schema";
+import {calendarEvent,membership,message,payment,talent,todo} from "@/lib/db/schema";
 import {managerLocalEnabled} from "@/lib/manager/config";
 import {managerDateRange,ManagerScopeError,selectManagedArtists} from "@/lib/manager/scope";
 import {managerFinance} from "@/lib/manager/finance";
@@ -41,13 +42,13 @@ export async function getManagerOverview(personId:string,requested:string[]|unde
     db.select({id:message.id,artistId:message.talentId,receivedAt:message.receivedAt,status:message.status,body:message.bodyText}).from(message)
       .innerJoin(membership,and(eq(membership.talentId,message.talentId),access))
       .where(and(inArray(message.talentId,ids),sql`${message.receivedAt}>=${start}::date and ${message.receivedAt}<(${end}::date + interval '1 day')`,sql`${message.status}<>'dismissed'`)).orderBy(desc(message.receivedAt)).limit(151),
-    db.select({projectId:payment.projectId,projectStage:project.stage,talentId:payment.talentId,currency:payment.currency,amount:payment.amount,settledAmount:payment.settledAmount,receipts:payment.receipts,settledOn:payment.settledOn,dueOn:payment.dueOn,recordedOn:payment.recordedOn,direction:payment.direction,status:payment.status,taxRate:payment.taxRate,taxIncluded:payment.taxIncluded,voidedAt:payment.voidedAt}).from(payment).leftJoin(project,and(eq(project.id,payment.projectId),eq(project.talentId,payment.talentId)))
+    db.select({talentId:payment.talentId,currency:payment.currency,amount:payment.amount,settledAmount:receiptCashSql(start,end),covered:receiptCoveredSql(),inRange:sql<boolean>`coalesce(${payment.dueOn},${payment.recordedOn}) between ${start} and ${end}`,direction:payment.direction,status:payment.status,taxRate:payment.taxRate,taxIncluded:payment.taxIncluded,voidedAt:payment.voidedAt}).from(payment)
       .innerJoin(membership,and(eq(membership.talentId,payment.talentId),access))
-      .where(and(inArray(payment.talentId,ids),isNull(payment.voidedAt),sql`(coalesce(${payment.dueOn},${payment.recordedOn}) between ${start} and ${end} or ${payment.settledOn} between ${start} and ${end} or exists (select 1 from jsonb_array_elements(${payment.receipts}) r where r->>'date' between ${start} and ${end}))`)),
+      .where(and(inArray(payment.talentId,ids),sql`(${receiptCoveredSql()}>0 or ${payment.status} <> 'expected' or ${payment.projectId} is null or exists(select 1 from project p where p.id=${payment.projectId} and p.talent_id=${payment.talentId} and p.stage in ('signed','in_progress','collecting_payment','closed')))`,isNull(payment.voidedAt),sql`(coalesce(${payment.dueOn},${payment.recordedOn}) between ${start} and ${end} or ${receiptCashSql(start,end)} > 0)`)),
   ]);
   const currentCapability=await requireManagerCapability(personId);
   selectManagedArtists(await getManagerRoster(personId),ids,currentCapability.artistLimit);
   const calendar=[...events.map(row=>({...row,date:row.date,time:row.time?.slice(0,5)||"",source:"event" as const})),...tasks.filter(row=>row.date).map(row=>({...row,date:row.date!,time:row.time?.slice(0,5)||"",source:"todo" as const}))]
     .sort((a,b)=>wallTimeToUtc(a.date,a.time||"00:00",a.timeZone).getTime()-wallTimeToUtc(b.date,b.time||"00:00",b.timeZone).getTime());
-  return {...base,limitReached:calendar.length>300||messages.length>150,calendar:calendar.slice(0,300),messages:messages.slice(0,150).map(row=>({...row,receivedAt:row.receivedAt.toISOString(),body:(row.body||"").slice(0,10000)})),finance:managerFinance(payments.map(p=>({...p,projectStage:p.projectStage??undefined})),start,end)};
+  return {...base,limitReached:calendar.length>300||messages.length>150,calendar:calendar.slice(0,300),messages:messages.slice(0,150).map(row=>({...row,receivedAt:row.receivedAt.toISOString(),body:(row.body||"").slice(0,10000)})),finance:managerFinance(payments)};
 }

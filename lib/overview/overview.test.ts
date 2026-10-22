@@ -1,7 +1,8 @@
 // Today's widgets: arrangement and each widget's data. Run: npm test
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { InboxMessage, Payment, Project } from "@/lib/types";
+import { quote } from "@/lib/domain/money";
+import type { Payment, Project } from "@/lib/types";
 import { monthIncome } from "./income";
 import { outstandingMoney } from "./money";
 import { editableLayout, moveWidget, overviewLayout, toSavedLayout } from "./layout";
@@ -13,13 +14,17 @@ const ZONE = "Asia/Taipei";
 
 const project = (over: Partial<Project> = {}): Project =>
   ({ id: "p1", title: "Zepp 春季巡演", stage: "negotiating", archived: false, updatedAt: "2026-09-20T02:00:00Z", ...over }) as Project;
-const message = (projectId: string, receivedAt: string) => ({ id: `m-${receivedAt}`, projectId, receivedAt }) as InboxMessage;
-const payment = (over: Partial<Payment> = {}): Payment =>
-  ({
+// A settled one received its settled amount, or its whole total, on its settled date: one receipt.
+const payment = ({ settledAmount = null, ...over }: Partial<Payment> & { settledAmount?: number | null } = {}): Payment => {
+  const p = {
     id: "x", projectId: null, projectType: "gig", direction: "in", installment: "regular", label: "", amount: 1000, currency: "TWD",
-    taxRate: 0, taxIncluded: true, recordedDate: "2026-10-01", dueDate: null, status: "settled", settledAmount: null,
-    settledDate: "2026-10-02", invoiceRef: "", notes: "", voided: false, ...over,
-  }) as Payment;
+    taxRate: 0, taxIncluded: true, recordedDate: "2026-10-01", dueDate: null, status: "settled",
+    settledDate: "2026-10-02", invoiceRef: "", notes: "", voided: false, receipts: [], ...over,
+  } as Payment;
+  const cash = settledAmount ?? quote(p.amount, p.taxRate, p.taxIncluded, p.currency).total;
+  const receipt = { id: `${p.id}-r`, date: p.settledDate!, cash, withheld: 0, note: "", replacesId: null, withdrawn: false, recordedAt: "" };
+  return over.receipts || p.status !== "settled" ? p : { ...p, receipts: [receipt] };
+};
 
 describe("overviewLayout", () => {
   test("defaults per role, split into columns", () => {
@@ -61,7 +66,7 @@ describe("stalledDeals", () => {
     const quiet = project({ id: "a", title: "A", updatedAt: "2026-09-20T02:00:00Z" });
     const quieter = project({ id: "b", title: "B", updatedAt: "2026-09-01T02:00:00Z" });
     const recent = project({ id: "c", title: "C", updatedAt: "2026-10-04T02:00:00Z" });
-    const got = stalledDeals({ projects: [quiet, quieter, recent], inbox: [], today: TODAY, timeZone: ZONE });
+    const got = stalledDeals({ projects: [quiet, quieter, recent], latestActivity: {}, today: TODAY, timeZone: ZONE });
     assert.deepEqual(
       got.map((d) => [d.project.id, d.quietDays]),
       [["b", 35], ["a", 16]],
@@ -69,14 +74,14 @@ describe("stalledDeals", () => {
   });
 
   test("a recent message about the deal counts as news", () => {
-    const got = stalledDeals({ projects: [project()], inbox: [message("p1", "2026-10-05T03:00:00Z")], today: TODAY, timeZone: ZONE });
+    const got = stalledDeals({ projects: [project()], latestActivity: { p1: "2026-10-05T03:00:00Z" }, today: TODAY, timeZone: ZONE });
     assert.deepEqual(got, []);
   });
 
   test("signed, ended, and archived deals aren't chased", () => {
     const got = stalledDeals({
       projects: [project({ id: "s", stage: "signed" }), project({ id: "d", stage: "declined" }), project({ id: "x", archived: true })],
-      inbox: [],
+      latestActivity: {},
       today: TODAY,
       timeZone: ZONE,
     });
@@ -114,12 +119,20 @@ describe("monthIncome", () => {
           payment({ amount: 9999, status: "expected", settledDate: null }),
           payment({ amount: 300, direction: "out", settledDate: "2026-10-03" }),
           payment({ amount: 700, voided: true, settledDate: "2026-10-03" }),
+          payment({ amount: 80, currency: "USD", settledDate: "2026-09-12" }),
         ],
         projects: [],
       },
       TODAY,
     );
-    assert.deepEqual(got, { thisMonth: 1450, lastMonth: 2000 });
+    assert.deepEqual(got, [
+      { currency: "TWD", thisMonth: 1450, lastMonth: 2000 },
+      { currency: "USD", thisMonth: 0, lastMonth: 80 },
+    ]);
+  });
+
+  test("with nothing received in either month, one zero row in TWD", () => {
+    assert.deepEqual(monthIncome({ payments: [], projects: [] }, TODAY), [{ currency: "TWD", thisMonth: 0, lastMonth: 0 }]);
   });
 });
 
@@ -129,17 +142,19 @@ describe("outstandingMoney", () => {
       [
         payment({ amount: 9000, status: "expected", dueDate: "2026-10-01", settledDate: null }),
         payment({ amount: 1000, status: "expected", dueDate: "2026-10-12", settledDate: null }),
-        payment({ amount: 21000, currency: "HKD", status: "expected", dueDate: "2026-11-05", settledDate: null }),
+        payment({ amount: 21000, status: "expected", dueDate: "2026-11-05", settledDate: null }),
         payment({ amount: 500, status: "expected", direction: "out", dueDate: "2026-10-08", settledDate: null }),
         payment({ amount: 4000, status: "settled" }),
         payment({ amount: 800, status: "expected", voided: true, dueDate: "2026-10-01", settledDate: null }),
+        payment({ amount: 300, currency: "HKD", status: "expected", dueDate: "2026-10-03", settledDate: null }),
       ],
       TODAY,
     );
+    // Currencies are never added together: one total each, TWD first.
     assert.deepEqual(got, {
-      overdue: [{ currency: "TWD", amount: 9000 }],
+      overdue: [{ currency: "TWD", amount: 9000 }, { currency: "HKD", amount: 300 }],
       thisWeek: [{ currency: "TWD", amount: 1000 }],
-      toReceive: [{ currency: "TWD", amount: 10000 }, { currency: "HKD", amount: 21000 }],
+      toReceive: [{ currency: "TWD", amount: 31000 }, { currency: "HKD", amount: 300 }],
       toPay: [{ currency: "TWD", amount: 500 }],
     });
   });

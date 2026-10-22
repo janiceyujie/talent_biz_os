@@ -8,7 +8,7 @@ import { googleErrorKey } from "@/lib/auth/google-errors";
 import { SignInForm } from "./sign-in-form";
 
 export default async function SignInPage({ searchParams }: PageProps<"/sign-in">) {
-  if (await getSession()) redirect("/");
+  if (await getSession()) redirect("/"); // signed in already, with a session that holds
   const t = await getTranslations("auth");
   const googleError = googleErrorKey((await searchParams).error);
   return (

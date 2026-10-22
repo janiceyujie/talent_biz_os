@@ -11,7 +11,8 @@ import { InfoHint } from "@/components/app/info-hint";
 import { PageHeader } from "@/components/app/page-header";
 import { useFitToWindow } from "@/components/app/use-fit-to-window";
 import { partnerInsights } from "@/lib/domain/insights";
-import { useMoney } from "@/lib/i18n/format";
+import { totalsByCurrency } from "@/lib/domain/money";
+import { useMoney, useMoneyTotals } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 
 const NARROW = "(max-width: 1000px)"; // list and report stack: show one at a time, as on Projects
@@ -28,7 +29,7 @@ export function PartnersView() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState(() => address.get("org") ?? "");
   const [detailOpen, setDetailOpen] = useState(() => !!address.get("org"));
-  const reports = partnerInsights(data); // most overdue money first, then the most projects
+  const reports = partnerInsights(data); // most overdue payments first, then the most projects
   const shown = reports.filter((r) => r.organization.name.toLowerCase().includes(q.trim().toLowerCase()));
   const active = reports.find((r) => r.organization.id === selected) ?? shown[0];
   const panel = useRef<HTMLElement>(null);
@@ -109,6 +110,7 @@ function PartnerReport({ report, onBack }: { report: Report; onBack: () => void 
   const t = useTranslations("partners");
   const labels = useLabels();
   const money = useMoney();
+  const moneyTotals = useMoneyTotals();
   const [byProject, setByProject] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<RowSort>("dueNew");
@@ -140,7 +142,7 @@ function PartnerReport({ report, onBack }: { report: Report; onBack: () => void 
       <td data-label={t("colLate")} className={x.lateDays ? "late" : ""}>
         {x.lateDays ? x.lateDays : "—"}
       </td>
-      <td className="partner-pay-total">{money(x.total)}</td>
+      <td className="partner-pay-total">{money(x.total, x.currency)}</td>
     </tr>
   );
 
@@ -175,9 +177,7 @@ function PartnerReport({ report, onBack }: { report: Report; onBack: () => void 
         </div>
         <div>
           <small>{t("statOverdue")}</small>
-          <strong className={report.overdueByCurrency.length ? "late" : ""}>
-            {report.overdueByCurrency.map((item) => money(item.amount, item.currency)).join(" · ") || money(0)}
-          </strong>
+          <strong className={report.overdueAmount.length ? "late" : ""}>{moneyTotals(report.overdueAmount)}</strong>
         </div>
       </div>
 
@@ -236,8 +236,8 @@ function PartnerReport({ report, onBack }: { report: Report; onBack: () => void 
               [...groups].map(([projectId, items]) => {
                 const project = projectOf(projectId);
                 const all = report.rows.filter((x) => x.projectId === projectId);
-                const received = all.reduce((n, x) => n + paymentCash(x), 0);
-                const total = all.reduce((n, x) => n + x.total, 0);
+                const received = totalsByCurrency(all, (x) => paymentCash(x)); // every receipt, parts too
+                const total = totalsByCurrency(all, (x) => x.total);
                 return (
                   <tbody key={projectId}>
                     {/* A project as a bar: what it is, where it stands, and how much of it has come in. */}
@@ -248,7 +248,7 @@ function PartnerReport({ report, onBack }: { report: Report; onBack: () => void 
                           {project && <span className="person-role">{labels.stage(project.stage)}</span>}
                           <small>
                             {all.length
-                              ? t("groupSummary", { received: money(received), total: money(total), count: all.length })
+                              ? t("groupSummary", { received: moneyTotals(received), total: moneyTotals(total), count: all.length })
                               : t("noPaymentsYet")}
                           </small>
                         </span>

@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     db.select().from(notificationState).where(and(eq(notificationState.personId, session.personId),
       sql`coalesce(${notificationState.snoozedUntil}, ${notificationState.readAt}) > now() - interval '90 days'`)),
     db.select({id:payment.id,label:payment.label,date:payment.invoiceOn}).from(payment)
-      .where(and(eq(payment.talentId,current.id),eq(payment.direction,"in"),eq(payment.currency,"USD"),eq(payment.status,"expected"),isNull(payment.voidedAt),lte(payment.invoiceOn,day),parts ? or(gt(payment.invoiceOn,parts[0]),and(eq(payment.invoiceOn,parts[0]),gt(payment.id,parts[1]))) : undefined,sql`${payment.amount} > 0`,
+      .where(and(eq(payment.talentId,current.id),eq(payment.direction,"in"),inArray(payment.currency,["USD","TWD"]),eq(payment.status,"expected"),isNull(payment.voidedAt),lte(payment.invoiceOn,day),parts ? or(gt(payment.invoiceOn,parts[0]),and(eq(payment.invoiceOn,parts[0]),gt(payment.id,parts[1]))) : undefined,sql`${payment.amount} > 0`,
         or(isNull(payment.projectId), sql`exists (select 1 from ${project} where ${project.id} = ${payment.projectId} and ${project.talentId} = ${current.id} and ${project.archivedAt} is null and ${project.stage} in ('signed', 'in_progress', 'collecting_payment', 'closed'))`),
         sql`not exists (select 1 from ${invoice} where ${invoice.paymentId} = ${payment.id} and ${invoice.talentId} = ${current.id} and ${ne(invoice.status,"cancelled")})`))
       .orderBy(asc(payment.invoiceOn),asc(payment.id)).limit(21),

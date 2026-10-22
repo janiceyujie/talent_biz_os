@@ -1,15 +1,15 @@
 import "server-only";
+import {paymentsOf} from "./rows";
 import {requireManagerCapability,managerPlanAccess} from "./manager-entitlement";
 import {and,asc,desc,eq,getTableColumns,inArray,isNull} from "drizzle-orm";
 import {db} from "@/lib/db";
-import {calendarEvent,membership,payment,project,todo} from "@/lib/db/schema";
+import {paymentReceipt,calendarEvent,membership,payment,project,todo} from "@/lib/db/schema";
 import {getManagerRoster} from "./manager";
 import {summaryOf} from "./projects";
 import {managerLocalEnabled} from "@/lib/manager/config";
 import {ManagerScopeError,selectManagedArtists} from "@/lib/manager/scope";
 import type {PortfolioWorkspace} from "@/lib/manager/workspace-types";
-import {calendarKinds,type CalendarKind,type Payment,type TravelDetails} from "@/lib/types";
-import {isProjectType} from "@/lib/project-types";
+import {calendarKinds,type CalendarKind,type TravelDetails} from "@/lib/types";
 const hhmm=(value:string|null)=>value?.slice(0,5)||"";
 /** Read-only data for the existing pages; identity always comes from the authenticated session. */
 export async function getManagerWorkspace(personId:string,requested?:string[],projectId?:string):Promise<PortfolioWorkspace> {
@@ -29,6 +29,7 @@ export async function getManagerWorkspace(personId:string,requested?:string[],pr
   selectManagedArtists(await getManagerRoster(personId),ids,currentCapability.artistLimit);
   // Never present partial collections as complete financial totals.
   if(events.length>1000||tasks.length>1000||payments.length>2000||projects.length>1000)return {...base,limited:true,calendar:[],payments:[],projects:[]};
+  const receiptRows=payments.length?await db.select(getTableColumns(paymentReceipt)).from(paymentReceipt).innerJoin(membership,and(eq(membership.talentId,paymentReceipt.talentId),access)).where(and(inArray(paymentReceipt.paymentId,payments.map(p=>p.id)),inArray(paymentReceipt.talentId,ids))):[];
   const artistOf=(id:string)=>({artistId:id,artistName:selected.find(row=>row.id===id)!.name});
   const kind=(value:string):CalendarKind=>calendarKinds.includes(value as CalendarKind)?value as CalendarKind:"meeting";
   return {...base,
@@ -36,7 +37,7 @@ export async function getManagerWorkspace(personId:string,requested?:string[],pr
       travel:row.kind==="travel"||row.kind==="accommodation"?{endDate:row.endDate||"",endTime:hhmm(row.endTime),endTimeZone:row.endTimeZone||"",transportMode:(row.transportMode||"") as TravelDetails["transportMode"],operator:row.operator||"",serviceNumber:row.serviceNumber||"",destination:row.destination||"",seat:row.seat||"",hotelName:row.hotelName||""}:null,
       endDate:row.endDate||"",endTime:hhmm(row.endTime)})),
       ...tasks.filter(row=>row.dueDate).map(row=>({...artistOf(row.talentId),id:row.id,source:"todo" as const,kind:({deliverable:"deliverable",payment_due:"payment"} as Record<string,CalendarKind>)[row.type]||"todo",title:row.title,date:row.dueDate!,time:hhmm(row.dueTime),timeZone:row.timeZone,location:"",projectId:row.projectId,suggestedProjectId:null,notes:row.notes||"",done:row.status==="done",archived:row.status==="dismissed",travel:null,endDate:"",endTime:""}))],
-    payments:payments.map(row=>({...artistOf(row.talentId),id:row.id,projectId:row.projectId,suggestedProjectId:null,projectType:isProjectType(row.projectType)?row.projectType:"other",direction:row.direction,installment:row.installment,label:row.label,amount:row.amount,currency:row.currency.trim() as Payment["currency"],taxRate:row.taxRate,taxIncluded:row.taxIncluded,recordedDate:row.recordedOn,dueDate:row.dueOn,status:row.status,receipts:row.receipts,settledAmount:row.settledAmount,settledDate:row.settledOn,invoiceRef:row.invoiceRef||"",notes:row.notes||"",voided:!!row.voidedAt})),
+    payments:paymentsOf(payments,receiptRows).map((row,index)=>({...row,...artistOf(payments[index].talentId)})),
     projects:projects.map(row=>summaryOf(row,null,artistOf(row.talentId).artistName,null)),
   };
 }

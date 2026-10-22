@@ -4,9 +4,10 @@
 // Adapted from the prototype's planner model (talent-business-os-prototype,
 // src/components/planner/model.ts), on real data instead of a demo scenario.
 import { wallTimeToUtc } from "@/lib/domain/dates";
+import type { Currency } from "@/lib/domain/money";
 import { isSigned } from "@/lib/domain/phases";
 import { paymentRemaining } from "@/lib/domain/workflow";
-import type { AppData, CalendarKind } from "@/lib/types";
+import type { AppData, CalendarKind, ProjectSummary } from "@/lib/types";
 
 export type PlanItem = {
   /** Unique per item on the timeline; a stay's check-out marker gets its own. */
@@ -32,11 +33,10 @@ export type PlanItem = {
   done: boolean;
   /** Shown when the item can't sit on the timeline as stated (another zone, multi-day). */
   note: string;
-  amount: number | null;
-  currency?: string; // payment due dates
+  amount: { value: number; currency: Currency } | null; // payment due dates; negative when paid out
   /**
    * From the person's Google calendars (decision 0009, phase 2): read-only. `series`: a repeating event
-   * in our own Talent Biz OS calendar, which can be added to a project as a whole (decision 0017).
+   * in our own Taloox calendar, which can be added to a project as a whole (decision 0017).
    */
   external: { calendar: string; color: string | null; series: string | null } | null;
 };
@@ -166,13 +166,17 @@ function wallTime(instant: Date, zone: string) {
   return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
 }
 
+/** What planItems reads: the layout's data, or only the rows a page fetched for some days. */
+export type PlanSource = Pick<AppData, "calendar" | "payments" | "talent"> &
+  Partial<Pick<AppData, "externalEvents">> & { projects: Pick<ProjectSummary, "id" | "title" | "counterparty" | "archived" | "stage">[] };
+
 /**
  * Everything with a date, as timeline items in the talent's zone. Items in
  * another zone are shown at the talent's local time but not dragged (moving
  * them would mean rewriting a time someone gave in their own zone); travel
  * and stays span days and are edited in the full form.
  */
-export function planItems(data: Pick<AppData, "calendar" | "payments" | "projects" | "talent"> & Partial<Pick<AppData, "externalEvents">>): PlanItem[] {
+export function planItems(data: PlanSource): PlanItem[] {
   const zone = data.talent.timeZone;
   const projectOf = (id: string | null) => data.projects.find((p) => p.id === id);
   const items: PlanItem[] = [];
@@ -241,7 +245,7 @@ export function planItems(data: Pick<AppData, "calendar" | "payments" | "project
       client: p?.counterparty ?? "",
       done: false,
       note: "",
-      amount: paymentRemaining(pay) * (pay.direction === "out" ? -1 : 1),
+      amount: { value: paymentRemaining(pay) * (pay.direction === "out" ? -1 : 1), currency: pay.currency },
       external: null,
     });
   }

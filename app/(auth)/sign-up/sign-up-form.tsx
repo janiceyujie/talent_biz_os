@@ -38,7 +38,7 @@ export function SignUpForm() {
   }
 
   return (
-    <form onSubmit={onSubmit}>
+    <form method="post" onSubmit={onSubmit}>
       <Field label={t("yourName")} name="name" autoComplete="name" required />
       <Field label={t("email")} name="email" type="email" autoComplete="email" required />
       <Field

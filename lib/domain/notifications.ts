@@ -111,6 +111,7 @@ export function notifications(data: AppData, now = new Date(), includeTodayHisto
 }
 
 /** A notification id as the server accepts it: what notifications() produces. */
+export const SNOOZE_HOURS = [1,2,3] as const;
 export const notificationIdPattern = /^(calendar:[0-9a-f-]{36}:(end:)?\d{4}-\d{2}-\d{2}:(\d{2}:\d{2})?|payment:[0-9a-f-]{36}:\d{4}-\d{2}-\d{2}|billing:[0-9a-f-]{36}:\d{4}-\d{2}-\d{2}|invoice:[0-9a-f-]{36}:[1-9]\d{0,8}:\d{4}-\d{2}-\d{2})$/;
 
 /**

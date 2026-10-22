@@ -118,7 +118,7 @@ export async function registerUpload(
   return { id: created.id, duplicate: false };
 }
 
-/** Whether a file's first bytes match its declared type (PNG, JPEG, WebP, HEIC/HEIF, PDF). */
+/** Whether a file's first bytes match its declared type (PNG, JPEG, WebP, PDF). */
 function looksLike(bytes: Uint8Array, type: string) {
   const ascii = (from: number, to: number) => String.fromCharCode(...bytes.subarray(from, to));
   switch (type) {
@@ -128,9 +128,6 @@ function looksLike(bytes: Uint8Array, type: string) {
       return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
     case "image/webp":
       return ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP";
-    case "image/heic":
-    case "image/heif":
-      return ascii(4, 8) === "ftyp";
     case "application/pdf":
       return ascii(0, 5) === "%PDF-";
     default:

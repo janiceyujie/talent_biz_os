@@ -31,10 +31,11 @@ Do this **once**, as late as possible (right before creating the production data
 
 - [ ] A strong `BETTER_AUTH_SECRET` per environment, never reused from development. It encrypts stored Google tokens (decision 0009); changing it later forces everyone to reconnect Google.
 - [ ] `BETTER_AUTH_URL` set to the production address.
-- [ ] No test settings in production: `GOOGLE_TEST_STUB`, `AI_REPLAY`, `GOOGLE_CALENDAR_API_URL`, `GOOGLE_OAUTH_REVOKE_URL`, `NEXT_DIST_DIR`, `GMAIL_API_URL`, `GOOGLE_OAUTH_TOKEN_URL`, `AI_FREE_TIER_OK`, `MAIL_KEY_DEV` unset; `APP_ENV=production`.
+- [ ] No test settings in production: `GOOGLE_TEST_STUB`, `AI_REPLAY`, `GOOGLE_CALENDAR_API_URL`, `GOOGLE_OAUTH_REVOKE_URL`, `NEXT_DIST_DIR`, `GMAIL_API_URL`, `GOOGLE_OAUTH_TOKEN_URL`, `MAIL_KEY_DEV` unset; `APP_ENV=production`.
 - [ ] Cloud KMS key in Singapore; an encrypt-only credential on the web service and a decrypt-only one on the worker ([decision 0016](../decisions/0016-mailbox-tokens-and-key-management.md)).
 - [ ] Email: a real SMTP provider (architecture doc, "Transactional email").
 - [ ] Storage: a production bucket and keys (`STORAGE_*`).
+- [ ] `STORAGE_*` also set wherever `npm run db:migrate` runs on deploy: after the migrations it publishes the contract and quote templates, uploading their Word files ([decision 0020](../decisions/0020-document-templates-are-data.md)).
 
 ## 4. Google
 
@@ -52,14 +53,24 @@ Do this **once**, as late as possible (right before creating the production data
 From [decision 0008](../decisions/0008-ai-operations.md):
 
 - [x] OpenAI and Anthropic behind the provider seam, each with its own key and a spending cap; `AI_PRIMARY` and `AI_BACKUP` set ([decision 0015](../decisions/0015-production-model-providers.md)).
-- [ ] The Gemini adapter, `AI_PROVIDER_KEEPS_DATA`, and `AI_FREE_TIER_OK` removed; a permanent line that content is analyzed by AI; the privacy policy names both providers.
+- [x] The Gemini and Ollama adapters, `AI_PROVIDER_KEEPS_DATA`, and `AI_FREE_TIER_OK` removed ([decision 0022](../decisions/0022-paid-providers-only.md)).
+- [ ] A permanent line that content is analyzed by AI; the privacy policy names both providers.
 - [ ] A cap on PDF pages and on the model's output length.
 - [ ] Per-month and short-burst limits.
 - [ ] Rate limits on server actions and the upload and file routes.
-- [ ] A switch to pause AI app-wide.
+- [x] A switch to pause AI app-wide (`AI_PAUSED`), and a daily spending cap that pauses it on its own (`AI_DAILY_SPEND_CAP_USD`).
+- [ ] A monthly spending limit and usage alerts set in the Anthropic and OpenAI consoles for the production keys (around $300 a month to start): the hard cap behind the app's estimate.
+- [ ] `AI_ALERT_EMAIL` set, so a tripped spending cap reaches someone.
+- [ ] Pause and resume tried once on the deployed web service and worker: with `AI_PAUSED=1`, paste a made-up message and see it wait as Paused; unset it and see the message analyzed within about 5 minutes. Then set `AI_DAILY_SPEND_CAP_USD` below the day's spend and see the alert email arrive. (Done locally for PR #28; the deployed run checks the real worker and mail provider.)
 
 ## 6. Operations
 
 - [ ] Database backups, and a restore tried once.
 - [ ] Error reporting and logs somewhere you'll see them.
 - [ ] A way to delete an account and everything in it, on request (privacy policy).
+
+## 7. Legal
+
+- [ ] Terms of service and a privacy policy, as pages in the app (Google's consent screen links to them too, section 4). The terms include the template clause from [decision 0020](../decisions/0020-document-templates-are-data.md): Taloox isn't a law firm, its templates are self-help documents and not legal advice, using them creates no lawyer–client relationship, and the person is responsible for what they sign.
+- [ ] The template library's disclaimer links to those terms.
+- [ ] A lawyer reviews the contract and quote templates, the disclaimer under the library, and the note at the top of every Word file.

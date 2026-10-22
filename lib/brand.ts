@@ -1,7 +1,7 @@
 // Names and symbols that are the same in every language, so they aren't in
 // the message catalogs.
-export const PRODUCT_NAME = "Talent Business OS";
-export const PRODUCT_MONOGRAM = "TB";
+export const PRODUCT_NAME = "Taloox";
+export const PRODUCT_MONOGRAM = "T";
 export const PRODUCT_TAGLINE = "CREATIVE BUSINESS";
 export const SEARCH_SHORTCUT = "⌘ K";
 export const COLLAPSE_SHORTCUT = "⌘ \\"; // collapses the sidebar to its icons

@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMoney } from "@/lib/i18n/format";
 import { useRouter } from "next/navigation";
@@ -15,10 +16,12 @@ import { Widget } from "../widget";
 export function ActionsWidget({ ctx: { data, today, items } }: { ctx: OverviewContext }) {
   const t = useTranslations("today");
   const { list } = useNotifications();
-  const actions = todayActions({ reminders: list.filter((n) => !n.snoozedUntil), inbox: data.inboxOverview?.review.map(m => ({ ...m, analysis: { title: m.title } })) ?? data.inbox, items, today });
-  const analyzing = data.inboxOverview?.counts.pending ?? data.inbox.filter((m) => m.status === "pending").length;
+  const actions = todayActions({ reminders: list.filter((n) => !n.snoozedUntil), inbox: data.inboxOverview!.review, items, today });
+  const analyzing = data.inboxOverview!.counts.pending;
+  // Today lists the messages waiting longest; the rest are a link away, and counted.
+  const moreToReview = data.inboxOverview!.counts.analyzed - data.inboxOverview!.review.length;
   return (
-    <Widget id="actions" title={t("actionsTitle")} count={actions.length + (data.inboxOverview ? data.inboxOverview.counts.analyzed - data.inboxOverview.review.length : 0)}>
+    <Widget id="actions" title={t("actionsTitle")} count={actions.length + Math.max(0, moreToReview)}>
       {analyzing > 0 && (
         <p className="today-analyzing" role="status">
           <Loader2 size={16} aria-hidden="true" />
@@ -28,7 +31,11 @@ export function ActionsWidget({ ctx: { data, today, items } }: { ctx: OverviewCo
       {actions.map((a) => (
         <ActionRow key={a.id} action={a} today={today} />
       ))}
-      {!!data.inboxOverview && data.inboxOverview.counts.analyzed > data.inboxOverview.review.length && <a className="text-button" href="/inbox">{t("reviewMore", { count: data.inboxOverview.counts.analyzed })}</a>}
+      {moreToReview > 0 && (
+        <Link className="text-button today-more" href="/inbox">
+          {t("reviewMore", { count: moreToReview })}
+        </Link>
+      )}
       {!actions.length && !analyzing && <p className="empty">{t("actionsEmpty")}</p>}
     </Widget>
   );
@@ -50,7 +57,7 @@ function ActionRow({ action: a, today }: { action: TodayAction; today: string })
             tag: <span className="reminder-status today-tag-review">{t("tagReview")}</span>,
             title: a.message.notice
               ? tNotice("title", { amount: money(a.message.notice.amount, a.message.notice.currency) })
-              : a.message.analysis?.title || t("reviewUntitled"),
+              : a.message.title || t("reviewUntitled"),
             detail: t("reviewDetail"),
             href: `/inbox?message=${a.message.id}`,
           }
@@ -61,7 +68,7 @@ function ActionRow({ action: a, today }: { action: TodayAction; today: string })
             href: `/calendar?date=${a.date}`,
           };
   return (
-    <button data-preview-safe="true" className="today-action" onClick={() => router.push(row.href)}>
+    <button className="today-action" onClick={() => router.push(row.href)}>
       {row.tag}
       <span>
         <strong>{row.title}</strong>

@@ -1,29 +1,3 @@
-CREATE TABLE "document_template" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"scenario" text NOT NULL,
-	"role" text NOT NULL,
-	"kind" text NOT NULL,
-	"locale" text NOT NULL,
-	"version" integer NOT NULL,
-	"title" text NOT NULL,
-	"intro" text NOT NULL,
-	"sections" jsonb NOT NULL,
-	"body" text NOT NULL,
-	"storage_key" text NOT NULL,
-	"filename" text NOT NULL,
-	"size_bytes" integer NOT NULL,
-	"content_hash" char(64) NOT NULL,
-	"published" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "document_template_version" UNIQUE("scenario","kind","locale","version"),
-	CONSTRAINT "document_template_content" UNIQUE("scenario","kind","locale","content_hash"),
-	CONSTRAINT "document_template_kind_check" CHECK ("document_template"."kind" in ('contract', 'quote')),
-	CONSTRAINT "document_template_locale_check" CHECK ("document_template"."locale" in ('en', 'zh-TW')),
-	CONSTRAINT "document_template_version_check" CHECK ("document_template"."version" > 0),
-	CONSTRAINT "document_template_size_check" CHECK ("document_template"."size_bytes" > 0)
-);
---> statement-breakpoint
-ALTER TABLE "document_template" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "grant_application" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"talent_id" uuid NOT NULL,
@@ -106,8 +80,6 @@ CREATE TABLE "manager_entitlement" (
 );
 --> statement-breakpoint
 ALTER TABLE "manager_entitlement" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
-ALTER TABLE "payment" DROP CONSTRAINT "payment_currency_check";--> statement-breakpoint
-ALTER TABLE "project" DROP CONSTRAINT "project_quote_currency_check";--> statement-breakpoint
 ALTER TABLE "mail_decision" ADD COLUMN "import_status" text DEFAULT 'idle' NOT NULL;--> statement-breakpoint
 ALTER TABLE "mail_decision" ADD COLUMN "import_failure" text;--> statement-breakpoint
 ALTER TABLE "mail_decision" ADD COLUMN "requested_by" uuid;--> statement-breakpoint
@@ -120,12 +92,8 @@ ALTER TABLE "grant_task" ADD CONSTRAINT "grant_task_todo_id_todo_id_fk" FOREIGN 
 ALTER TABLE "grant_watch" ADD CONSTRAINT "grant_watch_talent_id_talent_id_fk" FOREIGN KEY ("talent_id") REFERENCES "public"."talent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "grant_watch" ADD CONSTRAINT "grant_watch_person_id_person_id_fk" FOREIGN KEY ("person_id") REFERENCES "public"."person"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "manager_entitlement" ADD CONSTRAINT "manager_entitlement_person_id_person_id_fk" FOREIGN KEY ("person_id") REFERENCES "public"."person"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "document_template_published" ON "document_template" USING btree ("scenario","kind","locale") WHERE "document_template"."published";--> statement-breakpoint
 CREATE INDEX "grant_application_talent_idx" ON "grant_application" USING btree ("talent_id");--> statement-breakpoint
 CREATE INDEX "grant_opportunity_region_close_idx" ON "grant_opportunity" USING btree ("region","closes_on");--> statement-breakpoint
 CREATE INDEX "grant_task_application_idx" ON "grant_task" USING btree ("application_id");--> statement-breakpoint
 ALTER TABLE "mail_decision" ADD CONSTRAINT "mail_decision_requested_by_person_id_fk" FOREIGN KEY ("requested_by") REFERENCES "public"."person"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "message_talent_received_id_idx" ON "message" USING btree ("talent_id","received_at","id");--> statement-breakpoint
-ALTER TABLE "mail_decision" ADD CONSTRAINT "mail_decision_import_status_check" CHECK ("mail_decision"."import_status" in ('idle', 'queued', 'imported', 'error'));--> statement-breakpoint
-ALTER TABLE "payment" ADD CONSTRAINT "payment_currency_check" CHECK ("payment"."currency" in ('TWD', 'HKD', 'USD', 'JPY', 'EUR', 'GBP'));--> statement-breakpoint
-ALTER TABLE "project" ADD CONSTRAINT "project_quote_currency_check" CHECK ("project"."quote_currency" in ('TWD', 'HKD', 'USD', 'JPY', 'EUR', 'GBP'));
+ALTER TABLE "mail_decision" ADD CONSTRAINT "mail_decision_import_status_check" CHECK ("mail_decision"."import_status" in ('idle', 'queued', 'imported', 'error'));

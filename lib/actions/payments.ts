@@ -1,6 +1,10 @@
 "use server";
+import {lockPayment,addReceipt,settle,type LockedPayment} from "./receipt-rows";
+import {activeReceipts} from "@/lib/domain/workflow";
+import {paymentReceipt} from "@/lib/db/schema";
 import { isBillingCurrency } from "@/lib/invoices/document";
 
+import {readLockedPayment,persistReceipts,type ReceiptPayment} from "@/lib/data/payment-receipts";
 import { randomUUID } from "node:crypto";
 import { amendReceipt, appendReceipt, paymentBalance, receiptHistory, ReceiptError } from "@/lib/domain/payment-receipts";
 import { and, eq, isNull, ne } from "drizzle-orm";
@@ -16,6 +20,7 @@ import { isOpenStage } from "@/lib/domain/phases";
 import { checkProjectLink } from "./project-link";
 import { errorText, firstIssue, optionalId, optionalText } from "./validation";
 
+type Tx=Parameters<Parameters<typeof db.transaction>[0]>[0];
 const money = z.coerce.number().min(0, "amountNegative").max(9_999_999_999.99).multipleOf(0.01, "amountDecimals");
 const day = z.iso.date("dateInvalid");
 const optionalDay = z
@@ -95,14 +100,11 @@ export async function savePaymentWithId(data: Record<string, unknown>): Promise<
     dueOn: input.dueDate,
     ...(Object.hasOwn(data, "invoiceOn") ? {invoiceOn: input.direction === "in" && isBillingCurrency(input.currency) ? input.invoiceOn : null} : {}),
     status: input.status,
-    // Back to expected clears what was recorded as settled.
-    settledOn: settled ? input.settledDate : null,
-    settledAmount: settled ? input.settledAmount : null,
     invoiceRef: input.invoiceRef,
     notes: input.notes,
   };
 
-  const record = (previous: typeof payment.$inferSelect | null) => {
+  const record = (previous: ReceiptPayment | null) => {
     const base = { ...values, status: previous?.status ?? "expected", settledAmount: previous?.settledAmount ?? null, settledOn: previous?.settledOn ?? null, receipts: previous?.receipts ?? [] };
     if (!settled) return previous ? { receipts: previous.receipts, status: previous.status, settledAmount: previous.settledAmount, settledOn: previous.settledOn } : {};
     if (input.shortfallReason === "withholding" && input.direction !== "in") throw new ReceiptError("receiptInvalid");
@@ -124,11 +126,13 @@ export async function savePaymentWithId(data: Record<string, unknown>): Promise<
       }
     }
     if (!id) {
-      const [saved] = await tx.insert(payment).values({ ...values, ...record(null), talentId: current.id }).returning({ id: payment.id });
+      const [saved] = await tx.insert(payment).values({ ...values,status:"expected",talentId: current.id }).returning({ id: payment.id });
+      const created=(await readLockedPayment(tx,current.id,saved.id))!;
+      await persistReceipts(tx,created,record(null));
       savedId = saved.id;
       return null;
     }
-    const [previous] = await tx.select().from(payment).where(and(eq(payment.id, id), eq(payment.talentId, current.id))).for("update");
+    const previous = await readLockedPayment(tx,current.id,id);
     if (!previous || previous.voidedAt) return "paymentNotFound" as const;
     if (previous.projectId !== currentLink) return "receiptChanged" as const;
     if (receiptHistory(previous).length && (["amount", "currency", "taxRate", "taxIncluded", "direction"] as const).some(key => previous[key] !== values[key])) return "receiptLocked" as const;
@@ -137,7 +141,8 @@ export async function savePaymentWithId(data: Record<string, unknown>): Promise<
       const protectedFields = ["projectId", "direction", "amount", "currency", "taxRate", "taxIncluded", "invoiceRef", "dueOn"] as const;
       if (protectedFields.some(key => previous[key] !== values[key]) || (issued.status === "sending" && previous.status !== values.status)) return "paymentInvoiceLocked" as const;
     }
-    await tx.update(payment).set({ ...values, ...record(previous) }).where(and(eq(payment.id, id), eq(payment.talentId, current.id)));
+    await tx.update(payment).set({...values,status:previous.status}).where(and(eq(payment.id, id), eq(payment.talentId, current.id)));
+    await persistReceipts(tx,previous,record(previous));
     return null;
   });
   if (result) return { error: await fail(result) };
@@ -161,7 +166,7 @@ export async function voidPayment(id: string, voided: boolean): Promise<string |
   const fail = await errorText();
   if (!z.uuid().safeParse(id).success) return fail("invalid");
   const result = await db.transaction(async tx => {
-    const [previous] = await tx.select().from(payment).where(and(eq(payment.id, id), eq(payment.talentId, current.id))).for("update");
+    const previous = await readLockedPayment(tx,current.id,id);
     if (!previous) return "paymentNotFound" as const;
     const [issued] = await tx.select({ status: invoice.status }).from(invoice).where(and(eq(invoice.paymentId, id), eq(invoice.talentId, current.id), ne(invoice.status, "cancelled")));
     if (issued && ["sending", "sent", "delivery_unknown", "draft_queued", "draft_creating", "gmail_draft", "draft_unknown", "draft_missing"].includes(issued.status)) return "paymentInvoiceLocked" as const;
@@ -172,6 +177,98 @@ export async function voidPayment(id: string, voided: boolean): Promise<string |
   refresh();
   return null;
 }
+
+const receiptInput = z
+  .object({
+    date: day,
+    cash: money,
+    withheld: money.default(0),
+    note: z.string().trim().max(500).optional().transform((v) => v || null),
+    // The upstream payload remains accepted; uncovered amounts stay open.
+    rest: z.enum(["coming", "closed"]).default("coming"),
+  })
+  .refine((r) => r.cash + r.withheld > 0, { message: "receiptEmpty" });
+
+/** Checks a receipt against its payment: a live one, a day not ahead, whole yen. */
+async function receiptProblem(p: LockedPayment, r: { date: string; cash: number; withheld: number }) {
+  if (p.voidedAt || p.status === "cancelled") return "paymentNotOpen" as const;
+  if (r.date > (await today(p.talentId))) return "settledDateFuture" as const;
+  if (p.direction === "out" && r.withheld > 0) return "withholdingInvalid" as const;
+  if (p.currency === "JPY" && (!Number.isInteger(r.cash) || !Number.isInteger(r.withheld))) return "amountWholeYen" as const;
+  return null;
+}
+
+/**
+ * Record money that arrived or was paid against a payment (decision 0021): any part of it, with
+ * what was withheld. It's settled once covered; otherwise the uncovered balance remains due.
+ */
+export async function recordReceipt(data: Record<string, unknown>): Promise<string | null> {
+  const { person, talent: current } = await requireTalent();
+  const fail = await errorText();
+  const parsed = receiptInput.and(z.object({ paymentId: z.uuid() })).safeParse(data);
+  if (!parsed.success) return fail(firstIssue(parsed.error));
+  const r = parsed.data;
+  const failure = await db.transaction(async (tx) => {
+    const p = await lockPayment(tx, current.id, r.paymentId);
+    if (!p) return fail("paymentNotFound");
+    const problem = await receiptProblem(p, r);
+    if (problem) return fail(problem);
+    await addReceipt(tx, p, { ...r, recordedBy: person.personId });
+    await settle(tx, p, r.rest);
+    return null;
+  });
+  if (!failure) refresh();
+  return failure;
+}
+
+/** The payment a receipt belongs to, locked, with that receipt, if it still counts. */
+async function lockActive(tx: Tx, talentId: string, receiptId: string) {
+  const [row] = await tx
+    .select({ paymentId: paymentReceipt.paymentId })
+    .from(paymentReceipt)
+    .where(and(eq(paymentReceipt.id, receiptId), eq(paymentReceipt.talentId, talentId)));
+  if (!row) return null;
+  const p = await lockPayment(tx, talentId, row.paymentId);
+  return p && activeReceipts(p).some((x) => x.id === receiptId) ? p : null;
+}
+
+/** Correct a receipt: a new one replaces it, and the old one stays, struck through. */
+export async function correctReceipt(data: Record<string, unknown>): Promise<string | null> {
+  const { person, talent: current } = await requireTalent();
+  const fail = await errorText();
+  const parsed = receiptInput.and(z.object({ receiptId: z.uuid() })).safeParse(data);
+  if (!parsed.success) return fail(firstIssue(parsed.error));
+  const r = parsed.data;
+  const failure = await db.transaction(async (tx) => {
+    const p = await lockActive(tx, current.id, r.receiptId);
+    if (!p) return fail("receiptChanged");
+    const problem = await receiptProblem(p, r);
+    if (problem) return fail(problem);
+    await addReceipt(tx, p, { ...r, replacesId: r.receiptId, recordedBy: person.personId });
+    await settle(tx, p, r.rest);
+    return null;
+  });
+  if (!failure) refresh();
+  return failure;
+}
+
+/** Withdraw a receipt that never arrived; the payment is open again while anything's left. */
+export async function withdrawReceipt(receiptId: string): Promise<string | null> {
+  const { person, talent: current } = await requireTalent();
+  const fail = await errorText();
+  if (!z.uuid().safeParse(receiptId).success) return fail("invalid");
+  const failure = await db.transaction(async (tx) => {
+    const p = await lockActive(tx, current.id, receiptId);
+    if (!p) return fail("receiptChanged");
+    const old = p.receipts.find((x) => x.id === receiptId)!;
+    await addReceipt(tx, p, { date: old.date, cash: 0, replacesId: receiptId, withdrawn: true, recordedBy: person.personId });
+    if (p.status !== "cancelled") await settle(tx, p, "coming");
+    return null;
+  });
+  if (!failure) refresh();
+  return failure;
+}
+
 
 const planInput = z
   .object({
@@ -223,7 +320,7 @@ export async function createPaymentPlan(data: Record<string, unknown>): Promise<
 
     let split: ReturnType<typeof splitPayments>;
     try {
-      split = splitPayments(quote(p.quotedAmount, p.taxRate, p.taxIncluded).total, percent);
+      split = splitPayments(quote(p.quotedAmount, p.taxRate, p.taxIncluded,p.quoteCurrency).total, percent,p.quoteCurrency);
     } catch (e) {
       if (e instanceof SplitError) return fail(e.code);
       throw e;
@@ -270,14 +367,14 @@ export async function amendPaymentReceipt(data: Record<string, unknown>): Promis
       // correcting concurrently must never leave a completed project with new debt.
       const [linked] = link.projectId ? await tx.select({ stage: project.stage, archivedAt: project.archivedAt }).from(project)
         .where(and(eq(project.id, link.projectId), eq(project.talentId, current.id))).for("update") : [];
-      const [p] = await tx.select().from(payment).where(and(eq(payment.id, input.paymentId), eq(payment.talentId, current.id))).for("update");
+      const p=await readLockedPayment(tx,current.id,input.paymentId);
       if (!p || p.voidedAt || p.status === "cancelled") return "paymentNotFound" as const;
       if (p.projectId !== link.projectId || (link.projectId && !linked)) return "receiptChanged" as const;
       if (p.direction === "out" && input.withheld !== 0) return "withholdingInvalid" as const;
       const values = amendReceipt(p, { id: input.requestId, targetId: input.targetId, revision: input.revision,
         operation: input.operation, date: input.date, cash: input.cash, withheld: input.withheld,
         note: input.note, recordedAt: new Date().toISOString(), recordedBy: person.personId });
-      await tx.update(payment).set(values).where(and(eq(payment.id, p.id), eq(payment.talentId, current.id)));
+      await persistReceipts(tx,p,values);
       const remaining = paymentBalance({ ...p, ...values }).remaining;
       if (linked?.stage === "closed" && p.projectId && remaining > 0) {
         await tx.update(project).set({ stage: "collecting_payment", archivedAt: null })

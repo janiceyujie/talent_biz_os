@@ -72,7 +72,7 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - Draft a reply, quote, or payment follow-up — several versions at once — for the person to review and send themselves — **MVP**. Validated as the single most requested capability in interviews; the system never sends on its own. Drafts are stored, along with which one the person picked and how they edited it.
 - A reply library: reusable templates with placeholders (`{{合作方}}`, `{{報價}}`…) and past replies kept for reference, per project type — **MVP**. Useful without AI, and later the examples AI drafts from.
 - Quotes and payments carry a tax rate and whether the entered amount includes tax; tax-inclusive and tax-exclusive amounts are shown side by side — **MVP**. Taiwan's 5% business tax appears on most quotes.
-- An assistant that answers questions over the person's own data ("what's due tomorrow?", "how much is unpaid?") — **Later**. The screen ships as a placeholder.
+- An assistant that answers questions over the person's own data ("what's due tomorrow?", "how much is unpaid?") — **Built in part** ([decision 0023](decisions/0023-talent-assistant.md)): the quick prompts (today, tomorrow, money to come in, money to pay) are answered in code on the server (`POST /api/assistant/messages`, `lib/assistant/`), from the calendar's items and Today's money figures, in a panel in the corner of every page and on the Assistant page. Questions in the person's own words go to the model (the `assistant` role in `lib/ai/model.ts`) with a bounded, cleaned snapshot of the workspace or of one chosen project (`lib/assistant/snapshot.ts`), never message text or contact details; the answer is shown as plain text. One question at a time per person, within a monthly allowance and a daily cap (`assistantUsage` in `lib/ai/usage.ts`). Every answered question is saved to a conversation that belongs to the person (`assistant_conversation`, `assistant_message`; `lib/assistant/conversations.ts`), and the model also gets the conversation's last few turns. The Assistant page lists them beside the open one, which is in the address (`?c=`); the corner panel picks up the tab's conversation after a reload. A conversation about a talent the person no longer has access to is read-only; the person can delete their own.
 - Draft against the person's own past phrasing and process, not a generic template — **Phase 2**. Needs enough confirmed history per person to draw from.
 
 ### Review and action
@@ -94,7 +94,8 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - Void (作廢) a mistaken or duplicate payment entry: it drops out of every total and chart but stays viewable and restorable — **MVP**. Payments have no archive: past months need no hiding, they're just a date filter.
 - Finance views: money still to pay, the last six months of cash in and out, overdue-income aging, and signed-contract totals — **MVP**.
 - Subscription plans and billing for the product itself — **Later**. Kept entirely separate from a talent's project payments.
-- Record amounts in TWD, HKD, USD, JPY, EUR, or GBP — **MVP**. Summaries keep currencies separate; conversion to a default currency is **Later**.
+- Amounts in TWD, HKD, USD, JPY, EUR, or GBP — **MVP**. A project has its own currency; its payments may be in any of them. Totals are shown per currency, side by side. See [Multi-currency](#multi-currency).
+- A default currency the totals convert into, at recorded exchange rates — **Later**. See [Multi-currency](#multi-currency).
 - A running record of which counterparties pay late and by how much — **Later**. Needs enough payment history per counterparty to be meaningful.
 
 ### Analytics and insights
@@ -191,7 +192,7 @@ Invoice preparation optionally adds `gmail.compose` consent and worker-created P
 - Several images uploaded together are treated as one conversation. The extractor reads them in the order they were uploaded and reconstructs who said what.
 - A personal email-in address covers the case where uploading from a phone's share sheet isn't available.
 - Relative dates in a screenshot ("Friday," "tomorrow") resolve against a timestamp visible in the image where there is one, falling back to upload time. The review screen always shows the resolved date, not the original phrase.
-- **Built:** 上傳截圖／PDF in the inbox takes up to 10 files, 10 MB each and 12 MB in total (they go to the model inline, base64-encoded, within a 20 MB request) — PNG, JPEG, WebP, HEIC, PDF — in an order the person can change. The browser `PUT`s each file to storage through a signed URL (`lib/storage`, ten minutes, bound to the declared type and size) under a key scoped to the talent (`files/{talent_id}/{file_id}`); `registerUpload` then checks each file arrived with that size, type, and matching file signature (a renamed text file isn't a PNG), fingerprints the bytes in order (`dedup_key`, so the same screenshots twice open the existing message), and records the message (channel `upload`) and its `file` rows. The analysis reads the files inline with the prompt and also returns a transcript of what it read, shown as "AI 讀到的內容" beside the thumbnails. Files are served only through `/api/files/[id]`, which checks the signed-in talent and sends the stored type with `nosniff`. Not yet: the email-in address; cleanup of files uploaded but never registered (an abandoned dialog); HEIC thumbnails (the file opens, the inbox shows a tile).
+- **Built:** 上傳截圖／PDF in the inbox takes up to 10 files, 10 MB each and 12 MB in total (they go to the model inline, base64-encoded) — PNG, JPEG, WebP, PDF; HEIC is refused for now (`docs/tech-debt.md`) — in an order the person can change. The browser `PUT`s each file to storage through a signed URL (`lib/storage`, ten minutes, bound to the declared type and size) under a key scoped to the talent (`files/{talent_id}/{file_id}`); `registerUpload` then checks each file arrived with that size, type, and matching file signature (a renamed text file isn't a PNG), fingerprints the bytes in order (`dedup_key`, so the same screenshots twice open the existing message), and records the message (channel `upload`) and its `file` rows. The analysis reads the files inline with the prompt and also returns a transcript of what it read, shown as "AI 讀到的內容" beside the thumbnails. Files are served only through `/api/files/[id]`, which checks the signed-in talent and sends the stored type with `nosniff`. Not yet: the email-in address; cleanup of files uploaded but never registered (an abandoned dialog); HEIC thumbnails (the file opens, the inbox shows a tile).
 
 ### Designed for later: other mailboxes
 
@@ -209,7 +210,7 @@ Analysis turns a message into facts. Matching decides which project those facts 
 - One model call, forced into a schema rather than free text, labels the message and pulls out the core fields plus the fields for its project type and intent (`lib/ai/analysis.ts`).
 - **Two labels, from registries.** The *intent* is what the message is doing — inquiry, negotiation, confirmation, contract, logistics, payment, cancellation, other (`lib/ai/extraction/intents.ts`) — and decides what filing it should do. The *project type* is what the work is (`lib/project-types`). Each defines its own fields; the prompt and the schema are generated from those definitions, so adding a type or a field is a definition plus its labels, checked by `npm run i18n:check`. Core fields (parties, dates, money, payment terms, reply-by, asks, missing) apply to every message. Each value carries the exact words it came from, shown under it in the inbox.
 - **Prompts are code** (`lib/ai/prompts.ts`): general rules plus the registry definitions, with the week's calendar written out for relative dates. A fingerprint of the prompt and definitions is stored with every analysis (`message_analysis.prompt_version`) beside the model, so results can be compared across changes.
-- **Evals** (`evals/`, `npm run eval:extraction`) score extraction against made-up cases with known answers, through the same function the app uses; run them before and after changing a prompt, field, or model. Classifying and extracting can split into two calls later if a cheap triage step pays off. The model sits behind one seam (`lib/ai/model.ts`): a free local model in development, Claude for production — see [decision 0006](decisions/0006-model-provider.md).
+- **Evals** (`evals/`, `npm run eval:extraction`) score extraction against made-up cases with known answers, through the same function the app uses; run them before and after changing a prompt, field, or model. Classifying and extracting can split into two calls later if a cheap triage step pays off. The model sits behind one seam (`lib/ai/model.ts`): Anthropic as primary and OpenAI as backup, in development too — see decisions [0006](decisions/0006-model-provider.md), [0015](decisions/0015-production-model-providers.md), and [0022](decisions/0022-paid-providers-only.md).
 - Beyond the facts, the analysis records a short summary, what the sender is asking for, and what's missing (no start time, no deposit terms) — the drafter uses the last two directly.
 - Images (screenshots, photos, rendered PDF pages) go through the same extractor using a vision-capable model call rather than a separate OCR step.
 - Every analysis is stored with the model version and a confidence score, versioned per message rather than overwritten — re-running it later doesn't lose the earlier attempt.
@@ -224,7 +225,8 @@ A deal is rarely one message. A venue's first offer, the signed contract, and a 
 
 - **Explicit tagging first.** If the message arrived through a channel that lets the person specify the project directly (e.g. the Gmail add-on's dropdown), use that — no inference needed.
 - **Email threading next.** When a message is a reply within an existing email thread (Gmail's thread id, then `In-Reply-To` / `References`), the project its thread is filed under is the strongest suggestion.
-- **Known facts next.** Built: the same contact (email, then company or name), a date the project already has, the same venue or event, and for a payment notice an expected payment of that amount; a similar title only adds weight. Each suggestion shows its reasons (`lib/domain/intake.ts`, `suggestTargets`).
+- **Known facts next.** Built: who it's from, counted once — the project's contact by email, the sender corresponding on the project (`project_correspondent`, recorded whenever a message is filed), or a matching company or name — then a date the project already has, the same venue or event, and for a payment notice an expected payment of that amount; a similar title only adds weight. Each suggestion shows its reasons (`lib/domain/intake.ts`, `suggestTargets`).
+- **Scored on the server, from relationships, not past messages** ([decision 0019](decisions/0019-match-messages-by-relationships.md)): opening a message returns its suggestions (`lib/data/suggestions.ts`). The top one is ticked only when it leads the next by 3 points or is the only one; projects that tie (a long-term partner's) are ordered by when the sender last wrote there, and the person picks.
 - **Similarity as a fallback** (later). For anything the facts don't settle, compare the extracted summary against the open projects for that talent using embedding similarity, and propose the closest match above a threshold. Per talent only, and when to start: [design/embeddings.md](design/embeddings.md).
 - **Always proposed, never automatic** for anything inferred. A proposed match is presented as "this looks like the same deal as [project] — is it?" alongside the extraction review, and a person confirms, rejects, or starts a new project instead.
 - **Then the message's changes are proposed against that project** — a checklist the person edits and ticks, applied in one transaction and recorded in `audit_log` as `message.applied` (what changed, what was left as a proposal). Code decides what to propose by intent; the server recomputes it on apply and refuses items no longer in it. See [docs/design/intake-to-project.md](design/intake-to-project.md).
@@ -302,7 +304,7 @@ A queue is a row in Postgres, not memory in the worker: the number of mailboxes 
 | A sync, steady state | One "what changed" call, plus one header read per new email | New mail for 4 mailboxes at once at 20 emails a second each: far above the expected 100 emails a day per artist (about 0.1 a second for 100 artists) |
 | The first sync, 30 days | One list call per 500 emails, then one header read each | About 25 seconds for 500 emails (measured: the builder's month); about 2.5 minutes for 3,000 |
 | Waiting or Filtered out opening | One header read per row, 30 rows a page | About 1.5 seconds a page. HTTP lookups don't use job slots: they're limited by the mailbox's pace, not the worker |
-| `mail.relevance` | One header read and one small-model call per email the rules leave pending (about 4% of mail) | One at a time per mailbox (its own queue): about 1.5 seconds each on a local qwen3:8b (measured: 37 emails in 78 seconds), well under a second on a paid small model. To score several at once, drop the per-mailbox queue; a local Ollama also needs `OLLAMA_NUM_PARALLEL` |
+| `mail.relevance` | One header read and one small-model call per email the rules leave pending (about 4% of mail) | One at a time per mailbox (its own queue): well under a second each on the small model. To score several at once, drop the per-mailbox queue |
 | `message.analyze` | One model call, about 5 to 30 seconds | Roughly 10 to 50 analyses a minute, bounded by model latency and the daily limit |
 
 The first limit to reach is job slots when many large jobs arrive together: for example, 20 new mailboxes each starting a 30-day sync, or a burst of analyses waiting on a slow model. Jobs then wait in the queue rather than fail; the wait grows, not the error rate.
@@ -379,6 +381,8 @@ erDiagram
 | `reply_draft` | One drafted reply — from AI, a template, or by hand — with whether it was used and how it was edited | M2 |
 | `project` (UI: 專案) | One ongoing deal with one counterparty, with a type and a stage | M2 (one project per confirmed message); matching in M4 |
 | `project_contact` | People on a project beyond its main contact (`project.counterparty_id`), each with a free-text role there | Built |
+| `project_correspondent` | Who the person corresponds with on each project, by email, with when they last wrote: recorded whenever a message is filed, whether or not they're a contact; matching reads it ([decision 0019](decisions/0019-match-messages-by-relationships.md)) | Built |
+| `document_template` | The contract and quote template library: one shared catalog, a row per version with its structured content and the key of its Word file in Storage, one version published per scenario, kind, and language. Published from `assets/document-templates/content/` by `npm run db:migrate` ([decision 0020](decisions/0020-document-templates-are-data.md)) | Built |
 | `organization` | A company, organisation, band, or label the talent works with; contacts link to it (`contact.organization_id`). [Decision 0012](decisions/0012-companies-and-their-roles-on-projects.md) | Built |
 | `project_organization` | The organisations on a project, each with a free-text role; exactly one primary (the client), whose name `project.counterparty` mirrors | Built |
 | `organization_distinct` | Pairs of organisations marked as different, so they aren't suggested as duplicates again | Built |
@@ -468,7 +472,20 @@ There's no "awaiting signature" stage — many gigs never have a written contrac
 
 #### Multi-currency
 
-Payments and project quotes can be recorded in TWD, HKD, USD, JPY, EUR, or GBP. Finance summaries and forecasts filter to one currency at a time; overview and partner summaries keep each currency separate. A payment linked to a project must use that project's currency, and a project's currency is locked after its first ledger entry. The app does not convert currencies or estimate exchange rates. A future conversion feature needs a per-talent display currency, dated exchange rates, and clear presentation of both original and converted amounts.
+**Now.** Amounts are recorded in one of six currencies (`supportedCurrencies`, `lib/domain/money.ts`: TWD, HKD, USD, JPY, EUR, GBP), enforced by a check constraint on `project.quote_currency` and `payment.currency`. JPY amounts are whole yen; the rest have two decimals.
+
+- A project's currency is the one its quote is in. A payment on it starts in that currency but may be in any; the server doesn't require them to match.
+- Nothing converts, so currencies are never added together. Totals are one figure per currency (`totalsByCurrency`): Today's money and income, a client's and a partner's totals. Finance shows one currency at a time, picked at the top; its summary, insights, revenue mix, and CSV follow the pick.
+- A project's settlement (quoted, billed, received) counts only payments in the project's currency. Income in another currency is listed apart ("In other currencies"), since it can't be set against the quote.
+- A bank notice settles only an expected payment in the notice's currency, and money it records goes in at the notice's currency.
+- The intake reads an amount in the currency the message names, or in the project's when it names none (`lib/domain/intake.ts`). A new project takes the message's currency, or TWD; one outside the six stays in its notes. On an existing project, a fee in another currency isn't proposed, and an amount is matched only against payments in its own currency. A payment message in another currency still offers the payment, unticked, at its own total, for the person to enter what arrived.
+
+**Later: conversion.** Totals in a default currency, so a deal with income in two currencies and Finance across currencies can show one figure. The design, to be settled in a decision record first:
+
+- A default currency per workspace — the one cross-project totals show in. Each project's totals convert into the project's currency.
+- An `exchange_rate` table (date, from, to, rate, source), filled daily from a rates provider. The source is still open.
+- Settled amounts convert at the rate on their settled date, so past totals never shift; optionally the amount that actually arrived, when the person enters it. Expected amounts convert at the latest rate and are labeled as estimates.
+- Original amount and currency are always shown alongside the converted figure.
 
 ### Conventions
 
@@ -575,7 +592,7 @@ create table project (
                      check (stage in ('offer','negotiating','signed','in_progress',
                                       'collecting_payment','closed','declined','cancelled')),
   quoted_amount    numeric(12,2),                 -- as entered; see tax_included
-  quote_currency   char(3) not null default 'TWD' check (quote_currency in ('TWD','HKD','USD','JPY','EUR','GBP')),
+  quote_currency   char(3) not null default 'TWD', -- one of supportedCurrencies; see Multi-currency
   tax_rate         numeric(5,2) not null default 0 check (tax_rate between 0 and 100),
   tax_included     boolean not null default false,
   details          jsonb not null default '{}',   -- type fields, dates kept before signing, to-confirm list (lib/types ProjectDetails)
@@ -637,7 +654,7 @@ create table message_analysis (
                    check (intent in ('inquiry','negotiation','confirmation','contract','logistics','payment','cancellation','other')),
   analysis       jsonb not null,   -- { summary, facts: core + type fields, asks, missing }
   confidence     numeric(4,3) not null,
-  model_version  text not null,                     -- provider and model, e.g. 'gemini:gemini-3.5-flash-lite'
+  model_version  text not null,                     -- provider and model, e.g. 'anthropic:claude-sonnet-5-5'
   prompt_version text not null,                     -- fingerprint of the prompt and field definitions
   created_at     timestamptz not null default now()   -- latest row wins
 );
@@ -724,25 +741,42 @@ create table payment (
                        check (installment in ('regular','deposit','balance')),
   label              text not null,                 -- '訂金', 'train to Tainan'
   amount             numeric(12,2) not null check (amount >= 0),   -- as entered; see tax_included
-  currency           char(3) not null default 'TWD'
-                       check (currency in ('TWD','HKD','USD','JPY','EUR','GBP')),
+  currency           char(3) not null default 'TWD', -- one of supportedCurrencies; see Multi-currency
   tax_rate           numeric(5,2) not null default 0 check (tax_rate between 0 and 100),
   tax_included       boolean not null default false,
   recorded_on        date not null,                 -- 登錄日期; calendar days, in the talent's time zone
   due_on             date,
   status             text not null default 'expected'
                        check (status in ('expected','settled','cancelled')),  -- 待收・待付 / 已收・已付
-  settled_amount     numeric(12,2),                 -- what actually arrived or was paid
-  settled_on         date,                          -- set exactly when status = 'settled'
+                                                    -- settled: its receipts cover it, or closed short (0021)
   method             text,                          -- 'bank_transfer', 'cash', 'paypal'...
   invoice_ref        text,                          -- 發票／請款編號
   notes              text,
   voided_at          timestamptz,                   -- 作廢: entered by mistake or duplicated; out of every total
   created_at         timestamptz not null default now(),
-  updated_at         timestamptz not null default now(),
-  check ((status = 'settled') = (settled_on is not null))
+  updated_at         timestamptz not null default now()
 );
 create index payment_talent_status_due_idx on payment (talent_id, status, due_on);
+
+-- What arrived or was paid, once each time (decision 0021). Only added: a correction names the
+-- receipt it replaces; a withdrawal is a row with withdrawn set. A payment's received, withheld,
+-- left, and settled day are worked out from its active receipts, never stored.
+create table payment_receipt (
+  id           uuid primary key default gen_random_uuid(),
+  talent_id    uuid not null references talent(id) on delete cascade,
+  payment_id   uuid not null references payment(id) on delete cascade,
+  received_on  date not null,
+  cash         numeric(12,2) not null,
+  withheld     numeric(12,2) not null default 0,  -- income tax, the NHI premium: kept back, claimable
+  note         text,
+  replaces_id  uuid unique references payment_receipt(id) on delete cascade,
+  withdrawn    boolean not null default false,
+  recorded_by  uuid references person(id) on delete set null,
+  created_at   timestamptz not null default now(),
+  check (cash >= 0 and withheld >= 0),
+  check (not withdrawn or (replaces_id is not null and cash = 0 and withheld = 0))
+);
+create index payment_receipt_payment_idx on payment_receipt (payment_id);
 
 create table todo (
   id            uuid primary key default gen_random_uuid(),
@@ -837,13 +871,13 @@ Shaped by the situation: a part-time build, a handful of solo artists at first, 
 | Layer | Choice | Status | Why |
 |---|---|---|---|
 | App shape | Next.js monolith (React, TS) — route handlers + server actions | Decided | One deployable and shared types; the Gmail add-on webhook is just another route handler. Split only for a concrete reason (see below) |
-| Data loading | The layout carries what every page needs; a page fetches what it shows, lists in pages of 50 with keyset cursors, an item's detail when it's opened | Decided — moving screen by screen | The cost of a page stays proportional to the screen, not the account. Projects are done (`/api/projects`, `/api/projects/[id]`); the layout still carries a summary of each project and every payment, to-do, and event until the other screens move. See [decision 0011](decisions/0011-pages-fetch-what-they-show.md) |
+| Data loading | The layout carries what every page needs; a page fetches what it shows, lists in pages of 50 with keyset cursors, an item's detail when it's opened | Decided — moving screen by screen | The cost of a page stays proportional to the screen, not the account. Projects and Intake's messages are done (`/api/projects`, `/api/projects/[id]`, `/api/inbox`, `/api/inbox/[id]`; the layout keeps only message counts, Today's review list, and each project's latest message); the layout still carries a summary of each project and every payment, to-do, and event until the other screens move. See [decision 0011](decisions/0011-pages-fetch-what-they-show.md) |
 | Primary DB | Postgres, hosted on Supabase in Singapore | Decided | Relational integrity for money, contracts, and versions. Supabase gives free local dev (`supabase start`) and Asia regions; to us it is plain Postgres. Region: [decision 0014](decisions/0014-hosting-and-job-queue.md) |
 | Vector search | pgvector | Decided | Project matching without a second datastore; supported by every major Postgres host |
 | DB access + migrations | Drizzle (`drizzle-kit`) | Decided | SQL-shaped, typed queries and typed `jsonb`; schema lives in TS; works on any Postgres |
 | App auth (login) | Better Auth — email/password + Google sign-in | Decided | Users and sessions live in our own Postgres tables, so changing host never touches identity. Google sign-in from day one eases linking the Gmail add-on later. Login only — separate from any mailbox authorization |
 | Blob storage | Supabase Storage, through its S3-compatible API | Decided | Raw emails, screenshots, PDFs; presigned uploads straight from the browser. The S3 API means moving to S3, R2, or GCS is an endpoint change |
-| LLM | OpenAI and Anthropic in production, one primary and one backup set in configuration; Gemini's free tier for testing until launch | Decided | Structured JSON extraction, vision input for screenshots and PDF pages, drafting; a provider outage delays mail instead of stopping it. See [decision 0015](decisions/0015-production-model-providers.md) |
+| LLM | OpenAI and Anthropic, one primary and one backup set in configuration, in development too | Decided | Structured JSON extraction, vision input for screenshots and PDF pages, drafting; a provider outage delays mail instead of stopping it. See decisions [0015](decisions/0015-production-model-providers.md) and [0022](decisions/0022-paid-providers-only.md) |
 | Embeddings | OpenAI's embedding models first; Voyage AI as an alternative | Open — M4 | Claude has no embeddings API. OpenAI is already our backup model provider ([decision 0015](decisions/0015-production-model-providers.md)), so it adds no new vendor, key, or data terms. Needed only once project matching is built; plan in [design/embeddings.md](design/embeddings.md) |
 | Transactional email | Plain SMTP (nodemailer); Mailpit locally, provider TBD at deploy (e.g. Resend) | Decided — provider open until M2 | Password reset and verification. Every provider speaks SMTP, so switching is a `SMTP_URL` change |
 | Job queue | Graphile Worker in our Postgres, behind a `Queue` interface (`lib/queue`), run by `npm run worker` | Decided | Enqueue inside our own transactions with plain SQL, one-at-a-time queues per mailbox, retries and cron built in, no new vendor. See [decision 0014](decisions/0014-hosting-and-job-queue.md) |
@@ -901,7 +935,3 @@ The pipeline already creates the seam this would use: ingestion, classification,
 - **Vertical schema fields.** Can't finalize the influencer or model extension schema without real sample deals from each — same research dependency as the extraction schema itself.
 - **Manager visibility boundary.** Once a manager account exists, do they see raw source messages or only extracted summaries? Worth deciding before building multi-talent accounts, since it shapes the Membership and Message access rules.
 - **Screenshot and forwarded-mail retention.** Both can contain a counterparty's private content. How long originals are kept, and whether anything gets redacted, is still open.
-
-## Local grant discovery experiment
-
-The local Grants surface caches official public announcements separately from talent-scoped applications. Application deadlines and paperwork steps reuse `todo`, Calendar and Today; award progress does not create income or alter signed-project rules. Five additive tables and the existing Graphile Worker implement it, behind an explicit loopback/development gate. See [decision 0017](decisions/0017-local-grant-discovery.md) and [local validation](testing/grants-local-2026-10-11.md) for source coverage and deployment boundaries.

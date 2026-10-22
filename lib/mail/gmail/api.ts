@@ -6,6 +6,7 @@ import "server-only";
 // fake Gmail in tests; production leaves it unset.
 
 import { metadataHeaders } from "../metadata";
+import { MAX_ATTACHMENT, MAX_MESSAGE, MAX_RESPONSE, readCapped } from "./limits";
 import type { GmailFullMessage } from "./parts";
 
 const base = () => (process.env.GMAIL_API_URL || "https://gmail.googleapis.com/gmail/v1").replace(/\/$/, "");
@@ -38,7 +39,7 @@ async function pace(token: string) {
 
 const rateLimited = (status: number, reason: string) => status === 429 || (status === 403 && /rateLimitExceeded/i.test(reason));
 
-async function call<T>(token: string, path: string, body?: unknown): Promise<T> {
+async function call<T>(token: string, path: string, body?: unknown, max = MAX_RESPONSE): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     await pace(token);
     let res: Response;
@@ -52,10 +53,15 @@ async function call<T>(token: string, path: string, body?: unknown): Promise<T> 
     } catch {
       throw new GmailError(0, "network");
     }
-    const reader=res.body?.getReader();
-    const chunks:Uint8Array[]=[]; let bytes=0;
-    if(reader) try { for(;;){ const part=await reader.read(); if(part.done)break; bytes+=part.value.length; if(bytes>2_000_000)throw new GmailError(0,"response_too_large"); chunks.push(part.value); } } finally {await reader.cancel().catch(()=>{});}
-    const json = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}") as {
+    const text = await readCapped(res, max);
+    if (text === null) throw new GmailError(res.status, "response_too_large");
+    const json = (() => {
+      try {
+        return JSON.parse(text || "{}");
+      } catch {
+        return {};
+      }
+    })() as {
       error?: { status?: string; errors?: { reason?: string }[] };
     } & T;
     if (res.ok) return json;
@@ -107,11 +113,11 @@ export function gmailApi(token: string) {
       return call<GmailMetadata>(token, `/messages/${encodeURIComponent(id)}?${q}`);
     },
     /** The whole message, parts and all: only for email brought in. Attachments come separately. */
-    full: (id: string) => call<GmailFullMessage>(token, `/messages/${encodeURIComponent(id)}?format=full`),
+    full: (id: string) => call<GmailFullMessage>(token, `/messages/${encodeURIComponent(id)}?format=full`, undefined, MAX_MESSAGE),
     /** Push: Gmail posts a notice to this Pub/Sub topic on every change, for up to 7 days. `expiration` is ms since the epoch. */
     watch: (topicName: string) => call<{ historyId: string; expiration: string }>(token, "/watch", { topicName }),
     stop: () => call<unknown>(token, "/stop", {}),
     attachment: (messageId: string, attachmentId: string) =>
-      call<{ data: string; size: number }>(token, `/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`),
+      call<{ data: string; size: number }>(token, `/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`, undefined, MAX_ATTACHMENT),
   };
 }

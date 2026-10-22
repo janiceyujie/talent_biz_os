@@ -1,6 +1,6 @@
 # 0015 — OpenAI and Anthropic in production, one primary and one backup
 
-**Status:** Accepted (2026-10-10). Replaces the production choice in [decision 0006](0006-model-provider.md) (Claude only) and the paid-model bullets of [decision 0008](0008-ai-operations.md); the seam, evals, and logging from both stand.
+**Status:** Accepted (2026-10-10). Replaces the production choice in [decision 0006](0006-model-provider.md) (Claude only) and the paid-model bullets of [decision 0008](0008-ai-operations.md); the seam, evals, and logging from both stand. The free Gemini tier section is replaced by [decision 0022](0022-paid-providers-only.md): Gemini, Ollama, and their flags are removed.
 
 ## Context
 

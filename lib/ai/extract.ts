@@ -23,7 +23,6 @@ export async function extractMessage({
   timeZone,
   outputLocale,
   trace,
-  fromMailbox = false,
   textIfFilesUnreadable = false,
   sent = false,
   thread = [],
@@ -35,7 +34,6 @@ export async function extractMessage({
   timeZone: string;
   outputLocale: Locale;
   trace: Omit<CallTrace, "promptVersion">; // what the call is for and whom (ai_call log)
-  fromMailbox?: boolean; // read from a connected mailbox: the mailbox model and the free-tier rule apply
   textIfFilesUnreadable?: boolean; // an email's files are extras: if the model can't read them, analyze its text alone
   sent?: boolean; // the person's own reply, read as their side of the deal (prompts.ts)
   thread?: ThreadNote[]; // earlier messages in its email thread, as background (prompts.ts)
@@ -45,7 +43,6 @@ export async function extractMessage({
   // before the model reads the text, and say so.
   const visible = stripInvisible(body);
   const request = {
-    fromMailbox,
     system: systemPrompt({ today, timeZone, outputLocale, sent }),
     prompt: messagePrompt(visible.text, outputLocale, files, thread),
     trace: { ...trace, promptVersion: sent ? SENT_PROMPT_VERSION : PROMPT_VERSION },
@@ -62,7 +59,7 @@ export async function extractMessage({
       // (lyrics, articles). Retrying the same request gets the same refusal;
       // asking without the transcript usually works.
       if (e instanceof ModelError && e.code === "unsupported_file" && textIfFilesUnreadable && visible.text.trim()) {
-        // This model can't read these files (a local text-only model): the text alone, and say so.
+        // This model can't read these files: the text alone, and say so.
         filesNotRead = true;
         return generateObject({ ...asked, prompt: messagePrompt(visible.text, outputLocale, [], thread), schema: modelOutput });
       }
@@ -73,7 +70,7 @@ export async function extractMessage({
   };
   // Which model (decision 0015): the large one for PDFs and long messages; the mid-size one
   // otherwise, and the large one again when its answer is unsure, a contract, or off-schema.
-  const escalates = modelFor("analysis_complex", fromMailbox).models.join() !== modelFor("analysis", fromMailbox).models.join();
+  const escalates = modelFor("analysis_complex").model !== modelFor("analysis").model;
   const hard = files.some((f) => f.mimeType === "application/pdf") || visible.text.length > LONG_MESSAGE;
   let result;
   if (hard || !escalates) result = await ask(hard ? "analysis_complex" : "analysis");

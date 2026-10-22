@@ -627,7 +627,7 @@ export const messageAnalysis = pgTable(
     intent: text({ enum: intentKeys }).notNull(), // what the message is doing — lib/ai/extraction/intents.ts
     analysis: jsonb().$type<MessageAnalysis>().notNull(), // summary, facts, asks, missing — lib/ai/analysis.ts
     confidence: numeric({ precision: 4, scale: 3, mode: "number" }).notNull(),
-    modelVersion: text().notNull(), // provider and model, e.g. "gemini:gemini-3.5-flash"
+    modelVersion: text().notNull(), // provider and model, e.g. "anthropic:claude-sonnet-5-5"
     promptVersion: text().notNull(), // fingerprint of the prompt and field definitions — lib/ai/prompts.ts
     createdAt: createdAt(), // latest row wins
   },

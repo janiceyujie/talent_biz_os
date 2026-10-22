@@ -31,7 +31,7 @@ Do this **once**, as late as possible (right before creating the production data
 
 - [ ] A strong `BETTER_AUTH_SECRET` per environment, never reused from development. It encrypts stored Google tokens (decision 0009); changing it later forces everyone to reconnect Google.
 - [ ] `BETTER_AUTH_URL` set to the production address.
-- [ ] No test settings in production: `GOOGLE_TEST_STUB`, `AI_REPLAY`, `GOOGLE_CALENDAR_API_URL`, `GOOGLE_OAUTH_REVOKE_URL`, `NEXT_DIST_DIR`, `GMAIL_API_URL`, `GOOGLE_OAUTH_TOKEN_URL`, `AI_FREE_TIER_OK`, `MAIL_KEY_DEV` unset; `APP_ENV=production`.
+- [ ] No test settings in production: `GOOGLE_TEST_STUB`, `AI_REPLAY`, `GOOGLE_CALENDAR_API_URL`, `GOOGLE_OAUTH_REVOKE_URL`, `NEXT_DIST_DIR`, `GMAIL_API_URL`, `GOOGLE_OAUTH_TOKEN_URL`, `MAIL_KEY_DEV` unset; `APP_ENV=production`.
 - [ ] Cloud KMS key in Singapore; an encrypt-only credential on the web service and a decrypt-only one on the worker ([decision 0016](../decisions/0016-mailbox-tokens-and-key-management.md)).
 - [ ] Email: a real SMTP provider (architecture doc, "Transactional email").
 - [ ] Storage: a production bucket and keys (`STORAGE_*`).
@@ -53,7 +53,8 @@ Do this **once**, as late as possible (right before creating the production data
 From [decision 0008](../decisions/0008-ai-operations.md):
 
 - [x] OpenAI and Anthropic behind the provider seam, each with its own key and a spending cap; `AI_PRIMARY` and `AI_BACKUP` set ([decision 0015](../decisions/0015-production-model-providers.md)).
-- [ ] The Gemini adapter, `AI_PROVIDER_KEEPS_DATA`, and `AI_FREE_TIER_OK` removed; a permanent line that content is analyzed by AI; the privacy policy names both providers.
+- [x] The Gemini and Ollama adapters, `AI_PROVIDER_KEEPS_DATA`, and `AI_FREE_TIER_OK` removed ([decision 0022](../decisions/0022-paid-providers-only.md)).
+- [ ] A permanent line that content is analyzed by AI; the privacy policy names both providers.
 - [ ] A cap on PDF pages and on the model's output length.
 - [ ] Per-month and short-burst limits.
 - [ ] Rate limits on server actions and the upload and file routes.

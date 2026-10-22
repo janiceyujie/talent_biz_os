@@ -202,7 +202,6 @@ function SenderRules({ onNotice }: { onNotice: (text: string) => void }) {
 
 /** What connecting means in one line (details behind ⓘ), the history choice, then off to Google (a full page load, not a fetch). */
 function ConnectDialog({ reconnect, defaultMode, onClose }: { reconnect: boolean; defaultMode: HistoryMode; onClose: () => void }) {
-  const { gmail } = useAppData();
   const t = useTranslations("gmail");
   const [mode, setMode] = useState<HistoryMode>(defaultMode);
   const options: { value: HistoryMode; label: string; hint: string; recommended?: boolean }[] = [
@@ -228,7 +227,6 @@ function ConnectDialog({ reconnect, defaultMode, onClose }: { reconnect: boolean
           ))}
         </fieldset>
       )}
-      {gmail.freeTier && <p className="notice gmail-free-tier">{t("freeTierNotice")}</p>}
       <p className="gmail-account-note">{t("accountNote")}</p>
       <footer className="modal-actions">
         <button className="secondary" onClick={onClose}>

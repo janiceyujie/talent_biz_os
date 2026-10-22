@@ -44,7 +44,6 @@ flowchart LR
   subgraph AI["Language models"]
     AN["Anthropic<br/>primary"]
     OA["OpenAI<br/>backup"]
-    DEV["Ollama / Gemini<br/>development only"]
   end
 
   B <-->|pages, saves, change checks| W
@@ -65,7 +64,6 @@ flowchart LR
   K <-->|our events out, Google's changes in| GC
   K -->|"score, read, analyze"| AN
   K -.->|only when the primary can't answer| OA
-  K -.-> DEV
   W -->|Sync now| GC
 ```
 
@@ -161,8 +159,7 @@ sequenceDiagram
 ```
 
 - **Which model** follows the routing below: a PDF or a long text goes to `analysis_complex` at once; screenshots and short text start on `analysis`.
-- **Limits** (`lib/uploads.ts`): up to 10 files, 10 MB each, 12 MB together, since files go to the model inline. PNG, JPEG, WebP, HEIC/HEIF, and PDF.
-- **Locally**, an Ollama model can't read a PDF, and one without vision can't read images: an upload then fails with Retry rather than being analyzed without its files. An email with text keeps its text and says its attachments weren't read.
+- **Limits** (`lib/uploads.ts`): up to 10 files, 10 MB each, 12 MB together, since files go to the model inline. PNG, JPEG, WebP, and PDF; HEIC/HEIF is refused for now (`docs/tech-debt.md`).
 - **Retry** queues the same `message.analyze` again; earlier analyses are kept.
 
 ## The job queue and the worker
@@ -271,7 +268,7 @@ flowchart TB
 ```
 
 - **Every call is logged** in `ai_call`: role, model, tokens, and for whom, never the content.
-- **Real mail in development** goes only to a provider that doesn't keep data, or to a local model (`AI_MAILBOX_PROVIDER=ollama`), never to a free tier that keeps what it's sent (`AI_PROVIDER_KEEPS_DATA`).
+- **Only the paid providers**, in development too (decision 0022): nothing goes to a provider that may keep or train on what it's sent.
 - **Evals** (`evals/`) run only on made-up cases, capped by `--max-calls` and `--max-cost`.
 
 ## Keeping the screen up to date

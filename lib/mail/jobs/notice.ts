@@ -41,7 +41,7 @@ export async function pathFor(d: Decision, c: Connection, mail: MailProvider): P
   if (!(await canScore(c.talentId))) return "wait"; // the mailbox's daily cap
   let scored;
   try {
-    scored = await scoreMail(meta, { task: "relevance", talentId: c.talentId }, true);
+    scored = await scoreMail(meta, { task: "relevance", talentId: c.talentId });
   } catch (e) {
     // Ids and codes only: never the subject or preview.
     console.error("mail.fetch kind failed", d.id, e instanceof ModelError ? e.code : (e as Error)?.name);

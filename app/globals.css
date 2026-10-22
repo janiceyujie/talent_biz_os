@@ -2757,9 +2757,6 @@ a.disabled {
   text-align: center;
   overflow-wrap: anywhere;
 }
-.notice.data-notice {
-  font-size: 13px;
-}
 .message-analysis .assumed {
   display: block;
   margin-top: 3px;
@@ -3983,10 +3980,6 @@ button.primary.danger {
 p.gmail-skipped {
   font-size: 13px;
   overflow-wrap: anywhere;
-}
-.notice.gmail-free-tier {
-  margin: 0;
-  font-size: 13px;
 }
 .gmail-rules h3 {
   margin: 20px 0 8px;

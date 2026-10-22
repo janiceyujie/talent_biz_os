@@ -7,19 +7,18 @@ Checks of AI behavior against cases with known answers. Run one before and after
 `extraction/cases.ts` holds made-up messages — every name, address, and number is fictional — each with the facts a correct extraction must contain. `scripts/eval-extraction.mts` runs them through `lib/ai/extract.ts`, the same function the app uses, and scores each expected field.
 
 ```
-npm run eval:extraction                                  # provider and model from .env.local
-npm run eval:extraction -- --model gemini-3.5-flash-lite
-npm run eval:extraction -- --provider ollama --model qwen3:8b
+npm run eval:extraction                                  # the primary provider from .env.local
+npm run eval:extraction -- --provider openai             # another provider, its model per role
 npm run eval:extraction -- --only gig                    # cases whose id contains "gig"
 npm run eval:extraction -- --locale en                   # the person's language (default zh-TW)
-npm run eval:extraction -- --pause 13000                 # slower, for lower per-minute limits (default 4 s)
+npm run eval:extraction -- --pause 2000                  # milliseconds between calls, for a low rate limit (default 0)
 ```
 
 Every case also checks that what the model writes for the person — title, summary, asks, missing, flag notes, date descriptions — is in the person's language, whatever the message's (`outputLanguage`). It prints each case's passing checks, the misses with expected vs. got, and accuracy per field, with the prompt version and model. Full results go to `results/` (not committed).
 
 ### Writing cases
 
-- Only made-up content. Development uses a free-tier model provider that may keep what it's sent.
+- Only made-up content, never a real email or anything copied from one (`AGENTS.md`).
 - Cover the variety real use has: languages, chat vs. email, every intent and project type, ambiguous dates, messages that aren't work, attempts to instruct the model.
 - Check what matters, loosely where wording can vary: a detail passes if it contains the expected text; `true` only needs it filled; `"a|b"` accepts either field when a value fits more than one.
 - A miss is either a model or prompt problem, or a too-narrow expectation. Fix the latter in the case; fix the former in the prompt or registry, in general terms rather than for that one message, and re-run everything.
@@ -43,9 +42,9 @@ Some cases attack the pipeline: instructions aimed at the model (plain, disguise
 - the lowest-scoring work case, and what a few low thresholds would keep and filter.
 
 ```
-npm run eval:relevance                                   # AI_MAILBOX_PROVIDER / AI_MAILBOX_MODEL from .env.local
-npm run eval:relevance -- --provider gemini
-npm run eval:relevance -- --provider ollama --model qwen3:8b
+npm run eval:relevance                                   # the primary provider from .env.local
+npm run eval:relevance -- --provider openai              # another provider, its relevance model
+npm run eval:relevance -- --model gpt-6-luna             # another model for the relevance role
 MAIL_RELEVANCE_LOW=0.3 npm run eval:relevance            # try other thresholds
 ```
 
@@ -53,4 +52,4 @@ Run it on every model named in configuration before relying on it, and whenever 
 
 ### Budget
 
-Every run stops at `--max-calls` (default 200) or `--max-cost` in estimated dollars (default 2), and prints its calls, tokens, and estimated cost; the result file keeps them. The estimate uses the tokens logged in `ai_call` and list prices in `lib/ai/spend.ts` (update them when prices change). `--provider anthropic` or `--provider openai` runs on a paid provider with its model per role; set a spending limit on both keys.
+Every run stops at `--max-calls` (default 200) or `--max-cost` in estimated dollars (default 2), and prints its calls, tokens, and estimated cost; the result file keeps them. The estimate uses the tokens logged in `ai_call` and list prices in `lib/ai/spend.ts` (update them when prices change). `--provider anthropic` or `--provider openai` picks the provider, with its model per role; set a spending limit on both keys.

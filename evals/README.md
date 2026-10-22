@@ -50,6 +50,23 @@ MAIL_RELEVANCE_LOW=0.3 npm run eval:relevance            # try other thresholds
 
 Run it on every model named in configuration before relying on it, and whenever the prompt changes. A case the check gets wrong becomes a better prompt in general terms, or a narrower expectation, as for extraction.
 
+## Assistant (`npm run eval:assistant`)
+
+`assistant/cases.ts` holds one made-up workspace (three projects, payments in two currencies, a week of events, and a project whose notes carry an injected instruction) and questions about it, as an overview or as one project, in both languages. `scripts/eval-assistant.mts` asks each through the app's own snapshot, prompt, and model call (`lib/assistant/`) and checks:
+
+- what a right answer contains (any one of a group, so wording can vary) and what it must not;
+- no links or images in the answer;
+- the answer is in the person's UI language, whatever the question's.
+
+```
+npm run eval:assistant                                   # the primary provider from .env.local
+npm run eval:assistant -- --provider openai              # another provider, its assistant model
+npm run eval:assistant -- --model claude-sonnet-5-5      # another model for the assistant role
+npm run eval:assistant -- --only zh                      # cases whose id contains "zh"
+```
+
+Run it when the prompt, the snapshot, or the assistant's model changes. A new attack gets a case first.
+
 ### Budget
 
 Every run stops at `--max-calls` (default 200) or `--max-cost` in estimated dollars (default 2), and prints its calls, tokens, and estimated cost; the result file keeps them. The estimate uses the tokens logged in `ai_call` and list prices in `lib/ai/spend.ts` (update them when prices change). `--provider anthropic` or `--provider openai` picks the provider, with its model per role; set a spending limit on both keys.

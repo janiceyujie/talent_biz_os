@@ -1,12 +1,12 @@
 // Database rows to the shapes the screens use: calendar items, payments with
-// their receipts, and the person's Google events. Shared by the layout's data
+// their receipts, contract versions, and the person's Google events. Shared by the layout's data
 // (index.ts) and the pages and endpoints that fetch only what they show
 // (decision 0011), so every reader gets the same shape. Pure, no queries.
-import type { calendarEvent, calendarImportSource, calendarSeriesProject, externalEvent, payment, paymentReceipt, todo } from "@/lib/db/schema";
+import type { calendarEvent, calendarImportSource, calendarSeriesProject, contract, externalEvent, payment, paymentReceipt, todo } from "@/lib/db/schema";
 import { activeReceipts } from "@/lib/domain/workflow";
 import type { Currency } from "@/lib/domain/money";
 import { isProjectType } from "@/lib/project-types";
-import { calendarKinds, type CalendarItem, type CalendarKind, type ExternalEvent, type Payment, type PaymentReceipt, type TravelDetails } from "@/lib/types";
+import { calendarKinds, type CalendarItem, type CalendarKind, type Contract, type ExternalEvent, type Payment, type PaymentReceipt, type TravelDetails } from "@/lib/types";
 
 type EventRow = typeof calendarEvent.$inferSelect;
 type TodoRow = typeof todo.$inferSelect;
@@ -15,6 +15,7 @@ type ReceiptRow = typeof paymentReceipt.$inferSelect;
 type ImportedRow = typeof externalEvent.$inferSelect;
 type SourceRow = typeof calendarImportSource.$inferSelect;
 type SeriesRow = typeof calendarSeriesProject.$inferSelect;
+type ContractRow = typeof contract.$inferSelect;
 
 export const hhmm = (t: string | null) => (t ? t.slice(0, 5) : "");
 const todoKind: Record<string, CalendarKind> = { deliverable: "deliverable", payment_due: "payment" };
@@ -130,4 +131,19 @@ export function externalEventsOf(importedRows: ImportedRow[], importSources: Sou
       series: source.own && e.seriesId ? { id: e.seriesId, projectId: seriesLinks.find((l) => l.seriesId === e.seriesId)?.projectId ?? null } : null,
     };
   });
+}
+
+/** Contract versions, in the order given (newest first where they're listed). */
+export function contractsOf(rows: ContractRow[]): Contract[] {
+  return rows.map((c) => ({
+    id: c.id,
+    projectId: c.projectId,
+    messageId: c.messageId,
+    version: c.versionNumber,
+    status: c.status,
+    terms: c.terms,
+    diff: c.diff ?? [],
+    against: c.supersedesId ? ("version" as const) : ("project" as const),
+    createdAt: c.createdAt.toISOString(),
+  }));
 }

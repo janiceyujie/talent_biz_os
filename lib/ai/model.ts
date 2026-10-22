@@ -31,19 +31,22 @@ export type Attachment = { mimeType: string; data: Uint8Array };
 
 /** What a call is for and whom, for the ai_call log and usage limits. */
 export type CallTrace = {
-  task: "extract" | "relevance" | "payment_notice" | "eval";
+  task: "extract" | "relevance" | "payment_notice" | "assistant" | "eval";
   promptVersion: string;
   talentId?: string | null;
   personId?: string | null;
   messageId?: string | null;
+  flags?: string[]; // what the deterministic checks found in what's sent, by kind and place, never the text
 };
 
 /**
  * What a call is for (decision 0015): relevance (score one email, the small
  * model), analysis (a message, the mid-size model), analysis_complex
- * (contracts, PDFs, long or unclear messages, the large model; lib/ai/extract.ts routes).
+ * (contracts, PDFs, long or unclear messages, the large model; lib/ai/extract.ts routes),
+ * assistant (a question about the person's own records, the small model until the
+ * assistant eval says otherwise; decision 0023).
  */
-export type ModelRole = "analysis" | "analysis_complex" | "relevance";
+export type ModelRole = "analysis" | "analysis_complex" | "relevance" | "assistant";
 
 export type StructuredRequest<T> = {
   role?: ModelRole; // default analysis
@@ -71,8 +74,8 @@ type Provider = "anthropic" | "openai";
 
 /** Each provider's model for each role (decision 0015); AI_MODEL_<PROVIDER>_<ROLE> overrides one. */
 const roleModels: Record<Provider, Record<ModelRole, string>> = {
-  anthropic: { relevance: "claude-haiku-5-5", analysis: "claude-sonnet-5-5", analysis_complex: "claude-opus-5-5" },
-  openai: { relevance: "gpt-6-luna", analysis: "gpt-6.1-sol", analysis_complex: "gpt-6-astra" },
+  anthropic: { relevance: "claude-haiku-5-5", analysis: "claude-sonnet-5-5", analysis_complex: "claude-opus-5-5", assistant: "claude-haiku-5-5" },
+  openai: { relevance: "gpt-6-luna", analysis: "gpt-6.1-sol", analysis_complex: "gpt-6-astra", assistant: "gpt-6-luna" },
 };
 
 /** One provider's model for a role: AI_MODEL_<PROVIDER>_<ROLE>, or its default. */
@@ -103,6 +106,7 @@ export async function generateObject<T>(request: StructuredRequest<T>): Promise<
         personId: request.trace.personId ?? null,
         messageId: request.trace.messageId ?? null,
         task: request.trace.task,
+        flags: request.trace.flags?.length ? request.trace.flags : null,
         provider,
         promptVersion: request.trace.promptVersion,
         latencyMs: Date.now() - started,
@@ -145,6 +149,16 @@ export async function generateObject<T>(request: StructuredRequest<T>): Promise<
   }
   if (replay === "record") await writeRecording(key, result);
   return { object: result.object, modelVersion: result.modelVersion };
+}
+
+/** A free-text answer: one string field, so it gets the structured path's backup, recordings, and logging unchanged. */
+const textAnswer = z.object({ answer: z.string() });
+export type TextRequest = Omit<StructuredRequest<unknown>, "schema" | "attachments">;
+
+/** A model's answer in its own words (the assistant, decision 0023); nothing in it is acted on. */
+export async function generateText(request: TextRequest): Promise<{ text: string; modelVersion: string }> {
+  const { object, modelVersion } = await generateObject({ ...request, schema: textAnswer });
+  return { text: object.answer, modelVersion };
 }
 
 function callProvider<T>(provider: string, request: StructuredRequest<T>, model: string): Promise<ProviderResult<T>> {
@@ -220,7 +234,7 @@ export function providerSchema(schema: z.ZodType): Record<string, unknown> {
 }
 
 /** Room for the answer and the model's thinking, which counts toward it. */
-const maxTokens = (role: ModelRole = "analysis") => (role === "relevance" ? 4_000 : role === "analysis" ? 16_000 : 32_000);
+const maxTokens = (role: ModelRole = "analysis") => (role === "relevance" || role === "assistant" ? 4_000 : role === "analysis" ? 16_000 : 32_000);
 
 /** What an SDK's failure means for us: an outage (the backup may answer), a bad request, or no key. */
 function sdkError(provider: string, e: unknown): ModelError {

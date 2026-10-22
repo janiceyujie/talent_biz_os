@@ -717,7 +717,7 @@ export const aiCall = pgTable(
     talentId: uuid().references(() => talent.id, { onDelete: "cascade" }), // null for evals and scripts
     personId: uuid().references(() => person.id, { onDelete: "set null" }),
     messageId: uuid().references(() => message.id, { onDelete: "set null" }),
-    task: text().notNull(), // 'extract', 'eval', later 'draft'
+    task: text().notNull(), // 'extract', 'relevance', 'payment_notice', 'assistant', 'eval'
     provider: text().notNull(),
     model: text().notNull(),
     promptVersion: text(),
@@ -727,10 +727,14 @@ export const aiCall = pgTable(
     outputTokens: integer(),
     latencyMs: integer().notNull(),
     replayed: boolean().notNull().default(false),
+    // What the deterministic checks found in what was sent (decision 0023): a kind and where, e.g.
+    // "instructions_to_ai:project.notes". Never the text itself.
+    flags: text().array(),
     createdAt: createdAt(),
   },
   (t) => [
     index("ai_call_talent_created_idx").on(t.talentId, t.createdAt),
+    index("ai_call_person_created_idx").on(t.personId, t.createdAt), // the assistant's per-person limits
     index("ai_call_message_idx").on(t.messageId),
     check("ai_call_status_check", oneOf(t.status, aiCallStatuses)),
   ],

@@ -66,11 +66,12 @@ describe("scheduleAnswer", () => {
     const many = Array.from({ length: ANSWER_LINES + 4 }, (_, i) => item({ id: `e${i}` }));
     const got = scheduleAnswer(source(many), TODAY);
     assert.equal(got.kind === "schedule" && got.lines.length, ANSWER_LINES);
-    assert.equal(got.more, 4);
+    assert.equal(got.kind === "schedule" && got.more, 4);
   });
 
   test("nothing on: no lines", () => {
-    assert.deepEqual(scheduleAnswer(source([]), TODAY).lines, []);
+    const got = scheduleAnswer(source([]), TODAY);
+    assert.deepEqual(got.kind === "schedule" && got.lines, []);
   });
 });
 

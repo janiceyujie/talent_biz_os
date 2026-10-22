@@ -35,3 +35,14 @@ Shortcuts taken on purpose, and gaps we know about: what happens today, why it's
 **Why for now.** Anthropic and OpenAI list JPEG, PNG, GIF, and WebP as image inputs, not HEIC (not yet tried against either API); Gemini, which read it, was removed in decision 0022. Converting needs a new dependency: the prebuilt `sharp` usually can't decode HEVC-encoded HEIC, and a browser-side converter such as `heic2any` is large.
 
 **Fix.** Convert to JPEG before the model sees it: in the browser on upload, or on the server for uploads and email attachments alike. Check first whether iPhone Safari already converts when the file picker doesn't list HEIC; if it does, only files sent from a Mac need it. Start if people ask for it or refused HEIC uploads show up.
+
+## Assistant
+
+### The assistant can't look anything up
+
+**Today.** A question in the person's own words is answered from one fixed snapshot: the workspace overview or one project (decision 0023). A question about something outside it (money received last quarter, an archived project, the wording of an email) gets "that isn't in your data here".
+
+**Why for now.** A model with tools that fetch data is the more flexible design, but decision 0007 says the model never gets tools, and an injected instruction could steer what it reads. A snapshot is bounded, testable, and cheap.
+
+**Fix.** Read-only tools the model can call (projects, payments, a date range), scoped to the person's access, each call logged. It needs its own decision record amending 0007. Start when the questions people actually ask show the snapshot falling short.
+

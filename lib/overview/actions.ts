@@ -3,16 +3,14 @@
 // the schedule beside it), messages waiting for review, and clashes in the
 // coming week. Pure; the view words each row.
 import { conflicts, plusDays, type PlanItem } from "@/lib/calendar/planner";
-import type { InboxMessage } from "@/lib/types";
+import type { InboxSummary } from "@/lib/types";
 import { urgencies, type StatefulNotification, type Urgency } from "@/lib/domain/notifications";
-
-type ReviewMessage = Pick<InboxMessage, "id" | "status" | "notice"> & { analysis: { title: string } | null };
 
 const CLASH_WINDOW_DAYS = 7; // as the reminders
 
 export type TodayAction =
   | { kind: "reminder"; id: string; urgency: Urgency; date: string; reminder: StatefulNotification }
-  | { kind: "review"; id: string; urgency: Urgency; date: string; message: ReviewMessage }
+  | { kind: "review"; id: string; urgency: Urgency; date: string; message: InboxSummary }
   | { kind: "clash"; id: string; urgency: Urgency; date: string; items: [PlanItem, PlanItem] };
 
 export function todayActions({
@@ -22,7 +20,7 @@ export function todayActions({
   today,
 }: {
   reminders: StatefulNotification[]; // already without snoozed ones
-  inbox: ReviewMessage[];
+  inbox: InboxSummary[]; // the messages Today lists for review
   items: PlanItem[];
   today: string;
 }): TodayAction[] {

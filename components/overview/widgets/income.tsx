@@ -6,15 +6,18 @@ import { monthIncome } from "@/lib/overview/income";
 import type { OverviewContext } from "../context";
 import { Widget } from "../widget";
 
-/** Received this month: cash received this month, with last month beside it (zero included). */
+/** Received this month: cash received this month, with last month beside it (zero included), one pair per currency. */
 export function IncomeWidget({ ctx: { data, today } }: { ctx: OverviewContext }) {
   const t = useTranslations("today");
   const money = useMoney();
-  const { thisMonth, lastMonth } = monthIncome(data, today);
   return (
     <Widget id="income" title={t("incomeTitle")}>
-      <p className="widget-big">{money(thisMonth)}</p>
-      <p className="widget-note">{t("incomeLastMonth", { amount: money(lastMonth) })}</p>
+      {monthIncome(data, today).map(({ currency, thisMonth, lastMonth }) => (
+        <div key={currency}>
+          <p className="widget-big">{money(thisMonth, currency)}</p>
+          <p className="widget-note">{t("incomeLastMonth", { amount: money(lastMonth, currency) })}</p>
+        </div>
+      ))}
     </Widget>
   );
 }

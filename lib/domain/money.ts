@@ -1,9 +1,13 @@
 // Money and tax arithmetic, done in minor units (cents; whole yen) so that
 // net + tax always equals total. Ported from the prototype's domain rules.
 
-/** ISO currencies supported for recording and same-currency financial views. */
+/**
+ * Currencies an amount can be recorded in. Totals keep each currency apart;
+ * there's no conversion yet (docs/architecture.md, "Multi-currency").
+ */
 export const supportedCurrencies = ["TWD", "HKD", "USD", "JPY", "EUR", "GBP"] as const;
 export type Currency = (typeof supportedCurrencies)[number];
+export const isCurrency = (code: string): code is Currency => (supportedCurrencies as readonly string[]).includes(code);
 
 /** Currency for display in a UI locale: TWD reads "$21,000.00" in zh-TW, "NT$21,000.00" in en. */
 export const money = (n: number, locale: string, currency = "TWD") =>
@@ -13,18 +17,20 @@ export const money = (n: number, locale: string, currency = "TWD") =>
     maximumFractionDigits: currency === "JPY" ? 0 : 2,
   }).format(n);
 
+/** Minor units in one major unit: 100 cents, or 1 for whole yen. */
 export const minorUnitFactor = (currency: string) => (currency === "JPY" ? 1 : 100);
 
 export function minorUnits(amount: number, currency: string) {
   return Number(amount.toFixed(currency === "JPY" ? 0 : 2).replace(".", ""));
 }
 
+/** One total per currency present, in supportedCurrencies order; currencies are never added together. */
 export function totalsByCurrency<T extends { currency: Currency }>(rows: T[], amount: (row: T) => number) {
-  const totals = new Map<Currency, number>();
-  for (const row of rows) totals.set(row.currency, (totals.get(row.currency) ?? 0) + minorUnits(amount(row), row.currency));
-  return supportedCurrencies.flatMap((currency) => totals.has(currency)
-    ? [{ currency, amount: totals.get(currency)! / minorUnitFactor(currency) }]
-    : []);
+  const units = new Map<Currency, number>();
+  for (const row of rows) units.set(row.currency, (units.get(row.currency) ?? 0) + minorUnits(amount(row), row.currency));
+  return supportedCurrencies.flatMap((currency) =>
+    units.has(currency) ? [{ currency, amount: units.get(currency)! / minorUnitFactor(currency) }] : [],
+  );
 }
 
 /** Net, tax, and total for an amount entered with or without tax. */

@@ -1,0 +1,113 @@
+{
+  "scenario": "live",
+  "role": "musician",
+  "kind": "quote",
+  "locale": "en",
+  "title": "Live performance Quotation",
+  "blocks": [
+    {
+      "type": "paragraph",
+      "text": "Quote number [ID]. Issued [date]. Valid until [date]. Currency [currency]. Subject to written confirmation; this quotation does not itself reserve dates or grant rights."
+    },
+    {
+      "type": "heading",
+      "text": "Parties"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Client [legal name, address, contact and email]",
+        "Service provider [legal name, address, contact and email]",
+        "Project [name]. Agreement date [date]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Scope and schedule"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Date [date], venue [address], soundcheck [time], performance [time and duration], lineup [names]. Organizer provides [stage, sound, lighting, security and permits]. Artist provides [equipment]. Attach the agreed technical rider."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Price breakdown"
+    },
+    {
+      "type": "paragraph",
+      "text": "For each item, enter scope, quantity, unit, unit price and amount. If commission applies, specify the calculation basis and rate. Identify estimates separately from fixed fees."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Item",
+        "Qty / unit",
+        "Unit price",
+        "Amount"
+      ],
+      "rows": [
+        [
+          "Performance fee",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Additional set or overtime",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Travel and accommodation",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Recording or streaming license",
+          "[___]",
+          "[___]",
+          "[___]"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Fees and payment"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Subtotal excluding tax [amount]",
+        "Discount [amount]",
+        "Tax rate and tax [rate and amount]",
+        "Total including tax [amount and currency]",
+        "Deposit [amount and due date]",
+        "Balance [amount and payment terms]"
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Usage and special terms"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Fee covers only the live performance. Recording, streaming, broadcast, paid advertising and merchandise are excluded unless separately approved in writing with media, territory, term and additional fee. Confirm travel, accommodation and overtime [terms]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Quotation conditions"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Unlisted deliverables, extra revisions, travel and usage rights are excluded. Scope changes or acceptance after expiry require a revised price and availability check. Confirm cancellation, acceptance, rights and full engagement terms in writing before work begins."
+      ]
+    }
+  ]
+}

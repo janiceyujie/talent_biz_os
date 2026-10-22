@@ -33,5 +33,10 @@ export function parseAddress(header: string): Address {
   return address.includes("@") ? { address, name } : { address: "", name: name || header.trim() };
 }
 
+/** A list of addresses, as a To line writes it: commas inside quoted names don't split. Entries without an address are left out. */
+export function parseAddressList(header: string): Address[] {
+  return (header.match(/(?:"(?:[^"\\]|\\.)*"|[^,])+/g) ?? []).map(parseAddress).filter((a) => a.address);
+}
+
 /** The part after the @, lowercased; "" when there's no address. */
 export const domainOf = (address: string) => address.split("@")[1] ?? "";

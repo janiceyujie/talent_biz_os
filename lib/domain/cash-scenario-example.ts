@@ -51,7 +51,7 @@ export function cashScenarioExample(today: string, currency: Payment["currency"]
       recordedDate: today,
       dueDate,
       status: "expected",
-      settledAmount: null,
+      receipts: [], settledAmount: null,
       settledDate: null,
       invoiceRef: "",
       notes: "Synthetic example; not a real receivable or payable.",

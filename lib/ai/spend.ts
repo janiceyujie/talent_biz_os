@@ -1,11 +1,13 @@
 import "server-only";
-import { and, eq, gte } from "drizzle-orm";
+import { and, eq, gte, isNull, ne, notInArray, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { aiCall } from "@/lib/db/schema";
+import { neverSent } from "./errors";
 
 // What model calls cost, estimated from the tokens each one reports (ai_call)
-// and list prices. For the evals' budget (scripts/eval-*.mts); the providers'
-// own spending limits are the hard cap. Gemini's free tier and a local model cost nothing.
+// and list prices. For the evals' budget (scripts/eval-*.mts) and the app's
+// daily spending cap (./pause.ts); the providers' own spending limits are the
+// hard cap.
 
 /** US dollars per million tokens, input and output (October 2026 list prices). */
 const prices: Record<string, [number, number]> = {
@@ -38,6 +40,26 @@ export async function evalSpend(since: Date) {
     return n + ((r.input ?? 0) * i + (r.output ?? 0) * o) / 1e6;
   }, 0);
   return { calls: real.length, inputTokens, outputTokens, cost };
+}
+
+/** The app's estimated cost since `since`: every real call but the evals', which have their own budget. Summed in the database. */
+export async function appSpend(since: Date) {
+  const rows = await db
+    .select({ provider: aiCall.provider, model: aiCall.model, input: sql<number>`coalesce(sum(${aiCall.inputTokens}), 0)::float8`, output: sql<number>`coalesce(sum(${aiCall.outputTokens}), 0)::float8` })
+    .from(aiCall)
+    .where(
+      and(
+        gte(aiCall.createdAt, since),
+        eq(aiCall.replayed, false),
+        ne(aiCall.task, "eval"),
+        or(isNull(aiCall.failureCode), notInArray(aiCall.failureCode, neverSent)),
+      ),
+    )
+    .groupBy(aiCall.provider, aiCall.model);
+  return rows.reduce((n, r) => {
+    const [i, o] = priceOf(r.provider, r.model);
+    return n + (r.input * i + r.output * o) / 1e6;
+  }, 0);
 }
 
 /** An eval's limits: --max-calls (default 200) and --max-cost in dollars (default 2), per run. */

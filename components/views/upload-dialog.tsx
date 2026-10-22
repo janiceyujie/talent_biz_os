@@ -4,23 +4,22 @@ import { ArrowDown, ArrowUp, FileText, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
-import { DataNotice } from "@/components/app/data-notice";
 import { Modal } from "@/components/app/modal";
 import { prepareUpload, registerUpload } from "@/lib/actions/uploads";
 import { UPLOAD_LIMITS, type UploadType } from "@/lib/uploads";
 
-// Some browsers leave File.type empty for HEIC photos from iPhones.
+// Some browsers leave File.type empty, so the extension decides then.
 const byExtension: Record<string, UploadType> = {
   png: "image/png",
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
   webp: "image/webp",
-  heic: "image/heic",
-  heif: "image/heif",
   pdf: "application/pdf",
 };
 const typeOf = (f: File) =>
   (UPLOAD_LIMITS.types as readonly string[]).includes(f.type) ? (f.type as UploadType) : byExtension[f.name.split(".").pop()?.toLowerCase() ?? ""];
+// An iPhone photo saved as HEIC: refused with its own hint, since the models can't read it.
+const isHeic = (f: File) => /^image\/hei[cf]$/.test(f.type) || /\.hei[cf]$/i.test(f.name);
 
 type Picked = { key: string; file: File; type: UploadType; preview: string | null };
 
@@ -46,9 +45,10 @@ export function UploadDialog({ onClose, onSubmitted }: { onClose: () => void; on
     setError(null);
     const next = [...files].map((file) => {
       const type = typeOf(file);
-      return { key: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`, file, type, preview: type?.startsWith("image/") && type !== "image/heic" && type !== "image/heif" ? URL.createObjectURL(file) : null };
+      return { key: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`, file, type, preview: type?.startsWith("image/") ? URL.createObjectURL(file) : null };
     });
-    if (next.some((p) => !p.type)) setError(t("uploadUnsupported"));
+    if ([...files].some(isHeic)) setError(t("uploadHeic"));
+    else if (next.some((p) => !p.type)) setError(t("uploadUnsupported"));
     setPicked((current) => [...current, ...next.filter((p) => p.type)].slice(0, UPLOAD_LIMITS.files));
   };
   const move = (i: number, by: number) =>
@@ -98,7 +98,7 @@ export function UploadDialog({ onClose, onSubmitted }: { onClose: () => void; on
             type="file"
             aria-label={t("uploadPick")}
             multiple
-            accept={[...UPLOAD_LIMITS.types, ".heic", ".heif"].join(",")}
+            accept={UPLOAD_LIMITS.types.join(",")}
             disabled={pending}
             onChange={(e) => {
               if (e.target.files) add(e.target.files);
@@ -146,7 +146,6 @@ export function UploadDialog({ onClose, onSubmitted }: { onClose: () => void; on
         )}
         {picked.length > 0 && <p className="muted">{t("uploadTotal", { count: picked.length, megabytes: totalMb.toFixed(1) })}</p>}
         <p className="muted">{t("pasteHint")}</p>
-        <DataNotice />
         {error && (
           <p className="notice error" role="alert">
             {error}

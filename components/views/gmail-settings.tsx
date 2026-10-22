@@ -202,9 +202,9 @@ function SenderRules({ onNotice }: { onNotice: (text: string) => void }) {
 
 /** What connecting means in one line (details behind ⓘ), the history choice, then off to Google (a full page load, not a fetch). */
 function ConnectDialog({ reconnect, defaultMode, onClose }: { reconnect: boolean; defaultMode: HistoryMode; onClose: () => void }) {
-  const { gmail } = useAppData();
   const t = useTranslations("gmail");
   const [mode, setMode] = useState<HistoryMode>(defaultMode);
+  const {gmail}=useAppData();
   const [drafts, setDrafts] = useState(gmail.connection?.draftGranted ?? false);
   const options: { value: HistoryMode; label: string; hint: string; recommended?: boolean }[] = [
     { value: "30_days", label: t("history30"), hint: t("history30Hint"), recommended: true },
@@ -229,7 +229,6 @@ function ConnectDialog({ reconnect, defaultMode, onClose }: { reconnect: boolean
           ))}
         </fieldset>
       )}
-      {gmail.freeTier && <p className="notice gmail-free-tier">{t("freeTierNotice")}</p>}
       <label className="invoice-check"><input type="checkbox" checked={drafts} onChange={e=>setDrafts(e.target.checked)} />{t("draftAccess")}</label>
       {drafts && <p className="notice">{t("draftDisclosure")}</p>}
       <p className="gmail-account-note">{t("accountNote")}</p>

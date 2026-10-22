@@ -1,0 +1,1 @@
+CREATE INDEX "message_talent_received_idx" ON "message" USING btree ("talent_id","received_at","id");

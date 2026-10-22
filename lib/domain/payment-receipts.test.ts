@@ -8,7 +8,7 @@ import { financeInsights } from "./insights";
 import { managerFinance } from "@/lib/manager/finance";
 import { cashScenario } from "./cash-scenario";
 import type { AppData, Payment, ProjectSummary } from "@/lib/types";
-const base: Payment = {id:"10000000-0000-4000-8000-000000000001", projectId:"project", projectType:"other", direction:"in", installment:"regular", label:"Synthetic receipt", amount:55500, currency:"TWD", taxRate:5, taxIncluded:true, recordedDate:"2026-09-15", dueDate:"2026-10-17", status:"expected", settledAmount:null, settledDate:null, invoiceRef:"", notes:"", voided:false};
+const base: Payment = {id:"10000000-0000-4000-8000-000000000001", projectId:"project", projectType:"other", direction:"in", installment:"regular", label:"Synthetic receipt", amount:55500, currency:"TWD", taxRate:5, taxIncluded:true, recordedDate:"2026-09-15", dueDate:"2026-10-17", status:"expected", settledAmount:null, settledDate:null, invoiceRef:"", notes:"", voided:false,receipts:[]};
 const project = {id:"project",stage:"in_progress",currency:"TWD",quotedAmount:55500,taxRate:5,taxIncluded:true,archived:false} as ProjectSummary;
 const data = (p:Payment) => ({payments:[p],projects:[project],calendar:[],talent:{timeZone:"UTC"},notificationState:{}} as unknown as AppData);
 const receive = (p:Payment, cash:number, reason="unpaid", date="2026-09-30", id="first", withheld?:number) => ({...p,...appendReceipt(p,{id,date,cash,reason,withheld,revision:receiptHistory(p).length})});

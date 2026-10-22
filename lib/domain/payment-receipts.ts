@@ -3,16 +3,16 @@ import { minorUnitFactor, minorUnits, quote } from "./money";
 /** Append-only cash and confirmed withholding entries, persisted with their payment. */
 export type PaymentReceipt = {
   id: string; date: string; cash: number; withheld: number;
-  replaces?: string; withdrawn?: boolean; note?: string; recordedAt?: string; recordedBy?: string;
+  replacesId?:string|null; replaces?: string; withdrawn?: boolean; note?: string; recordedAt?: string; recordedBy?: string;
 };
 export type PaymentBalanceSource = {
   amount: number; taxRate: number; taxIncluded: boolean; currency: string;
-  status: string; settledAmount: number | null;
+  status: string; settledAmount?: number | null;
   settledOn?: string | null; settledDate?: string | null;
   receipts?: PaymentReceipt[];
 };
 export function receiptHistory(p: PaymentBalanceSource): PaymentReceipt[] {
-  if (p.receipts?.length) return p.receipts;
+  if (p.receipts?.length) return p.receipts.map(r=>(r.replacesId&&!r.replaces?{...r,replaces:r.replacesId}:r));
   // Preserve legacy cash without guessing that an unexplained difference was tax.
   if (p.status !== "settled") return [];
   return [{ id: "legacy", date: p.settledDate ?? p.settledOn ?? "", cash: p.settledAmount ?? quote(p.amount, p.taxRate, p.taxIncluded, p.currency).total, withheld: 0 }];

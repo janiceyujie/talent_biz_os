@@ -58,6 +58,12 @@ export function notesFrom(description: string | undefined, markers: string[]): s
   return lines.slice(at + 1).join("\n").trim() || null;
 }
 
+/**
+ * The notes line as it was written before the product was renamed Taloox: still read, never
+ * written, so events already in Google keep their notes apart from their details.
+ */
+export const earlierNotesMarkers = ["── Notes (synced with Talent Biz OS) ──", "── 備註（與 Talent Biz OS 同步）──"];
+
 /** The lines above the notes line: ours, never read back. */
 export const infoFrom = (description: string | undefined, markers: string[]) => {
   const lines = (description ?? "").replace(/\r\n/g, "\n").split("\n");

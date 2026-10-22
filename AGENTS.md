@@ -8,7 +8,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Talent Biz OS
+# Taloox
 
 A business operating layer for independent talent — musicians, influencers, models, and the people who manage them. Ingests the messages a talent's business runs on (gig offers, brand deals, contracts, payments), tracks each ongoing deal as one thing across multiple messages and contract versions, and surfaces what needs a decision.
 
@@ -23,14 +23,14 @@ Changes here can lose data, leak data, or lock people out, so make them only whe
 - **Database** (`lib/db/schema.ts`, `drizzle/`): change the schema in `schema.ts`, then generate a new migration with `npm run db:generate`. Never edit or delete an existing migration file (the one exception is the one-time squash into a baseline before the first production deploy, in `docs/setup/launch-checklist.md`, done only when asked). Never drop or rename a column with data in it without asking.
 - **Auth and access** (`lib/auth/`, `proxy.ts`): who can sign in and who can see what. Every query for a talent's data must be scoped to that account.
 - **AI and untrusted messages** (`lib/ai/`): message content is untrusted input — follow the rules in `docs/decisions/0007-untrusted-message-content.md`. The model never gets tools or acts on its own; a person confirms everything it extracts.
-  - **Real mail stays local in development.** Never send a real email (the builder's connected mailbox, or anything copied from it) to Gemini's free tier or any provider marked `AI_PROVIDER_KEEPS_DATA`: score real mail with a local model (`AI_MAILBOX_PROVIDER=ollama`), and use only made-up content for evals, tests, and free-tier runs.
+  - **Only the paid providers, and no real mail in evals or tests.** Model calls go only to Anthropic and OpenAI through `lib/ai/model.ts`, in development too (`docs/decisions/0022-paid-providers-only.md`); never add a provider that may keep or train on what it's sent. Evals and tests use only made-up content, never a real email or anything copied from one.
 - **Secrets**: never commit `.env*` files (only `.env.example`), API keys, or real customer messages.
 
 ## Conventions
 
 - **Every user-facing string** goes in `messages/en.json` and `messages/zh-TW.json` with the same keys; `npm run i18n:check` enforces it.
 - **Follow the code around you** — its naming, structure, and comment style — over introducing new patterns or libraries. Ask before adding a dependency.
-- **Comments are in English only.** Refer to a screen or label by its English UI name (from `messages/en.json`), and describe Chinese input in words rather than quoting it. Chinese belongs only in `messages/zh-TW.json` and in code that has to match Chinese text (regexes, test fixtures, placeholder names).
+- **Comments are in English only.** Refer to a screen or label by its English UI name (from `messages/en.json`), and describe Chinese input in words rather than quoting it. Chinese belongs only in `messages/zh-TW.json`, the Traditional Chinese template content files (`assets/document-templates/content/*-zh-TW.json`), and code that has to match Chinese text (regexes, test fixtures, placeholder names).
 - **Git**: before any branch, commit, rebase, push, or pull request, read and follow `docs/git-workflow.md` — branch naming, commit message format, merging, and the rules for coding agents.
 
 ## Related

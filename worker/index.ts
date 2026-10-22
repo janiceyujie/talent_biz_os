@@ -24,8 +24,6 @@ async function main() {
   const { startPush } = await import("./push");
   const { schedule } = await import("./schedule");
   const { liveness } = await import("./liveness");
-  const { freeTierOk } = await import("@/lib/ai/model");
-  freeTierOk(); // throws when AI_FREE_TIER_OK=1 in production: refuse to start
   const { pushMode } = await import("@/lib/mail/push-mode");
   const { checkCredentials } = await import("@/lib/mail/pubsub");
   // Push is required in production, and half set up is refused anywhere: refuse to start.

@@ -2,7 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { hasSessionCookie } from "@/lib/auth/cookie";
 
 // Optimistic redirects only. Pages still verify the session against the
-// database through lib/auth (requirePerson / requireTalent).
+// database through lib/auth (requirePerson / requireTalent). A cookie alone
+// never sends anyone away from the auth pages: it can be expired, or signed
+// with an old secret, and the app would send them straight back (a loop that
+// only clearing cookies ended). Sign-in and sign-up check the real session.
 const authPages = ["/sign-in", "/sign-up", "/forgot-password", "/reset-password"];
 
 export function proxy(request: NextRequest) {
@@ -13,8 +16,6 @@ export function proxy(request: NextRequest) {
   if (!signedIn && !onAuthPage) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
-  // A cookie can be expired or signed by an old local secret. Auth pages
-  // must remain reachable; only a verified session can redirect from sign-in.
   return NextResponse.next();
 }
 

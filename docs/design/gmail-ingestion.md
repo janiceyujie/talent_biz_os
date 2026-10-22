@@ -106,7 +106,7 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 
 ## Settings
 
-- **Connect Gmail**: any Google account; says what's read, what's kept, that members (including a manager) see work email brought in, and, when `AI_FREE_TIER_OK=1`, that Google's free tier analyzes it. History choice: last 30 days (default) or only new mail.
+- **Connect Gmail**: any Google account; says what's read, what's kept, that members (including a manager) see work email brought in. History choice: last 30 days (default) or only new mail.
 - **Connected**: account, status, last sync, sender rules (each removable).
 - **Disconnect**: remove everything brought in from Gmail, or keep what's filed under projects and remove the rest. The worker revokes the token and deletes the connection; the choice arrives with `gmail-ingest`, once there is mail to remove.
 
@@ -114,12 +114,10 @@ All new tables are scoped to `talent_id` and checked against the signed-in perso
 
 | Variable | Purpose |
 |---|---|
-| `APP_ENV` | `development`, `testing`, `production`; gates the free tier and the `.env` key |
+| `APP_ENV` | `development`, `testing`, `production`; gates the `.env` key |
 | `AI_PRIMARY`, `AI_BACKUP` | `anthropic` or `openai` |
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | Provider keys |
 | `AI_MODEL_<PROVIDER>_<ROLE>` | e.g. `AI_MODEL_ANTHROPIC_RELEVANCE`; roles `RELEVANCE`, `ANALYSIS`, `ANALYSIS_COMPLEX` |
-| `AI_FREE_TIER_OK` | Allows Gmail content to reach a provider marked `AI_PROVIDER_KEEPS_DATA` (never with `APP_ENV=production`) |
-| `AI_MAILBOX_PROVIDER`, `AI_MAILBOX_MODEL` | Development: mailbox content (relevance, and analysis of what's brought in) on its own provider and model; unset, it goes to the primary |
 | `AI_PRIMARY`, `AI_BACKUP`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `AI_MODEL_<PROVIDER>_<ROLE>` | The paid providers and their model per role (decision 0015) |
 | `MAIL_RELEVANCE_HIGH`, `MAIL_RELEVANCE_LOW` | The two thresholds: 0.6 and 0.4, from the first relevance eval |
 | `MAIL_KEY_DEV` | The local data-key master key (development only) |

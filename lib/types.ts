@@ -6,7 +6,8 @@ import type { Locale } from "@/lib/i18n/config";
 import type { Appearance, Role } from "@/lib/roles";
 import type { MessageAnalysis } from "@/lib/ai/analysis";
 import type { NoticeFields } from "@/lib/mail/payment-notice/fields";
-import type { ChangeRecord } from "@/lib/domain/intake";
+import type { ChangeRecord, TargetSuggestion } from "@/lib/domain/intake";
+import type { ListPage } from "@/lib/domain/list-page";
 import type { ProjectType } from "@/lib/project-types";
 import type { Currency } from "@/lib/domain/money";
 
@@ -181,15 +182,20 @@ export type Payment = {
   taxIncluded: boolean;
   recordedDate: string; // recorded on
   dueDate: string | null;
+  // Expected: still open, nothing or part arrived. Settled: closed, its receipts cover it or the
+  // person closed it short (decision 0021).
   status: "expected" | "settled" | "cancelled";
-  settledAmount: number | null; // what actually arrived or was paid; null = the full total
-  settledDate: string | null;
-  receipts?: import("@/lib/domain/payment-receipts").PaymentReceipt[];
+  settledAmount?: number | null; // Compatibility display only; never persisted.
+  receipts: PaymentReceipt[]; // every one recorded, oldest first, corrected and withdrawn ones too
+  settledDate: string | null; // the day its last active receipt arrived, once settled
   invoiceRef: string;
   invoiceOn?: string | null; // optional date to start preparing this receivable’s invoice
   notes: string;
   voided: boolean; // Void: a mistaken or duplicate entry, out of every total
 };
+
+/** Money that arrived or was paid, once. Only added: a correction is a new one naming the one it replaces. */
+export type PaymentReceipt = import("@/lib/domain/payment-receipts").PaymentReceipt;
 
 export type ReplyTemplate = {
   id: string;
@@ -225,13 +231,9 @@ export type StoredFile = {
 };
 
 /** A message the person sent in, with the latest analysis of it (the model's proposal). */
-export type InboxSummary = Pick<InboxMessage, "id" | "channel" | "status" | "projectId" | "receivedAt"> & {
-  title: string; snippet: string; flagged: boolean; fileCount: number;
-  notice?: NoticeFields | null; sent?: boolean;
-};
 export type InboxMessage = {
   threadContext?: { projectId: string | null; replied: boolean; newer: boolean; waitingIds: string[] };
-  filed?: import("@/lib/domain/intake").FiledMessage[];
+  filed?: {id:string;projectId:string|null;counterparty: {name:string;company:string;email:string;phone:string};dates:ProjectDate[]}[];
   id: string;
   channel: "paste" | "upload" | "gmail" | "gmail_addon" | "forwarded_email";
   body: string;
@@ -256,6 +258,35 @@ export type InboxMessage = {
   notice?: NoticeFields | null;
   // Reply to-dos this message, the person's own reply, marked done (Undo reopens them).
   completedTodos?: { id: string; title: string }[];
+  /**
+   * The rest of its email thread: the project an earlier message in it is filed on, whether the
+   * person replied or the other side wrote again since, and the others still waiting for review.
+   */
+  thread?: { projectId: string | null; replied: boolean; newer: boolean; waiting: string[] };
+};
+
+/** A message as Intake opens it (app/api/inbox/[id]): with the projects it most likely belongs to, best first, scored on the server (decision 0019). */
+export type OpenedMessage = InboxMessage & { suggestions: TargetSuggestion[] };
+
+/** A message as Intake's list and Today show it (lib/data/inbox.ts); the full one loads when it's opened. */
+export type InboxSummary = Pick<InboxMessage, "id" | "channel" | "status" | "projectId" | "receivedAt" | "notice"> & {
+  sent: boolean; // the person's own reply
+  sender?: string;
+  subject?: string;
+  firstLine?: string;
+  title: string; // the analysis's, "" before there is one
+  snippet: string;
+  flagged: boolean;
+  fileCount: number;
+};
+
+export type InboxPage = ListPage<InboxSummary>;
+
+/** What every page knows of Intake: counts by status, the messages Today lists for review, and each project's latest message. */
+export type InboxOverview = {
+  counts: Record<InboxMessage["status"], number>;
+  review: InboxSummary[]; // waiting longest first; counts.analyzed says how many there are in all
+  latestActivity: Record<string, string>; // by project id
 };
 
 /** What only a project's own screen shows, loaded when it's opened (lib/data/project-detail.ts). */
@@ -270,6 +301,8 @@ export type ProjectDetail = {
   grantApplications?: { id: string; title: string }[];
   offerText: string; // the earliest message filed under it
   timeline: TimelineEntry[]; // newest first
+  /** Dates the messages filed under it gave, each once: a proposal compares a new message's dates with these too. */
+  earlierDates?: ProjectDate[];
 };
 
 /** One message on a project's timeline, with what applying it changed (audit_log `message.applied`). */
@@ -310,7 +343,7 @@ export type ExternalEvent = {
   timeZone: string;
   location: string;
   link: string; // opens the event in Google Calendar
-  /** An occurrence of a repeating event in our own Talent Biz OS calendar (decision 0017): the series can be added to a project as a whole. */
+  /** An occurrence of a repeating event in our own Taloox calendar (decision 0017): the series can be added to a project as a whole. */
   series: { id: string; projectId: string | null } | null;
 };
 
@@ -343,7 +376,7 @@ export type AppData = {
     counts: Record<InboxMessage["status"], number>;
     review: InboxSummary[];
     latestActivity: Record<string, string>;
-    revision: string;
+    revision?: string;
   };
   contracts: Contract[]; // newest version first
   notificationState: NotificationState; // this person's read and snooze marks
@@ -363,7 +396,6 @@ export type AppData = {
   gmail: {
     reviewEnabled?: boolean;
     available: boolean;
-    freeTier: boolean; // Gmail content may go to a free tier that keeps what it's sent (AI_FREE_TIER_OK, decision 0015)
     connection: {
       draftGranted?: boolean;
       accountEmail: string;
@@ -381,9 +413,8 @@ export type AppData = {
   };
   // This person's sign-in methods; googleAccountId is our auth_account row id (what unlinking takes).
   signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };
-  // The AI service's name when it may keep what's sent (e.g. a free tier) — shown as a notice; null otherwise.
-  aiDataNotice: string | null;
   aiUsage: { used: number; limit: number; remaining: number }; // AI analyses in the last 24 hours (docs/decisions/0008)
+  aiPaused: boolean; // AI paused app-wide (lib/ai/pause.ts): analyses wait
   changes: string; // the change mark this data was read at (lib/data/changes.ts): screens reload when it moves
 };
 
@@ -398,9 +429,10 @@ export type GmailMailItem = {
   gmailId: string;
   receivedAt: string;
   outcome: "work" | "skipped" | "pending" | "unsure" | "not_work";
-  decidedBy: string | null; // a rule id (lib/mail/relevance/rules.ts), "model", "person", or "gone"; null while pending
+  decidedBy: string | null; // a rule id (lib/mail/relevance/rules.ts), "model", "person", "gone", or "too_large"; null while pending
   score: number | null; // the model's, 0 to 1
   kind: string | null; // what the model says it looks like (lib/mail/relevance/prompt.ts)
+  fetchFailed: boolean; // bringing it in failed after every retry; Try again queues it once more
   from: { address: string; name: string } | null; // read live from Gmail; null when it couldn't be
   subject: string | null;
 };

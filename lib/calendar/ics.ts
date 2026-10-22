@@ -77,7 +77,7 @@ export function buildCalendar(events: IcsEvent[], { name, host }: { name: string
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Talent Biz OS//Calendar//ZH-TW",
+    "PRODID:-//Taloox//Calendar//ZH-TW",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${escapeText(name)}`,

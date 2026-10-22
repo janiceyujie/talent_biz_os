@@ -58,7 +58,9 @@ From [decision 0008](../decisions/0008-ai-operations.md):
 - [ ] A cap on PDF pages and on the model's output length.
 - [ ] Per-month and short-burst limits.
 - [ ] Rate limits on server actions and the upload and file routes.
-- [ ] A switch to pause AI app-wide.
+- [x] A switch to pause AI app-wide (`AI_PAUSED`), and a daily spending cap that pauses it on its own (`AI_DAILY_SPEND_CAP_USD`).
+- [ ] A monthly spending limit and usage alerts set in the Anthropic and OpenAI consoles for the production keys (around $300 a month to start): the hard cap behind the app's estimate.
+- [ ] `AI_ALERT_EMAIL` set, so a tripped spending cap reaches someone.
 
 ## 6. Operations
 

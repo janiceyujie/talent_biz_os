@@ -2,6 +2,7 @@ import "server-only";
 import { and, count, desc, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
 import { relevanceQueue } from "@/lib/queue/jobs";
 import { cache } from "react";
+import { aiPaused } from "@/lib/ai/pause";
 import { dailyUsage } from "@/lib/ai/usage";
 import { CALENDAR_SCOPE, hasScopes, IMPORT_SCOPES } from "@/lib/calendar/google/scope";
 import { isGoogleConfigured, isGoogleEnabled, requireTalent } from "@/lib/auth";
@@ -170,6 +171,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     },
     calendarFeed: Boolean(memberRow?.feedHash),
     aiUsage: await dailyUsage(current.id),
+    aiPaused: !!(await aiPaused()),
     externalEvents: externalEventsOf(importedRows, importSources, seriesLinks),
     googleCalendar: {
       available: isGoogleConfigured,

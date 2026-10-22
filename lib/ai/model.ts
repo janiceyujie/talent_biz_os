@@ -8,6 +8,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { aiCall } from "@/lib/db/schema";
 import type { ModelErrorCode } from "./errors";
+import { aiPaused } from "./pause";
 
 // The one place that talks to a language model. The pipeline asks for an
 // object matching a zod schema; which model answers is configuration
@@ -25,6 +26,7 @@ import type { ModelErrorCode } from "./errors";
 //
 // Every call is logged in ai_call, and can be served from a recording
 // (AI_REPLAY) so tests don't spend quota. See docs/decisions/0006 and 0008.
+// While AI is paused app-wide (./pause.ts), nothing is sent but evals and recordings.
 
 /** A file the model reads alongside the prompt: an image or a PDF, in order. */
 export type Attachment = { mimeType: string; data: Uint8Array };
@@ -126,6 +128,11 @@ export async function generateObject<T>(request: StructuredRequest<T>): Promise<
       await log({ model: "replay", status: "error", failureCode: "replay_missing" });
       throw new ModelError("replay_missing", `No recording ${key} (AI_REPLAY=only); record it with AI_REPLAY=record`);
     }
+  }
+  // Callers check first, to wait rather than fail; this is the guarantee. Evals have their own budget.
+  if (request.trace.task !== "eval" && (await aiPaused())) {
+    await log({ model: model || provider, status: "error", failureCode: "paused" });
+    throw new ModelError("paused", "AI is paused app-wide");
   }
   const attempt = async (p: string, m: string) => {
     try {

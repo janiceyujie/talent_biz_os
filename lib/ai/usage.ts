@@ -2,19 +2,19 @@ import "server-only";
 import { and, count, eq, gt, inArray, isNull, notInArray, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { aiCall } from "@/lib/db/schema";
+import { neverSent } from "./errors";
+import { aiPaused } from "./pause";
 
 // Usage limits on AI calls (docs/decisions/0008), counted from ai_call. Only
 // real model calls count — replayed recordings cost nothing — and the
 // relevance check and payment-notice read on a connected mailbox don't (short,
 // cheap, and not the person's action), nor do calls stopped before reaching a model (a file it
-// can't read, nothing configured, a missing recording). Limits come from
+// can't read, nothing configured, a missing recording, AI paused). Limits come from
 // the environment until plans and billing exist. A mailbox's own calls have
 // their own daily cap (canScore), and the assistant's are counted per person
 // (assistantUsage, decision 0023).
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-// Failures raised before anything was sent: they cost nothing.
-const neverSent = ["unsupported_file", "not_configured", "replay_missing"];
 // Run by the mailbox on its own, not by the person.
 const mailboxTasks = ["relevance", "payment_notice"];
 // Not the talent's analyses: the assistant has its own per-person limits.
@@ -56,9 +56,10 @@ export const dailyMailboxLimit = () => Number(process.env.AI_DAILY_RELEVANCE || 
  * Whether this talent's mailbox may make one more model call today: the
  * relevance check and payment notices don't count toward the analysis limit,
  * so a flood of mail is capped here instead. Over it, emails wait as "Not
- * decided yet" until a later check.
+ * decided yet" until a later check. So do they while AI is paused (./pause.ts).
  */
 export async function canScore(talentId: string) {
+  if (await aiPaused()) return false; // paused app-wide: the same wait
   const [row] = await db
     .select({ used: count() })
     .from(aiCall)

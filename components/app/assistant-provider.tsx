@@ -9,7 +9,7 @@ import { useAppData } from "./app-data";
 
 export type { Question };
 /** Why an answer didn't come, as the server says (app/api/assistant/messages/route.ts). */
-export type AskError = "busy" | "month_limit" | "day_limit" | "unavailable" | "not_found" | "failed";
+export type AskError = "busy" | "month_limit" | "day_limit" | "unavailable" | "paused" | "not_found" | "failed";
 
 /**
  * A question is kept as asked and an answer as data, so quick prompts and code-worked answers

@@ -7,6 +7,8 @@ import { Modal } from "./modal";
 
 /** How often a page looks again while a message is being analyzed (it runs in the background). */
 export const ANALYSIS_POLL_MS = 2500;
+/** While AI is paused app-wide, messages wait: a page looks again only now and then, to see it resume. */
+export const PAUSED_POLL_MS = 60_000;
 
 /** Paste an offer's text to have it analyzed: from Intake, and from the page header's Import offer wherever it is. */
 export function PasteDialog({ onClose, onSubmitted }: { onClose: () => void; onSubmitted: (id: string, duplicate: boolean) => void }) {

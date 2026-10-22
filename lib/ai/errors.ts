@@ -14,10 +14,14 @@ export const failureCodes = [
   "unsupported_file", // this model can't read this kind of file
   "replay_missing", // tests run on recordings only (AI_REPLAY=only) and this request has none
   "usage_limit", // the account reached its AI usage limit
+  "paused", // AI is paused app-wide (./pause.ts); the message waits and is analyzed once it resumes
   "unexpected", // anything else (details in the server log)
 ] as const;
 export type FailureCode = (typeof failureCodes)[number];
 /** The codes a model call itself can fail with. */
 export type ModelErrorCode = Exclude<FailureCode, "unexpected">;
+
+/** Failures raised before anything was sent: they cost nothing, so no usage limit or spending cap counts them. */
+export const neverSent: FailureCode[] = ["unsupported_file", "not_configured", "replay_missing", "paused"];
 
 export const isFailureCode = (value: unknown): value is FailureCode => failureCodes.includes(value as FailureCode);

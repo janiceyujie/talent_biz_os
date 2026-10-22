@@ -12,7 +12,7 @@ import { ListMore } from "@/components/app/list-more";
 import { useListPages } from "@/components/app/list-pages";
 import { InfoHint } from "@/components/app/info-hint";
 import { MoreMenu } from "./more-menu";
-import { ANALYSIS_POLL_MS, PasteDialog } from "@/components/app/paste-dialog";
+import { ANALYSIS_POLL_MS, PasteDialog, PAUSED_POLL_MS } from "@/components/app/paste-dialog";
 import { FileText, MailWarning, TriangleAlert } from "lucide-react";
 import { markNotWork, markSureWork, reopenReplies } from "@/lib/actions/mail";
 import { dismissMessage, openFromHistory, reanalyzeMessage } from "@/lib/actions/messages";
@@ -83,15 +83,21 @@ export function InboxView() {
     router.replace("/inbox", { scroll: false });
   }, [params, router]);
 
-  // Analysis runs in the background; refresh until it lands.
+  // Analysis runs in the background; refresh until it lands. While AI is paused, now and then, to see it resume.
+  const paused = data.aiPaused;
   useEffect(() => {
     if (!analyzing) return;
-    const timer = setInterval(() => router.refresh(), ANALYSIS_POLL_MS);
+    const timer = setInterval(() => router.refresh(), paused ? PAUSED_POLL_MS : ANALYSIS_POLL_MS);
     return () => clearInterval(timer);
-  }, [analyzing, router]);
+  }, [analyzing, paused, router]);
 
   return (
     <div className="inbox-workspace">
+      {paused && (
+        <p className="notice" role="status">
+          {t("aiPaused")}
+        </p>
+      )}
       {data.aiUsage.remaining === 0 && (
         <p className="notice error" role="status">
           {t("usageExhausted", { limit: data.aiUsage.limit })}
@@ -295,9 +301,12 @@ function summaryTitle(m: InboxSummary, t: ReturnType<typeof useTranslations<"inb
   return m.subject || m.firstLine.slice(0, 80) || (m.fileCount ? t("filesCount", { count: m.fileCount }) : t("untitled"));
 }
 
+/** While AI is paused app-wide, a message waiting for analysis says so rather than "Analyzing". */
 function StatusChip({ status }: { status: InboxMessage["status"] }) {
   const t = useTranslations("inbox.status");
-  return <em className={`message-status status-${status}`}>{t(status)}</em>;
+  const { aiPaused } = useAppData();
+  const label = status === "pending" && aiPaused ? "paused" : status;
+  return <em className={`message-status status-${status}`}>{t(label)}</em>;
 }
 
 
@@ -394,7 +403,8 @@ function MessageDetail({ message }: { message: OpenedMessage }) {
           </div>
         </div>
       )}
-      {message.status === "pending" && <p className="notice analyzing">{t("pendingBody")}</p>}
+      {message.status === "pending" &&
+        (message.failure === "paused" ? <p className="notice">{t("pausedBody")}</p> : <p className="notice analyzing">{t("pendingBody")}</p>)}
       {message.status === "error" && (
         <div className="notice error" role="alert">
           <p>{t("failed", { reason: failureText(message.failure, t) })}</p>

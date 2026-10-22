@@ -394,6 +394,7 @@ export type AppData = {
   // This person's sign-in methods; googleAccountId is our auth_account row id (what unlinking takes).
   signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };
   aiUsage: { used: number; limit: number; remaining: number }; // AI analyses in the last 24 hours (docs/decisions/0008)
+  aiPaused: boolean; // AI paused app-wide (lib/ai/pause.ts): analyses wait
   changes: string; // the change mark this data was read at (lib/data/changes.ts): screens reload when it moves
 };
 

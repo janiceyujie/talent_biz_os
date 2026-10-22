@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { generateText, ModelError } from "@/lib/ai/model";
+import { aiPaused } from "@/lib/ai/pause";
 import { stripInvisible } from "@/lib/ai/safety";
 import { assistantUsage } from "@/lib/ai/usage";
 import { assistantIntents, dayOf, moneyAnswer, promptKeys, QUESTION_MAX, scheduleAnswer, type AssistantAnswer } from "@/lib/assistant/answers";
@@ -64,6 +65,8 @@ export async function POST(req: Request) {
   }
 
   const { text, projectId } = parsed.data;
+  // AI paused app-wide (decision 0008): the quick prompts above still answer, in code.
+  if (await aiPaused()) return json({ error: "paused" }, 503);
   // One question at a time per person, across machines: the lock lasts as long as this transaction.
   return db.transaction(async (tx) => {
     const [{ locked }] = (await tx.execute(sql`select pg_try_advisory_xact_lock(hashtext(${"assistant:" + session.personId})) as locked`)) as unknown as {
@@ -96,7 +99,7 @@ export async function POST(req: Request) {
     } catch (e) {
       // Ids and codes only: never the question or the data.
       console.error("assistant failed", session.personId, e instanceof ModelError ? e.code : (e as Error)?.name);
-      return json({ error: "unavailable" }, 503);
+      return json({ error: e instanceof ModelError && e.code === "paused" ? "paused" : "unavailable" }, 503);
     }
   });
 }

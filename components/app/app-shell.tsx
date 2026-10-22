@@ -7,6 +7,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { COLLAPSE_SHORTCUT, PRODUCT_MONOGRAM, PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/brand";
 import { AccountMenu } from "./account-menu";
+import { AssistantDock } from "./assistant-dock";
+import { AssistantProvider } from "./assistant-provider";
 import { Companion } from "./companion";
 import { LiveRefresh } from "./live-refresh";
 import { NotificationList, ReminderToast, useNotifications } from "./notifications";
@@ -36,6 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [companionOpen, setCompanionOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const sidebar = useRef<HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [tip, setTip] = useState<{ label: string; top: number } | null>(null);
@@ -128,123 +131,130 @@ export function AppShell({ children }: { children: ReactNode }) {
     router.push(href);
   };
 
+  // The corner assistant: not on phones (a panel there would cover the page), behind a dialog, or on its own page.
+  const assistantHidden = narrow || showNotifications || showSearch || pathname.startsWith("/assistant");
+  const assistantShown = assistantOpen && !assistantHidden;
+
   return (
-    <div className={`app-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
-      <aside
-        ref={sidebar}
-        id="workspace-navigation"
-        className={`sidebar ${mobile ? "open" : ""}`}
-        inert={narrow && !mobile}
-        role={narrow && mobile ? "dialog" : undefined}
-        aria-modal={narrow && mobile ? true : undefined}
-        aria-label={tNav("menuLabel")}
-      >
-        <div className="brand">
-          <span>{PRODUCT_MONOGRAM}</span>
-          <div>
-            <strong>{PRODUCT_NAME}</strong>
-            <small>{PRODUCT_TAGLINE}</small>
+    <AssistantProvider>
+      <div className={`app-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
+        <aside
+          ref={sidebar}
+          id="workspace-navigation"
+          className={`sidebar ${mobile ? "open" : ""}`}
+          inert={narrow && !mobile}
+          role={narrow && mobile ? "dialog" : undefined}
+          aria-modal={narrow && mobile ? true : undefined}
+          aria-label={tNav("menuLabel")}
+        >
+          <div className="brand">
+            <span>{PRODUCT_MONOGRAM}</span>
+            <div>
+              <strong>{PRODUCT_NAME}</strong>
+              <small>{PRODUCT_TAGLINE}</small>
+            </div>
+            <button className="close-nav" aria-label={tNav("closeMenu")} onClick={() => setMobile(false)}>
+              <X size={20} />
+            </button>
           </div>
-          <button className="close-nav" aria-label={tNav("closeMenu")} onClick={() => setMobile(false)}>
-            <X size={20} />
-          </button>
-        </div>
-        <nav>
-          <small>{tNav("groupWork")}</small>
-          {nav.map((item, i) => {
-            const Icon = item.icon;
-            const active = isActive(pathname, item.href);
-            return (
-              <div key={item.href}>
-                {item.group === "manage" && nav[i - 1]?.group === "work" && (
-                  <small className="nav-group-label">{tNav("groupManage")}</small>
-                )}
-                <Link
-                  href={item.href}
-                  className={active ? "active" : ""}
-                  aria-current={active ? "page" : undefined}
-                  // Collapsed, the label shows as a tooltip beside the icon (the sidebar scrolls, so it's drawn outside it).
-                  onMouseEnter={collapsed ? (e) => showTip(e.currentTarget, tNav(item.key)) : undefined}
-                  onMouseLeave={collapsed ? () => setTip(null) : undefined}
-                  onFocus={collapsed ? (e) => e.currentTarget.matches(":focus-visible") && showTip(e.currentTarget, tNav(item.key)) : undefined}
-                  onBlur={collapsed ? () => setTip(null) : undefined}
-                  onClick={() => setMobile(false)}
-                >
-                  <Icon size={19} />
-                  <span>{tNav(item.key)}</span>
-                  {item.href === "/inbox" && toReview > 0 && <em>{toReview}</em>}
-                </Link>
-              </div>
-            );
-          })}
-        </nav>
-      </aside>
-      {collapsed && tip && (
-        // The link already carries its name for screen readers; this is the visible copy.
-        <div className="nav-tip" aria-hidden="true" style={{ top: tip.top }}>
-          {tip.label}
-        </div>
-      )}
-      {mobile && (
-        <button
-          className="nav-backdrop"
-          tabIndex={-1}
-          aria-hidden="true"
-          aria-label={tNav("closeBackdrop")}
-          onClick={() => setMobile(false)}
-        />
-      )}
-      <main className="app-main" inert={narrow && mobile}>
-        <header className="topbar">
+          <nav>
+            <small>{tNav("groupWork")}</small>
+            {nav.map((item, i) => {
+              const Icon = item.icon;
+              const active = isActive(pathname, item.href);
+              return (
+                <div key={item.href}>
+                  {item.group === "manage" && nav[i - 1]?.group === "work" && (
+                    <small className="nav-group-label">{tNav("groupManage")}</small>
+                  )}
+                  <Link
+                    href={item.href}
+                    className={active ? "active" : ""}
+                    aria-current={active ? "page" : undefined}
+                    // Collapsed, the label shows as a tooltip beside the icon (the sidebar scrolls, so it's drawn outside it).
+                    onMouseEnter={collapsed ? (e) => showTip(e.currentTarget, tNav(item.key)) : undefined}
+                    onMouseLeave={collapsed ? () => setTip(null) : undefined}
+                    onFocus={collapsed ? (e) => e.currentTarget.matches(":focus-visible") && showTip(e.currentTarget, tNav(item.key)) : undefined}
+                    onBlur={collapsed ? () => setTip(null) : undefined}
+                    onClick={() => setMobile(false)}
+                  >
+                    <Icon size={19} />
+                    <span>{tNav(item.key)}</span>
+                    {item.href === "/inbox" && toReview > 0 && <em>{toReview}</em>}
+                  </Link>
+                </div>
+              );
+            })}
+          </nav>
+        </aside>
+        {collapsed && tip && (
+          // The link already carries its name for screen readers; this is the visible copy.
+          <div className="nav-tip" aria-hidden="true" style={{ top: tip.top }}>
+            {tip.label}
+          </div>
+        )}
+        {mobile && (
           <button
-            className="menu-button"
-            aria-label={tNav("openMenu")}
-            aria-expanded={mobile}
-            aria-controls="workspace-navigation"
-            onClick={() => setMobile(true)}
-          >
-            <Menu size={20} />
-          </button>
-          <div className="topbar-start">
-            {/* Wide screens: collapse the sidebar to its icons for more room (calendar, dashboard). Phones use the menu button above. */}
-            <button
-              className="collapse-nav"
-              aria-label={tNav(collapsed ? "expandMenu" : "collapseMenu")}
-              title={`${tNav(collapsed ? "expandMenu" : "collapseMenu")} (${COLLAPSE_SHORTCUT})`}
-              aria-expanded={!collapsed}
-              aria-controls="workspace-navigation"
-              onClick={toggleCollapsed}
-            >
-              {collapsed ? <PanelLeftOpen size={19} aria-hidden="true" /> : <PanelLeftClose size={19} aria-hidden="true" />}
-            </button>
-            <WorkspaceSearch open={showSearch} onOpenChange={setShowSearch} />
-          </div>
-          <Companion
-            key={data.person.role}
-            open={companionOpen}
-            onOpenChange={setCompanionOpen}
-            blocked={mobile || showNotifications || showSearch}
+            className="nav-backdrop"
+            tabIndex={-1}
+            aria-hidden="true"
+            aria-label={tNav("closeBackdrop")}
+            onClick={() => setMobile(false)}
           />
-          <div className="top-actions">
+        )}
+        <main className="app-main" inert={narrow && mobile}>
+          <header className="topbar">
             <button
-              aria-label={t("notifications", { count: unread.length })}
-              onClick={() => setShowNotifications(true)}
+              className="menu-button"
+              aria-label={tNav("openMenu")}
+              aria-expanded={mobile}
+              aria-controls="workspace-navigation"
+              onClick={() => setMobile(true)}
             >
-              <Bell size={19} />
-              {unread.length > 0 && <i />}
+              <Menu size={20} />
             </button>
-            <AccountMenu />
-          </div>
-        </header>
-        <div className="page-content">{children}</div>
-      </main>
-      {showNotifications && (
-        <Modal title={t("notifications", { count: unread.length })} onClose={() => setShowNotifications(false)}>
-          <NotificationList open={open} />
-        </Modal>
-      )}
-      <LiveRefresh />
-      <ReminderToast onOpen={() => setShowNotifications(true)} suppress={showNotifications || showSearch || companionOpen} />
-    </div>
+            <div className="topbar-start">
+              {/* Wide screens: collapse the sidebar to its icons for more room (calendar, dashboard). Phones use the menu button above. */}
+              <button
+                className="collapse-nav"
+                aria-label={tNav(collapsed ? "expandMenu" : "collapseMenu")}
+                title={`${tNav(collapsed ? "expandMenu" : "collapseMenu")} (${COLLAPSE_SHORTCUT})`}
+                aria-expanded={!collapsed}
+                aria-controls="workspace-navigation"
+                onClick={toggleCollapsed}
+              >
+                {collapsed ? <PanelLeftOpen size={19} aria-hidden="true" /> : <PanelLeftClose size={19} aria-hidden="true" />}
+              </button>
+              <WorkspaceSearch open={showSearch} onOpenChange={setShowSearch} />
+            </div>
+            <Companion
+              key={data.person.role}
+              open={companionOpen}
+              onOpenChange={setCompanionOpen}
+              blocked={mobile || showNotifications || showSearch || assistantShown}
+            />
+            <div className="top-actions">
+              <button
+                aria-label={t("notifications", { count: unread.length })}
+                onClick={() => setShowNotifications(true)}
+              >
+                <Bell size={19} />
+                {unread.length > 0 && <i />}
+              </button>
+              <AccountMenu />
+            </div>
+          </header>
+          <div className="page-content">{children}</div>
+        </main>
+        {showNotifications && (
+          <Modal title={t("notifications", { count: unread.length })} onClose={() => setShowNotifications(false)}>
+            <NotificationList open={open} />
+          </Modal>
+        )}
+        <AssistantDock open={assistantOpen} setOpen={setAssistantOpen} hidden={assistantHidden} />
+        <LiveRefresh />
+        <ReminderToast onOpen={() => setShowNotifications(true)} suppress={showNotifications || showSearch || companionOpen || assistantShown} />
+      </div>
+    </AssistantProvider>
   );
 }

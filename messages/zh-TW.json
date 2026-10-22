@@ -961,16 +961,43 @@
     "empty": "還沒有檔案。可上傳 Offer、合約、素材或發票。"
   },
   "assistant": {
-    "status": "即將推出 · 只回答，不執行外部動作",
-    "intro": "之後可以問我今天／明天的行程、未收款或合約紀錄。這個功能還在開發中。",
+    "status": "只回答，不會替你執行任何動作",
+    "intro": "可以問今天或明天的行程，以及還沒收到、還要付出的款項。答案都來自你自己的紀錄。",
     "prompt": {
       "today": "我今天要做什麼？",
       "tomorrow": "我明天要做什麼？",
-      "unpaid": "還有多少錢沒收？"
+      "unpaid": "還有多少錢沒收？",
+      "payable": "我還有哪些款項要付？"
     },
     "input": "助理訊息",
-    "placeholder": "問你的案件、行程或款項…",
-    "send": "送出問題"
+    "placeholder": "自行輸入問題的功能即將推出",
+    "comingSoon": "目前請先選上方的問題，用自己的話提問的功能即將推出。",
+    "send": "送出問題",
+    "dockTitle": "個人助理",
+    "openChat": "開啟個人助理",
+    "expand": "展開成完整頁面",
+    "minimize": "收起個人助理",
+    "conversation": "與助理的對話",
+    "you": "你",
+    "working": "正在查詢…",
+    "failed": "沒能取得答案。",
+    "retry": "重試",
+    "answer": {
+      "schedule": "{date}・時間以 {zone} 顯示",
+      "scheduleEmpty": "{date} 沒有待完成的行程。",
+      "untimed": "未定時間",
+      "scheduleMore": "還有 {count} 項沒有列出，完整內容請看「行程」。",
+      "in": "還沒收到：{totals}",
+      "out": "還要付出：{totals}",
+      "inEmpty": "目前沒有待收的款項。",
+      "outEmpty": "目前沒有待付的款項。",
+      "overdue": "已逾期：{totals}",
+      "due": "{date} 到期",
+      "noDue": "未設到期日",
+      "late": "已逾期",
+      "signedOnly": "只計已簽約的案件，與「今日總覽」相同。",
+      "moneyMore": "還有 {count} 筆沒有列出，完整內容請看「內帳分析」。"
+    }
   },
   "calendar": {
     "prevMonth": "上個月",

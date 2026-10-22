@@ -72,7 +72,7 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - Draft a reply, quote, or payment follow-up — several versions at once — for the person to review and send themselves — **MVP**. Validated as the single most requested capability in interviews; the system never sends on its own. Drafts are stored, along with which one the person picked and how they edited it.
 - A reply library: reusable templates with placeholders (`{{合作方}}`, `{{報價}}`…) and past replies kept for reference, per project type — **MVP**. Useful without AI, and later the examples AI drafts from.
 - Quotes and payments carry a tax rate and whether the entered amount includes tax; tax-inclusive and tax-exclusive amounts are shown side by side — **MVP**. Taiwan's 5% business tax appears on most quotes.
-- An assistant that answers questions over the person's own data ("what's due tomorrow?", "how much is unpaid?") — **Later**. The screen ships as a placeholder.
+- An assistant that answers questions over the person's own data ("what's due tomorrow?", "how much is unpaid?") — **Built in part** ([decision 0023](decisions/0023-talent-assistant.md)): the quick prompts (today, tomorrow, money to come in, money to pay) are answered in code on the server (`POST /api/assistant/messages`, `lib/assistant/`), from the calendar's items and Today's money figures, in a panel in the corner of every page and on the Assistant page. The conversation lives in the browser tab. Questions in the person's own words (a model call) and saved conversations are next.
 - Draft against the person's own past phrasing and process, not a generic template — **Phase 2**. Needs enough confirmed history per person to draw from.
 
 ### Review and action

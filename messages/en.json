@@ -961,16 +961,43 @@
     "empty": "No files yet. Upload offers, contracts, assets, or invoices."
   },
   "assistant": {
-    "status": "Coming soon · answers only, never acts on your behalf",
-    "intro": "Soon you'll be able to ask about today's or tomorrow's schedule, unpaid money, or contracts. This is still in development.",
+    "status": "Answers only · never acts on your behalf",
+    "intro": "Ask about today's or tomorrow's schedule, or money still to come in or to pay. Answers come from your own records.",
     "prompt": {
       "today": "What do I need to do today?",
       "tomorrow": "What's on tomorrow?",
-      "unpaid": "How much hasn't been paid yet?"
+      "unpaid": "How much hasn't been paid yet?",
+      "payable": "What do I still have to pay?"
     },
     "input": "Message to assistant",
-    "placeholder": "Ask about your projects, calendar, or payments…",
-    "send": "Send"
+    "placeholder": "Typing your own question is coming soon",
+    "comingSoon": "For now, pick a question above. Asking in your own words is coming soon.",
+    "send": "Send",
+    "dockTitle": "Assistant",
+    "openChat": "Open the assistant",
+    "expand": "Open as a full page",
+    "minimize": "Close the assistant",
+    "conversation": "Conversation with the assistant",
+    "you": "You",
+    "working": "Looking it up…",
+    "failed": "Couldn't get an answer.",
+    "retry": "Try again",
+    "answer": {
+      "schedule": "{date} · times in {zone}",
+      "scheduleEmpty": "Nothing left to do on {date}.",
+      "untimed": "No set time",
+      "scheduleMore": "{count, plural, one {# more item} other {# more items}} not shown. See Calendar for the whole day.",
+      "in": "Still to come in: {totals}",
+      "out": "Still to pay: {totals}",
+      "inEmpty": "Nothing is waiting to come in.",
+      "outEmpty": "Nothing is waiting to be paid.",
+      "overdue": "Overdue: {totals}",
+      "due": "due {date}",
+      "noDue": "no due date",
+      "late": "overdue",
+      "signedOnly": "Signed deals only, as on Today.",
+      "moneyMore": "{count, plural, one {# more payment} other {# more payments}} not shown. See Finance for all of them."
+    }
   },
   "calendar": {
     "prevMonth": "Previous month",

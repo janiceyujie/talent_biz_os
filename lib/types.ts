@@ -377,7 +377,6 @@ export type AppData = {
   // The talent's connected Gmail mailbox (decision 0013); `available` = an OAuth client and a master key are set up here.
   gmail: {
     available: boolean;
-    freeTier: boolean; // Gmail content may go to a free tier that keeps what it's sent (AI_FREE_TIER_OK, decision 0015)
     connection: {
       accountEmail: string;
       status: "connected" | "reconnect_needed" | "error" | "disconnecting";
@@ -394,8 +393,6 @@ export type AppData = {
   };
   // This person's sign-in methods; googleAccountId is our auth_account row id (what unlinking takes).
   signIn: { password: boolean; googleAccountId: string | null; googleAvailable: boolean };
-  // The AI service's name when it may keep what's sent (e.g. a free tier) — shown as a notice; null otherwise.
-  aiDataNotice: string | null;
   aiUsage: { used: number; limit: number; remaining: number }; // AI analyses in the last 24 hours (docs/decisions/0008)
   changes: string; // the change mark this data was read at (lib/data/changes.ts): screens reload when it moves
 };

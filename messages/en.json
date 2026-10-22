@@ -748,7 +748,6 @@
     },
     "transcriptWithheld": "The AI service wouldn't write out this file's text (it looks like published material), so there's no transcript.",
     "notWork": "This doesn't look like a work message. If you don't need it, dismiss it.",
-    "dataNotice": "What you send is analyzed by {service}. This setup uses its free tier: under its terms, content may be kept, used to improve its services, and read by reviewers. Avoid including passwords, verification codes, ID numbers, or bank account numbers.",
     "assumptions": "What the AI assumed",
     "assumed": "AI assumed: {note}",
     "usageRemaining": "AI analyses left today: {remaining} of {limit}",
@@ -1288,7 +1287,6 @@
     "notLoaded": "Sender and subject couldn't be loaded",
     "sorting": "Sorting your email…",
     "byModel": "Model: {kind} ({score})",
-    "freeTierNotice": "Work email is checked by Google's free Gemini tier, which may keep and use what it's sent.",
     "kind": {
       "offer": "offer or inquiry",
       "negotiation": "negotiation",

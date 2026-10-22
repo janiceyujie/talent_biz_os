@@ -1,7 +1,7 @@
 // From the model's score to what happens to an email (decision 0013): above
 // the high threshold it's work; below the low one it's filtered out; between
 // them it's "Not sure this is work", fetched and flagged. Set from the
-// relevance eval (evals/relevance): on both Gemini and a local qwen3:8b, every
+// relevance eval (evals/relevance): on the models it was first run on, every
 // work case scored 0.8 or more and almost everything else 0.3 or less. The Not
 // work rate tunes them from here.
 

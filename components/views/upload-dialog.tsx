@@ -3,7 +3,6 @@
 import { ArrowDown, ArrowUp, FileText, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
-import { DataNotice } from "@/components/app/data-notice";
 import { Modal } from "@/components/app/modal";
 import { prepareUpload, registerUpload } from "@/lib/actions/uploads";
 import { UPLOAD_LIMITS, type UploadType } from "@/lib/uploads";
@@ -141,7 +140,6 @@ export function UploadDialog({ onClose, onSubmitted }: { onClose: () => void; on
         )}
         {picked.length > 0 && <p className="muted">{t("uploadTotal", { count: picked.length, megabytes: totalMb.toFixed(1) })}</p>}
         <p className="muted">{t("pasteHint")}</p>
-        <DataNotice />
         {error && (
           <p className="notice error" role="alert">
             {error}

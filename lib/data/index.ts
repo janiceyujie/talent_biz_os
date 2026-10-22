@@ -1,6 +1,5 @@
 import "server-only";
 import { and, count, desc, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
-import { freeTierOk, keepsData, modelFor } from "@/lib/ai/model";
 import { relevanceQueue } from "@/lib/queue/jobs";
 import { cache } from "react";
 import { dailyUsage } from "@/lib/ai/usage";
@@ -235,8 +234,6 @@ export const getAppData = cache(async (): Promise<AppData> => {
       workspaceOwner: current.role === "owner", // only owners change the workspace's name and zone
     },
     calendarFeed: Boolean(memberRow?.feedHash),
-    // The provider paste and upload actually use (AI_PRIMARY, or AI_PROVIDER in development).
-    aiDataNotice: keepsData(modelFor("analysis", false).provider) ? aiServiceName(modelFor("analysis", false).provider) : null,
     aiUsage: await dailyUsage(current.id),
     externalEvents: importedRows.map((e) => {
       const source = importSources.find((x) => x.id === e.sourceId)!;
@@ -271,7 +268,6 @@ export const getAppData = cache(async (): Promise<AppData> => {
     },
     gmail: {
       available: mailConfigured(),
-      freeTier: keepsData(modelFor("relevance").provider) && freeTierOk(),
       connection: mailbox
         ? {
             accountEmail: mailbox.accountEmail,
@@ -368,8 +364,3 @@ export const getAppData = cache(async (): Promise<AppData> => {
     inbox: inboxRows,
   };
 });
-
-/** How the AI service is named to people, for the data notice. */
-function aiServiceName(provider: string | undefined) {
-  return ({ gemini: "Google Gemini", anthropic: "Anthropic Claude", openai: "OpenAI", ollama: "Ollama" } as Record<string, string>)[provider ?? ""] ?? "AI";
-}

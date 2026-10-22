@@ -26,7 +26,7 @@ Restart `npm run dev` (it runs the worker too). Then Settings → Connected serv
 
 Mail is checked by the worker on its own: the first check starts as soon as you connect and reads the last 30 days, if that was the choice, or starts from now; later ones read what arrived since. Without push (below), the worker checks every 2 minutes. Intake shows when it last checked, with **Check now** to look right away. Only headers and labels are read, never the body.
 
-What the rules can't decide, a model scores from sender, subject, tab, and Gmail's short preview; "Syncing…" lasts until it's done. It uses `AI_MAILBOX_PROVIDER` and `AI_MAILBOX_MODEL`, or `AI_PROVIDER` when they're unset. For a local model: install [Ollama](https://ollama.com), `ollama pull qwen3:8b`, keep `ollama serve` running, and set `AI_MAILBOX_PROVIDER=ollama` and `AI_MAILBOX_MODEL=qwen3:8b`. A provider marked `AI_PROVIDER_KEEPS_DATA` is refused mailbox content unless `AI_FREE_TIER_OK=1`; those emails stay "Not decided yet".
+What the rules can't decide, a model scores from sender, subject, tab, and Gmail's short preview; "Syncing…" lasts until it's done. It uses the primary provider's relevance model (`AI_PRIMARY`; `AI_MODEL_<PROVIDER>_RELEVANCE` overrides it), like every other model call.
 
 Disconnect is finished by the worker (it alone can decrypt the token to revoke it at Google), so the row says "Disconnecting…" until `npm run worker` picks the job up.
 
@@ -78,6 +78,5 @@ Push is required in production: the Pub/Sub settings above on the worker only (t
 | The worker exits at startup with "Gmail push isn't fully set up" | Set the settings it names (Push, above). Required in production; in development, set all three or none |
 | New mail takes minutes to appear with push set up | The worker's log says "push pull failed" with a status: 403 is the subscription's Subscriber permission; 404 is the subscription name. The 15-minute check still brings mail in. With "mail.sync watch failed": the topic's Publisher permission for `gmail-api-push@system.gserviceaccount.com` |
 | "Senders and subjects can't be read from Gmail right now" in Waiting or Filtered out | The worker isn't running, `WORKER_SECRET` differs between `.env.local` and the worker (or is missing), or `WORKER_URL` doesn't point at its port. The worker's log says "listening on" when its endpoint is up |
-| A Gmail message shows "this model can't read this file" | A PDF attachment on a local model, which reads text and images only; it's analyzed once a provider that reads PDFs is set for mailbox content |
-| Emails stay "Not decided yet" | The relevance model isn't reachable (`ollama serve` not running, or the model not pulled), or it's a free tier without `AI_FREE_TIER_OK=1`. The worker's log has `mail.relevance failed` with the code. Check now, or the next new email, tries them again |
+| Emails stay "Not decided yet" | The relevance model isn't reachable (a missing or wrong `ANTHROPIC_API_KEY`, or the provider is down and there's no `AI_BACKUP`). The worker's log has `mail.relevance failed` with the code. Check now, or the next new email, tries them again |
 | "Last sync failed" | The worker's log has `mail.sync failed` with Gmail's status and reason. A 403 `accessNotConfigured` is step 1 |

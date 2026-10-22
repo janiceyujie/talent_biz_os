@@ -748,7 +748,6 @@
     },
     "transcriptWithheld": "AI 服務不提供這份檔案的文字轉錄（看起來像已發表的內容），因此沒有轉錄。",
     "notWork": "這看起來不是工作上的訊息。如果不需要，可以按「略過」。",
-    "dataNotice": "內容會交由 {service} 分析。目前使用的是它的免費方案：依其條款，送出的內容可能被保留、用於改善服務，也可能由審查人員閱讀。請避免放入密碼、驗證碼、身分證字號或銀行帳號等資料。",
     "assumptions": "AI 的推定",
     "assumed": "AI 推定：{note}",
     "usageRemaining": "今日剩餘 AI 分析：{remaining}／{limit} 次",
@@ -1288,7 +1287,6 @@
     "notLoaded": "無法載入寄件者與主旨",
     "sorting": "正在整理你的信…",
     "byModel": "模型判斷：{kind}（{score}）",
-    "freeTierNotice": "工作信會交給 Google Gemini 免費方案判讀，Google 可能保留並使用收到的內容。",
     "kind": {
       "offer": "邀約或詢問",
       "negotiation": "條件洽談",

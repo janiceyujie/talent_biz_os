@@ -5,7 +5,7 @@ import { aiCall } from "@/lib/db/schema";
 
 // What model calls cost, estimated from the tokens each one reports (ai_call)
 // and list prices. For the evals' budget (scripts/eval-*.mts); the providers'
-// own spending limits are the hard cap. Gemini's free tier and a local model cost nothing.
+// own spending limits are the hard cap.
 
 /** US dollars per million tokens, input and output (October 2026 list prices). */
 const prices: Record<string, [number, number]> = {

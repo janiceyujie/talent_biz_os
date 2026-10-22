@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { submitPastedMessage } from "@/lib/actions/messages";
-import { DataNotice } from "./data-notice";
 import { Modal } from "./modal";
 
 /** How often a page looks again while a message is being analyzed (it runs in the background). */
@@ -42,7 +41,6 @@ export function PasteDialog({ onClose, onSubmitted }: { onClose: () => void; onS
           />
         </label>
         <p className="muted">{t("pasteHint")}</p>
-        <DataNotice />
         {error && (
           <p className="notice error" role="alert">
             {error}

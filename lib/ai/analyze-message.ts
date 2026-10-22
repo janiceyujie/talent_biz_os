@@ -72,7 +72,6 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
     const thread = gmail ? await threadNotes(messageId, row) : [];
     const { analysis, modelVersion, promptVersion } = await extractMessage({
       body: header + (row.body ?? ""),
-      fromMailbox: gmail,
       textIfFilesUnreadable: gmail,
       sent,
       thread,

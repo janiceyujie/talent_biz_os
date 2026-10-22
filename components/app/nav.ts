@@ -1,5 +1,6 @@
 import {
   Archive,
+  Award,
   BarChart3,
   Bot,
   CalendarDays,
@@ -13,7 +14,7 @@ import {
 } from "lucide-react";
 
 /** Keys under the "nav" message namespace; also each page's title (settings has no nav item: it's under the avatar menu). */
-export type NavKey = "today" | "inbox" | "projects" | "drafts" | "finance" | "assistant" | "contacts" | "files" | "calendar" | "partners" | "settings";
+export type NavKey = "today" | "inbox" | "projects" | "drafts" | "finance" | "opportunities" | "assistant" | "contacts" | "files" | "calendar" | "partners" | "settings";
 
 export type NavItem = { href: string; key: NavKey; icon: LucideIcon; group: "work" | "manage" };
 
@@ -23,6 +24,7 @@ export const nav: NavItem[] = [
   { href: "/projects", key: "projects", icon: FolderKanban, group: "work" },
   { href: "/drafts", key: "drafts", icon: FilePenLine, group: "work" },
   { href: "/finance", key: "finance", icon: BarChart3, group: "work" },
+  { href: "/opportunities", key: "opportunities", icon: Award, group: "work" },
   { href: "/assistant", key: "assistant", icon: Bot, group: "work" },
   { href: "/contacts", key: "contacts", icon: Users, group: "manage" },
   { href: "/files", key: "files", icon: Archive, group: "manage" },

@@ -351,6 +351,13 @@
       "when": 1792651237317,
       "tag": "0049_assistant_conversations",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1792652668674,
+      "tag": "0050_add_opportunities",
+      "breakpoints": true
     }
   ]
 }

@@ -3,6 +3,7 @@
 // value that doesn't fit is treated as "not set", so the defaults apply and an
 // old or broken save never breaks a page. Saving is strict (lib/actions/preferences).
 import { z } from "zod";
+import { screeningProfileSchema } from "@/lib/opportunities/types";
 import { widgetIds } from "@/lib/overview/widgets";
 
 const MAX_IDS = 50;
@@ -21,6 +22,8 @@ export const preferences = {
       hidden: z.array(z.enum(widgetIds)).max(widgetIds.length),
     }),
   },
+  /** Who you are, to screen calls against (decision 0024). */
+  "opportunities.profile": { read: screeningProfileSchema, save: screeningProfileSchema },
 } as const;
 
 export type PreferenceKey = keyof typeof preferences;

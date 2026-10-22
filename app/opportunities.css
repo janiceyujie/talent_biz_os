@@ -1,0 +1,129 @@
+/* Opportunities (components/views/opportunities.tsx): the list of calls and their detail. */
+
+.opportunity-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.opportunity-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.opportunity-card {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+.opportunity-card:hover,
+.opportunity-card:focus-visible {
+  border-color: var(--ink-soft);
+}
+.opportunity-card strong {
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.opportunity-card-top,
+.opportunity-card-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.opportunity-card-top {
+  justify-content: space-between;
+}
+.opportunity-card-bottom .muted {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.opportunity-state,
+.opportunity-fit,
+.opportunity-following {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--text-meta);
+  white-space: nowrap;
+}
+.opportunity-state.open,
+.opportunity-fit.fits {
+  background: var(--lime-soft);
+}
+.opportunity-state.upcoming,
+.opportunity-following {
+  background: var(--blue-soft);
+}
+.opportunity-state.unknown,
+.opportunity-fit.check {
+  background: var(--orange-soft);
+}
+.opportunity-state.closed,
+.opportunity-fit.doesNotFit {
+  background: var(--paper);
+  color: var(--muted);
+}
+
+.opportunity-dates {
+  display: flex;
+  gap: 32px;
+  margin: 12px 0;
+}
+.opportunity-dates dt {
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.opportunity-dates dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
+.opportunity-fit-details {
+  margin-top: 12px;
+}
+.opportunity-fit-details summary {
+  cursor: pointer;
+}
+.opportunity-fit-details ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.opportunity-tasks {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+.opportunity-tasks li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.opportunity-tasks .check-line {
+  margin: 8px 0 !important;
+}
+.opportunity-tasks .overdue {
+  color: var(--red);
+}
+
+@media (max-width: 640px) {
+  .opportunity-dates {
+    gap: 20px;
+  }
+}

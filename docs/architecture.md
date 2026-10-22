@@ -115,6 +115,10 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - Search across projects, contacts, calendar, and templates (⌘K) — **MVP**.
 - In-app notifications derived from upcoming to-dos, events, and payments due to be received or paid — **MVP**. Ordered by urgency (within the next two hours, overdue, today, later); read state and "remind me in an hour" are saved per person — **MVP**. Background push (browser, email) — **Later**.
 
+### Opportunities
+
+- Public calls for grants, competitions, and showcases, read on a schedule into a catalogue shared by every account, screened against the person's profile, and followed as to-dos — **Built in part** ([decision 0024](decisions/0024-opportunity-discovery.md)). The worker's daily `opportunities.refresh` (05:00 Taipei; `npm run opportunities:refresh` to run it now) reads the Ministry of Culture's open-data list of open calls and Grants.gov's arts grants (`lib/opportunities/sources/`) into `opportunity`, keeping a call a later read leaves out. Who a call is for comes only from what the source states (a form marked for individuals or groups, a unit that funds one discipline, Grants.gov's applicant codes); each dimension is a list, "any", or unknown. The screening profile (applicant type, country, county or state, disciplines) is the `opportunities.profile` preference; `lib/opportunities/screening.ts` gives Fits, Check (unknown, missing, or not read in three days), or Doesn't fit, which the list hides unless asked (`GET /api/opportunities`). Following a call (`opportunity_application`) can add a Submit to-do on its closing date; an application's to-dos (`opportunity_task`) are ordinary to-dos. Tracked pages read with a checked model extraction, and the notification when a followed call's dates change — **Next**.
+
 ### Contacts
 
 - A contact list of artists, counterparties, and managers — name, company, email, phone, notes — linked to projects — **MVP**. A project keeps the counterparty's name as text too, so a project without a contact still works; a draft takes its recipient from the linked contact.
@@ -860,6 +864,62 @@ create table audit_log (
   details          jsonb,             -- e.g. { "from": "negotiating", "to": "signed" }
   created_at       timestamptz not null default now()
 );
+
+-- Opportunities (decision 0024) ----------------------------------------------
+
+-- The catalogue is shared by every account: public calls, no customer data, the one place a read isn't scoped to a talent.
+create table opportunity_source (
+  id            text primary key,           -- 'moc', 'grants_gov'
+  checked_at    timestamptz,                -- the last successful read
+  attempted_at  timestamptz,
+  failure       text                        -- why the last read failed; null after a success
+);
+
+create table opportunity (
+  id             uuid primary key default gen_random_uuid(),
+  source         text not null references opportunity_source(id),
+  external_id    text not null,             -- the source's id, or a hash of what identifies the call
+  region         text not null check (region in ('TW','US')),
+  kind           text not null check (kind in ('grant','competition','showcase','residency')),
+  title          text not null,
+  agency         text not null,
+  url            text not null,
+  opens_on       date,
+  closes_on      date,                      -- in the source's region (Asia/Taipei for Taiwan)
+  source_status  text not null check (source_status in ('posted','forecasted','unknown')),
+  summary        text not null default '',
+  rules          jsonb,                     -- who it's for, per dimension: a list, 'any', or null (unknown); lib/opportunities/types.ts
+  content_hash   text not null,
+  checked_at     timestamptz not null default now(),
+  changed_at     timestamptz not null default now(),   -- last read with something different
+  created_at     timestamptz not null default now(),
+  unique (source, external_id)
+);
+create index opportunity_region_closes_idx on opportunity (region, closes_on);
+
+create table opportunity_application (
+  id              uuid primary key default gen_random_uuid(),
+  talent_id       uuid not null references talent(id) on delete cascade,
+  opportunity_id  uuid not null references opportunity(id),
+  project_id      uuid references project(id) on delete set null,   -- once awarded
+  stage           text not null default 'preparing'
+                    check (stage in ('preparing','submitted','awarded','not_selected','closed')),
+  notes           text not null default '',
+  created_by      uuid references person(id) on delete set null,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  unique (talent_id, opportunity_id)
+);
+
+-- An application's to-dos are ordinary to-dos; this says which and what for.
+create table opportunity_task (
+  id              uuid primary key default gen_random_uuid(),
+  application_id  uuid not null references opportunity_application(id) on delete cascade,
+  todo_id         uuid not null unique references todo(id) on delete cascade,
+  kind            text not null check (kind in ('submission','eligibility','proposal','budget','agreement','report','settlement','custom')),
+  created_at      timestamptz not null default now()
+);
+create index opportunity_task_application_idx on opportunity_task (application_id);
 ```
 
 ## Stack

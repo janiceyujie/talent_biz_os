@@ -1,0 +1,40 @@
+name: Deploy
+
+# Deploys this run's commit to one environment on Render: the worker (which
+# migrates first), then web, then a smoke check (scripts/render-deploy.mjs).
+# Called by ci.yml (main → staging) and release.yml (a release → production);
+# setup in docs/setup/render.md, "Deploys".
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ vars.WEB_URL }}
+    # One deploy per environment at a time. A newer one waits instead of cancelling one midway.
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+      - name: Deploy worker, then web
+        run: node scripts/render-deploy.mjs "$GITHUB_SHA"
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          WORKER_SERVICE_ID: ${{ vars.RENDER_WORKER_SERVICE_ID }}
+          WEB_SERVICE_ID: ${{ vars.RENDER_WEB_SERVICE_ID }}
+          WEB_URL: ${{ vars.WEB_URL }}

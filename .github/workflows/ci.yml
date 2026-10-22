@@ -36,3 +36,14 @@ jobs:
           BETTER_AUTH_URL: http://localhost:3000
           SMTP_URL: smtp://localhost:1025
           EMAIL_FROM: ci@example.com
+
+  staging:
+    # Every commit on main that passes goes to staging. Off until the Render
+    # services exist: set the repository variable RENDER_DEPLOYS to "on"
+    # (docs/setup/render.md, "Deploys").
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.RENDER_DEPLOYS == 'on'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: staging
+    secrets: inherit

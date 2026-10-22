@@ -1,0 +1,46 @@
+name: Release
+
+# A published release tagged vX.Y.Z deploys its commit to production, once
+# that commit is on main and has deployed to staging successfully. Only the
+# builder can create v* tags (a tag ruleset; docs/setup/render.md, "Deploys").
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  deployments: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.release.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: The tag names a version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::$TAG isn't vX.Y.Z"; exit 1; }
+      - name: Its commit is on main
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$GITHUB_SHA isn't on main"; exit 1; }
+      - name: Its commit deployed to staging
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/deployments?environment=staging&sha=$GITHUB_SHA" --jq '.[].id'); do
+            [ "$(gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses" --jq '.[0].state')" = success ] && exit 0
+          done
+          echo "::error::$GITHUB_SHA hasn't deployed to staging successfully; wait for its staging deploy, or release a commit that has"
+          exit 1
+
+  production:
+    needs: check
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: production
+    secrets: inherit

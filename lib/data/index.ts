@@ -8,22 +8,16 @@ import { isGoogleConfigured, isGoogleEnabled, requireTalent } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { readPreferences } from "@/lib/preferences";
 import { pairKey } from "@/lib/domain/organizations";
-import { activeReceipts } from "@/lib/domain/workflow";
 import { inboxOverview } from "./inbox";
 import { summaryOf } from "./projects";
 import { changeMark } from "./changes";
+import { calendarItemsOf, externalEventsOf, paymentsOf } from "./rows";
 import { authAccount, calendarSeriesProject, organization, organizationDistinct, projectContact, projectOrganization, calendarConnection, calendarEvent, calendarImportSource, contract, mailConnection, mailDecision, mailSenderRule, externalEvent, contact, membership, notificationState, payment, paymentReceipt, person as personTable, preference, project, replyTemplate, talent, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
 import { mailConfigured } from "@/lib/mail/connect";
-import type { Currency } from "@/lib/domain/money";
 import { isProjectType } from "@/lib/project-types";
 import { roleOf } from "@/lib/roles";
-import { calendarKinds, type AppData, type CalendarItem, type PaymentReceipt, type CalendarKind, type TravelDetails } from "@/lib/types";
-
-
-const hhmm = (t: string | null) => (t ? t.slice(0, 5) : "");
-const todoKind: Record<string, CalendarKind> = { deliverable: "deliverable", payment_due: "payment" };
-const eventKind = (k: string): CalendarKind => (calendarKinds.includes(k as CalendarKind) ? (k as CalendarKind) : "meeting");
+import type { AppData } from "@/lib/types";
 
 /**
  * Everything the signed-in talent's screens show. Each list fills in as its
@@ -86,13 +80,6 @@ export const getAppData = cache(async (): Promise<AppData> => {
       .where(and(eq(preference.personId, person.personId), eq(preference.talentId, current.id))),
     db.select().from(paymentReceipt).where(eq(paymentReceipt.talentId, current.id)).orderBy(paymentReceipt.createdAt),
   ]);
-  const receiptsOf = new Map<string, PaymentReceipt[]>();
-  for (const r of receiptRows)
-    receiptsOf.set(r.paymentId, [
-      ...(receiptsOf.get(r.paymentId) ?? []),
-      { id: r.id, date: r.receivedOn, cash: r.cash, withheld: r.withheld, note: r.note ?? "", replacesId: r.replacesId, withdrawn: r.withdrawn, recordedAt: r.createdAt.toISOString() },
-    ]);
-
   const contractRows = await db
     .select()
     .from(contract)
@@ -159,59 +146,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
 
 
 
-  const calendar: CalendarItem[] = [
-    ...eventRows.map((e) => ({
-      id: e.id,
-      source: "event" as const,
-      kind: eventKind(e.kind),
-      title: e.title,
-      date: e.startDate,
-      time: hhmm(e.startTime),
-      timeZone: e.timeZone,
-      location: e.location ?? "",
-      projectId: e.projectId,
-      suggestedProjectId: e.suggestedProjectId,
-      notes: e.notes ?? "",
-      done: false,
-      archived: e.archivedAt !== null,
-      travel:
-        e.kind === "travel" || e.kind === "accommodation"
-          ? ({
-              endDate: e.endDate ?? "",
-              endTime: hhmm(e.endTime),
-              endTimeZone: e.endTimeZone ?? "",
-              transportMode: e.transportMode ?? "",
-              operator: e.operator ?? "",
-              serviceNumber: e.serviceNumber ?? "",
-              destination: e.destination ?? "",
-              seat: e.seat ?? "",
-              hotelName: e.hotelName ?? "",
-            } satisfies TravelDetails)
-          : null,
-      endDate: e.kind !== "travel" && e.kind !== "accommodation" ? (e.endDate ?? "") : "",
-      endTime: e.kind !== "travel" && e.kind !== "accommodation" ? hhmm(e.endTime) : "",
-    })),
-    ...todoRows
-      .filter((t) => t.dueDate) // undated to-dos have no place on a calendar
-      .map((t) => ({
-        id: t.id,
-        source: "todo" as const,
-        kind: todoKind[t.type] ?? ("todo" as const),
-        title: t.title,
-        date: t.dueDate!,
-        time: hhmm(t.dueTime),
-        timeZone: t.timeZone,
-        location: "",
-        projectId: t.projectId,
-        suggestedProjectId: null,
-        notes: t.notes ?? "",
-        done: t.status === "done",
-        archived: t.status === "dismissed",
-        travel: null,
-        endDate: "",
-        endTime: "",
-      })),
-  ];
+  const calendar = calendarItemsOf(eventRows, todoRows);
 
   const clientOf = new Map(clientRows.map((r) => [r.projectId, r.organizationId]));
   // A project's next step: its earliest open to-do, undated ones last.
@@ -235,23 +170,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     },
     calendarFeed: Boolean(memberRow?.feedHash),
     aiUsage: await dailyUsage(current.id),
-    externalEvents: importedRows.map((e) => {
-      const source = importSources.find((x) => x.id === e.sourceId)!;
-      return {
-        id: e.id,
-        calendar: source.name,
-        color: source.color,
-        title: e.title,
-        date: e.startDate,
-        time: hhmm(e.startTime),
-        endDate: e.endDate ?? "",
-        endTime: hhmm(e.endTime),
-        timeZone: e.timeZone,
-        location: e.location ?? "",
-        link: e.htmlLink ?? "",
-        series: source.own && e.seriesId ? { id: e.seriesId, projectId: seriesLinks.find((l) => l.seriesId === e.seriesId)?.projectId ?? null } : null,
-      };
-    }),
+    externalEvents: externalEventsOf(importedRows, importSources, seriesLinks),
     googleCalendar: {
       available: isGoogleConfigured,
       importGranted: hasScopes(accountRows.find((a) => a.providerId === "google")?.scope, IMPORT_SCOPES),
@@ -315,30 +234,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     distinctOrganizations: distinctRows.map((r) => pairKey(r.a, r.b)),
     projectPeople: projectPeopleRows,
     calendar,
-    payments: paymentRows.map((p) => {
-      const receipts = receiptsOf.get(p.id) ?? [];
-      return {
-        id: p.id,
-        projectId: p.projectId,
-        projectType: p.projectType && isProjectType(p.projectType) ? p.projectType : "other",
-        direction: p.direction,
-        installment: p.installment,
-        label: p.label,
-        amount: p.amount,
-        currency: p.currency as Currency,
-        taxRate: p.taxRate,
-        taxIncluded: p.taxIncluded,
-        recordedDate: p.recordedOn,
-        dueDate: p.dueOn,
-        status: p.status,
-        receipts,
-        // Worked out, never stored (decision 0021): the day the last receipt that counts arrived.
-        settledDate: p.status === "settled" ? (activeReceipts({ receipts }).map((r) => r.date).sort().at(-1) ?? null) : null,
-        invoiceRef: p.invoiceRef ?? "",
-        notes: p.notes ?? "",
-        voided: p.voidedAt !== null,
-      };
-    }),
+    payments: paymentsOf(paymentRows, receiptRows),
     templates: templateRows.map((t) => ({
       id: t.id,
       projectType: isProjectType(t.projectType) ? t.projectType : "other",

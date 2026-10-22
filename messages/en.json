@@ -1714,6 +1714,7 @@
     "yourWorkspace": "YOUR WORKSPACE"
   },
   "roles": {
+    "cancelChange": "Close without changing",
     "musician": {
       "label": "Musician",
       "description": "Gigs and music collaborations"

@@ -1714,6 +1714,7 @@
     "yourWorkspace": "YOUR WORKSPACE"
   },
   "roles": {
+    "cancelChange": "不變更並關閉",
     "musician": {
       "label": "音樂人",
       "description": "演出與音樂合作"

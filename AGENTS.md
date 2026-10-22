@@ -8,7 +8,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Talent Biz OS
+# Taloox
 
 A business operating layer for independent talent — musicians, influencers, models, and the people who manage them. Ingests the messages a talent's business runs on (gig offers, brand deals, contracts, payments), tracks each ongoing deal as one thing across multiple messages and contract versions, and surfaces what needs a decision.
 
@@ -30,7 +30,7 @@ Changes here can lose data, leak data, or lock people out, so make them only whe
 
 - **Every user-facing string** goes in `messages/en.json` and `messages/zh-TW.json` with the same keys; `npm run i18n:check` enforces it.
 - **Follow the code around you** — its naming, structure, and comment style — over introducing new patterns or libraries. Ask before adding a dependency.
-- **Comments are in English only.** Refer to a screen or label by its English UI name (from `messages/en.json`), and describe Chinese input in words rather than quoting it. Chinese belongs only in `messages/zh-TW.json` and in code that has to match Chinese text (regexes, test fixtures, placeholder names).
+- **Comments are in English only.** Refer to a screen or label by its English UI name (from `messages/en.json`), and describe Chinese input in words rather than quoting it. Chinese belongs only in `messages/zh-TW.json`, the Traditional Chinese template content files (`assets/document-templates/content/*-zh-TW.json`), and code that has to match Chinese text (regexes, test fixtures, placeholder names).
 - **Git**: before any branch, commit, rebase, push, or pull request, read and follow `docs/git-workflow.md` — branch naming, commit message format, merging, and the rules for coding agents.
 
 ## Related

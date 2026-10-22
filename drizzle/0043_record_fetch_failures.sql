@@ -1,0 +1,1 @@
+ALTER TABLE "mail_decision" ADD COLUMN "fetch_failure" text;

@@ -5,6 +5,7 @@ import { project, projectContact, projectOrganization, todo } from "@/lib/db/sch
 import { identifyingFields } from "@/lib/domain/intake";
 import { phaseOf } from "@/lib/domain/phases";
 import { listViews, PAGE_MAX, type ListSort, type ListView, type ProjectPage } from "@/lib/domain/project-list";
+import type { Currency } from "@/lib/domain/money";
 import { isProjectType } from "@/lib/project-types";
 import { stages, type Project, type ProjectSummary } from "@/lib/types";
 
@@ -24,7 +25,7 @@ export function summaryOf(p: Row, nextAction: NextAction, artist: string, client
     type: isProjectType(p.type) ? p.type : "other",
     stage: p.stage,
     quotedAmount: p.quotedAmount,
-    currency: "TWD",
+    currency: p.quoteCurrency as Currency, // the check constraint keeps it to supportedCurrencies
     taxRate: p.taxRate,
     taxIncluded: p.taxIncluded,
     details: { fields, dates: p.details.dates ?? [] },

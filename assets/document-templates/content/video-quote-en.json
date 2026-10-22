@@ -1,0 +1,113 @@
+{
+  "scenario": "video",
+  "role": "video",
+  "kind": "quote",
+  "locale": "en",
+  "title": "Video production services Quotation",
+  "blocks": [
+    {
+      "type": "paragraph",
+      "text": "Quote number [ID]. Issued [date]. Valid until [date]. Currency [currency]. Subject to written confirmation; this quotation does not itself reserve dates or grant rights."
+    },
+    {
+      "type": "heading",
+      "text": "Parties"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Client [legal name, address, contact and email]",
+        "Service provider [legal name, address, contact and email]",
+        "Project [name]. Agreement date [date]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Scope and schedule"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Produce [videos, lengths, formats and languages]. Milestones: brief [date], storyboard [date], shoot [date], first cut [date], final delivery [date]. Included shoot days [days], crew and equipment [list], revision rounds [number]. Changes to the approved brief need a written change order with cost and schedule impact."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Price breakdown"
+    },
+    {
+      "type": "paragraph",
+      "text": "For each item, enter scope, quantity, unit, unit price and amount. If commission applies, specify the calculation basis and rate. Identify estimates separately from fixed fees."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Item",
+        "Qty / unit",
+        "Unit price",
+        "Amount"
+      ],
+      "rows": [
+        [
+          "Pre-production",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Shoot days and crew",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Editing and revision rounds",
+          "[___]",
+          "[___]",
+          "[___]"
+        ],
+        [
+          "Licenses and additional deliverables",
+          "[___]",
+          "[___]",
+          "[___]"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Fees and payment"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Subtotal excluding tax [amount]",
+        "Discount [amount]",
+        "Tax rate and tax [rate and amount]",
+        "Total including tax [amount and currency]",
+        "Deposit [amount and due date]",
+        "Balance [amount and payment terms]"
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Usage and special terms"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Final deliverable rights [license or assignment] take effect [conditions]. Raw footage, project files and third-party assets are [included / excluded with details]. Client supplies necessary approvals for its materials; producer clears only assets listed in scope. Archive retention [duration] and reshoot responsibility [conditions]."
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "Quotation conditions"
+    },
+    {
+      "type": "lines",
+      "lines": [
+        "Unlisted deliverables, extra revisions, travel and usage rights are excluded. Scope changes or acceptance after expiry require a revised price and availability check. Confirm cancellation, acceptance, rights and full engagement terms in writing before work begins."
+      ]
+    }
+  ]
+}

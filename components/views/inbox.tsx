@@ -3,22 +3,25 @@
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
+import { useInboxDetail } from "@/components/app/inbox-detail";
 import { InboxReaderLayout } from "@/components/app/inbox-reader-layout";
+import { useListPages } from "@/components/app/list-pages";
 import { InfoHint } from "@/components/app/info-hint";
 import { MoreMenu } from "./more-menu";
 import { ANALYSIS_POLL_MS, PasteDialog } from "@/components/app/paste-dialog";
 import { FileText, MailWarning, TriangleAlert } from "lucide-react";
 import { markNotWork, markSureWork, reopenReplies } from "@/lib/actions/mail";
 import { dismissMessage, openFromHistory, reanalyzeMessage } from "@/lib/actions/messages";
+import { isCurrency } from "@/lib/domain/money";
 import { useMoney } from "@/lib/i18n/format";
 import { useLabels } from "@/lib/i18n/labels";
 import { detailFieldKeys, type AssumptionTopic } from "@/lib/ai/analysis";
 import { isFailureCode } from "@/lib/ai/errors";
 import { weekdayMismatchOf } from "@/lib/ai/safety";
-import type { InboxMessage } from "@/lib/types";
+import type { InboxMessage, InboxPage, InboxSummary, OpenedMessage } from "@/lib/types";
 import { GmailMail, GmailSync, IntakeTabs, type IntakeTab } from "./gmail-intake";
 import { MessageReview } from "./message-review";
 import { NoticeDetail, NoticeRowLine } from "./payment-notice";
@@ -53,13 +56,18 @@ export function InboxView() {
   const [showDismissed, setShowDismissed] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [tab, setTab] = useState<IntakeTab>("messages");
-  // From your history: kept apart, collapsed, and analyzed only when opened (decision 0013).
-  const history = data.inbox.filter((m) => m.status === "history");
-  const visible = data.inbox.filter((m) => m.status !== "history" && (showDismissed || m.status !== "dismissed"));
-  const dismissed = data.inbox.filter((m) => m.status === "dismissed").length;
+  // A page at a time (decision 0011); after a save or an analysis the layout's data is new, and the shown rows reload.
+  const list = useListPages<InboxPage>("/api/inbox", { dismissed: String(showDismissed) }, data.inbox);
+  const visible = list.items;
+  // From your history: kept apart, collapsed, analyzed only when opened (decision 0013), and loaded once expanded.
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const history = useListPages<InboxPage>("/api/inbox", { history: "true" }, data.inbox, { enabled: historyOpen });
+  const historyCount = data.inbox.counts.history;
+  const dismissed = data.inbox.counts.dismissed;
   const [, startOpening] = useTransition();
-  const message = data.inbox.find((m) => m.id === active) ?? visible[0];
-  const analyzing = data.inbox.some((m) => m.status === "pending");
+  const selected = active || visible[0]?.id || "";
+  const { message, failed: detailFailed } = useInboxDetail(selected, data.inbox);
+  const analyzing = data.inbox.counts.pending > 0;
   // Waiting and Filtered out show before Gmail is connected too, so they can be found; they say how to connect.
   const gmailTabs = !!data.gmail.connection || data.gmail.available;
 
@@ -144,7 +152,7 @@ export function InboxView() {
       ) : (
         <div id="intake-panel" role={gmailTabs ? "tabpanel" : undefined} aria-labelledby={gmailTabs ? "intake-tab-messages" : undefined}>
           <InboxReaderLayout
-            selectedId={message?.id ?? ""}
+            selectedId={selected}
             listLabel={t("listLabel")}
             startReading={!!params.get("message")}
             openId={opened}
@@ -152,7 +160,7 @@ export function InboxView() {
               <>
                 <div className="inbox-list-heading">
                   <h2>{t("listHeading")}</h2>
-                  <span role="status">{t("listCount", { count: visible.length })}</span>
+                  <span role="status">{t("listCount", { count: list.total ?? visible.length })}</span>
                 </div>
                 {/* Only when something was dismissed: an option that does nothing is just noise. */}
                 {(dismissed > 0 || showDismissed) && (
@@ -161,20 +169,20 @@ export function InboxView() {
                     {t("showDismissed", { count: dismissed })}
                   </label>
                 )}
-                {!visible.length && (
+                {!visible.length && !list.loading && !list.failed && (
                   <div className="empty">
                     <h3>{t("emptyTitle")}</h3>
                     <p>{t("emptyBody")}</p>
                   </div>
                 )}
                 {visible.map((m) => (
-                  <div className={`mail-item single ${message?.id === m.id ? "is-active" : ""}`} key={m.id}>
-                    <button className={`mail-summary ${message?.id === m.id ? "active" : ""}`} aria-pressed={message?.id === m.id} onClick={() => setActive(m.id)}>
+                  <div className={`mail-item single ${selected === m.id ? "is-active" : ""}`} key={m.id}>
+                    <button className={`mail-summary ${selected === m.id ? "active" : ""}`} aria-pressed={selected === m.id} onClick={() => setActive(m.id)}>
                       <small>
                         <StatusChip status={m.status} />
-                        {!!m.analysis?.flags.length && <em className="message-status status-flagged">{t("flagChip")}</em>}
+                        {m.flagged && <em className="message-status status-flagged">{t("flagChip")}</em>}
                         {m.notice && <em className="message-status status-payment">{tNotice("chip")}</em>}
-                        {m.gmail?.sent && <em className="message-status status-sent">{t("yourReply")}</em>} {t(`channel.${m.channel}`)}
+                        {m.sent && <em className="message-status status-sent">{t("yourReply")}</em>} {t(`channel.${m.channel}`)}
                       </small>
                       {m.notice ? (
                         <>
@@ -188,8 +196,8 @@ export function InboxView() {
                         </>
                       ) : (
                         <>
-                          <strong>{m.analysis?.title || fallbackTitle(m, t)}</strong>
-                          <span className="mail-snippet">{(m.analysis?.summary || m.body || m.files.map((f) => f.filename).join(", ")).slice(0, 110)}</span>
+                          <strong>{m.title || summaryTitle(m, t)}</strong>
+                          <span className="mail-snippet">{m.snippet}</span>
                         </>
                       )}
                       <span className="mail-summary-meta">
@@ -199,15 +207,16 @@ export function InboxView() {
                     </button>
                   </div>
                 ))}
-                {history.length > 0 && (
-                  <details className="history-group">
+                <PageMore list={list} />
+                {historyCount > 0 && (
+                  <details className="history-group" onToggle={(e) => setHistoryOpen(e.currentTarget.open)}>
                     <summary>
-                      <strong>{t("historyGroup")}</strong> <span className="muted">{t("historyCount", { count: history.length })}</span> <InfoHint notes={[t("historyInfo")]} />
+                      <strong>{t("historyGroup")}</strong> <span className="muted">{t("historyCount", { count: historyCount })}</span> <InfoHint notes={[t("historyInfo")]} />
                     </summary>
-                    {history.map((m) => (
+                    {history.items.map((m) => (
                       <button
                         key={m.id}
-                        className={`history-row ${message?.id === m.id ? "active" : ""}`}
+                        className={`history-row ${selected === m.id ? "active" : ""}`}
                         onClick={() => {
                           setActive(m.id);
                           startOpening(async () => {
@@ -219,17 +228,26 @@ export function InboxView() {
                           });
                         }}
                       >
-                        <span>{m.gmail?.sent ? t("yourReply") : senderName(m.gmail?.sender ?? "")}</span>
-                        <strong>{fallbackTitle(m, t)}</strong>
+                        <span>{m.sent ? t("yourReply") : senderName(m.sender)}</span>
+                        <strong>{summaryTitle(m, t)}</strong>
                         <time dateTime={m.receivedAt}>{format.dateTime(new Date(m.receivedAt), { month: "short", day: "numeric" })}</time>
                       </button>
                     ))}
+                    {historyOpen && <PageMore list={history} />}
                   </details>
                 )}
               </>
             }
           >
-            {message ? <MessageDetail key={message.id} message={message} /> : <p className="empty">{t("pick")}</p>}
+            {message ? (
+              <MessageDetail key={message.id} message={message} />
+            ) : detailFailed ? (
+              <p className="notice error" role="alert">
+                {t("openFailed")}
+              </p>
+            ) : (
+              <p className="empty">{selected ? t("opening") : t("pick")}</p>
+            )}
           </InboxReaderLayout>
         </div>
       )}
@@ -271,13 +289,51 @@ function fallbackTitle(m: InboxMessage, t: ReturnType<typeof useTranslations<"in
   return m.gmail?.subject || firstLine(m.body) || (m.files.length ? t("filesCount", { count: m.files.length }) : t("untitled"));
 }
 
+/** The same, for a row of the list, which has the subject and first line but not the body. */
+function summaryTitle(m: InboxSummary, t: ReturnType<typeof useTranslations<"inbox">>) {
+  return m.subject || m.firstLine.slice(0, 80) || (m.fileCount ? t("filesCount", { count: m.fileCount }) : t("untitled"));
+}
+
+/**
+ * The end of a list: the next page loads as it scrolls into view (a button too, for keyboards
+ * and if scrolling doesn't trigger it), or a failure to retry — never a list that silently stops short.
+ */
+function PageMore({ list }: { list: { loading: boolean; failed: boolean; hasMore: boolean; loadMore: () => void; retry: () => void } }) {
+  const t = useTranslations("inbox");
+  const end = useRef<HTMLDivElement>(null);
+  const { loadMore, hasMore } = list;
+  useEffect(() => {
+    const target = end.current;
+    if (!target) return;
+    const watch = new IntersectionObserver((seen) => seen.some((e) => e.isIntersecting) && loadMore(), { rootMargin: "600px 0px" });
+    watch.observe(target);
+    return () => watch.disconnect();
+  }, [loadMore, hasMore]);
+  if (list.failed)
+    return (
+      <p className="notice error" role="alert">
+        {t("listFailed")}{" "}
+        <button className="text-button" onClick={list.retry}>
+          {t("retry")}
+        </button>
+      </p>
+    );
+  return hasMore ? (
+    <div ref={end} className="deal-list-more">
+      <button className="text-button" disabled={list.loading} onClick={loadMore}>
+        {list.loading ? t("loading") : t("loadMore")}
+      </button>
+    </div>
+  ) : null;
+}
+
 function StatusChip({ status }: { status: InboxMessage["status"] }) {
   const t = useTranslations("inbox.status");
   return <em className={`message-status status-${status}`}>{t(status)}</em>;
 }
 
 
-function MessageDetail({ message }: { message: InboxMessage }) {
+function MessageDetail({ message }: { message: OpenedMessage }) {
   const t = useTranslations("inbox");
   const labels = useLabels();
   const tGmail = useTranslations("gmail");
@@ -531,7 +587,7 @@ function Terms({ analysis: a }: { analysis: Analysis }) {
   const money = useMoney();
   const fee =
     a.money.amount && a.money.amount > 0
-      ? `${a.money.currency === "TWD" || !a.money.currency ? money(a.money.amount) : `${a.money.currency} ${a.money.amount}`}${
+      ? `${!a.money.currency || isCurrency(a.money.currency) ? money(a.money.amount, a.money.currency || "TWD") : `${a.money.currency} ${a.money.amount}`}${
           a.money.taxIncluded === null ? "" : ` (${a.money.taxIncluded ? tInbox("taxIncluded") : tInbox("taxExcluded")})`
         }`
       : a.money.asStated;
@@ -658,7 +714,7 @@ function AnalysisView({ analysis: a }: { analysis: Analysis }) {
   const fee =
     a.money.amount === null
       ? ""
-      : `${a.money.currency === "TWD" || !a.money.currency ? money(a.money.amount) : `${a.money.currency} ${a.money.amount}`}${
+      : `${!a.money.currency || isCurrency(a.money.currency) ? money(a.money.amount, a.money.currency || "TWD") : `${a.money.currency} ${a.money.amount}`}${
           a.money.taxIncluded === null ? "" : ` (${a.money.taxIncluded ? t("taxIncluded") : t("taxExcluded")})`
         }`;
   // [label, value, the words it came from, which assumptions belong under it]

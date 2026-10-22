@@ -94,8 +94,8 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - Void (作廢) a mistaken or duplicate payment entry: it drops out of every total and chart but stays viewable and restorable — **MVP**. Payments have no archive: past months need no hiding, they're just a date filter.
 - Finance views: money still to pay, the last six months of cash in and out, overdue-income aging, and signed-contract totals — **MVP**.
 - Subscription plans and billing for the product itself — **Later**. Kept entirely separate from a talent's project payments.
-- Amounts in TWD only — **MVP**. Each amount still carries its currency.
-- Multiple currencies, with a per-user default currency the dashboard converts into — **Later**. See [Multi-currency](#multi-currency-later).
+- Amounts in TWD, HKD, USD, JPY, EUR, or GBP — **MVP**. A project has its own currency; its payments may be in any of them. Totals are shown per currency, side by side. See [Multi-currency](#multi-currency).
+- A default currency the totals convert into, at recorded exchange rates — **Later**. See [Multi-currency](#multi-currency).
 - A running record of which counterparties pay late and by how much — **Later**. Needs enough payment history per counterparty to be meaningful.
 
 ### Analytics and insights
@@ -223,7 +223,8 @@ A deal is rarely one message. A venue's first offer, the signed contract, and a 
 
 - **Explicit tagging first.** If the message arrived through a channel that lets the person specify the project directly (e.g. the Gmail add-on's dropdown), use that — no inference needed.
 - **Email threading next.** When a message is a reply within an existing email thread (Gmail's thread id, then `In-Reply-To` / `References`), the project its thread is filed under is the strongest suggestion.
-- **Known facts next.** Built: the same contact (email, then company or name), a date the project already has, the same venue or event, and for a payment notice an expected payment of that amount; a similar title only adds weight. Each suggestion shows its reasons (`lib/domain/intake.ts`, `suggestTargets`).
+- **Known facts next.** Built: who it's from, counted once — the project's contact by email, the sender corresponding on the project (`project_correspondent`, recorded whenever a message is filed), or a matching company or name — then a date the project already has, the same venue or event, and for a payment notice an expected payment of that amount; a similar title only adds weight. Each suggestion shows its reasons (`lib/domain/intake.ts`, `suggestTargets`).
+- **Scored on the server, from relationships, not past messages** ([decision 0019](decisions/0019-match-messages-by-relationships.md)): opening a message returns its suggestions (`lib/data/suggestions.ts`). The top one is ticked only when it leads the next by 3 points or is the only one; projects that tie (a long-term partner's) are ordered by when the sender last wrote there, and the person picks.
 - **Similarity as a fallback** (later). For anything the facts don't settle, compare the extracted summary against the open projects for that talent using embedding similarity, and propose the closest match above a threshold. Per talent only, and when to start: [design/embeddings.md](design/embeddings.md).
 - **Always proposed, never automatic** for anything inferred. A proposed match is presented as "this looks like the same deal as [project] — is it?" alongside the extraction review, and a person confirms, rejects, or starts a new project instead.
 - **Then the message's changes are proposed against that project** — a checklist the person edits and ticks, applied in one transaction and recorded in `audit_log` as `message.applied` (what changed, what was left as a proposal). Code decides what to propose by intent; the server recomputes it on apply and refuses items no longer in it. See [docs/design/intake-to-project.md](design/intake-to-project.md).
@@ -378,6 +379,8 @@ erDiagram
 | `reply_draft` | One drafted reply — from AI, a template, or by hand — with whether it was used and how it was edited | M2 |
 | `project` (UI: 專案) | One ongoing deal with one counterparty, with a type and a stage | M2 (one project per confirmed message); matching in M4 |
 | `project_contact` | People on a project beyond its main contact (`project.counterparty_id`), each with a free-text role there | Built |
+| `project_correspondent` | Who the person corresponds with on each project, by email, with when they last wrote: recorded whenever a message is filed, whether or not they're a contact; matching reads it ([decision 0019](decisions/0019-match-messages-by-relationships.md)) | Built |
+| `document_template` | The contract and quote template library: one shared catalog, a row per version with its structured content and the key of its Word file in Storage, one version published per scenario, kind, and language. Published from `assets/document-templates/content/` by `npm run db:migrate` ([decision 0020](decisions/0020-document-templates-are-data.md)) | Built |
 | `organization` | A company, organisation, band, or label the talent works with; contacts link to it (`contact.organization_id`). [Decision 0012](decisions/0012-companies-and-their-roles-on-projects.md) | Built |
 | `project_organization` | The organisations on a project, each with a free-text role; exactly one primary (the client), whose name `project.counterparty` mirrors | Built |
 | `organization_distinct` | Pairs of organisations marked as different, so they aren't suggested as duplicates again | Built |
@@ -465,15 +468,22 @@ There's no "awaiting signature" stage — many gigs never have a written contrac
 
 **Money.** One `payment` table for both directions, so income and expenses share project and cross-project summaries. A payment usually belongs to a project but doesn't have to (a general expense such as gear). Each payment, and the project's quote, stores the amount as entered, a tax rate, and whether the amount includes tax; net, tax, and total are computed in minor units so net + tax always equals total. A quote can be split into a deposit and a balance in one transaction (the balance absorbs rounding), and is refused if the project already has income rows. The settlement check compares quoted, billed (income rows), and received (settled) per project. The agreed amount and the settled amount are separate columns — withholding tax and 二代健保 often make the received amount smaller, and that gap should show. "Overdue" is computed (due date past, still expected), never stored. Amounts are `numeric`, never floating point. Payment dates (recorded, due, settled) are `date`s — calendar days in the talent's time zone, not instants. A payment without a project counts as 其他 in per-type summaries. Cash summaries use the settled amount: received counts what actually arrived, by settled date; outstanding counts expected rows, by recorded date.
 
-#### Multi-currency (Later)
+#### Multi-currency
 
-The MVP is TWD only, enforced by a check constraint, but every `payment` row already stores its own `currency`, so no existing data changes when this ships. The design:
+**Now.** Amounts are recorded in one of six currencies (`supportedCurrencies`, `lib/domain/money.ts`: TWD, HKD, USD, JPY, EUR, GBP), enforced by a check constraint on `project.quote_currency` and `payment.currency`. JPY amounts are whole yen; the rest have two decimals.
 
-- `person.default_currency` — the currency the dashboard shows totals in.
-- An `exchange_rate` table (date, from, to, rate, source), filled daily from a rates provider.
-- Settled amounts convert at the rate on their settled date, so past totals never shift. Expected amounts convert at the latest rate and are labeled as estimates.
+- A project's currency is the one its quote is in. A payment on it starts in that currency but may be in any; the server doesn't require them to match.
+- Nothing converts, so currencies are never added together. Totals are one figure per currency (`totalsByCurrency`): Today's money and income, a client's and a partner's totals. Finance shows one currency at a time, picked at the top; its summary, insights, revenue mix, and CSV follow the pick.
+- A project's settlement (quoted, billed, received) counts only payments in the project's currency. Income in another currency is listed apart ("In other currencies"), since it can't be set against the quote.
+- A bank notice settles only an expected payment in the notice's currency, and money it records goes in at the notice's currency.
+- The intake reads an amount in the currency the message names, or in the project's when it names none (`lib/domain/intake.ts`). A new project takes the message's currency, or TWD; one outside the six stays in its notes. On an existing project, a fee in another currency isn't proposed, and an amount is matched only against payments in its own currency. A payment message in another currency still offers the payment, unticked, at its own total, for the person to enter what arrived.
+
+**Later: conversion.** Totals in a default currency, so a deal with income in two currencies and Finance across currencies can show one figure. The design, to be settled in a decision record first:
+
+- A default currency per workspace — the one cross-project totals show in. Each project's totals convert into the project's currency.
+- An `exchange_rate` table (date, from, to, rate, source), filled daily from a rates provider. The source is still open.
+- Settled amounts convert at the rate on their settled date, so past totals never shift; optionally the amount that actually arrived, when the person enters it. Expected amounts convert at the latest rate and are labeled as estimates.
 - Original amount and currency are always shown alongside the converted figure.
-- Drop the TWD-only check when this ships.
 
 ### Conventions
 
@@ -580,7 +590,7 @@ create table project (
                      check (stage in ('offer','negotiating','signed','in_progress',
                                       'collecting_payment','closed','declined','cancelled')),
   quoted_amount    numeric(12,2),                 -- as entered; see tax_included
-  quote_currency   char(3) not null default 'TWD' check (quote_currency = 'TWD'),
+  quote_currency   char(3) not null default 'TWD', -- one of supportedCurrencies; see Multi-currency
   tax_rate         numeric(5,2) not null default 0 check (tax_rate between 0 and 100),
   tax_included     boolean not null default false,
   details          jsonb not null default '{}',   -- type fields, dates kept before signing, to-confirm list (lib/types ProjectDetails)
@@ -729,8 +739,7 @@ create table payment (
                        check (installment in ('regular','deposit','balance')),
   label              text not null,                 -- '訂金', 'train to Tainan'
   amount             numeric(12,2) not null check (amount >= 0),   -- as entered; see tax_included
-  currency           char(3) not null default 'TWD'
-                       check (currency = 'TWD'),    -- MVP: TWD only; see Multi-currency
+  currency           char(3) not null default 'TWD', -- one of supportedCurrencies; see Multi-currency
   tax_rate           numeric(5,2) not null default 0 check (tax_rate between 0 and 100),
   tax_included       boolean not null default false,
   recorded_on        date not null,                 -- 登錄日期; calendar days, in the talent's time zone
@@ -842,7 +851,7 @@ Shaped by the situation: a part-time build, a handful of solo artists at first, 
 | Layer | Choice | Status | Why |
 |---|---|---|---|
 | App shape | Next.js monolith (React, TS) — route handlers + server actions | Decided | One deployable and shared types; the Gmail add-on webhook is just another route handler. Split only for a concrete reason (see below) |
-| Data loading | The layout carries what every page needs; a page fetches what it shows, lists in pages of 50 with keyset cursors, an item's detail when it's opened | Decided — moving screen by screen | The cost of a page stays proportional to the screen, not the account. Projects are done (`/api/projects`, `/api/projects/[id]`); the layout still carries a summary of each project and every payment, to-do, and event until the other screens move. See [decision 0011](decisions/0011-pages-fetch-what-they-show.md) |
+| Data loading | The layout carries what every page needs; a page fetches what it shows, lists in pages of 50 with keyset cursors, an item's detail when it's opened | Decided — moving screen by screen | The cost of a page stays proportional to the screen, not the account. Projects and Intake's messages are done (`/api/projects`, `/api/projects/[id]`, `/api/inbox`, `/api/inbox/[id]`; the layout keeps only message counts, Today's review list, and each project's latest message); the layout still carries a summary of each project and every payment, to-do, and event until the other screens move. See [decision 0011](decisions/0011-pages-fetch-what-they-show.md) |
 | Primary DB | Postgres, hosted on Supabase in Singapore | Decided | Relational integrity for money, contracts, and versions. Supabase gives free local dev (`supabase start`) and Asia regions; to us it is plain Postgres. Region: [decision 0014](decisions/0014-hosting-and-job-queue.md) |
 | Vector search | pgvector | Decided | Project matching without a second datastore; supported by every major Postgres host |
 | DB access + migrations | Drizzle (`drizzle-kit`) | Decided | SQL-shaped, typed queries and typed `jsonb`; schema lives in TS; works on any Postgres |

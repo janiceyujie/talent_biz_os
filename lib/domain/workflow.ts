@@ -4,7 +4,7 @@ import { projectTypes } from "@/lib/project-types";
 import { contentWords, displayName, placeholderKey, type PlaceholderKey } from "@/lib/templates/placeholders";
 import type { AppData, Payment, Project, ProjectSummary, ReplyTemplate } from "@/lib/types";
 import { isSigned } from "./phases";
-import { minorUnits, quote } from "./money";
+import { minorUnitFactor, minorUnits, quote, totalsByCurrency, type Currency } from "./money";
 
 export const paymentTotal = (p: Pick<Payment, "amount" | "taxRate" | "taxIncluded" | "currency">) =>
   quote(p.amount, p.taxRate, p.taxIncluded, p.currency).total;
@@ -20,11 +20,15 @@ export const projectQuoteTotal = (p: Pick<Project, "quotedAmount" | "taxRate" | 
  * Quoted vs. billed vs. received for one project, plus what still blocks
  * closing. `shortfall` is billed income that settled for less than its total
  * (withholding, fees) — shown on its own rather than left as outstanding.
+ * Everything is in the project's currency; income in another currency can't
+ * be compared with the quote yet, so it's totalled apart in `otherIncome`.
  */
 export function projectSettlement(data: AppData, project: ProjectSummary) {
   const rows = data.payments.filter((p) => p.projectId === project.id && !p.voided && p.status !== "cancelled");
-  const income = rows.filter((p) => p.direction === "in");
+  const allIncome = rows.filter((p) => p.direction === "in");
+  const income = allIncome.filter((p) => p.currency === project.currency);
   const units = (n: number) => minorUnits(n, project.currency);
+  const factor = minorUnitFactor(project.currency);
   const sum = (list: Payment[], value: (p: Payment) => number) => list.reduce((n, p) => n + units(value(p)), 0);
   const settled = income.filter((p) => p.status === "settled");
   const quoteTotal = projectQuoteTotal(project);
@@ -32,12 +36,13 @@ export function projectSettlement(data: AppData, project: ProjectSummary) {
   const billed = sum(income, paymentTotal);
   const received = sum(settled, paymentCash);
   return {
-    quoted: quoteTotal === null ? null : quoted / 100,
-    billed: billed / 100,
-    received: received / 100,
-    pending: sum(income.filter((p) => p.status === "expected"), paymentTotal) / 100,
-    shortfall: (sum(settled, paymentTotal) - received) / 100,
-    unbilled: quoteTotal === null ? 0 : (quoted - billed) / 100, // nothing to compare while the quote is unset
+    quoted: quoteTotal === null ? null : quoted / factor,
+    billed: billed / factor,
+    received: received / factor,
+    pending: sum(income.filter((p) => p.status === "expected"), paymentTotal) / factor,
+    shortfall: (sum(settled, paymentTotal) - received) / factor,
+    unbilled: quoteTotal === null ? 0 : (quoted - billed) / factor, // nothing to compare while the quote is unset
+    otherIncome: totalsByCurrency(allIncome.filter((p) => p.currency !== project.currency), paymentTotal),
     openItems: data.calendar.filter((c) => c.projectId === project.id && c.source === "todo" && !c.archived && !c.done),
     unpaidCosts: rows.filter((p) => p.direction === "out" && p.status === "expected"),
   };
@@ -63,7 +68,7 @@ export function renderTemplate(template: ReplyTemplate, source: string, project:
     deliverables: project?.details.deliverables || "",
     rights: project?.details.rights || "",
     next_due: project?.nextAction?.dueDate || "",
-    quote: project && project.quotedAmount !== null ? words.quote(projectQuoteTotal(project)!, project.taxRate) : "",
+    quote: project && project.quotedAmount !== null ? words.quote(projectQuoteTotal(project)!, project.taxRate, project.currency) : "",
   };
   const missing = new Set<string>();
   const body = template.body.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (_, name: string) => {
@@ -79,7 +84,6 @@ export function renderTemplate(template: ReplyTemplate, source: string, project:
 /** Date a payment counts on: settled date once settled, otherwise the recorded date. */
 export const paymentDate = (p: Payment) => (p.status === "settled" ? p.settledDate || p.recordedDate : p.recordedDate);
 
-/** Cash-basis totals for a date range (TWD only for the MVP): settled rows count their cash. */
 /**
  * Payments as totals, reminders, and matching count them (decision 0018): money still expected
  * counts only for signed work or no project, since a deal being negotiated may never happen;
@@ -90,13 +94,19 @@ export function countedPayments<P extends Pick<Payment, "status" | "projectId">>
   return payments.filter((p) => p.status !== "expected" || !p.projectId || signed.has(p.projectId));
 }
 
-export function summarize(data: { payments: Payment[]; projects: Pick<ProjectSummary, "id" | "stage">[] }, from = "", to = "9999-12-31") {
+/** Cash-basis totals for one currency and a date range: settled rows count their cash. */
+export function summarize(
+  data: { payments: Payment[]; projects: Pick<ProjectSummary, "id" | "stage">[] },
+  from = "",
+  to = "9999-12-31",
+  currency: Currency = "TWD",
+) {
   const rows = countedPayments(data.payments, data.projects).filter(
-    (p) => !p.voided && p.status !== "cancelled" && paymentDate(p) >= from && paymentDate(p) <= to,
+    (p) => p.currency === currency && !p.voided && p.status !== "cancelled" && paymentDate(p) >= from && paymentDate(p) <= to,
   );
   const value = (p: Payment) => (p.status === "settled" ? paymentCash(p) : paymentTotal(p));
   const sum = (match: (p: Payment) => boolean) =>
-    rows.filter(match).reduce((n, p) => n + minorUnits(value(p), p.currency), 0) / 100;
+    rows.filter(match).reduce((n, p) => n + minorUnits(value(p), currency), 0) / minorUnitFactor(currency);
   return {
     rows,
     received: sum((p) => p.direction === "in" && p.status === "settled"),

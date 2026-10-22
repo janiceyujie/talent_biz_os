@@ -122,12 +122,29 @@ const clean = (v: string, max = 2000) => {
   return filler.test(text) ? "" : text.slice(0, max);
 };
 
-/** The currency from how the amount was written, when the model left it out. */
-function currencyFrom(asStated: string) {
-  if (/NT\$|NTD|TWD|台幣|新臺幣|新台幣|元/i.test(asStated)) return "TWD";
-  if (/US\$|USD/i.test(asStated)) return "USD";
-  if (/JPY|円/.test(asStated)) return "JPY";
-  return "";
+// How a currency may be written, most specific first: the Chinese names for USD, HKD, and JPY end in the
+// same character as TWD's yuan, which alone means TWD.
+const writtenCurrencies: [string, RegExp][] = [
+  ["USD", /US\$|USD|美金|美元/i],
+  ["HKD", /HK\$|HKD|港幣|港元|港币/i],
+  ["JPY", /JPY|円|日圓|日元|日幣/i], // not ¥: it also means CNY
+  ["EUR", /EUR|€|歐元/i],
+  ["GBP", /GBP|£|英鎊/i],
+  ["TWD", /NT\$|NTD|TWD|台幣|臺幣|新臺幣|新台幣|元/i],
+];
+// Codes people write that aren't ISO 4217.
+const currencyAliases: Record<string, string> = { NTD: "TWD", NT: "TWD", RMB: "CNY" };
+
+/** The currency from how an amount was written ("US$1,200", or 35,000 followed by the character for yuan); "" when it doesn't say. */
+export function currencyFrom(asStated: string) {
+  return writtenCurrencies.find(([, written]) => written.test(asStated))?.[0] ?? "";
+}
+
+/** The model's currency code as ISO 4217, else the one the amount's wording shows. */
+function currencyOf(code: string, asStated: string) {
+  const upper = code.trim().toUpperCase();
+  if (/^[A-Z]{2,3}$/.test(upper)) return currencyAliases[upper] ?? (upper.length === 3 ? upper : currencyFrom(asStated));
+  return currencyFrom(asStated);
 }
 
 export type DetailValue = { value: string; asStated: string };
@@ -171,9 +188,7 @@ export function normalize(o: ModelOutput & { transcript?: string }) {
     })),
     money: {
       amount: Number.isFinite(o.money.amount) && o.money.amount > 0 ? Math.round(o.money.amount * 100) / 100 : null,
-      currency: /^[A-Z]{3}$/.test(o.money.currency.trim().toUpperCase())
-        ? o.money.currency.trim().toUpperCase()
-        : currencyFrom(o.money.asStated),
+      currency: currencyOf(o.money.currency, o.money.asStated),
       taxIncluded: o.money.taxIncluded === "unknown" ? null : o.money.taxIncluded === "yes",
       asStated: clean(o.money.asStated, 200),
     },

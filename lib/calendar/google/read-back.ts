@@ -22,7 +22,7 @@ import { feedEvents } from "../feed";
 import type { googleCalendar } from "./api";
 import type { GoogleEvent } from "./import-plan";
 import { toGoogleEvent } from "./plan";
-import { changedHere, fieldsOfOurs, fieldsOfTheirs, infoFrom, keysFor, mergeFields, suggestProject, type SyncFields } from "./two-way";
+import { changedHere, earlierNotesMarkers, fieldsOfOurs, fieldsOfTheirs, infoFrom, keysFor, mergeFields, suggestProject, type SyncFields } from "./two-way";
 
 // Our own calendar read back (docs/design/calendar-two-way.md, decision 0017):
 // what changed in Google since the last read, by its sync token, brought into
@@ -39,8 +39,8 @@ type EventRow = typeof calendarEvent.$inferSelect;
 
 const FIELDS = "id,etag,status,summary,description,location,start,end,updated,recurrence,recurringEventId,attendees(email),extendedProperties";
 
-/** The notes line in every language, so it's found whichever language wrote it. */
-const notesMarkers = async () => Promise.all(locales.map(async (l) => (await translator(l, "googleCalendar"))("notesMarker")));
+/** The notes line in every language, so it's found whichever language wrote it, and as events pushed before the rename still have it. */
+const notesMarkers = async () => [...(await Promise.all(locales.map(async (l) => (await translator(l, "googleCalendar"))("notesMarker")))), ...earlierNotesMarkers];
 
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : null);
 const ordinary = (kind: string) => keysFor(kind).includes("end");

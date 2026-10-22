@@ -23,6 +23,10 @@ import {
 } from "drizzle-orm/pg-core";
 import type { MessageAnalysis } from "../ai/analysis"; // relative: drizzle-kit loads this file too
 import { intentKeys } from "../ai/extraction/intents";
+import { supportedCurrencies } from "../domain/money";
+import { locales } from "../i18n/config";
+import { roles } from "../roles";
+import { templateKinds, type TemplateContent } from "../templates/content";
 import { historyModes } from "../mail/history";
 import type { SyncFields } from "@/lib/calendar/google/two-way";
 import type { NoticeFields } from "../mail/payment-notice/fields";
@@ -267,7 +271,7 @@ export const project = pgTable(
   (t) => [
     index("project_talent_stage_idx").on(t.talentId, t.stage),
     check("project_stage_check", oneOf(t.stage, projectStages)),
-    check("project_quote_currency_check", sql`${t.quoteCurrency} = 'TWD'`), // MVP: TWD only
+    check("project_quote_currency_check", oneOf(t.quoteCurrency, supportedCurrencies)),
     check("project_tax_rate_check", sql`${t.taxRate} between 0 and 100`),
   ],
 ).enableRLS();
@@ -322,6 +326,34 @@ export const projectContact = pgTable(
     createdAt: createdAt(),
   },
   (t) => [unique("project_contact_project_contact").on(t.projectId, t.contactId), index("project_contact_project_idx").on(t.projectId)],
+).enableRLS();
+
+// Who the person corresponds with on a project (decision 0019): the other side
+// of each message filed on it — a received email's sender, the recipients of
+// the person's own reply, the email a pasted message gives — whether or not
+// they were added as a contact. Matching a new message reads it by email.
+// `lastAt`: when they last wrote (or were written to), which orders projects
+// that tie. Kept when contacts change; removed with the project.
+export const projectCorrespondent = pgTable(
+  "project_correspondent",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    projectId: uuid()
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    email: text().notNull(), // lowercased
+    name: text().notNull().default(""), // as the message last gave it
+    lastAt: timestamp({ withTimezone: true }).notNull(),
+    messageCount: integer().notNull().default(1),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("project_correspondent_project_email").on(t.projectId, t.email),
+    index("project_correspondent_talent_email_idx").on(t.talentId, t.email),
+  ],
 ).enableRLS();
 
 // Who confirmed or changed what, and when.
@@ -421,7 +453,7 @@ export const payment = pgTable(
     check("payment_direction_check", oneOf(t.direction, paymentDirections)),
     check("payment_installment_check", oneOf(t.installment, paymentInstallments)),
     check("payment_status_check", oneOf(t.status, paymentStatuses)),
-    check("payment_currency_check", sql`${t.currency} = 'TWD'`), // MVP: TWD only
+    check("payment_currency_check", oneOf(t.currency, supportedCurrencies)),
     check("payment_tax_rate_check", sql`${t.taxRate} between 0 and 100`),
     check("payment_amount_check", sql`${t.amount} >= 0 and (${t.settledAmount} is null or ${t.settledAmount} >= 0)`),
     check("payment_settled_check", sql`(${t.status} = 'settled') = (${t.settledOn} is not null)`),
@@ -537,6 +569,7 @@ export const message = pgTable(
   },
   (t) => [
     unique("message_talent_dedup_key").on(t.talentId, t.dedupKey),
+    index("message_talent_received_idx").on(t.talentId, t.receivedAt, t.id), // Intake's list, a page at a time
     index("message_talent_status_idx").on(t.talentId, t.status),
     index("message_project_idx").on(t.projectId),
     index("message_connection_thread_idx").on(t.connectionId, t.providerThreadId),
@@ -822,7 +855,7 @@ export const calendarImportSource = pgTable(
     color: text(), // Google's background colour for the calendar, as #rrggbb
     lastImportedAt: timestamp({ withTimezone: true }),
     syncToken: text(), // tells whether the calendar changed since the last read; null = not known yet
-    // Our own Talent Biz OS calendar's repeating events, read-only like a chosen calendar (decision 0017).
+    // Our own Taloox calendar's repeating events, read-only like a chosen calendar (decision 0017).
     own: boolean().notNull().default(false),
     createdAt: createdAt(),
   },
@@ -851,7 +884,7 @@ export const externalEvent = pgTable(
   (t) => [unique("external_event_source_event").on(t.sourceId, t.externalEventId), index("external_event_source_start_idx").on(t.sourceId, t.startDate)],
 ).enableRLS();
 
-// A repeating event made in our own Talent Biz OS calendar, added to a project as a whole (decision
+// A repeating event made in our own Taloox calendar, added to a project as a whole (decision
 // 0017): every occurrence shows on it. The series stays read-only here, edited in Google.
 export const calendarSeriesProject = pgTable(
   "calendar_series_project",
@@ -870,6 +903,42 @@ export const calendarSeriesProject = pgTable(
     createdAt: createdAt(),
   },
   (t) => [unique("calendar_series_project_connection_series").on(t.connectionId, t.seriesId)],
+).enableRLS();
+
+// The contract and quote template library (decision 0020): one shared catalog, not any workspace's,
+// with no customer data. Each version is a row and never changes; one per scenario, kind, and language
+// is published. Its Word file is in Storage under `storageKey`, which includes the content hash.
+// `source`: where the version came from; "repository" is published on deploy (scripts/publish-templates.mts),
+// and the online editor will add its own.
+export const templateSources = ["repository"] as const;
+export const documentTemplate = pgTable(
+  "document_template",
+  {
+    id: id(),
+    scenario: text().notNull(), // live, license, brand…
+    role: text({ enum: roles }).notNull(), // who it's written for, to filter by
+    kind: text({ enum: templateKinds }).notNull(),
+    locale: text({ enum: locales }).notNull(),
+    version: integer().notNull(),
+    title: text().notNull(),
+    content: jsonb().$type<TemplateContent>().notNull(), // lib/templates/content.ts
+    contentHash: char({ length: 64 }).notNull(), // content, the file's note, and the generator's version
+    storageKey: text().notNull(),
+    sizeBytes: integer().notNull(),
+    source: text({ enum: templateSources }).notNull().default("repository"),
+    published: boolean().notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("document_template_version").on(t.scenario, t.kind, t.locale, t.version),
+    unique("document_template_content").on(t.scenario, t.kind, t.locale, t.contentHash),
+    uniqueIndex("document_template_published").on(t.scenario, t.kind, t.locale).where(sql`${t.published}`),
+    check("document_template_role_check", oneOf(t.role, roles)),
+    check("document_template_kind_check", oneOf(t.kind, templateKinds)),
+    check("document_template_locale_check", oneOf(t.locale, locales)),
+    check("document_template_source_check", oneOf(t.source, templateSources)),
+    check("document_template_version_check", sql`${t.version} > 0`),
+  ],
 ).enableRLS();
 
 // A connected mailbox (decision 0013): one per talent for now, any Google
@@ -925,7 +994,8 @@ export const mailDecisionOutcomes = ["work", "skipped", "pending", "unsure", "no
 // Who decided: a rule (lib/mail/relevance/rules.ts), the model, the person with
 // a sender rule, `gone` when the email was deleted in Gmail before the model saw it, or
 // `expired` when a payment notice was left unhandled for 30 days.
-export const mailDecisionDeciders = [...ruleIds, "model", "analysis", "person", "gone", "expired"] as const;
+// "too_large": its text and markup are past what's read of a message (lib/mail/gmail/limits.ts), so it can't be brought in.
+export const mailDecisionDeciders = [...ruleIds, "model", "analysis", "person", "gone", "expired", "too_large"] as const;
 
 export const mailDecision = pgTable(
   "mail_decision",
@@ -946,6 +1016,8 @@ export const mailDecision = pgTable(
     kind: text({ enum: mailKinds }), // what the model says it looks like: our label, nothing from the email
     classifierVersion: text().notNull(), // the rules version, and the model step's prompt and model when it decided
     messageId: uuid().references(() => message.id, { onDelete: "set null" }), // the message it became, once brought in
+    // Why bringing it in failed after every retry: a code, never mail content. Cleared when it's queued again.
+    fetchFailure: text(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

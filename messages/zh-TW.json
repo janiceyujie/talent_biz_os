@@ -266,6 +266,7 @@
     "tagReview": "待確認",
     "tagClash": "衝突",
     "reviewUntitled": "新訊息",
+    "reviewMore": "Intake 還有 {count} 則訊息待審",
     "reviewDetail": "新訊息，等你確認後建檔",
     "allDay": "全天",
     "tomorrow": "明天",
@@ -359,7 +360,7 @@
       "status": "狀態",
       "due": "付款期限",
       "invoice": "發票",
-      "filename": "內帳-TWD.csv"
+      "filename": "內帳-{currency}.csv"
     },
     "edit": "編輯",
     "restore": "還原",
@@ -581,6 +582,7 @@
     "received": "已收款",
     "outstanding": "待收款",
     "shortfall": "實收差額",
+    "otherCurrencies": "其他幣別",
     "createPlan": "建立訂金與尾款",
     "closingCheck": "結案前檢查",
     "warn": {
@@ -633,6 +635,12 @@
     "emptyTitle": "這裡還沒有邀約",
     "emptyBody": "按「貼上邀約文字」匯入第一則邀約。",
     "pick": "選擇一則訊息查看內容。",
+    "loading": "載入中…",
+    "loadMore": "載入更多",
+    "listFailed": "無法載入訊息清單。",
+    "retry": "再試一次",
+    "opening": "開啟中…",
+    "openFailed": "無法開啟這則訊息，請再點一次重試。",
     "replyTodo": "回覆：{title}",
     "pasteTitle": "貼上邀約",
     "pasteLabel": "邀約內容",
@@ -764,6 +772,7 @@
   },
   "intake": {
     "targetHeading": "歸入合作案",
+    "pickOne": "有幾個合作案都可能符合，請選這則訊息屬於哪一個。",
     "suggested": "建議",
     "reason": {
       "contact": "同一聯絡人：{value}",
@@ -840,6 +849,7 @@
       "checkFields": "確認細節：合作方、金額、日期、備註"
     },
     "earlierDate": "先前的訊息提過這個日期，但合作案上還沒記；套用後會記在合作案上。",
+    "otherCurrency": "訊息寫的是 {stated}，這筆款項以 {currency} 記錄；請填入實際收到的 {currency} 金額。",
     "contractSigned": "已簽署",
     "contractSame": "和前一版內容相同，可能是重複的檔案；不勾選就只當作附件。",
     "contractMatches": "和目前談定的條件沒有衝突。",
@@ -1044,7 +1054,7 @@
     "zone": "時間以 {zone} 顯示",
     "noProject": "未歸入合作案",
     "addToProject": "加到合作案",
-    "repeatingFromGoogle": "週期性行程，來自 Google 上的 Talent Biz OS 日曆；請在 Google 修改。",
+    "repeatingFromGoogle": "週期性行程，來自 Google 上的 Taloox 日曆；請在 Google 修改。",
     "openInGoogle": "在 Google 日曆開啟",
     "changeProject": "更換",
     "seriesNote": "加到合作案時，會連同這個系列的每一次一起加入。",
@@ -1091,8 +1101,8 @@
     "confirmDisableBody": "已加入這個連結的行事曆將停止更新。之後可以隨時建立新連結。"
   },
   "googleCalendar": {
-    "calendarName": "Talent Biz OS · {talent}",
-    "calendarDescription": "由 Talent Biz OS 建立的行程。在這裡或 Talent Biz OS 修改，兩邊都會更新。",
+    "calendarName": "Taloox · {talent}",
+    "calendarDescription": "由 Taloox 建立的行程。在這裡或 Taloox 修改，兩邊都會更新。",
     "title": "Google 日曆",
     "notConfigured": "這個環境尚未設定 Google。",
     "needGoogle": "請先在上方「以 Google 登入」連結 Google 帳號",
@@ -1113,7 +1123,7 @@
     },
     "disconnectTitle": "中斷 Google 日曆連結？",
     "disconnectBody": "之後不再同步，並撤銷本服務對你 Google 帳號的存取權（Google 登入不受影響）。",
-    "deleteCalendar": "同時刪除 Google 上的「Talent Biz OS」日曆",
+    "deleteCalendar": "同時刪除 Google 上的「Taloox」日曆",
     "confirmDisconnect": "中斷連結",
     "cancel": "取消",
     "importTitle": "在這裡顯示",
@@ -1125,10 +1135,10 @@
     "chooseSave": "儲存",
     "saving": "儲存中…",
     "sendTitle": "與 Google 同步",
-    "sendTo": "你的行程 ⇄ Google 上的「Talent Biz OS」日曆",
+    "sendTo": "你的行程 ⇄ Google 上的「Taloox」日曆",
     "sendNote": "在任一邊修改，另一邊也會跟著更新。",
     "importNone": "尚未選擇",
-    "aboutSend": "傳送到 Google：已確認的行程會放進你 Google 帳號中專屬的「Talent Biz OS」日曆，儲存後隨即更新。本服務只會建立與修改這個日曆；同步標題、時間、地點與所屬合作案，待辦與款項不會同步。",
+    "aboutSend": "傳送到 Google：已確認的行程會放進你 Google 帳號中專屬的「Taloox」日曆，儲存後隨即更新。本服務只會建立與修改這個日曆；同步標題、時間、地點與所屬合作案，待辦與款項不會同步。",
     "aboutShow": "在這裡顯示：你勾選的 Google 日曆會唯讀顯示在這裡的行事曆中，只有你看得到，方便看出和私人行程的衝突。本服務只讀取你勾選的日曆。",
     "notConnected": "未連結",
     "syncedAgo": "{when}同步",
@@ -1137,11 +1147,11 @@
     "manage": "管理",
     "done": "完成",
     "syncedJustNow": "剛剛同步",
-    "notesMarker": "── 備註（與 Talent Biz OS 同步）──"
+    "notesMarker": "── 備註（與 Taloox 同步）──"
   },
   "gmail": {
     "title": "Gmail",
-    "aboutRead": "連結收工作信的信箱。Talent Biz OS 只取得唯讀權限：無法寄信、刪信，也無法更改信箱裡的任何內容。",
+    "aboutRead": "連結收工作信的信箱。Taloox 只取得唯讀權限：無法寄信、刪信，也無法更改信箱裡的任何內容。",
     "aboutDecide": "每封新信會先看寄件者、主旨和預覽，看起來是工作信（邀約、合約、行程安排、款項）時才讀取全文。",
     "aboutMembers": "收進來的工作信屬於這個工作區，所有成員（包括經紀人）都看得到。不是工作的信不會保留。",
     "notConfigured": "這個環境尚未設定 Gmail。",
@@ -1173,7 +1183,7 @@
     "accountNote": "請選收邀約信的帳號。",
     "continue": "前往 Google",
     "disconnectTitle": "中斷 Gmail 連結？",
-    "disconnectBody": "Talent Biz OS 會停止讀取這個信箱，並撤銷在 Google 的存取權。Google 登入不受影響。",
+    "disconnectBody": "Taloox 會停止讀取這個信箱，並撤銷在 Google 的存取權。Google 登入不受影響。",
     "confirmDisconnect": "中斷連結",
     "result": {
       "connected": "已連結 Gmail。",
@@ -1234,6 +1244,7 @@
       "pending": "沒有符合的規則，之後會再判斷。",
       "model": "模型",
       "gone": "檢查前已在 Gmail 刪除",
+      "too_large": "太大，無法匯入：信件的文字和排版超過 10 MB。請在 Gmail 開啟，把需要的內容貼到進件分類。",
       "analysis": "分析判斷不是工作信"
     },
     "peekError": {
@@ -1277,6 +1288,9 @@
     "skippedAttachments": "未收進的附件（請在 Gmail 開啟）：{names}",
     "wasWork": "這是工作信",
     "bringingIn": "正在收進，稍後會出現在「訊息」。",
+    "fetchFailedChip": "無法匯入",
+    "fetchFailed": "這封信試了幾次仍無法匯入（Gmail 或連線出錯）。請再試一次，或在 Gmail 開啟。",
+    "tryAgain": "再試一次",
     "keepTitle": "從 Gmail 收進的信",
     "keepFiled": "保留已歸入合作案的信",
     "keepFiledHint": "其餘的移除",
@@ -1623,6 +1637,7 @@
     "contactNotFound": "找不到這位聯絡人。",
     "amountNegative": "金額不能是負數。",
     "amountDecimals": "金額最多兩位小數。",
+    "amountWholeYen": "日圓金額須為整數。",
     "entryNameRequired": "請填寫紀錄名稱。",
     "taxRateRange": "稅率需介於 0–100%。",
     "settledDateRequired": "已收／已付的紀錄需要實際收付日期。",
@@ -1672,9 +1687,9 @@
     "noticeCurrency": "目前只能記錄新台幣款項。"
   },
   "emails": {
-    "resetSubject": "重設 Talent Biz OS 密碼",
+    "resetSubject": "重設 Taloox 密碼",
     "resetBody": "請點擊以下連結重設密碼（1 小時內有效）：\n\n{url}\n\n如果你沒有要求重設密碼，請忽略這封信。",
-    "verifySubject": "確認你的 Talent Biz OS 電子郵件",
+    "verifySubject": "確認你的 Taloox 電子郵件",
     "verifyBody": "請點擊以下連結確認你的電子郵件（1 小時內有效）：\n\n{url}"
   },
   "meta": {
@@ -1958,5 +1973,53 @@
     "keep": "只標記，保留這些項目",
     "cancelDeclined": "標記為已婉拒，並取消這些項目",
     "cancelCancelled": "標記為已取消，並取消這些項目"
+  },
+  "dateTimeInput": {
+    "datePlaceholder": "YYYY/MM/DD",
+    "timePlaceholder": "HH:mm",
+    "dateHint": "可輸入 20261012 或 2026/10/12；方向鍵移動，Enter 選取。",
+    "timeHint": "可輸入 930 或 1530，分鐘可自由設定。",
+    "invalidDate": "請輸入有效日期，例如 20261012 或 2026/10/12。",
+    "invalidTime": "請輸入有效時間，例如 930 或 15:30。",
+    "required": "請填寫此欄位。",
+    "openDate": "選擇日期：{label}",
+    "openTime": "選擇時間：{label}",
+    "chooseTime": "選擇時間",
+    "previousMonth": "上個月",
+    "nextMonth": "下個月",
+    "today": "今天",
+    "clear": "清除",
+    "close": "關閉"
+  },
+  "documentLibrary": {
+    "title": "合約與報價單範本",
+    "expand": "瀏覽範本",
+    "collapse": "收合範本",
+    "disclaimer": "以下僅為參考範本，不構成法律建議，也未經律師審閱。請依你的合作內容與適用地區逐條確認，並自行承擔使用責任；簽署的內容由你負責。重要事項請諮詢律師。",
+    "fileNotice": "本文件僅為參考範本，不構成法律建議。Taloox 並非律師事務所，未針對你的合作審閱本文件。請逐條確認、填寫括號內容，並自行承擔使用責任；重要事項請諮詢律師。寄出前請刪除本段說明。",
+    "role": "適用角色",
+    "allRoles": "全部角色",
+    "language": "語言",
+    "kind": "文件類型",
+    "contract": "合約",
+    "quote": "報價單",
+    "preview": "預覽",
+    "download": "下載 Word",
+    "copy": "複製全文",
+    "copied": "已複製：{title}",
+    "copyFailed": "無法複製，請在預覽中選取文字後複製。",
+    "loading": "正在載入範本…",
+    "loadFailed": "無法載入範本。",
+    "retry": "再試一次",
+    "empty": "目前還沒有範本。",
+    "noMatch": "這個角色目前還沒有範本。",
+    "sources": "條文參考來源",
+    "source": {
+      "commonPaper": "Common Paper：專業服務合約",
+      "freelancersUnion": "Freelancers Union：合約基本事項",
+      "mu": "英國音樂家工會：標準合約",
+      "artsLaw": "Arts Law：演出合約檢查清單",
+      "ftc": "美國 FTC：代言與網紅規範"
+    }
   }
 }

@@ -266,6 +266,7 @@
     "tagReview": "To review",
     "tagClash": "Clash",
     "reviewUntitled": "New message",
+    "reviewMore": "{count, plural, one {# more message} other {# more messages}} to review in Intake",
     "reviewDetail": "New message, waiting for you to file it",
     "allDay": "All day",
     "tomorrow": "Tomorrow",
@@ -359,7 +360,7 @@
       "status": "Status",
       "due": "Due",
       "invoice": "Invoice",
-      "filename": "talent-ledger-TWD.csv"
+      "filename": "talent-ledger-{currency}.csv"
     },
     "edit": "Edit",
     "restore": "Restore",
@@ -581,6 +582,7 @@
     "received": "Received",
     "outstanding": "Outstanding",
     "shortfall": "Received short",
+    "otherCurrencies": "In other currencies",
     "createPlan": "Create deposit and balance",
     "closingCheck": "Before closing",
     "warn": {
@@ -633,6 +635,12 @@
     "emptyTitle": "No offers here yet",
     "emptyBody": "Use “Paste an offer” to bring in your first one.",
     "pick": "Pick a message to see it.",
+    "loading": "Loading…",
+    "loadMore": "Load more",
+    "listFailed": "Couldn't load the messages.",
+    "retry": "Try again",
+    "opening": "Opening…",
+    "openFailed": "Couldn't open this message. Pick it again to retry.",
     "replyTodo": "Reply: {title}",
     "pasteTitle": "Paste an offer",
     "pasteLabel": "Message",
@@ -764,6 +772,7 @@
   },
   "intake": {
     "targetHeading": "File under a project",
+    "pickOne": "Several projects fit. Pick the one this message is about.",
     "suggested": "Suggested",
     "reason": {
       "contact": "Same contact: {value}",
@@ -840,6 +849,7 @@
       "checkFields": "Check the details: client, fee, dates, notes"
     },
     "earlierDate": "An earlier message gave this date, but the project doesn't have it yet; applying adds it.",
+    "otherCurrency": "The message states {stated}; this payment is in {currency}. Enter what arrived, in {currency}.",
     "contractSigned": "Signed",
     "contractSame": "Same as the previous version, likely a duplicate; unticked, it's kept as an attachment only.",
     "contractMatches": "No conflicts with the terms agreed so far.",
@@ -1044,7 +1054,7 @@
     "zone": "Times are in {zone}",
     "noProject": "Not in a project",
     "addToProject": "Add to a project",
-    "repeatingFromGoogle": "Repeating, from your Talent Biz OS calendar in Google: change it there.",
+    "repeatingFromGoogle": "Repeating, from your Taloox calendar in Google: change it there.",
     "openInGoogle": "Open in Google Calendar",
     "changeProject": "Change",
     "seriesNote": "Adding it to a project adds every occurrence of the series.",
@@ -1091,8 +1101,8 @@
     "confirmDisableBody": "Calendars that added this link stop updating. You can make a new link any time."
   },
   "googleCalendar": {
-    "calendarName": "Talent Biz OS · {talent}",
-    "calendarDescription": "Events created by Talent Biz OS. Change them here or in Talent Biz OS: both stay up to date.",
+    "calendarName": "Taloox · {talent}",
+    "calendarDescription": "Events created by Taloox. Change them here or in Taloox: both stay up to date.",
     "title": "Google Calendar",
     "notConfigured": "Google isn't set up in this environment.",
     "needGoogle": "Connect your Google account under “Sign in with Google” above first",
@@ -1113,7 +1123,7 @@
     },
     "disconnectTitle": "Disconnect Google Calendar?",
     "disconnectBody": "Syncing stops, and the app's access to your Google account is withdrawn (Google sign-in keeps working).",
-    "deleteCalendar": "Also delete the “Talent Biz OS” calendar in Google",
+    "deleteCalendar": "Also delete the “Taloox” calendar in Google",
     "confirmDisconnect": "Disconnect",
     "cancel": "Cancel",
     "importTitle": "Show here",
@@ -1125,10 +1135,10 @@
     "chooseSave": "Save",
     "saving": "Saving…",
     "sendTitle": "Sync with Google",
-    "sendTo": "Your events ⇄ the “Talent Biz OS” calendar in Google",
+    "sendTo": "Your events ⇄ the “Taloox” calendar in Google",
     "sendNote": "A change on either side updates the other.",
     "importNone": "None chosen",
-    "aboutSend": "Send to Google: confirmed events go into a dedicated “Talent Biz OS” calendar in your Google account, updated as soon as you save. This app only creates and changes that calendar; it sends the title, time, place, and project. To-dos and payments aren’t sent.",
+    "aboutSend": "Send to Google: confirmed events go into a dedicated “Taloox” calendar in your Google account, updated as soon as you save. This app only creates and changes that calendar; it sends the title, time, place, and project. To-dos and payments aren’t sent.",
     "aboutShow": "Show here: the Google calendars you tick appear read-only in the calendar here, visible only to you, so clashes with personal plans show. This app reads only the calendars you tick.",
     "notConnected": "Not connected",
     "syncedAgo": "Synced {when}",
@@ -1137,11 +1147,11 @@
     "manage": "Manage",
     "done": "Done",
     "syncedJustNow": "Synced just now",
-    "notesMarker": "── Notes (synced with Talent Biz OS) ──"
+    "notesMarker": "── Notes (synced with Taloox) ──"
   },
   "gmail": {
     "title": "Gmail",
-    "aboutRead": "Connect the mailbox your work email comes to. Talent Biz OS gets read-only access: it can't send, delete, or change anything in it.",
+    "aboutRead": "Connect the mailbox your work email comes to. Taloox gets read-only access: it can't send, delete, or change anything in it.",
     "aboutDecide": "For each new email it first looks at the sender, subject, and preview, and reads the full email only when it looks like work: offers, contracts, logistics, payments.",
     "aboutMembers": "Work email brought in belongs to this workspace, so its members, including a manager, see it. Email that isn't work isn't kept.",
     "notConfigured": "Gmail isn't set up in this environment.",
@@ -1173,7 +1183,7 @@
     "accountNote": "Pick the account your offers come to.",
     "continue": "Continue to Google",
     "disconnectTitle": "Disconnect Gmail?",
-    "disconnectBody": "Talent Biz OS stops reading this mailbox and withdraws its access at Google. Your Google sign-in isn't affected.",
+    "disconnectBody": "Taloox stops reading this mailbox and withdraws its access at Google. Your Google sign-in isn't affected.",
     "confirmDisconnect": "Disconnect",
     "result": {
       "connected": "Gmail connected.",
@@ -1234,6 +1244,7 @@
       "pending": "No rule matched. A later check will decide.",
       "model": "The model",
       "gone": "Deleted in Gmail before it was checked",
+      "too_large": "Too large to bring in: its text and formatting are over 10 MB. Open it in Gmail and paste what matters into Intake.",
       "analysis": "The analysis found it isn't work"
     },
     "peekError": {
@@ -1277,6 +1288,9 @@
     "skippedAttachments": "Not brought in (open it in Gmail): {names}",
     "wasWork": "This was work",
     "bringingIn": "Bringing it in. It will appear in Messages.",
+    "fetchFailedChip": "Couldn't bring in",
+    "fetchFailed": "This email couldn't be brought in, even after several tries (Gmail or the connection failed). Try again, or open it in Gmail.",
+    "tryAgain": "Try again",
     "keepTitle": "What was brought in from Gmail",
     "keepFiled": "Keep what's filed under projects",
     "keepFiledHint": "Remove the rest",
@@ -1623,6 +1637,7 @@
     "contactNotFound": "Contact not found.",
     "amountNegative": "Amounts can't be negative.",
     "amountDecimals": "Amounts can have at most two decimal places.",
+    "amountWholeYen": "Amounts in yen are whole numbers.",
     "entryNameRequired": "Enter an entry name.",
     "taxRateRange": "The tax rate must be between 0 and 100%.",
     "settledDateRequired": "Received or paid entries need the date settled.",
@@ -1672,9 +1687,9 @@
     "noticeCurrency": "Only NT$ payments can be recorded for now."
   },
   "emails": {
-    "resetSubject": "Reset your Talent Biz OS password",
+    "resetSubject": "Reset your Taloox password",
     "resetBody": "Click this link to reset your password (valid for 1 hour):\n\n{url}\n\nIf you didn't ask to reset your password, you can ignore this email.",
-    "verifySubject": "Confirm your Talent Biz OS email",
+    "verifySubject": "Confirm your Taloox email",
     "verifyBody": "Click this link to confirm your email (valid for 1 hour):\n\n{url}"
   },
   "meta": {
@@ -1958,5 +1973,53 @@
     "keep": "Only mark it, keep these",
     "cancelDeclined": "Mark as declined and cancel these",
     "cancelCancelled": "Mark as cancelled and cancel these"
+  },
+  "dateTimeInput": {
+    "datePlaceholder": "YYYY/MM/DD",
+    "timePlaceholder": "HH:mm",
+    "dateHint": "Type 20261012 or 2026/10/12. Arrow keys move; Enter picks.",
+    "timeHint": "Type 930 or 1530; any minute works.",
+    "invalidDate": "Enter a real date, for example 20261012 or 2026/10/12.",
+    "invalidTime": "Enter a time, for example 930 or 15:30.",
+    "required": "This field is required.",
+    "openDate": "Choose date: {label}",
+    "openTime": "Choose time: {label}",
+    "chooseTime": "Choose time",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "today": "Today",
+    "clear": "Clear",
+    "close": "Close"
+  },
+  "documentLibrary": {
+    "title": "Contract and quote templates",
+    "expand": "Browse templates",
+    "collapse": "Collapse templates",
+    "disclaimer": "These are templates for reference only, not legal advice, and haven't been reviewed by a lawyer. Check every term for your deal and where you work, and use them at your own responsibility: you're responsible for what you sign. For anything that matters, ask a lawyer.",
+    "fileNotice": "Template for reference only, not legal advice. Taloox isn't a law firm and hasn't reviewed this for your deal. Check every term, fill in the brackets, and use it at your own responsibility; for anything that matters, ask a lawyer. Delete this note before you send it.",
+    "role": "For",
+    "allRoles": "Every role",
+    "language": "Language",
+    "kind": "Document",
+    "contract": "Contract",
+    "quote": "Quote",
+    "preview": "Preview",
+    "download": "Download Word",
+    "copy": "Copy text",
+    "copied": "Copied: {title}",
+    "copyFailed": "Couldn't copy. Select the text in the preview and copy it.",
+    "loading": "Loading templates…",
+    "loadFailed": "Couldn't load the templates.",
+    "retry": "Try again",
+    "empty": "No templates yet.",
+    "noMatch": "None for this role yet.",
+    "sources": "Where the wording comes from",
+    "source": {
+      "commonPaper": "Common Paper: professional services agreement",
+      "freelancersUnion": "Freelancers Union: contract essentials",
+      "mu": "Musicians' Union: standard contracts",
+      "artsLaw": "Arts Law: booking agreement checklist",
+      "ftc": "FTC: endorsements and influencers"
+    }
   }
 }

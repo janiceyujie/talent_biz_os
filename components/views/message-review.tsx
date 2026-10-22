@@ -6,26 +6,30 @@
 import { useTranslations } from "next-intl";
 import { useMemo, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { DateTimeInput } from "@/components/app/date-time-input";
 import { InfoHint } from "@/components/app/info-hint";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { applyMessage, createProjectFromMessage, fileThread, type NewProjectInput } from "@/lib/actions/intake";
-import { initialEdit, intakeContext, keptFields, proposeChanges, proposeNewProject, suggestTargets, type Change, type IntakeContext, type TargetReason } from "@/lib/domain/intake";
+import { initialEdit, intakeContext, keptFields, preselect, proposeChanges, proposeNewProject, type Change, type IntakeContext, type TargetReason } from "@/lib/domain/intake";
 import { projectTypes, type ProjectType } from "@/lib/project-types";
-import { useMoney } from "@/lib/i18n/format";
+import { supportedCurrencies, type Currency } from "@/lib/domain/money";
+import { useCurrencyName, useMoney } from "@/lib/i18n/format";
+import { dateInZone } from "@/lib/domain/dates";
 import { useLabels } from "@/lib/i18n/labels";
-import type { InboxMessage, Project, ProjectSummary, Stage, TermChange } from "@/lib/types";
+import type { InboxMessage, OpenedMessage, Project, ProjectSummary, Stage, TermChange } from "@/lib/types";
 
 type Analysis = NonNullable<InboxMessage["analysis"]>;
 type Edit = Record<string, unknown>;
 
-export function MessageReview({ message }: { message: InboxMessage }) {
+export function MessageReview({ message }: { message: OpenedMessage }) {
   const data = useAppData();
   const t = useTranslations("intake");
   const tInbox = useTranslations("inbox");
   const a = message.analysis!;
   const ctx = useMemo<IntakeContext>(() => intakeContext(data, message), [data, message]);
-  const suggestions = useMemo(() => suggestTargets(a, ctx).slice(0, 3), [a, ctx]);
-  const [target, setTarget] = useState<string>(suggestions[0]?.projectId ?? "new");
+  // Scored on the server (decision 0019). Ticked only when one clearly leads; with several close, the person picks.
+  const suggestions = message.suggestions;
+  const [target, setTarget] = useState<string>(() => preselect(suggestions) ?? (suggestions.length ? "" : "new"));
   const [other, setOther] = useState("");
   const live = data.projects.filter((p) => !p.archived);
   const chosen = target === "other" ? live.find((p) => p.id === other) : live.find((p) => p.id === target);
@@ -33,6 +37,7 @@ export function MessageReview({ message }: { message: InboxMessage }) {
   return (
     <section className="message-review" aria-label={t("targetHeading")}>
       <h3>{t("targetHeading")}</h3>
+      {target === "" && <p className="muted">{t("pickOne")}</p>}
       <div className="target-options" role="radiogroup" aria-label={t("targetHeading")}>
         {suggestions.map((s) => {
           const p = live.find((x) => x.id === s.projectId)!;
@@ -79,12 +84,11 @@ export function MessageReview({ message }: { message: InboxMessage }) {
 /** File all: the other messages waiting in this email thread go under the same project, with their ticked items. */
 function ThreadBatch({ message, projectId }: { message: InboxMessage; projectId: string }) {
   const t = useTranslations("intake");
-  const data = useAppData();
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<string | null>(null);
-  const waiting = data.inbox.filter((m) => m.id !== message.id && m.status === "analyzed" && !m.notice && m.gmail?.threadId === message.gmail?.threadId);
+  const waiting = message.thread.waiting;
   if (!waiting.length) return null;
-  const ids = [message.id, ...waiting.map((m) => m.id)];
+  const ids = [message.id, ...waiting];
   return (
     <div className="thread-batch">
       <span>{result ?? t("threadWaiting", { count: waiting.length })}</span>
@@ -107,7 +111,7 @@ function ThreadBatch({ message, projectId }: { message: InboxMessage; projectId:
 function Reason({ reason }: { reason: TargetReason }) {
   const t = useTranslations("intake");
   const money = useMoney();
-  const value = reason.kind === "payment" ? money(reason.value) : reason.value;
+  const value = reason.kind === "payment" ? money(reason.value, reason.currency) : reason.value;
   return <span>{t(`reason.${reason.kind}`, { value })}</span>;
 }
 
@@ -115,7 +119,9 @@ function Reason({ reason }: { reason: TargetReason }) {
 function ChangesFor({ project, ...rest }: { message: InboxMessage; analysis: Analysis; project: ProjectSummary; ctx: IntakeContext }) {
   const tProjects = useTranslations("projects");
   const { detail, failed } = useProjectDetail(project);
-  if (detail) return <Changes {...rest} project={withDetail(project, detail)} />;
+  // Dates its earlier messages gave come with the project's detail.
+  const ctx = useMemo(() => detail && { ...rest.ctx, earlierDates: { [project.id]: detail.earlierDates } }, [detail, rest.ctx, project.id]);
+  if (detail && ctx) return <Changes {...rest} ctx={ctx} project={withDetail(project, detail)} />;
   return <p className={failed ? "notice error" : "muted"}>{tProjects(failed ? "detailFailed" : "loading")}</p>;
 }
 
@@ -230,6 +236,7 @@ function ChangeRow({
   const labels = useLabels();
   const money = useMoney();
   const data = useAppData();
+  const today = dateInZone(data.talent.timeZone); // where a date's calendar opens when it has none
   const id = `change-${c.id}`;
   const empty = <span className="muted">{t("empty")}</span>;
   const from = (v: string | null) => (v ? <s className="change-from">{v}</s> : empty);
@@ -242,7 +249,7 @@ function ChangeRow({
       label = t("change.fee");
       body = (
         <>
-          {from(c.from === null ? null : money(c.from))} →{" "}
+          {from(c.from === null ? null : money(c.from, c.currency))} →{" "}
           <input className="change-edit" type="number" min={0} aria-label={label} value={String(edit.to ?? "")} onChange={(e) => onEdit({ to: Number(e.target.value) })} />
           {c.taxIncluded !== null && <span className="muted"> {c.taxIncluded ? t("taxIncluded") : t("taxExcluded")}</span>}
         </>
@@ -267,8 +274,8 @@ function ChangeRow({
       body = (
         <>
           <span>{c.to.what}</span> {was && <>{from(was)} → </>}
-          <input className="change-edit" type="date" aria-label={label} value={String(edit.date ?? "")} onChange={(e) => onEdit({ date: e.target.value })} />{" "}
-          <input className="change-edit" type="time" aria-label={`${label} ${t("change.date")}`} value={String(edit.time ?? "")} onChange={(e) => onEdit({ time: e.target.value })} />
+          <DateTimeInput className="inline" kind="date" hideLabel label={label} value={String(edit.date ?? "")} today={today} onChange={(v) => onEdit({ date: v })} />{" "}
+          <DateTimeInput className="inline" kind="time" hideLabel label={`${label} ${t("change.date")}`} value={String(edit.time ?? "")} today={today} onChange={(v) => onEdit({ time: v })} />
           {(c.asEvent || (signing && !c.eventId)) && <span className="muted"> · {t("asEvent")}</span>}
           {c.earlier && <span className="change-hint">{t("earlierDate")}</span>}
         </>
@@ -288,10 +295,11 @@ function ChangeRow({
       const amount = Number(edit.amount ?? 0);
       body = (
         <>
-          {from(t("expected", { amount: money(c.expected) }))} → {t("received")}{" "}
+          {from(t("expected", { amount: money(c.expected, c.currency) }))} → {t("received")}{" "}
           <input className="change-edit" type="number" min={0} aria-label={t("amount")} value={String(edit.amount ?? "")} onChange={(e) => onEdit({ amount: Number(e.target.value) })} /> · {t("settledOn")}{" "}
-          <input className="change-edit" type="date" aria-label={t("settledOn")} value={String(edit.settledOn ?? "")} onChange={(e) => onEdit({ settledOn: e.target.value })} />
-          {amount > 0 && amount < c.expected && <span className="change-hint">{t("shortfall", { amount: money(c.expected - amount) })}</span>}
+          <DateTimeInput className="inline" kind="date" hideLabel label={t("settledOn")} value={String(edit.settledOn ?? "")} today={today} onChange={(v) => onEdit({ settledOn: v })} />
+          {amount > 0 && amount < c.expected && <span className="change-hint">{t("shortfall", { amount: money(c.expected - amount, c.currency) })}</span>}
+          {c.statedIn && c.currency && <span className="change-hint">{t("otherCurrency", { stated: c.statedIn, currency: c.currency })}</span>}
         </>
       );
       break;
@@ -300,8 +308,8 @@ function ChangeRow({
       label = c.label === "received" ? t("change.newPaymentReceived") : t("change.newPaymentCancellationFee");
       body = (
         <>
-          <input className="change-edit" type="number" min={0} aria-label={t("amount")} value={String(edit.amount ?? "")} onChange={(e) => onEdit({ amount: Number(e.target.value) })} />{" "}
-          <input className="change-edit" type="date" aria-label={t("settledOn")} value={String(edit.date ?? "")} onChange={(e) => onEdit({ date: e.target.value })} />
+          {c.currency} <input className="change-edit" type="number" min={0} aria-label={t("amount")} value={String(edit.amount ?? "")} onChange={(e) => onEdit({ amount: Number(e.target.value) })} />{" "}
+          <DateTimeInput className="inline" kind="date" hideLabel label={t("settledOn")} value={String(edit.date ?? "")} today={today} onChange={(v) => onEdit({ date: v })} />
         </>
       );
       break;
@@ -313,7 +321,8 @@ function ChangeRow({
       label = t(c.purpose === "reply" ? "change.todoReply" : c.purpose === "awaitContract" ? "change.todoAwaitContract" : "change.todoSendInvoice");
       body = (
         <>
-          {t("dueBy")} <input className="change-edit" type="date" aria-label={`${label} ${t("dueBy")}`} value={String(edit.dueDate ?? "")} onChange={(e) => onEdit({ dueDate: e.target.value })} />
+          {t("dueBy")}{" "}
+          <DateTimeInput className="inline" kind="date" hideLabel label={`${label} ${t("dueBy")}`} value={String(edit.dueDate ?? "")} today={today} onChange={(v) => onEdit({ dueDate: v })} />
         </>
       );
       break;
@@ -322,7 +331,7 @@ function ChangeRow({
       body = (
         <>
           {c.status === "signed" && <strong>{t("contractSigned")}</strong>}
-          <TermDiff diff={c.diff} against={c.against} same={c.same} type={project.type} />
+          <TermDiff diff={c.diff} against={c.against} same={c.same} type={project.type} currency={project.currency} />
         </>
       );
       break;
@@ -370,6 +379,7 @@ function ChangeRow({
 function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; analysis: Analysis; ctx: IntakeContext }) {
   const t = useTranslations("intake");
   const tEditor = useTranslations("editor");
+  const currencyName = useCurrencyName();
   const tInbox = useTranslations("inbox");
   const labels = useLabels();
   const fallbackTitle = message.body.trim().split("\n")[0]?.slice(0, 80) || message.files[0]?.filename || "";
@@ -427,6 +437,7 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
         project: {
           ...project,
           quotedAmount: project.quotedAmount === "" ? null : Number(project.quotedAmount),
+          currency: project.currency,
           taxRate: Number(project.taxRate),
           fields: Object.fromEntries(fieldKeys.map((k) => [k, project.fields[k] ?? ""])),
           dates: project.dates.filter((d) => d.date),
@@ -470,7 +481,17 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
           <div className="form-grid">
             <label>
               {tEditor("field.amount")}
-              <input type="number" min={0} value={project.quotedAmount} onChange={(e) => set({ quotedAmount: e.target.value })} />
+              <input type="number" min={0} step={project.currency === "JPY" ? "1" : "0.01"} value={project.quotedAmount} onChange={(e) => set({ quotedAmount: e.target.value })} />
+            </label>
+            <label>
+              {tEditor("field.currency")}
+              <select value={project.currency} onChange={(e) => set({ currency: e.target.value as Currency })}>
+                {supportedCurrencies.map((c) => (
+                  <option key={c} value={c}>
+                    {c} · {currencyName(c)}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               {tEditor("field.taxRate")}
@@ -494,8 +515,8 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
             {project.dates.map((d, i) => (
               <div key={i} className="new-date">
                 <input aria-label={t("new.dateWhat")} placeholder={t("new.dateWhat")} value={d.what} onChange={(e) => setDate(i, { what: e.target.value })} />
-                <input type="date" aria-label={tEditor("field.date")} value={d.date} onChange={(e) => setDate(i, { date: e.target.value })} />
-                <input type="time" aria-label={tEditor("field.time")} value={d.time} onChange={(e) => setDate(i, { time: e.target.value })} />
+                <DateTimeInput className="inline" kind="date" hideLabel label={tEditor("field.date")} value={d.date} today={ctx.receivedOn} onChange={(v) => setDate(i, { date: v })} />
+                <DateTimeInput className="inline" kind="time" hideLabel label={tEditor("field.time")} value={d.time} today={ctx.receivedOn} onChange={(v) => setDate(i, { time: v })} />
                 <button type="button" className="text-button" onClick={() => set({ dates: project.dates.filter((_, j) => j !== i) })}>
                   {t("new.removeDate")}
                 </button>
@@ -550,7 +571,8 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
           <label htmlFor="new-reply" className="change-label">
             {t("change.todoReply")}
           </label>{" "}
-          {t("dueBy")} <input className="change-edit" type="date" aria-label={`${t("change.todoReply")} ${t("dueBy")}`} value={replyBy} onChange={(e) => setReplyBy(e.target.value)} />
+          {t("dueBy")}{" "}
+          <DateTimeInput className="inline" kind="date" hideLabel label={`${t("change.todoReply")} ${t("dueBy")}`} value={replyBy} today={ctx.receivedOn} onChange={setReplyBy} />
           {a.replyByStated && <span className="stated">「{a.replyByStated}」</span>}
         </div>
       </div>
@@ -581,9 +603,9 @@ function NewProject({ message, analysis: a, ctx }: { message: InboxMessage; anal
 }
 
 /** How a contract differs from the previous version, or where a first contract conflicts with what was agreed. */
-export function TermDiff({ diff, against, same, type }: { diff: TermChange[]; against: "version" | "project"; same: boolean; type: ProjectType }) {
+export function TermDiff({ diff, against, same, type, currency }: { diff: TermChange[]; against: "version" | "project"; same: boolean; type: ProjectType; currency: Currency }) {
   const t = useTranslations("intake");
-  const describe = useDescribeTerm(type);
+  const describe = useDescribeTerm(type, currency);
   if (same) return <span className="change-hint">{t("contractSame")}</span>;
   if (!diff.length) return <span className="muted">{against === "project" ? t("contractMatches") : t("contractNoDiff")}</span>;
   return (
@@ -598,15 +620,15 @@ export function TermDiff({ diff, against, same, type }: { diff: TermChange[]; ag
   );
 }
 
-/** The label, then old → new: "Fee $30,000 → $35,000", or "Set length 60 min → (removed)". */
-export function useDescribeTerm(type: ProjectType) {
+/** The label, then old → new: "Fee $30,000 → $35,000", or "Set length 60 min → (removed)". A fee is in the project's currency. */
+export function useDescribeTerm(type: ProjectType, currency: Currency) {
   const t = useTranslations("intake");
   const labels = useLabels();
   const money = useMoney();
   return (d: TermChange) => {
     const [kind, rest] = d.key.includes(":") ? [d.key.slice(0, d.key.indexOf(":")), d.key.slice(d.key.indexOf(":") + 1)] : [d.key, ""];
     const value = (v: string) =>
-      !v ? t("removed") : kind === "fee" ? money(Number(v)) : kind === "taxIncluded" ? (v === "yes" ? t("taxIncluded") : t("taxExcluded")) : v;
+      !v ? t("removed") : kind === "fee" ? money(Number(v), currency) : kind === "taxIncluded" ? (v === "yes" ? t("taxIncluded") : t("taxExcluded")) : v;
     const label =
       kind === "field" ? labels.detailField(type, rest) : kind === "date" ? rest || t("change.date") : t(`term.${kind as "fee" | "taxIncluded" | "paymentTerms" | "keyTerms"}`);
     return d.before ? `${label} ${value(d.before)} → ${value(d.after)}` : `${label} ${t("added")} ${value(d.after)}`;

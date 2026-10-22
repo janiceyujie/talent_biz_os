@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { PlanItem } from "@/lib/calendar/planner";
-import type { InboxMessage } from "@/lib/types";
+import type { InboxSummary } from "@/lib/types";
 import type { StatefulNotification } from "@/lib/domain/notifications";
 import { todayActions } from "./actions";
 
@@ -34,8 +34,8 @@ const payment = (over: Partial<StatefulNotification> = {}) =>
   ({ ...base, id: "payment:p", kind: "receivable", amount: 9000, urgency: "overdue", date: "2026-10-01", ...over }) as StatefulNotification;
 const reminder = (source: "event" | "todo", over: Partial<StatefulNotification> = {}) =>
   ({ ...base, id: `calendar:${source}`, kind: "calendar", source, calendarKind: "meeting", marker: null, location: "", urgency: "today", ...over }) as StatefulNotification;
-const message = (status: InboxMessage["status"]): InboxMessage =>
-  ({ id: `m-${status}`, channel: "paste", body: "", receivedAt: "2026-10-05T00:00:00Z", status, failure: null, projectId: null, analysis: null, files: [], gmail: null, notice: null, completedTodos: [] }) as InboxMessage;
+const message = (status: InboxSummary["status"]): InboxSummary =>
+  ({ id: `m-${status}`, channel: "paste", receivedAt: "2026-10-05T00:00:00Z", status, projectId: null, notice: null, sent: false, sender: "", subject: "", firstLine: "", title: "", snippet: "", flagged: false, fileCount: 0 }) as InboxSummary;
 
 describe("todayActions", () => {
   test("events stay in the schedule; payments and to-dos are actions", () => {

@@ -10,6 +10,7 @@ How the running pieces connect: the web app, the worker, the database and its jo
 - [Where the models come in, and which one answers](#where-the-models-come-in-and-which-one-answers)
 - [Keeping the screen up to date](#keeping-the-screen-up-to-date)
 - [Google Calendar: today and later](#google-calendar-today-and-later)
+- [Contract and quote templates: today and later](#contract-and-quote-templates-today-and-later)
 - [Recovery paths](#recovery-paths)
 - [Timings at a glance](#timings-at-a-glance)
 
@@ -311,7 +312,7 @@ Our events and a dedicated calendar in the person's Google account go both ways 
 
 ```mermaid
 flowchart LR
-  subgraph Both["Ours ⇄ the Talent Biz OS calendar in Google"]
+  subgraph Both["Ours ⇄ the Taloox calendar in Google"]
     E["An event saved, archived,<br/>or deleted here"] -->|"calendar.sync<br/>(bursts merge into one)"| CS["calendar.sync, one per connection at a time"]
     REC["Worker: calendar.reconcile<br/>every 5 min, whether or not<br/>anyone has the app open"] --> CS
     SN["Sync now (in the request)"] --> CS
@@ -403,6 +404,93 @@ flowchart LR
 ```
 
 - **Change notices** (`calendar-webhooks`, with or after `deploy-render`): Google tells us when our calendar or a chosen one changes, and the same `calendar.sync` runs within seconds. The 5-minute reconcile becomes a 30-minute safety net, since Google doesn't promise delivery and stores nothing while we're down.
+
+## Contract and quote templates: today and later
+
+A library of fill-in-the-blank contracts and quotes, in English and Traditional Chinese, that people preview, copy, or download as Word files. Templates are data: rows in `document_template` with their Word files in Storage, published on every deploy from the repository's content files, and later edited online ([decision 0020](decisions/0020-document-templates-are-data.md)). None of it calls a model.
+
+### Today
+
+```mermaid
+flowchart LR
+  subgraph Repo["The repository"]
+    CF["assets/document-templates/content/<br/>one file per template:<br/>title, introduction, sections"]
+  end
+
+  subgraph Deploy["npm run db:migrate (every deploy, and locally)"]
+    M["1. Migrations"] --> PUB["2. Publish templates"]
+    PUB --> H{"Content + generator<br/>hash = the published<br/>version's?"}
+    H -->|"same"| SKIP["Nothing to do"]
+    H -->|"changed or new"| GEN["Generate the Word file<br/>(docx, on the server)"]
+    GEN --> UP["Upload under a key<br/>with the hash"]
+    UP --> ROW["Add a version, published;<br/>the previous one is kept"]
+  end
+
+  subgraph Data["Supabase"]
+    DT[("document_template<br/>one shared catalog,<br/>no customer data")]
+    ST[("Storage<br/>document-templates/<br/>&lt;scenario&gt;-&lt;kind&gt;-&lt;language&gt;-&lt;hash&gt;.docx")]
+  end
+
+  subgraph App["Web, for a signed-in person"]
+    LIST["GET /api/document-templates<br/>published, by language and kind"]
+    DL["GET /api/document-templates/&lt;id&gt;/download<br/>resolves the id, streams the file"]
+  end
+
+  B["Browser: the library<br/>in Drafts and Files"]
+
+  CF --> PUB
+  ROW --> DT
+  UP --> ST
+  B -->|"opened: preview, copy text"| LIST
+  LIST --> DT
+  B -->|"download"| DL
+  DL --> DT
+  DL --> ST
+```
+
+What to know:
+
+- **Nothing loads until the library is opened**, and it's the same for every workspace.
+- **A browser never names a Storage key**: it asks for a template by id, and the server streams the file of the published version.
+- **Not legal advice, three times:** a line under the library's heading, a note at the top of every Word file, and the terms of service.
+- **Changing a template** is a content-file change and a deploy. Changing the generator's layout republishes all of them.
+
+### Later: edited online, and copied into a person's own contract
+
+```mermaid
+flowchart LR
+  subgraph Team["The Taloox team"]
+    ED["Template editor<br/>(admin)"]
+  end
+
+  subgraph Catalog["The shared catalog"]
+    DT[("document_template<br/>versions")]
+    ST[("Storage")]
+    GEN["Generator<br/>(the same as on deploy)"]
+  end
+
+  subgraph Deploy["db:migrate"]
+    PUB["Publish from the repository"]
+  end
+
+  subgraph Workspace["One workspace"]
+    P["A person, on a project"]
+    CP["Their copy:<br/>edited for this deal"]
+    FC[("file + contract<br/>(this workspace only)")]
+  end
+
+  ED -->|"save: a new version"| DT
+  ED --> GEN
+  GEN --> ST
+  PUB -->|"only when the repository's<br/>content changed; never over<br/>a newer online edit"| DT
+  P -->|"Use this template"| CP
+  DT -->|"copied once: template<br/>and version recorded"| CP
+  CP -->|"save, download"| GEN
+  GEN --> FC
+```
+
+- **An online edit wins over the repository.** A deploy adds a repository version only when the repository's content changed, and leaves it unpublished if a newer edit was made online, for the team to compare.
+- **A person's copy is theirs.** It's stored with their workspace's files and a contract version on the project, records which template and version it came from, and editing it never changes the template.
 
 ## Recovery paths
 

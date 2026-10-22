@@ -2,10 +2,11 @@
 // change there. Pure functions over the analysis and the talent's records —
 // the AI only extracted the facts; these rules decide what to propose, and the
 // person confirms every item. See docs/design/intake-to-project.md.
-import type { MessageAnalysis } from "@/lib/ai/analysis";
+import { currencyFrom, type MessageAnalysis } from "@/lib/ai/analysis";
 import { projectType } from "@/lib/project-types";
 import type { AppData, CalendarItem, Contact, Contract, ContractTerms, InboxMessage, Payment, Project, ProjectDate, ProjectSummary, ProjectDetails, Stage, TermChange } from "@/lib/types";
 import { dateInZone } from "./dates";
+import { isCurrency, type Currency } from "./money";
 import { isSigned } from "./phases";
 import { paymentTotal } from "./workflow";
 
@@ -18,8 +19,13 @@ export type IntakeContext = {
   receivedOn: string;
   /** The person's default for answering a message with no stated reply-by date. */
   replyWithinDays: number;
-  /** Messages already filed on projects: who sent them and the dates they gave. */
-  filed: FiledMessage[];
+  /**
+   * The projects this message's sender corresponds on (decision 0019), and when they last
+   * wrote there: matching reads these, not past messages.
+   */
+  correspondents: { projectId: string; lastAt: string }[];
+  /** Dates earlier messages on a project gave that it doesn't keep, by project: loaded with the project chosen. */
+  earlierDates: Record<string, ProjectDate[]>;
   contracts: Contract[];
   /** Who is on each project besides its main contact. */
   projectPeople: { projectId: string; contactId: string }[];
@@ -34,16 +40,16 @@ export type IntakeContext = {
   sender: { name: string; email: string } | null;
 };
 
-export type FiledMessage = {
-  projectId: string;
-  counterparty: { name: string; company: string; email: string };
-  dates: ProjectDate[];
-};
-
-/** What a proposal for this message knows, built the same way on the review screen and on the server. */
-export function intakeContext(data: AppData, m: InboxMessage): IntakeContext {
-  const thread = m.gmail?.threadId ? data.inbox.filter((x) => x.id !== m.id && x.gmail?.threadId === m.gmail!.threadId) : [];
-  const filed = thread.filter((x) => x.status === "confirmed" && x.projectId).sort((x, y) => y.receivedAt.localeCompare(x.receivedAt));
+/**
+ * What a proposal for this message knows, built the same way on the review screen and on the server.
+ * The sender's correspondents come from the server (lib/data/correspondents.ts); a chosen project's
+ * earlier dates, from its detail.
+ */
+export function intakeContext(
+  data: AppData,
+  m: InboxMessage,
+  { correspondents = [], earlierDates = {} }: Partial<Pick<IntakeContext, "correspondents" | "earlierDates">> = {},
+): IntakeContext {
   const address = m.gmail?.sender.match(/<([^<>]+)>\s*$/)?.[1] ?? m.gmail?.sender ?? "";
   return {
     projects: data.projects,
@@ -52,14 +58,11 @@ export function intakeContext(data: AppData, m: InboxMessage): IntakeContext {
     calendar: data.calendar,
     receivedOn: dateInZone(data.talent.timeZone, 0, new Date(m.receivedAt)),
     replyWithinDays: data.person.replyWithinDays,
-    filed: filedMessages(data.inbox, m.id),
+    correspondents,
+    earlierDates,
     contracts: data.contracts,
     projectPeople: data.projectPeople,
-    thread: {
-      projectId: filed[0]?.projectId ?? null,
-      replied: thread.some((x) => x.gmail?.sent && x.receivedAt > m.receivedAt),
-      newer: thread.some((x) => !x.gmail?.sent && !x.notice && x.receivedAt > m.receivedAt),
-    },
+    thread: { projectId: m.thread.projectId, replied: m.thread.replied, newer: m.thread.newer },
     sent: !!m.gmail?.sent,
     sender:
       m.gmail && !m.gmail.sent && address.includes("@")
@@ -68,31 +71,20 @@ export function intakeContext(data: AppData, m: InboxMessage): IntakeContext {
   };
 }
 
-/** The filed messages among a list of messages, for matching later ones to their projects. */
-export function filedMessages(
-  messages: { id: string; projectId: string | null; status: string; analysis: Pick<MessageAnalysis, "counterparty" | "dates"> | null }[],
-  except = "",
-): FiledMessage[] {
-  return messages.flatMap((m) =>
-    m.projectId && m.status === "confirmed" && m.analysis && m.id !== except
-      ? [{ projectId: m.projectId, counterparty: m.analysis.counterparty, dates: m.analysis.dates.filter((d) => d.date).map((d) => ({ what: d.what, date: d.date, time: d.time, timeZone: d.timeZone })) }]
-      : [],
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Target: which project is this?
 
 export type TargetReason =
   | { kind: "thread"; value: string } // a message in the same email thread is filed on the project
   | { kind: "contact"; value: string } // same email, company, or name
-  | { kind: "earlier"; value: string } // an earlier message from the same sender is filed on the project
+  | { kind: "earlier"; value: string } // the sender corresponds on the project: an earlier message of theirs is filed there
   | { kind: "date"; value: string } // a date the project already has
   | { kind: "detail"; value: string } // same venue, event, brand, campaign…
   | { kind: "title"; value: string }
-  | { kind: "payment"; value: number }; // the total of an expected payment the amount matches
+  | { kind: "payment"; value: number; currency: Currency }; // the total of an expected payment the amount matches
 
-export type TargetSuggestion = { projectId: string; score: number; reasons: TargetReason[] };
+/** `lastAt`: when the sender last wrote on the project, "" when they haven't. */
+export type TargetSuggestion = { projectId: string; score: number; reasons: TargetReason[]; lastAt: string };
 
 const norm = (s: string) => s.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
 const same = (a: string, b: string) => !!a && !!b && norm(a) === norm(b);
@@ -153,36 +145,24 @@ export function suggestTargets(a: MessageAnalysis, ctx: IntakeContext): TargetSu
       reasons.push({ kind: "thread", value: "" });
     }
 
+    // Who it's from, counted once: the project's contact by email, the sender corresponding on the
+    // project (decision 0019), or else a matching name or company.
     const contact = ctx.contacts.find((c) => c.id === project.counterpartyId);
+    const corresponds = ctx.correspondents.find((c) => c.projectId === project.id);
+    const names = [project.counterparty, contact?.name ?? "", contact?.company ?? ""];
+    const byName = [who.company, who.name].find((n) => names.some((m) => same(m, n) || (n.length >= 4 && overlaps(m, n))));
     if (contact && same(contact.email, who.email)) {
       score += 5;
       reasons.push({ kind: "contact", value: contact.email });
-    } else {
-      const names = [project.counterparty, contact?.name ?? "", contact?.company ?? ""];
-      const hit = [who.company, who.name].find((n) => names.some((m) => same(m, n) || (n.length >= 4 && overlaps(m, n))));
-      if (hit) {
-        score += 3;
-        reasons.push({ kind: "contact", value: hit });
-      }
+    } else if (corresponds) {
+      score += 5;
+      reasons.push({ kind: "earlier", value: ctx.sender?.email || who.email });
+    } else if (byName) {
+      score += 3;
+      reasons.push({ kind: "contact", value: byName });
     }
 
-    // Messages already filed here: the same sender is as good a sign as a linked contact.
-    const earlier = ctx.filed.filter((f) => f.projectId === project.id);
-    if (!reasons.length) {
-      const byEmail = earlier.find((f) => same(f.counterparty.email, who.email));
-      const byName = [who.company, who.name].find((n) =>
-        earlier.some((f) => [f.counterparty.company, f.counterparty.name].some((m) => same(m, n) || (n.length >= 4 && overlaps(m, n)))),
-      );
-      if (byEmail) {
-        score += 5;
-        reasons.push({ kind: "earlier", value: who.email });
-      } else if (byName) {
-        score += 3;
-        reasons.push({ kind: "earlier", value: byName });
-      }
-    }
-
-    const projectDates = new Set([...datesOf(project, ctx.calendar), ...earlier.flatMap((f) => f.dates.map((d) => d.date))]);
+    const projectDates = new Set(datesOf(project, ctx.calendar));
     const date = a.dates.find((d) => d.date && projectDates.has(d.date));
     if (date) {
       score += 3;
@@ -200,11 +180,11 @@ export function suggestTargets(a: MessageAnalysis, ctx: IntakeContext): TargetSu
     }
 
     if (a.intent === "payment") {
-      const amount = statedAmount(a);
-      const match = amount ? expectedIncome(project, ctx.payments).find((p) => near(paymentTotal(p), amount)) : undefined;
+      const stated = statedAmount(a);
+      const match = stated ? expectedIncome(project, ctx.payments).find((p) => readsAs(stated, p.currency) && near(paymentTotal(p), stated.amount)) : undefined;
       if (match) {
         score += 2;
-        reasons.push({ kind: "payment", value: paymentTotal(match) });
+        reasons.push({ kind: "payment", value: paymentTotal(match), currency: match.currency });
       }
     }
 
@@ -215,9 +195,20 @@ export function suggestTargets(a: MessageAnalysis, ctx: IntakeContext): TargetSu
 
     // A finished project still takes a late payment notice, but rarely anything else.
     if (ended(project.stage) && a.intent !== "payment") score -= 2;
-    if (score >= 3) out.push({ projectId: project.id, score, reasons });
+    if (score >= 3) out.push({ projectId: project.id, score, reasons, lastAt: corresponds?.lastAt ?? "" });
   }
-  return out.sort((x, y) => y.score - x.score);
+  // Equal points: the project the sender last wrote on first. Recency orders; it never adds points.
+  return out.sort((x, y) => y.score - x.score || y.lastAt.localeCompare(x.lastAt));
+}
+
+/** A clear lead over the next suggestion: one more piece of evidence (decision 0019). */
+export const CLEAR_LEAD = 3;
+
+/** The suggestion to tick: the only one, or one that clearly leads; otherwise none, and the person picks. */
+export function preselect(suggestions: TargetSuggestion[]): string | null {
+  const [first, second] = suggestions;
+  if (!first) return null;
+  return !second || first.score - second.score >= CLEAR_LEAD ? first.projectId : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -260,7 +251,8 @@ export type TodoPurpose = "reply" | "awaitContract" | "sendInvoice";
 
 export type Change = Base &
   (
-    | { kind: "fee"; from: number | null; to: number; taxIncluded: boolean | null }
+    /** `currency`: the project's, which the new fee is in; absent from records written before amounts carried one (they're TWD). */
+    | { kind: "fee"; from: number | null; to: number; taxIncluded: boolean | null; currency?: Currency }
     | { kind: "field"; key: string; from: string; to: string }
     | { kind: "contractNotes"; from: string; to: string }
     /**
@@ -278,10 +270,13 @@ export type Change = Base &
         earlier: boolean;
       }
     | { kind: "stage"; from: Stage; to: Stage }
-    /** Mark an expected payment received; the shortfall is often withheld tax. */
-    | { kind: "settlePayment"; paymentId: string; expected: number; amount: number; settledOn: string; invoiceRef: string }
+    /**
+     * Mark an expected payment received; the shortfall is often withheld tax. Amounts are in the
+     * payment's `currency`. `statedIn`: the message names another currency, so its amount isn't used.
+     */
+    | { kind: "settlePayment"; paymentId: string; expected: number; amount: number; settledOn: string; invoiceRef: string; currency?: Currency; statedIn?: string }
     /** No expected payment matches: offer to record it instead of guessing. */
-    | { kind: "newPayment"; label: "received" | "cancellationFee"; amount: number; settled: boolean; date: string }
+    | { kind: "newPayment"; label: "received" | "cancellationFee"; amount: number; settled: boolean; date: string; currency?: Currency }
     | { kind: "paymentNote"; paymentId: string; note: string }
     | { kind: "todo"; purpose: TodoPurpose; dueDate: string }
     | { kind: "toConfirm"; items: string[] }
@@ -354,12 +349,19 @@ export function parseAmount(text: string) {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-/** The amount the message is about: the payment field, else the fee (TWD only, the MVP's currency). */
-function statedAmount(a: MessageAnalysis) {
-  const due = parseAmount(a.details.amountDue?.value ?? "");
-  if (due) return due;
-  return a.money.amount !== null && (a.money.currency === "TWD" || !a.money.currency) ? a.money.amount : null;
+/** An amount and the currency it was written in; `currency` is "" when the message doesn't say. */
+type Stated = { amount: number; currency: string };
+
+/** The amount the message is about: the payment field, else the fee. */
+function statedAmount(a: MessageAnalysis): Stated | null {
+  const due = a.details.amountDue;
+  const dueAmount = parseAmount(due?.value ?? "");
+  if (due && dueAmount) return { amount: dueAmount, currency: currencyFrom(`${due.value} ${due.asStated}`) || a.money.currency };
+  return a.money.amount !== null ? { amount: a.money.amount, currency: a.money.currency } : null;
 }
+
+/** A stated amount can be read in this currency: the message names it, or names none (the project's is meant). */
+const readsAs = (stated: { currency: string }, currency: Currency) => !stated.currency || stated.currency === currency;
 
 const near = (expected: number, amount: number) => amount <= expected && amount >= expected * 0.85;
 
@@ -385,9 +387,7 @@ function dateChanges(a: MessageAnalysis, project: Project, ctx: IntakeContext, t
     ...kept.map((d, index) => ({ date: d, eventId: null, index, earlier: false })),
   ];
   // Dates that earlier messages on this project gave but the project doesn't keep (e.g. it predates kept dates).
-  const fromMessages: Known[] = ctx.filed
-    .filter((f) => f.projectId === project.id)
-    .flatMap((f) => f.dates)
+  const fromMessages: Known[] = (ctx.earlierDates[project.id] ?? [])
     .filter((d, i, all) => !onProject.some((e) => e.date.date === d.date) && all.findIndex((x) => x.date === d.date && x.time === d.time) === i)
     .map((d) => ({ date: d, eventId: null, index: null, earlier: true }));
   const existing = [...onProject, ...fromMessages];
@@ -419,13 +419,14 @@ function dateChanges(a: MessageAnalysis, project: Project, ctx: IntakeContext, t
   return out;
 }
 
+/** A fee in another currency than the project's isn't proposed: it can't replace the quote until amounts convert. */
 function feeChange(a: MessageAnalysis, project: Project, ticked: boolean): Change[] {
   const amount = a.money.amount;
-  if (amount === null || (a.money.currency && a.money.currency !== "TWD")) return [];
+  if (amount === null || !readsAs(a.money, project.currency)) return [];
   const taxSame = a.money.taxIncluded === null || a.money.taxIncluded === project.taxIncluded;
   if (project.quotedAmount === amount && taxSame) return [];
   return [
-    { id: "fee", kind: "fee", ticked, asStated: a.money.asStated, from: project.quotedAmount, to: amount, taxIncluded: a.money.taxIncluded },
+    { id: "fee", kind: "fee", ticked, asStated: a.money.asStated, from: project.quotedAmount, to: amount, taxIncluded: a.money.taxIncluded, currency: project.currency },
   ];
 }
 
@@ -447,49 +448,50 @@ function paymentChanges(a: MessageAnalysis, project: Project, ctx: IntakeContext
   if (!isSigned(project.stage)) return []; // the intake proposes payments only for signed work (decision 0018)
   const out: Change[] = [];
   const expected = expectedIncome(project, ctx.payments);
-  const amount = statedAmount(a);
+  const stated = statedAmount(a);
+  const amount = stated?.amount ?? null;
+  // An amount the message gives no currency for is taken to be in the project's.
+  const currency = stated?.currency || project.currency;
   const asStated = a.details.amountDue?.asStated || a.money.asStated;
   const paid = statusIs(a, /sent|paid|已匯|已付|已轉|已支付|匯出|入帳|付款完成/i);
+  // Amounts are compared only within one currency.
+  const byAmount = amount ? expected.filter((p) => p.currency === currency && near(paymentTotal(p), amount)) : [];
+  /** Settle a payment with the stated amount, unless it's in another currency: then its own total, for the person to correct. */
+  const settle = (p: Payment, ticked: boolean): Change => {
+    const total = paymentTotal(p);
+    const other = amount !== null && p.currency !== currency;
+    return {
+      id: "payment",
+      kind: "settlePayment",
+      ticked: ticked && !other,
+      asStated,
+      paymentId: p.id,
+      expected: total,
+      amount: other ? total : (amount ?? total),
+      settledOn: ctx.receivedOn,
+      invoiceRef: a.details.invoiceRef?.value ?? "",
+      currency: p.currency,
+      ...(other ? { statedIn: currency } : {}),
+    };
+  };
 
   if (paid) {
-    const byAmount = amount ? expected.filter((p) => near(paymentTotal(p), amount)) : [];
     const match = byAmount.length === 1 ? byAmount[0] : expected.length === 1 ? expected[0] : undefined;
     if (match) {
-      const total = paymentTotal(match);
-      out.push({
-        id: "payment",
-        kind: "settlePayment",
-        ticked: true,
-        asStated,
-        paymentId: match.id,
-        expected: total,
-        amount: amount ?? total,
-        settledOn: ctx.receivedOn,
-        invoiceRef: a.details.invoiceRef?.value ?? "",
-      });
+      const change = settle(match, true);
+      out.push(change);
       // The last one in: the project is settled.
-      if (expected.length === 1 && project.stage !== "closed") out.push(...stageChange(project, "closed", true));
-    } else if (amount && !expected.length) {
-      out.push({ id: "payment", kind: "newPayment", ticked: false, asStated, label: "received", amount, settled: true, date: ctx.receivedOn });
+      if (expected.length === 1 && project.stage !== "closed") out.push(...stageChange(project, "closed", change.ticked));
+    } else if (amount && !expected.length && isCurrency(currency)) {
+      out.push({ id: "payment", kind: "newPayment", ticked: false, asStated, label: "received", amount, settled: true, date: ctx.receivedOn, currency });
     } else if (expected.length) {
       // Several could match: the review screen asks which one; nothing is ticked.
-      const first = byAmount[0] ?? expected[0];
-      out.push({
-        id: "payment",
-        kind: "settlePayment",
-        ticked: false,
-        asStated,
-        paymentId: first.id,
-        expected: paymentTotal(first),
-        amount: amount ?? paymentTotal(first),
-        settledOn: ctx.receivedOn,
-        invoiceRef: a.details.invoiceRef?.value ?? "",
-      });
+      out.push(settle(byAmount[0] ?? expected[0], false));
     }
   } else if (statusIs(a, /request|invoice|發票|請款|開立/i)) {
     out.push({ id: "todo:sendInvoice", kind: "todo", ticked: true, asStated, purpose: "sendInvoice", dueDate: addDays(ctx.receivedOn, 3) });
   } else if (statusIs(a, /remind|提醒|催/i)) {
-    const target = (amount ? expected.find((p) => near(paymentTotal(p), amount)) : undefined) ?? (expected.length === 1 ? expected[0] : undefined);
+    const target = byAmount[0] ?? (expected.length === 1 ? expected[0] : undefined);
     if (target) out.push({ id: "paymentNote", kind: "paymentNote", ticked: true, asStated, paymentId: target.id, note: a.summary });
   }
   return out;
@@ -571,8 +573,10 @@ export function proposeChanges(a: MessageAnalysis, project: Project, ctx: Intake
         changes.push(...dateChanges(a, project, ctx, true, true));
       } else {
         changes.push(...stageChange(project, "cancelled", true, a.details.reason?.asStated ?? ""));
-        const fee = parseAmount(a.details.cancellationFee?.value ?? "");
-        if (fee && isSigned(project.stage))
+        const stated = a.details.cancellationFee;
+        const fee = parseAmount(stated?.value ?? "");
+        const feeCurrency = currencyFrom(`${stated?.value ?? ""} ${stated?.asStated ?? ""}`) || project.currency;
+        if (fee && isSigned(project.stage) && isCurrency(feeCurrency))
           changes.push({
             id: "payment",
             kind: "newPayment",
@@ -582,6 +586,7 @@ export function proposeChanges(a: MessageAnalysis, project: Project, ctx: Intake
             amount: fee,
             settled: false,
             date: ctx.receivedOn,
+            currency: feeCurrency,
           });
       }
       break;
@@ -644,11 +649,10 @@ function commonChanges(a: MessageAnalysis, toConfirm: string[], ctx: IntakeConte
 
 const signedStage = (a: MessageAnalysis) => /signed|已簽|簽署完成|雙方簽/i.test(a.details.contractStage?.value ?? "");
 
-/** A contract's terms as the message states them. */
-export function contractTerms(a: MessageAnalysis, type: string): ContractTerms {
-  const twd = a.money.amount !== null && (a.money.currency === "TWD" || !a.money.currency);
+/** A contract's terms as the message states them; a fee in another currency than the project's is left out. */
+export function contractTerms(a: MessageAnalysis, type: string, currency: Currency): ContractTerms {
   return {
-    fee: twd ? a.money.amount : null,
+    fee: readsAs(a.money, currency) ? a.money.amount : null,
     taxIncluded: a.money.taxIncluded,
     paymentTerms: a.paymentTerms,
     keyTerms: a.details.keyTerms?.value ?? "",
@@ -704,7 +708,7 @@ export function diffTerms(before: ContractTerms, after: ContractTerms, conflicts
 function contractVersion(a: MessageAnalysis, project: Project, ctx: IntakeContext): Change {
   const versions = ctx.contracts.filter((c) => c.projectId === project.id);
   const previous = versions.filter((c) => c.status !== "void").sort((x, y) => y.version - x.version)[0];
-  const terms = contractTerms(a, project.type);
+  const terms = contractTerms(a, project.type, project.currency);
   const diff = previous ? diffTerms(previous.terms, terms) : diffTerms(projectTerms(project), terms, true);
   const same = !!previous && diff.length === 0;
   return {
@@ -731,13 +735,14 @@ export type NewProjectProposal = {
     type: Project["type"];
     counterparty: string;
     quotedAmount: number | null;
+    currency: Currency; // the quote's, as the message states it; TWD when it doesn't say
     taxIncluded: boolean;
     fields: Record<string, string>; // registry fields, by key
     dates: ProjectDate[];
   };
   /** Link the matching contact, or create one from the sender; null when the message names nobody. */
   contact: { existing: Contact } | { create: { name: string; company: string; email: string; phone: string } } | null;
-  /** In a currency other than the MVP's TWD: kept in the notes, not as the quote. */
+  /** In a currency we don't record (not in supportedCurrencies): kept in the notes, not as the quote. */
   foreignAmount: { amount: number; currency: string } | null;
   changes: Change[]; // reply to-do and to-confirm list, as tickable extras
 };
@@ -765,14 +770,16 @@ export function proposedProject(a: MessageAnalysis) {
 export function proposeNewProject(a: MessageAnalysis, fallbackTitle: string, ctx: IntakeContext): NewProjectProposal {
   const existing = matchContact(ctx.contacts, a.counterparty);
   const who = a.counterparty;
-  const twd = a.money.amount !== null && (a.money.currency === "TWD" || !a.money.currency);
+  const currency = a.money.currency || "TWD";
+  const recorded = a.money.amount !== null && isCurrency(currency);
   const { fields, dates } = proposedProject(a);
   return {
     project: {
       title: (a.title || fallbackTitle).slice(0, 200),
       type: a.projectType,
       counterparty: existing?.name ?? (who.company || who.name),
-      quotedAmount: twd ? a.money.amount : null,
+      quotedAmount: recorded ? a.money.amount : null,
+      currency: recorded ? currency : "TWD",
       taxIncluded: a.money.taxIncluded ?? false,
       fields,
       dates,
@@ -782,7 +789,7 @@ export function proposeNewProject(a: MessageAnalysis, fallbackTitle: string, ctx
       : who.name || who.company
         ? { create: { name: who.name || who.company, company: who.name ? who.company : "", email: who.email, phone: who.phone } }
         : null,
-    foreignAmount: !twd && a.money.amount !== null ? { amount: a.money.amount, currency: a.money.currency } : null,
+    foreignAmount: !recorded && a.money.amount !== null ? { amount: a.money.amount, currency } : null,
     changes: commonChanges(a, [], ctx),
   };
 }

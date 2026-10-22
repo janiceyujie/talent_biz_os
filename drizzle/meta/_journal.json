@@ -267,6 +267,55 @@
       "when": 1792468158406,
       "tag": "0037_calendar_series_projects",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792552362845,
+      "tag": "0038_record_six_currencies",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792553656541,
+      "tag": "0039_page_the_inbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792555804541,
+      "tag": "0040_record_correspondents",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792555992989,
+      "tag": "0041_backfill_correspondents",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1792557738193,
+      "tag": "0042_record_too_large",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792558233376,
+      "tag": "0043_record_fetch_failures",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1792567478663,
+      "tag": "0044_add_document_templates",
+      "breakpoints": true
     }
   ]
 }

@@ -4,12 +4,12 @@ import { and, eq, inArray, isNull, lt, max } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { file, mailConnection, mailDecision, message, person, todo } from "@/lib/db/schema";
 import { toLocale } from "@/lib/i18n/config";
-import { queue, type EnqueueOptions } from "@/lib/queue";
+import { queue } from "@/lib/queue";
 import { analysisQueue, analyzeJobKey, fetchJobKey, fetchQueue } from "@/lib/queue/jobs";
 import { removeObjects, writeBytes } from "@/lib/storage";
 import { accessToken, MailAccessLost, markReconnectNeeded } from "../access";
 import { stripQuoted } from "../clean";
-import { gmailProvider } from "../gmail";
+import { GmailError, gmailProvider } from "../gmail";
 import { chooseAttachments, FETCH_LIMITS } from "../attachments";
 import type { AttachmentRef } from "../gmail/parts";
 import { senderCheck } from "../sender-auth";
@@ -33,8 +33,17 @@ export async function queueFetching(connectionId: string) {
   for (const d of waiting) await queueFetch(connectionId, d.id);
 }
 
-export const queueFetch = (connectionId: string, decisionId: string, tx?: EnqueueOptions["tx"]) =>
-  queue.enqueue("mail.fetch", { decisionId }, { tx, queueName: fetchQueue(connectionId), jobKey: fetchJobKey(decisionId) });
+/** Bring an email in, in the background; a failure recorded by an earlier try is cleared. */
+export async function queueFetch(connectionId: string, decisionId: string, tx?: Parameters<Parameters<typeof db.transaction>[0]>[0]) {
+  await (tx ?? db).update(mailDecision).set({ fetchFailure: null }).where(eq(mailDecision.id, decisionId));
+  await queue.enqueue("mail.fetch", { decisionId }, { tx, queueName: fetchQueue(connectionId), jobKey: fetchJobKey(decisionId) });
+}
+
+/** The last try failed: say so in Waiting, with a code that names the cause and nothing from the email. */
+export async function markFetchFailed(decisionId: string, e: unknown) {
+  const code = e instanceof GmailError ? `gmail_${e.status}` : e instanceof Error ? e.name.slice(0, 40) : "unexpected";
+  await db.update(mailDecision).set({ fetchFailure: code }).where(and(eq(mailDecision.id, decisionId), isNull(mailDecision.messageId)));
+}
 
 export async function fetchDecision(decisionId: string) {
   const [row] = await db
@@ -57,6 +66,11 @@ export async function fetchDecision(decisionId: string) {
     read = await mail.getMessage(d.providerMessageId);
   } catch (e) {
     if (e instanceof MailAccessLost) return markReconnectNeeded(c.id);
+    // Too large to read: retrying won't shrink it. Filtered out, saying why, so it's opened in Gmail instead.
+    if (e instanceof GmailError && e.reason === "response_too_large") {
+      await db.update(mailDecision).set({ outcome: "skipped", decidedBy: "too_large" }).where(eq(mailDecision.id, d.id));
+      return;
+    }
     throw e;
   }
   if (!read) {
@@ -69,9 +83,15 @@ export async function fetchDecision(decisionId: string) {
   const stored: { id: string; key: string; a: AttachmentRef; size: number }[] = [];
   try {
     for (const a of fetch) {
-      const bytes = a.attachmentId ? await mail.getAttachment(read.id, a.attachmentId) : Buffer.from(a.data ?? "", "base64url");
+      // One larger than Gmail's listed size said is listed, not fetched, rather than failing the whole email.
+      const bytes = a.attachmentId
+        ? await mail.getAttachment(read.id, a.attachmentId).catch((e) => {
+            if (e instanceof GmailError && e.reason === "response_too_large") return Buffer.alloc(0);
+            throw e;
+          })
+        : Buffer.from(a.data ?? "", "base64url");
       if (!bytes.length || bytes.length > FETCH_LIMITS.fileBytes) {
-        skipped.push({ filename: a.filename, mimeType: a.mimeType, sizeBytes: bytes.length });
+        skipped.push({ filename: a.filename, mimeType: a.mimeType, sizeBytes: bytes.length || a.size });
         continue;
       }
       const id = randomUUID();

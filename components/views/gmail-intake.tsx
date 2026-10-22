@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { InboxReaderLayout } from "@/components/app/inbox-reader-layout";
 import { InfoHint } from "@/components/app/info-hint";
-import { addSenderRule, markWasWork, syncGmail } from "@/lib/actions/mail";
+import { addSenderRule, markWasWork, retryFetch, syncGmail } from "@/lib/actions/mail";
 import { domainOf } from "@/lib/mail/metadata";
 import { isPersonalDomain } from "@/lib/mail/relevance/rules";
 import type { GmailMailItem, GmailMailPage, GmailMailView } from "@/lib/types";
@@ -84,7 +84,7 @@ export function IntakeTabs({ tab, onTab }: { tab: IntakeTab; onTab: (tab: Intake
   const t = useTranslations("gmail");
   const counts = gmail.connection?.counts ?? { waiting: 0, skipped: 0 };
   // Messages counts what's waiting for review, as the Intake badge in the menu does (app-shell).
-  const toReview = inbox.filter((m) => m.status === "analyzed" || m.status === "error").length;
+  const toReview = inbox.counts.analyzed + inbox.counts.error;
   // Every tab shows its count, 0 too: a missing number reads as "nothing here" when that isn't known.
   const tabs: [IntakeTab, string, number][] = [
     ["messages", t("tabMessages"), toReview],
@@ -185,9 +185,12 @@ export function GmailMail({ view, onNotice }: { view: GmailMailView; onNotice: (
               <div className={`mail-item single ${picked?.id === m.id ? "is-active" : ""}`} key={m.id}>
                 <button className={`mail-summary ${picked?.id === m.id ? "active" : ""}`} aria-pressed={picked?.id === m.id} onClick={() => setActive(m.id)}>
                   <small>
-                    {view === "waiting" && (
-                      <em className={`message-status ${outcomeChip[m.outcome]}`}>{t(`outcome.${m.outcome}`)}</em>
-                    )}{" "}
+                    {view === "waiting" &&
+                      (m.fetchFailed ? (
+                        <em className="message-status status-error">{t("fetchFailedChip")}</em>
+                      ) : (
+                        <em className={`message-status ${outcomeChip[m.outcome]}`}>{t(`outcome.${m.outcome}`)}</em>
+                      ))}{" "}
                     {m.from ? m.from.name || m.from.address : ""}
                   </small>
                   <strong>{m.subject === null ? (error ? t("notLoaded") : t("unreadable")) : m.subject || t("noSubject")}</strong>
@@ -278,8 +281,27 @@ function GmailMailDetail({
           </div>
         )}
       </dl>
+      {item.fetchFailed && (
+        <p className="notice error section-gap" role="status">
+          {t("fetchFailed")}
+        </p>
+      )}
       <div className="row-actions section-gap">
-        {view === "skipped" && (
+        {item.fetchFailed && (
+          <button
+            className="primary"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                onNotice((await retryFetch(item.id)) ?? t("bringingIn"));
+              })
+            }
+          >
+            {t("tryAgain")}
+          </button>
+        )}
+        {/* One too large to bring in would only be refused again: the reason says to paste what matters instead. */}
+        {view === "skipped" && item.decidedBy !== "too_large" && (
           <button
             className="primary"
             disabled={pending}

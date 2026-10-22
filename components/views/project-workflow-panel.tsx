@@ -4,13 +4,14 @@ import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { DateTimeInput } from "@/components/app/date-time-input";
 import { Modal } from "@/components/app/modal";
 import { DealCard } from "./deal-card";
 import { toRecord, type Editor } from "@/components/app/record-editor";
 import { createPaymentPlan } from "@/lib/actions/payments";
 import { dateInZone } from "@/lib/domain/dates";
 import { splitPayments } from "@/lib/domain/money";
-import { useMoney } from "@/lib/i18n/format";
+import { useMoney, useMoneyTotals } from "@/lib/i18n/format";
 import { isOpenStage } from "@/lib/domain/phases";
 import { projectQuoteTotal, projectSettlement } from "@/lib/domain/workflow";
 import { useLabels } from "@/lib/i18n/labels";
@@ -57,7 +58,7 @@ export function useClosingChecks(project: Project | null): ClosingCheck[] {
       key: "billing",
       always: true,
       met: settlement.unbilled <= 0 && settlement.billed > 0,
-      open: settlement.unbilled > 0 ? t("warn.unbilled", { amount: money(settlement.unbilled) }) : t("warn.notBilled"),
+      open: settlement.unbilled > 0 ? t("warn.unbilled", { amount: money(settlement.unbilled, project.currency) }) : t("warn.notBilled"),
       done: t("met.billing"),
       fix: { kind: "billing", amount: Math.max(0, settlement.unbilled) },
     },
@@ -65,12 +66,12 @@ export function useClosingChecks(project: Project | null): ClosingCheck[] {
       key: "received",
       always: true,
       met: settlement.pending <= 0 && settlement.received > 0,
-      open: settlement.pending > 0 ? t("warn.pending", { amount: money(settlement.pending) }) : t("warn.nothingReceived"),
+      open: settlement.pending > 0 ? t("warn.pending", { amount: money(settlement.pending, project.currency) }) : t("warn.nothingReceived"),
       done: t("met.received"),
       fix: { kind: "received", paymentId: expected[0]?.id ?? null },
     },
-    { key: "overbilled", always: false, met: settlement.unbilled >= 0, open: t("warn.overbilled", { amount: money(-settlement.unbilled) }), done: "", fix: { kind: "money" } },
-    { key: "shortfall", always: false, met: settlement.shortfall <= 0, open: t("warn.shortfall", { amount: money(settlement.shortfall) }), done: "", fix: { kind: "money" } },
+    { key: "overbilled", always: false, met: settlement.unbilled >= 0, open: t("warn.overbilled", { amount: money(-settlement.unbilled, project.currency) }), done: "", fix: { kind: "money" } },
+    { key: "shortfall", always: false, met: settlement.shortfall <= 0, open: t("warn.shortfall", { amount: money(settlement.shortfall, project.currency) }), done: "", fix: { kind: "money" } },
     { key: "costs", always: false, met: !settlement.unpaidCosts.length, open: t("warn.unpaidCosts", { count: settlement.unpaidCosts.length }), done: "", fix: { kind: "money" } },
   ];
   return all.filter((c) => c.always || !c.met).map(({ key, met, open, done, fix }) => ({ key, met, open, done, fix }));
@@ -83,6 +84,7 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
   const tProjects = useTranslations("projects");
   const labels = useLabels();
   const money = useMoney();
+  const moneyTotals = useMoneyTotals();
   const today = dateInZone(data.talent.timeZone);
   const [plan, setPlan] = useState(false);
   const [percent, setPercent] = useState(50);
@@ -100,7 +102,7 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
 
   let preview: ReturnType<typeof splitPayments> | undefined;
   try {
-    if (quoteSet) preview = splitPayments(projectQuoteTotal(project)!, percent);
+    if (quoteSet) preview = splitPayments(projectQuoteTotal(project)!, percent, project.currency);
   } catch {}
 
   return (
@@ -113,10 +115,12 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
             [t("received"), settlement.received],
             [t("outstanding"), settlement.pending],
             ...(settlement.shortfall > 0 ? [[t("shortfall"), settlement.shortfall] as const] : []),
+            // Income in another currency can't be set against the quote until amounts convert.
+            ...(settlement.otherIncome.length ? [[t("otherCurrencies"), moneyTotals(settlement.otherIncome)] as const] : []),
           ].map(([label, value]) => (
             <div key={String(label)}>
               <dt>{label}</dt>
-              <dd>{typeof value === "number" ? money(value) : value}</dd>
+              <dd>{typeof value === "number" ? money(value, project.currency) : value}</dd>
             </div>
           ))}
         </dl>
@@ -131,6 +135,7 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
                     projectId: project.id,
                     label: tProjects("paymentLabel", { title: project.title.slice(0, 190) }),
                     amount: project.quotedAmount === null ? "" : Math.max(0, settlement.unbilled),
+                    currency: project.currency,
                     taxRate: project.taxRate,
                     taxIncluded: true,
                   },
@@ -156,7 +161,7 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
                 <button className="deal-record" onClick={() => edit({ kind: "payment", item: toRecord(p) })}>
                   <span>{p.label}</span>
                   <small>{labels.paymentStatus(p)}</small>
-                  <strong>{money(p.amount)}</strong>
+                  <strong>{money(p.amount, p.currency)}</strong>
                 </button>
               </li>
             ))}
@@ -202,17 +207,11 @@ export function ProjectWorkflowPanel({ project, edit }: { project: Project; edit
                 onChange={(e) => setPercent(Number(e.target.value))}
               />
             </label>
-            <label>
-              {t("depositDue")}
-              <input type="date" required value={depositDue} onChange={(e) => setDepositDue(e.target.value)} />
-            </label>
-            <label>
-              {t("balanceDue")}
-              <input type="date" required min={depositDue} value={balanceDue} onChange={(e) => setBalanceDue(e.target.value)} />
-            </label>
+            <DateTimeInput kind="date" required label={t("depositDue")} value={depositDue} today={today} onChange={setDepositDue} />
+            <DateTimeInput kind="date" required min={depositDue} label={t("balanceDue")} value={balanceDue} today={today} onChange={setBalanceDue} />
             {preview ? (
               <p>
-                {t("planPreview", { deposit: money(preview.deposit), balance: money(preview.balance), total: money(preview.total) })}
+                {t("planPreview", { deposit: money(preview.deposit, project.currency), balance: money(preview.balance, project.currency), total: money(preview.total, project.currency) })}
               </p>
             ) : (
               <p role="alert">{t("planInvalid")}</p>

@@ -160,6 +160,6 @@ describe("planItems", () => {
     const project = (id: string, stage: Project["stage"]) => ({ id, stage, archived: false, title: id, counterparty: "" }) as Project;
     const items = planItems(data([], [pay("p1", "signed"), pay("p2", "talking"), pay("p3", null)], [project("signed", "signed"), project("talking", "negotiating")]));
     assert.deepEqual(items.map((i) => i.id), ["payment:p1", "payment:p3"]);
-    assert.equal(items[0].amount, 21000);
+    assert.deepEqual(items[0].amount, { value: 21000, currency: "TWD" });
   });
 });

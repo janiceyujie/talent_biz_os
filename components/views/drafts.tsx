@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { DocumentLibrary } from "./document-library";
 import { Modal } from "@/components/app/modal";
 import { useProjectDetail, withDetail } from "@/components/app/project-detail";
 import { RecordEditor, toRecord, type Editor } from "@/components/app/record-editor";
@@ -421,6 +422,7 @@ export function DraftsView({ initialProjectId = "", initialAsks = [] }: { initia
             ))}
           {!data.drafts.filter((d) => !d.archived).length && <p className="empty">{t("savedEmpty")}</p>}
         </section>
+        <DocumentLibrary />
       </fieldset>
       {pendingChange && (
         <Modal title={t("confirmTitle")} onClose={() => setPendingChange(null)}>

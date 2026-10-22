@@ -4,6 +4,7 @@
 import { calendarPoints, pointKind } from "@/lib/calendar/points";
 import type { AppData, CalendarKind, NotificationState } from "@/lib/types";
 import { dateInZone, exactInstant } from "./dates";
+import type { Currency } from "./money";
 import { isSigned } from "./phases";
 import { countedPayments, paymentTotal } from "./workflow";
 
@@ -27,7 +28,7 @@ type Base = {
 export type Notification = Base &
   (
     | { kind: "calendar"; source: "event" | "todo"; calendarKind: CalendarKind; marker: ReturnType<typeof pointKind>; location: string }
-    | { kind: "receivable" | "payable"; amount: number }
+    | { kind: "receivable" | "payable"; amount: number; currency: Currency }
   );
 
 /**
@@ -98,6 +99,7 @@ export function notifications(data: AppData, now = new Date()): Notification[] {
       kind: p.direction === "in" ? "receivable" : "payable",
       title: p.label,
       amount: paymentTotal(p),
+      currency: p.currency,
       date: p.dueDate!,
       time: "",
       timeZone: talentZone,

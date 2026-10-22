@@ -22,7 +22,7 @@ function useDescribe(project: ProjectSummary) {
   return (c: ChangeRecord): string => {
     switch (c.kind) {
       case "fee":
-        return `${t("change.fee")} ${arrow(c.from === null ? "" : money(c.from), money(c.to))}`;
+        return `${t("change.fee")} ${arrow(c.from === null ? "" : money(c.from, c.currency), money(c.to, c.currency))}`;
       case "field":
         return `${labels.detailField(project.type, c.key)} ${arrow(c.from, c.to)}`;
       case "contractNotes":
@@ -32,9 +32,9 @@ function useDescribe(project: ProjectSummary) {
       case "stage":
         return `${t("change.stage")} ${arrow(labels.stage(c.from), labels.stage(c.to))}`;
       case "settlePayment":
-        return `${t("change.settlePayment", { label: data.payments.find((p) => p.id === c.paymentId)?.label ?? "" })} ${t("received")} ${money(c.amount)}`;
+        return `${t("change.settlePayment", { label: data.payments.find((p) => p.id === c.paymentId)?.label ?? "" })} ${t("received")} ${money(c.amount, c.currency)}`;
       case "newPayment":
-        return `${c.label === "received" ? t("change.newPaymentReceived") : t("change.newPaymentCancellationFee")} ${money(c.amount)}`;
+        return `${c.label === "received" ? t("change.newPaymentReceived") : t("change.newPaymentCancellationFee")} ${money(c.amount, c.currency)}`;
       case "paymentNote":
         return t("change.paymentNote", { label: data.payments.find((p) => p.id === c.paymentId)?.label ?? "" });
       case "todo":
@@ -124,7 +124,7 @@ export function ContractVersions({ project }: { project: ProjectSummary }) {
           <li key={c.id} className={c.status === "void" ? "void" : ""}>
             <strong>{t("version", { version: c.version })}</strong> · {t(`contractStatus.${c.status}`)} ·{" "}
             <time dateTime={c.createdAt}>{format.dateTime(new Date(c.createdAt), { dateStyle: "medium" })}</time>
-            <TermDiff diff={c.diff} against={c.against} same={false} type={project.type} />
+            <TermDiff diff={c.diff} against={c.against} same={false} type={project.type} currency={project.currency} />
             {c.messageId && <Link href={`/inbox?message=${c.messageId}`}>{t("original")}</Link>}
           </li>
         ))}

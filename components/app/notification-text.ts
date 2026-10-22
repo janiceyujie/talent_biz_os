@@ -17,7 +17,7 @@ export function useNotificationText() {
       };
     return {
       title: n.kind === "receivable" ? t("followUpPayment", { label: n.title }) : t("payPayment", { label: n.title }),
-      detail: t("paymentDue", { date: n.date, amount: money(n.amount) }),
+      detail: t("paymentDue", { date: n.date, amount: money(n.amount, n.currency) }),
     };
   };
 }

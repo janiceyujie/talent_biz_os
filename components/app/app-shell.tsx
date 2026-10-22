@@ -127,7 +127,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const { unread } = useNotifications();
   // Messages waiting for the person: analyzed and not yet filed or dismissed.
-  const toReview = data.inbox.filter((m) => m.status === "analyzed" || m.status === "error").length;
+  const toReview = data.inbox.counts.analyzed + data.inbox.counts.error;
   const results = [
     ...data.projects
       .filter((p) => !p.archived)

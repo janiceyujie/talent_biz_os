@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, LockKeyhole, Move, Plus, Trash2 } from "luci
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition, type MouseEvent as ReactMouseEvent, type PointerEvent } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { DateTimeInput } from "@/components/app/date-time-input";
 import { Modal } from "@/components/app/modal";
 import { PageHeader } from "@/components/app/page-header";
 import { EventProjectPicker, SeriesProjectPicker } from "@/components/app/project-picker";
@@ -134,14 +135,7 @@ export function PlannerView({ initialDay = "", initialDate = "" }: { initialDay?
         </select>
         {view !== "month" && (
           <>
-            <input
-              className="planner-go-to"
-              type="date"
-              aria-label={t("goTo")}
-              title={t("goTo")}
-              value={date}
-              onInput={(e) => e.currentTarget.value && setDate(e.currentTarget.value)}
-            />
+            <DateTimeInput className="planner-go-to" kind="date" hideLabel required label={t("goTo")} value={date} today={today} onChange={(v) => v && setDate(v)} />
           </>
         )}
         <button className="primary" title={t("add")} aria-label={t("add")} onClick={() => setEditor({ kind: "calendar", item: { date } })}>
@@ -577,7 +571,7 @@ export function EventCard({
         {!compact && item.project && <span>{item.project}</span>}
         {!compact && !item.projectId && (item.ref.source === "event" || !!item.external?.series) && <span className="no-project">{t("noProject")}</span>}
         {!compact && item.client && <span className="planner-event-meta">{item.client}</span>}
-        {item.amount !== null && <span className="planner-event-meta">{money(Math.abs(item.amount))}</span>}
+        {item.amount !== null && <span className="planner-event-meta">{money(Math.abs(item.amount.value), item.amount.currency)}</span>}
         {clash && <span className="planner-conflict">{t("conflict")}</span>}
         {item.note && <span className="planner-event-meta">{t("stated", { when: item.note })}</span>}
       </button>
@@ -609,7 +603,6 @@ function TimeEditor({
 }) {
   const t = useTranslations("planner");
   const [draft, setDraft] = useState<PlanItem>(item);
-  // The value is read before the update: React runs the update after the input event is gone.
   const set = (key: "date" | "start" | "endDate" | "end", value: string) => setDraft((d) => ({ ...d, [key]: value }));
   const [confirm, setConfirm] = useState(dropped);
   const [error, setError] = useState("");
@@ -648,22 +641,10 @@ function TimeEditor({
         ) : (
           // Start and end as pairs: day and time side by side.
           <div className="planner-time-fields">
-            <label>
-              {t("startDate")}
-              <input type="date" required value={draft.date} onInput={(e) => set("date", e.currentTarget.value)} />
-            </label>
-            <label>
-              {t("start")}
-              <input type="time" value={draft.start} onInput={(e) => set("start", e.currentTarget.value)} />
-            </label>
-            <label>
-              {t("endDate")}
-              <input type="date" value={draft.endDate} onInput={(e) => set("endDate", e.currentTarget.value)} />
-            </label>
-            <label>
-              {t("end")}
-              <input type="time" value={draft.end} onInput={(e) => set("end", e.currentTarget.value)} />
-            </label>
+            <DateTimeInput kind="date" required label={t("startDate")} value={draft.date} today={item.date} onChange={(v) => set("date", v)} />
+            <DateTimeInput kind="time" label={t("start")} value={draft.start} today={item.date} onChange={(v) => set("start", v)} />
+            <DateTimeInput kind="date" label={t("endDate")} value={draft.endDate} today={item.date} onChange={(v) => set("endDate", v)} />
+            <DateTimeInput kind="time" label={t("end")} value={draft.end} today={item.date} onChange={(v) => set("end", v)} />
           </div>
         )}
         {!!overlaps.length && (
@@ -774,7 +755,7 @@ function zoneOffset(date: string, timeZone: string, locale: string) {
   return parts.find((p) => p.type === "timeZoneName")?.value ?? timeZone;
 }
 
-/** A repeating event in our own Talent Biz OS calendar: read-only here, but it can go on a project as a whole (decision 0017). */
+/** A repeating event in our own Taloox calendar: read-only here, but it can go on a project as a whole (decision 0017). */
 function SeriesDialog({ item, onClose, onFile }: { item: PlanItem; onClose: () => void; onFile: () => void }) {
   const t = useTranslations("planner");
   const link = item.ref.source === "google" ? item.ref.link : "";

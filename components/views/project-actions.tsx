@@ -89,6 +89,7 @@ export function ProjectActions({
           projectId: project.id,
           label: tProjects("paymentLabel", { title: project.title.slice(0, 190) }),
           amount: f.amount || "",
+          currency: project.currency, // what's left to bill is in the quote's currency
           taxRate: full.taxRate,
           taxIncluded: true,
         },
@@ -244,13 +245,13 @@ export function ProjectGlance({
           <strong>{tProjects("quoteNotSet")}</strong>
         ) : signed ? (
           <>
-            <strong>{tWorkflow("receivedOf", { received: money(settlement.received), quoted: money(settlement.quoted) })}</strong>
+            <strong>{tWorkflow("receivedOf", { received: money(settlement.received, project.currency), quoted: money(settlement.quoted, project.currency) })}</strong>
             <span className="meter" aria-hidden="true">
               <span style={{ width: `${Math.min(100, settlement.quoted ? (settlement.received / settlement.quoted) * 100 : 0)}%` }} />
             </span>
           </>
         ) : (
-          <strong>{money(settlement.quoted)}</strong>
+          <strong>{money(settlement.quoted, project.currency)}</strong>
         )}
       </button>
       <button className="glance-card" onClick={() => showTab("travel")}>

@@ -62,6 +62,32 @@ Shortcuts taken on purpose, and gaps we know about: what happens today, why it's
 
 Start with 1 and 2. Do 3 with the next change to the extraction prompt, since that re-reads every announcement once anyway. Weigh 4 against the cost the measurement in 5 shows.
 
+### Disciplines are seven broad buckets, matched by keywords
+
+**Today.** A call's disciplines and the profile's come from one fixed list of seven, in `lib/opportunities/types.ts`: music, performing arts, visual arts, film, writing, content, and other. Each source maps to it differently:
+- **Ministry of Culture:** by the funding unit only. Pop music is music; film, radio, and TV are film; every other unit is unknown.
+- **Tracked pages:** the model picks from the list, and a pick is kept only when its passage contains one of that discipline's keywords (`disciplineWords` in `lib/opportunities/sources/pages.ts`).
+- **Grants.gov:** none, so it's always unknown.
+
+So common fields have no bucket of their own:
+- design;
+- comics and picture books;
+- crafts (folded into visual arts);
+- traditional opera (folded into performing arts);
+- cultural heritage.
+
+A comics prize comes out unknown rather than writing. The keyword check also keeps a pick when its passage only lists the discipline among many.
+
+**Why for now.** Seven buckets were enough to tell a music profile from a visual arts call, which was the first use. Finer ones change the profile people fill in and every source's mapping at once.
+
+**Fix.** Revisit with the page review above:
+- **Which buckets talents use to describe themselves.** Likely splits: design, comics and picture books, crafts, traditional arts.
+- **How each source maps to them:**
+  - the Ministry of Culture's programs by name, not only by unit;
+  - the tracked pages' keywords per bucket;
+  - a migration of saved profiles when a bucket splits.
+- **Whether a card shows the bucket or the call's own wording.** For example 傳統音樂類 rather than "music".
+
 ## Intake
 
 ### HEIC photos can't be sent in

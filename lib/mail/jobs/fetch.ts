@@ -14,6 +14,7 @@ import { chooseAttachments, FETCH_LIMITS } from "../attachments";
 import type { AttachmentRef } from "../gmail/parts";
 import { senderCheck } from "../sender-auth";
 import { bringNotice, pathFor } from "./notice";
+import { log } from "@/lib/log";
 
 // mail.fetch (docs/design/gmail-ingestion.md, Jobs): bring one email decided
 // as work, or Not sure, into Intake (a bank or payment-app notice: ./notice.ts). Its text (quoted history stripped) becomes
@@ -185,8 +186,7 @@ export async function fetchDecision(decisionId: string) {
     }
   } catch (e) {
     await removeObjects(stored.map((f) => f.key)).catch(() => undefined);
-    // Ids and codes only: never the subject or body.
-    console.error("mail.fetch failed", d.id, (e as Error)?.name, (e as { status?: number })?.status ?? "");
+    log.error("mail.fetch.failed", { decision_id: d.id, error: e });
     throw e;
   }
 }

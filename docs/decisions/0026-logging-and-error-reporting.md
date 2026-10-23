@@ -64,6 +64,18 @@ Built before the first beta user besides the builder.
 
   Granted and revoked only by SQL, with no screen in the app, so no bug in the app can grant it. Revoking sets `revoked_at` and keeps the row, so who had access when stays on record. Only `support` is used at first, and it can only read the Support page; what `admin` may do is decided when it's needed.
 
+### Implementation notes
+
+Logs (`user/janlin/structured-logs`):
+
+- `lib/log` checks values as well as types: an id field must look like an id and a code field like a code, or the value is written as `[invalid]`; a field outside the allowlist is dropped. So a cast can't get content through either.
+- `env` is `DEPLOY_ENV` (`staging` or `production`, from each environment's group in `render.yaml`). `release` is the deployed commit (`RENDER_GIT_COMMIT`, first 12 characters): staging deploys commits, not tags, and a tag names a commit.
+- Graphile Worker's own messages go through `lib/log` too (`worker/queue-log.ts`): its line for a failed job quotes the error's message and stack, so only the error's name and code are kept, and its progress messages are dropped.
+- Jobs log `job.started`, `job.succeeded`, `job.will_retry` (warn), and `job.failed` (error, the last attempt), with the payload's ids.
+- A worker that refuses to start prints the reason, a setting's name, before any job has run.
+- ESLint's `no-console` keeps `console.*` out of server code.
+- One line per request, with its `request_id`, comes with the error codes on error screens: request ids aren't in the app yet.
+
 ## Alternatives considered
 
 - **Render's logs alone.** Free and no dependency, but nothing tells the builder something broke; customers would.

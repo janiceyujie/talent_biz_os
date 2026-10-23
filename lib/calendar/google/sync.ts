@@ -12,6 +12,7 @@ import { googleCalendar, GoogleCalendarError } from "./api";
 import { planSync, toGoogleEvent } from "./plan";
 import { readBack } from "./read-back";
 import { fieldsOfOurs } from "./two-way";
+import { log } from "@/lib/log";
 
 // Our events and a dedicated calendar in the person's Google account, both ways
 // (decision 0009, phase 1; decision 0017). A sync first reads what changed in
@@ -106,7 +107,7 @@ async function readGoogle(tx: Tx, connectionId: string): Promise<{ failure?: { f
       await tx.update(calendarConnection).set({ lastError: "auth", status: "needs_reconnect" }).where(eq(calendarConnection.id, c.id));
       return { failure: { failure: "auth", retry: false }, others: [] };
     }
-    console.error("calendar read failed", { connectionId, status: e instanceof GoogleCalendarError ? e.status : (e as Error)?.name });
+    log.error("calendar.read.failed", { connection_id: connectionId, error: e });
     return { others: [] };
   }
 }
@@ -129,7 +130,7 @@ async function pushPasses(tx: Tx, connectionId: string): Promise<{ failure: Sync
         .update(calendarConnection)
         .set({ dirty: true, lastError: failure, ...(failure === "auth" ? { status: "needs_reconnect" as const } : {}) })
         .where(eq(calendarConnection.id, c.id));
-      console.error("calendar sync failed", { connectionId, failure, message: e instanceof Error ? e.message : String(e) });
+      log.error("calendar.push.failed", { connection_id: connectionId, reason: failure, error: e });
       const status = e instanceof GoogleCalendarError ? e.status : 0;
       return { failure, retry: failure === "network" || (failure === "google" && (status === 429 || status >= 500)) };
     }

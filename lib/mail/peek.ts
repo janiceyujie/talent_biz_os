@@ -6,6 +6,7 @@ import { accessToken, dropAccessToken, MailAccessLost, markReconnectNeeded } fro
 import { gmailProvider, GmailError } from "./gmail";
 import type { Address } from "./metadata";
 import { readMetadata } from "./read";
+import { log } from "@/lib/log";
 
 // Sender and subject for the emails Filtered out and Waiting list in Intake,
 // read live from Gmail as the page opens (decision 0013): we store only ids.
@@ -43,7 +44,7 @@ export async function peekMail(connectionId: string, ids: string[]): Promise<Pee
     }
     if (e instanceof GmailError) {
       if (e.status === 401) dropAccessToken(c.id);
-      console.error("mail peek failed", c.id, e.status, e.reason);
+      log.error("mail.peek.failed", { connection_id: c.id, error: e });
       return { error: "gmail" };
     }
     throw e;

@@ -24,6 +24,9 @@ projects:
         envVarGroups:
           - name: taloox-staging
             envVars:
+              # Which deployment a log line came from (lib/log).
+              - key: DEPLOY_ENV
+                value: staging
               - key: AI_PRIMARY
                 value: anthropic
               - key: AI_BACKUP
@@ -146,6 +149,9 @@ projects:
         envVarGroups:
           - name: taloox-production
             envVars:
+              # Which deployment a log line came from (lib/log).
+              - key: DEPLOY_ENV
+                value: production
               - key: AI_PRIMARY
                 value: anthropic
               - key: AI_BACKUP

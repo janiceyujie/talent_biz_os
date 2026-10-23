@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { peekMail } from "@/lib/mail/peek";
 import { authorized, PEEK_PATH, peekRequest } from "@/lib/mail/worker-api";
+import { log } from "@/lib/log";
 
 // The worker's private endpoint (lib/mail/worker-api.ts): sender and subject
 // for Intake's Filtered out and Waiting, read live from Gmail. Locally it
@@ -12,18 +13,18 @@ const MAX_BODY = 16 * 1024;
 export function startHttp(env = process.env) {
   const secret = env.WORKER_SECRET;
   if (!secret) {
-    console.warn("worker http: WORKER_SECRET not set; Filtered out and Waiting can't show senders and subjects");
+    log.warn("worker.http.no_secret"); // WORKER_SECRET unset: Filtered out and Waiting can't show senders and subjects
     return null;
   }
   const port = Number(env.WORKER_HTTP_PORT || 3001);
   const host = env.WORKER_HTTP_HOST || "127.0.0.1";
   const server = createServer((req, res) => {
     handle(req, res, secret).catch((e) => {
-      console.error("worker http", (e as Error)?.name);
+      log.error("worker.http.failed", { error: e });
       send(res, 500, { error: "internal" });
     });
   });
-  server.listen(port, host, () => console.log(`worker http: listening on ${host}:${port}`));
+  server.listen(port, host, () => log.info("worker.http.listening", { port }));
   return server;
 }
 

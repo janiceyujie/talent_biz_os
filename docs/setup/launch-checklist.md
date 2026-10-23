@@ -76,7 +76,9 @@ From [decision 0008](../decisions/0008-ai-operations.md):
 ## 6. Operations
 
 - [ ] Database backups, and a restore tried once.
-- [ ] Error reporting and logs somewhere you'll see them: JSON logs through `lib/log`, Sentry through `lib/errors` with scrubbing and its test, alerts by email and phone push ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
+- [x] JSON logs through `lib/log`: jobs, Google and model failures, sign-in outcomes; `console.*` refused by lint in server code ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
+- [ ] Error reporting somewhere you'll see it: Sentry through `lib/errors` with scrubbing and its test, alerts by email and phone push ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
+- [ ] One `info` line per request with its `request_id`, and the error code on error screens ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
 - [ ] A staff-only Support page (lookup by email, a metadata-only timeline, each lookup audited), the `staff` table, and error codes on error screens ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
 - [ ] A way to delete an account and everything in it, on request (privacy policy).
 - [ ] Invite-only sign-up on production: `SIGNUP_ALLOWLIST=1` (in `render.yaml`) and `WAITLIST_URL` on the web service, the waitlist form on the marketing site, and the first batch added ([beta-access.md](beta-access.md), [decision 0028](../decisions/0028-invite-only-beta.md)).

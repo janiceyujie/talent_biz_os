@@ -16,6 +16,7 @@ import { stripInvisible } from "./safety";
 import { canAnalyze } from "./usage";
 import { ModelError } from "./model";
 import { aiPaused } from "./pause";
+import { log } from "@/lib/log";
 
 /** While AI is paused, a message's analysis looks again this often. */
 const PAUSED_RETRY_MS = 5 * 60 * 1000;
@@ -111,7 +112,7 @@ export async function analyzeMessage(messageId: string, outputLocale: Locale) {
     if (e instanceof ModelError && e.code === "paused") return waitWhilePaused(messageId, row.talentId, outputLocale); // paused since the check
     // The code is shown to the person in their language (inbox.failure.*); details go to the log.
     const failure = e instanceof ModelError ? e.code : "unexpected";
-    console.error("analyzeMessage", messageId, e instanceof ModelError ? `${e.code}: ${e.message}` : e);
+    log.error("ai.analyze.failed", { message_id: messageId, error: e });
     await db
       .update(message)
       .set({ status: "error", failure: failure.slice(0, 500) })

@@ -87,7 +87,7 @@ jobs:
       - name: The worker starts, and stops cleanly on SIGTERM
         run: |
           docker run -d --name worker --network host --env-file "$RUNNER_TEMP/env" taloox:ci sh -c "exec $(yq "$WORKER | .dockerCommand" render.yaml)"
-          ready() { docker logs worker 2>&1 | grep -q "worker http: listening"; }
+          ready() { docker logs worker 2>&1 | grep -q '"event":"worker.http.listening"'; }
           for _ in $(seq 30); do ready && break; sleep 1; done
           ready || { docker logs worker; exit 1; }
           docker stop -t 30 worker

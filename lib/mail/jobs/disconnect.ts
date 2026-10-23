@@ -6,8 +6,9 @@ import { open } from "@/lib/keys";
 import { removeObjects } from "@/lib/storage";
 import { accessToken } from "../access";
 import { gmailProvider } from "../gmail";
-import { OAuthError, revokeToken } from "../oauth";
+import { revokeToken } from "../oauth";
 import { fromColumns, tokenAad } from "../token";
+import { log } from "@/lib/log";
 
 /**
  * mail.disconnect (decision 0013): stop push notices, withdraw our access at Google, remove what
@@ -24,13 +25,12 @@ export async function disconnectMailbox(connectionId: string, { lastAttempt, kee
   if (c.watchExpiresAt && c.watchExpiresAt > new Date())
     await gmailProvider(await accessToken(c))
       .stopWatch()
-      .catch((e) => console.error("mail.disconnect: couldn't stop the watch", connectionId, (e as Error)?.name));
+      .catch((e) => log.warn("mail.disconnect.stop_watch_failed", { connection_id: connectionId, error: e }));
   try {
     await revokeToken(await open(fromColumns(c), tokenAad(c.talentId, c.accountSubject)));
   } catch (e) {
     if (!lastAttempt) throw e;
-    // Ids and codes only: never the token.
-    console.error("mail.disconnect: couldn't revoke at Google, deleting anyway", connectionId, e instanceof OAuthError ? e.code : (e as Error)?.name);
+    log.error("mail.disconnect.revoke_failed", { connection_id: connectionId, error: e }); // deleted anyway
   }
   await removeBroughtIn(connectionId, keep);
   await db.delete(mailConnection).where(eq(mailConnection.id, connectionId));

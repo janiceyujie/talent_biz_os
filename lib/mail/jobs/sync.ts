@@ -12,6 +12,7 @@ import { ruleContext } from "../relevance/context";
 import { decideAll, RULES_VERSION } from "../relevance/rules";
 import { queueFetching } from "./fetch";
 import { queueScoring } from "./relevance";
+import { log } from "@/lib/log";
 
 // mail.sync (docs/design/gmail-ingestion.md, Jobs): find the mailbox's new
 // email, read each one's metadata, run the rules, and record what they
@@ -35,8 +36,7 @@ export async function syncMailbox(connectionId: string, { lastAttempt }: { lastA
   } catch (e) {
     if (e instanceof MailAccessLost) return markReconnectNeeded(c.id);
     if (e instanceof GmailError && e.status === 401) dropAccessToken(c.id); // the next attempt gets a fresh one
-    // Ids and codes only: never a subject or a token.
-    console.error("mail.sync failed", c.id, e instanceof GmailError ? `${e.status} ${e.reason}` : (e as Error)?.name);
+    log.error("mail.sync.failed", { connection_id: c.id, error: e });
     if (lastAttempt)
       await db
         .update(mailConnection)
@@ -180,6 +180,6 @@ async function keepWatching(c: Connection, mail: MailProvider) {
     await db.update(mailConnection).set({ watchExpiresAt: expiresAt }).where(eq(mailConnection.id, c.id));
   } catch (e) {
     if (e instanceof MailAccessLost) throw e;
-    console.error("mail.sync watch failed", c.id, e instanceof GmailError ? `${e.status} ${e.reason}` : (e as Error)?.name);
+    log.error("mail.sync.watch_failed", { connection_id: c.id, error: e });
   }
 }

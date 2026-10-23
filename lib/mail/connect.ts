@@ -10,6 +10,7 @@ import { authorizationUrl, exchangeCode, idTokenClaims, newState, oauthClient, O
 import { openState, sealState, STATE_TTL_SECONDS } from "./oauth-state";
 import { grantsGmail } from "./scope";
 import { toColumns, tokenAad } from "./token";
+import { log } from "@/lib/log";
 
 // Connecting a mailbox (decision 0013, 0016), called by the thin routes in
 // app/api/mail. The web service holds Google's tokens only while saving: it
@@ -74,7 +75,7 @@ export async function finishConnect(o: {
     tokens = await exchangeCode({ clientId: client.id, clientSecret: client.secret, code, verifier: remembered.verifier, redirectUri: redirectUri() });
   } catch (e) {
     if (e instanceof OAuthError) {
-      console.error("mail connect: code exchange failed", e.status, e.code);
+      log.warn("mail.connect.exchange_failed", { error: e });
       return e.code === "invalid_grant" ? "expired" : "googleError";
     }
     throw e;

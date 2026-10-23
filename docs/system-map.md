@@ -11,6 +11,7 @@ How the running pieces connect: the web app, the worker, the database and its jo
 - [Keeping the screen up to date](#keeping-the-screen-up-to-date)
 - [Google Calendar: today and later](#google-calendar-today-and-later)
 - [Contract and quote templates: today and later](#contract-and-quote-templates-today-and-later)
+- [Opportunities: today and later](#opportunities-today-and-later)
 - [Recovery paths](#recovery-paths)
 - [Timings at a glance](#timings-at-a-glance)
 
@@ -169,7 +170,7 @@ The queue is Graphile Worker on our own Postgres. A **named queue** runs its job
 ```mermaid
 flowchart LR
   subgraph Queues["Queues in Postgres: a named queue runs one job at a time"]
-    QN["no queue<br/>reconcile, cleanup"]
+    QN["no queue<br/>reconcile, cleanup, opportunities"]
     QM["mail:&lt;mailbox&gt;<br/>sync, disconnect"]
     QR["mail-relevance:&lt;mailbox&gt;<br/>scoring"]
     QF["mail-fetch:&lt;mailbox&gt;<br/>fetching"]
@@ -178,7 +179,7 @@ flowchart LR
   end
 
   subgraph Producers["Who queues work"]
-    C["Worker: schedule<br/>reconcile every 15 min (2 without push)<br/>calendar reconcile every 5 min<br/>cleanup daily, 03:30 Taipei"]
+    C["Worker: schedule<br/>reconcile every 15 min (2 without push)<br/>calendar reconcile every 5 min<br/>cleanup daily, 03:30 Taipei<br/>opportunities daily, 05:00 Taipei"]
     P["Worker: Pub/Sub notice"]
     A2["Web: Connect, Check now"]
     A3["Web: Disconnect"]
@@ -489,6 +490,101 @@ flowchart LR
 - **An online edit wins over the repository.** A deploy adds a repository version only when the repository's content changed, and leaves it unpublished if a newer edit was made online, for the team to compare.
 - **A person's copy is theirs.** It's stored with their workspace's files and a contract version on the project, records which template and version it came from, and editing it never changes the template.
 
+## Opportunities: today and later
+
+Public calls for grants, competitions, and showcases, read once a day into one catalogue shared by every account, screened against each person's profile, and followed as to-dos ([decision 0024](decisions/0024-opportunity-discovery.md)). The catalogue holds only public facts, so it's the one read not scoped to a talent; applications, their to-dos, and the profile are.
+
+### Today
+
+```mermaid
+flowchart TB
+  subgraph Daily["Worker: opportunities.refresh, daily 05:00 Taipei (or npm run opportunities:refresh)"]
+    direction TB
+    MOC["Ministry of Culture<br/>open-data XML"] -->|"parsed in code, no AI"| CAT
+    GG["Grants.gov<br/>search + detail APIs"] -->|"parsed in code, no AI"| CAT
+    TL["Tracked list pages<br/>(lib/opportunities/tracked.ts)"] --> LK["Links on the same host,<br/>titled as calls, not results:<br/>at most 10 per page"]
+    LK --> AN["Each announcement's text:<br/>invisible characters removed"]
+    AN --> SAME{"Same text and prompt<br/>as the last read?<br/>(opportunity_page)"}
+    SAME -->|yes| KEEP["Nothing new: checked time only"]
+    SAME -->|"no, and words aimed at an AI"| REF["Not sent: recorded as failed"]
+    SAME -->|"no, and AI paused or<br/>40 read this run"| NEXT["Left for the next run"]
+    SAME -->|no| LLM["Model: each call, every field<br/>with the passage it came from"]
+    LLM --> VER["Code checks each field:<br/>passage verbatim on the page,<br/>value read back out of it"]
+    VER -->|"failed field → unknown"| CAT[("opportunity<br/>shared catalogue")]
+  end
+
+  CAT --> SCR["Opportunities screen:<br/>screened against the profile<br/>Fits · Check · Doesn't fit (hidden unless asked)"]
+  SCR -->|Follow| APP["opportunity_application at Preparing<br/>+ a Submit to-do on the closing date<br/>(dates seen remembered)"]
+  APP --> TD["Today and the Calendar"]
+  CAT -->|"a followed call's dates<br/>differ from the ones seen"| NT["Notification: closing date A → B"]
+  NT -->|"Move the Submit to-do"| TD
+  NT -->|"Seen"| OK["Dates seen updated, to-do unchanged"]
+```
+
+What to know:
+
+- **The model reads only tracked announcements**, and only when their text changed. Everything after the catalogue (screening, following, the notification) is code, and every change to a person's to-dos is a button they press.
+- **Screening is a first pass, never a ruling.** Each rule a call states (applicant type, country, county or state, discipline) is a list, "any", or unknown. A stated rule that leaves you out is Doesn't fit; an unknown rule, a profile field left blank, or a source not read in three days is Check. Check is always shown.
+- **The dialog shows the evidence and the official link**: the passages a tracked page's fields came from, or the source's own codes.
+- **A source's last check and whether it failed** show on the Opportunities screen. A single tracked page or announcement that fails is recorded in `opportunity_page`, not on screen.
+
+### The pages we read
+
+| Source | Address | What it gives | How it's read |
+|---|---|---|---|
+| Ministry of Culture | `grants.moc.gov.tw/OpenData/getOpenData_ApplyList.jsp` | Every open call: year, unit, program, form, start and end date | One XML file, parsed in code. Discipline only for units that fund one. No link per call: the card links to the grants site. |
+| Grants.gov | `api.grants.gov` (`search2`, `fetchOpportunity`) | US federal calls, arts category, forecasted or posted | Up to 10 pages of 100, and details for 30 per run, which give applicant types. Mostly for organizations. |
+| National Culture and Arts Foundation | `www.ncafroc.org.tw/news.html?categoryId=002` | Its announcements: each regular and special program's call | Tracked page: announcement text from the page body, read by the model. |
+| Taipei Department of Cultural Affairs | `culture.gov.taipei/News.aspx?n=63F36AA6E434AD08…` | Its news, including subsidies for the city's residents | Tracked page, as above. "This city" in a call means Taipei. Often has no subsidy on the list. |
+
+### Constraints
+
+- **Fetching:** only these hosts, over HTTPS, no redirects, 20 seconds and 2 MB per request, identified as "Taloox opportunities reader". Nothing a person typed is ever fetched.
+- **Per run:** 10 announcements per tracked page, 40 model reads across all of them, 30,000 characters of each announcement, 5 calls per announcement. A call closed more than 30 days ago is dropped.
+- **AI:** through `lib/ai/model.ts`, so it stops while AI is paused or the day's spend cap is reached (decision 0008), and an announcement not read is read the next day. A changed announcement costs one model call: about $0.01.
+- **Not read:** PDFs and other attachments, where most of NCAF's eligibility rules are, so those fields are mostly Check.
+- **Adding a page is a code change**: an entry in `tracked.ts` with which links are announcements and where the text sits on the page. A site that changes its markup stops yielding links, and the page is recorded as failed.
+
+### Assumptions
+
+- **A list that leaves a call out hasn't withdrawn it.** A call is kept until its source says otherwise; only a re-read announcement that no longer gives a call removes it, and never one someone follows.
+- **An announcement's title says whether it's a call.** Titles are matched against each page's words for a call, and lists of results are skipped. A call with an unusual title is missed.
+- **The list page puts the newest first**, so the first 10 are the ones that matter.
+- **A date whose passage checks out is in the right field.** The check catches an invented date, not a real one misplaced, such as an announcement date read as the closing date. That's why the official page is one click away.
+- **Dates are the source region's:** Taipei for Taiwan, New York for the US.
+- **The profile is what the person says about themselves**, and nothing checks it.
+
+### Later
+
+```mermaid
+flowchart TB
+  subgraph Sources["More to read"]
+    TL2["Tracked list, full first version:<br/>national bodies, every municipal and county<br/>culture bureau, ~56 state and territory<br/>arts councils, yearly events"]
+    PDF["Attachments: PDF guidelines"]
+    FIND["Calls on pages not on the list:<br/>search, or a partner's feed (e.g. NYFA)"]
+  end
+  TL2 --> EX["Extraction and checks, as today"]
+  PDF --> EX
+  FIND --> EX
+  EX --> RV["Staff review queue<br/>(checked fields kept for it)"]
+  RV --> CAT[("opportunity")]
+  CAT --> SCR["Screening"]
+  SCR --> APP["Applications: unfollow,<br/>preparation to-dos"]
+  CAT --> NT["Notifications: date changes,<br/>later push (port follow-ups)"]
+```
+
+| | Today | Later |
+|---|---|---|
+| Coverage | 2 structured sources, 2 tracked pages | The full tracked list in decision 0024, kept current as ongoing work |
+| Yearly events (Golden Melody Awards, SXSW) | Not covered | Tracked pages, read like any other |
+| Eligibility in attachments | Not read, so Check | PDF guidelines read and checked the same way |
+| Before publishing | Code checks only | A staff review queue in front of publishing |
+| Calls off the list | Not found | Search, or a partner's feed |
+| A tracked call with no date that drops off its list | Stays, as Check the official page | Cleaned up |
+| A failed tracked page | Recorded in `opportunity_page` only | Shown on the source's status |
+| Following | Follow, stages, to-dos, link to a project | Unfollow; preparation to-dos when preparation is designed |
+| What's announced | A followed call's dates changing | Push notifications, with the port follow-ups |
+
 ## Recovery paths
 
 | Something fails | What happens |
@@ -504,6 +600,7 @@ flowchart LR
 | The model gives a bad answer | Analysis asks the large model once; if that fails too, it shows the failure with Retry. Scoring retries, then stays Not decided yet. |
 | Google Calendar push fails | Retries after 1 min, 5 min, 30 min, 2 h, then every 6 h. Lost access waits for Reconnect. |
 | A mailbox's access is revoked | The connection asks to reconnect; nothing more is read. |
+| An opportunity source fails | It keeps what it had and records why; the screen shows it failed. A tracked page fails on its own; the source fails only when every page does. |
 | The day's AI cap is reached | An analysis shows it's over the limit, with Retry. Scoring leaves the email Not decided yet for a later check. Nothing is dropped. |
 
 ## Timings at a glance
@@ -520,4 +617,5 @@ flowchart LR
 | Intake during Check now or sorting | 3 s |
 | Calendar push retries | 1 min, 5 min, 30 min, 2 h, then 6 h |
 | Google Calendar read back (our calendar and the chosen ones) | every 5 min (`calendar.reconcile`; every minute in development); a chosen calendar's window re-read when it changed, or daily |
+| Opportunities read | daily at 05:00 Taipei; a call not read in 3 days shows as Check |
 | Cleanup | daily at 03:30 Taipei: skipped mail after 90 days, payment notices and events deleted in Google after 30, given-up jobs after 14 |

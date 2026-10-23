@@ -78,19 +78,34 @@ export const person = pgTable(
 ).enableRLS();
 
 // Who may create an account while the beta is invite-only (decision 0028). Rows
-// are added by hand (docs/setup/beta-access.md); usedAt is set when the account
-// is created. Emails are stored as Better Auth stores them on person: trimmed, lowercased.
+// are added by staff on the Support page's beta list, or by SQL
+// (docs/setup/beta-access.md); usedAt is set when the account is created.
+// Emails are stored as Better Auth stores them on person: trimmed, lowercased.
+// Withdrawing an unused place sets withdrawnAt and keeps the row, so who was
+// invited when stays on record; a withdrawn row lets no one sign up.
 export const signupAllowlist = pgTable(
   "signup_allowlist",
   {
     id: id(),
     email: text().notNull().unique(),
+    name: text(), // as they gave it on the waitlist, for the invitation's greeting
     note: text(), // where they came from, e.g. "waitlist, 2026-11 batch"
-    invitedBy: uuid().references(() => person.id, { onDelete: "set null" }), // a person who invited them; empty when added by hand
+    invitedBy: uuid().references(() => person.id, { onDelete: "set null" }), // a person who invited them (a referral, later); empty when staff added them
+    addedBy: uuid().references(() => person.id, { onDelete: "set null" }), // the staff member who added them; empty when added by SQL
+    locale: text().notNull().default("zh-TW"), // the language their invitation is written in
     createdAt: createdAt(),
+    invitationSentAt: timestamp({ withTimezone: true }), // the latest invitation email
+    invitationSentBy: uuid().references(() => person.id, { onDelete: "set null" }),
     usedAt: timestamp({ withTimezone: true }),
+    withdrawnAt: timestamp({ withTimezone: true }),
+    withdrawnBy: uuid().references(() => person.id, { onDelete: "set null" }),
   },
-  (t) => [check("signup_allowlist_email_check", sql`${t.email} = lower(btrim(${t.email}))`)],
+  (t) => [
+    check("signup_allowlist_email_check", sql`${t.email} = lower(btrim(${t.email}))`),
+    check("signup_allowlist_locale_check", oneOf(t.locale, locales)),
+    // A place someone has used can't be withdrawn: they have an account.
+    check("signup_allowlist_withdrawn_check", sql`${t.withdrawnAt} is null or ${t.usedAt} is null`),
+  ],
 ).enableRLS();
 
 // Who may use the Support page (decision 0026): look up an account and read its

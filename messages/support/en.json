@@ -255,6 +255,78 @@
         "decisionId": "email decision",
         "talentId": "workspace"
       }
+    },
+    "tabs": {
+      "accounts": "Accounts",
+      "beta": "Beta list"
+    },
+    "beta": {
+      "heading": "Beta list",
+      "intro": "Who may sign up while the beta is invite-only. Staff can look; admins add people, send invitations, and withdraw places.",
+      "cap": "Google lets at most 100 Google accounts connect Gmail until the app is verified, and connecting once uses a place for good. Check how many are left in the Google Cloud console (APIs & Services → OAuth consent screen) before inviting a batch.",
+      "empty": "No one on the list yet.",
+      "status": {
+        "all": "All",
+        "added": "Not invited yet",
+        "invited": "Invited",
+        "signedUp": "Signed up",
+        "withdrawn": "Withdrawn"
+      },
+      "count": "{status} {count}",
+      "language": "Language",
+      "addedOn": "Added {date}",
+      "invitedOn": "Invited {date}",
+      "signedUpOn": "Signed up {date}",
+      "withdrawnOn": "Withdrawn {date}",
+      "by": "by {name}",
+      "bySql": "by SQL",
+      "add": {
+        "heading": "Add people",
+        "emails": "Email addresses",
+        "emailsHelp": "One person a line: their email and, if you have it, their name, e.g. \"Mei Lin, mei@example.com\". Rows copied from a spreadsheet or the waitlist's export work too. The name greets them in the invitation. Several emails on one line, separated by commas, are added without names.",
+        "note": "Note",
+        "noteHelp": "Where this batch came from, e.g. waitlist, 2026-11 batch 1",
+        "locale": "Invitation language",
+        "preview": "Check",
+        "new": "{count} new",
+        "restore": "{count} withdrawn before, to be restored",
+        "listed": "{count} on the list already: passed over",
+        "hasAccount": "{count} have an account already: passed over",
+        "invalid": "{count} aren't email addresses: passed over",
+        "confirm": "Add {count}",
+        "nothing": "Nothing to add.",
+        "open": "Add people"
+      },
+      "invite": {
+        "select": "Select {email}",
+        "send": "Send invitations ({count})",
+        "title": "Send {count} invitations?",
+        "sentBefore": "{count} of them were sent one before and will get another.",
+        "recipients": "To",
+        "sentBeforeMark": "sent one before",
+        "previewIn": "In {language}, as {who} will get it. Each email has its own recipient's name and address.",
+        "subject": "Subject",
+        "confirm": "Send",
+        "sent": "Sent {count}.",
+        "failed": "Couldn't send to {emails}. Try again later."
+      },
+      "withdraw": {
+        "button": "Withdraw",
+        "title": "Withdraw {email}?",
+        "body": "No one will be able to sign up with this address. The record stays.",
+        "invited": "They were sent an invitation: its link will now tell them they're not on the beta list.",
+        "confirm": "Withdraw"
+      },
+      "search": "Search by email, name, or note",
+      "noMatch": "No one matches.",
+      "selectAll": "Select all not invited yet ({count})",
+      "selectAllHelp": "Selects the {count} shown below who haven't been sent an invitation. To send again, filter to Invited, or tick them one by one.",
+      "selectAllInvited": "Select all invited ({count}): to send again",
+      "selectAllInvitedHelp": "Selects the {count} shown below who were sent an invitation and haven't signed up: each will get another.",
+      "selected": "{count} selected",
+      "clearSelection": "Clear",
+      "more": "More for {email}",
+      "addedSelected": "Just added: {count} selected"
     }
   }
 }

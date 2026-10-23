@@ -1,7 +1,7 @@
 import { aiCall, auditLog, calendarConnection, mailConnection, mailDecision, membership, message, person, talent } from "@/lib/db/schema";
 
-// The columns each of the Support page's reads takes (./index.ts), and nothing
-// else: ids, statuses, codes, counts, and times. support.test.ts checks none of
+// The columns each of the Support page's account reads takes (./index.ts), and
+// nothing else (the beta list, ./beta-list.ts, reads only the allowlist itself): ids, statuses, codes, counts, and times. support.test.ts checks none of
 // them holds mail or free text: no sender, recipients, subject, body, attachment
 // names, audit details, or a job's error text. A new column here is reviewed
 // against that.

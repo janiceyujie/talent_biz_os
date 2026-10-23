@@ -35,11 +35,11 @@ Make a separate OAuth client for each place the app runs — local, staging, pro
 Nothing in the code changes; the Google side and the environment do.
 
 1. **A production OAuth client** (ideally in a production project), type Web application:
-   - Authorized JavaScript origins: `https://app.example.com`
-   - Authorized redirect URIs: `https://app.example.com/api/auth/callback/google`
+   - Authorized JavaScript origins: `https://app.taloox.com`
+   - Authorized redirect URIs: `https://app.taloox.com/api/auth/callback/google`
 
    Google matches the redirect URI exactly — scheme, host, port, path, no trailing slash, no wildcards — and requires `https` for anything but localhost.
-2. **Environment variables on the host** (never committed): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `BETTER_AUTH_URL=https://app.example.com`. Better Auth builds the callback URL from `BETTER_AUTH_URL`; if it's wrong, Google rejects the sign-in with `redirect_uri_mismatch`. Leave `GOOGLE_TEST_STUB` unset.
+2. **Environment variables on the host** (never committed): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `BETTER_AUTH_URL=https://app.taloox.com`. Better Auth builds the callback URL from `BETTER_AUTH_URL`; if it's wrong, Google rejects the sign-in with `redirect_uri_mismatch`. Leave `GOOGLE_TEST_STUB` unset.
 3. **Branding for real users.** Add the app home page, privacy policy, and terms URLs, and your domain under **Authorized domains** (you'll prove you own it through Google Search Console). A privacy policy page on the domain is required to publish.
 4. **Publish.** **Audience → Publish app** moves from Testing to In production, so anyone with a Google account can sign in. With only the three basic scopes there's no security assessment. If you add a logo or want the app name shown prominently, Google runs a brand verification first (typically a few business days).
 5. **Allow for propagation.** Google says changes to clients and redirect URIs can take from a few minutes to a few hours to apply.

@@ -3,6 +3,7 @@
 // that are its own announcements, on its own host. Adding or removing a page
 // is a code change, reviewed like any other. Pure, no server-only imports.
 import type { Area } from "./areas";
+import { outOfScope } from "./scope";
 import type { OpportunityKind, OpportunityRegion } from "./types";
 
 export type TrackedPage = {
@@ -110,7 +111,7 @@ export const trackedPages: TrackedPage[] = [
   },
 ];
 
-/** Whether a link's title is a call worth reading, not a list of who won. */
-export const isCall = (page: TrackedPage, title: string) => page.about.test(title) && !results.test(title);
+/** Whether a link's title is a call worth reading: not a list of who won, nor outside what Opportunities is for. */
+export const isCall = (page: TrackedPage, title: string) => page.about.test(title) && !results.test(title) && !outOfScope(title);
 
 export const trackedHosts = () => new Set(trackedPages.map((p) => new URL(p.url).hostname));

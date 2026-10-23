@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 import { availability, listParams, pageOf } from "./list";
 import { screen } from "./screening";
 import { parseDetail, parseSearch } from "./sources/grants-gov";
+import { outOfScope } from "./scope";
 import { listingHash } from "./sources/listing";
 import { parseMoc } from "./sources/moc";
 import { announcementText, checkedCalls, datesIn, linksOn, type Extraction } from "./sources/pages";
@@ -91,6 +92,22 @@ describe("Grants.gov", () => {
     const reordered = Object.fromEntries(Object.entries(rules).reverse()) as OpportunityRules; // as jsonb gives kept rules back
     assert.equal(listingHash({ ...call, rules }), listingHash({ ...call, rules: reordered }));
 
+  });
+});
+
+describe("scope", () => {
+  test("calls for artists and creators are in; scholarships, research, historic upkeep, and the business around the arts are out", () => {
+    for (const title of ["測試學生115學年度第1學期助學金申請", "獎助研究生撰寫測試研究論文作業要點", "測試市歷史老屋再生補助", "私有古蹟日常管理維護補助", "實體書店發展補助", "售票業者購票系統補助", "Museums for Testing (2027)", "Test Library Services Grants", "Test Crash Data Collection"])
+      assert.ok(outOfScope(title), title);
+    for (const title of ["測試表演藝術類活動補助", "鼓勵售票演出補助", "青年村落文化行動計畫", "地方文史工作出版計畫補助", "Artist Fellowships 2027", "Grants for Arts Projects"])
+      assert.ok(!outOfScope(title), title);
+  });
+
+  test("a list doesn't follow a link to something out of scope, and a call it gives isn't kept", () => {
+    const ncaf = trackedPages.find((p) => p.id === "ncaf")!;
+    const html = `<a href="/news_detail.html?sid=1">測試學生獎學金 受理申請</a><a href="/news_detail.html?sid=2">測試創作補助 受理申請</a>`;
+    assert.deepEqual(linksOn(html, ncaf).links.map((l) => l.title), ["測試創作補助 受理申請"]);
+    assert.equal(parseMoc(xml(apply("測試學生就學獎助", "測試學生就學獎助")), "2026-10-01").length, 0);
   });
 });
 

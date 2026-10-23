@@ -2,6 +2,7 @@
 // applications (the government open-data licence). One row per application
 // form; a program with a form for individuals and one for groups is two calls.
 import { decodeEntities } from "@/lib/mail/clean";
+import { outOfScope } from "../scope";
 import type { Discipline, OpportunityRules } from "../types";
 import { isoDate, plain, stableId, type Listing } from "./listing";
 
@@ -60,6 +61,9 @@ export function parseMoc(xml: string, since: string): Listing[] {
     const externalId = stableId(year, unit, point, form, opensOn ?? "");
     if (seen.has(externalId)) continue;
     seen.add(externalId);
+    // One name when one holds the other (the form is often the program's with its track added); otherwise both.
+    const title = (!form || point.includes(form) ? point : form.includes(point) ? form : `${point} — ${form}`).slice(0, 300);
+    if (outOfScope(title)) continue;
     const disciplines = unitDisciplines[unit] ?? null;
     const applicantTypes = applicantTypesOf(form);
     rows.push({
@@ -67,8 +71,7 @@ export function parseMoc(xml: string, since: string): Listing[] {
       externalId,
       region: "TW",
       kind: "grant",
-      // One name when one holds the other (the form is often the program's with its track added); otherwise both.
-      title: (!form || point.includes(form) ? point : form.includes(point) ? form : `${point} — ${form}`).slice(0, 300),
+      title,
       agency: unit.slice(0, 200),
       url: MOC_SITE,
       opensOn,

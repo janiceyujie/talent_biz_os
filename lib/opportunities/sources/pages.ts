@@ -11,6 +11,7 @@ import { htmlToText } from "@/lib/mail/clean";
 import en from "@/messages/en.json";
 import zhTW from "@/messages/zh-TW.json";
 import { areas, type Area } from "../areas";
+import { outOfScope } from "../scope";
 import { isCall, type TrackedPage } from "../tracked";
 import { countries, disciplines, ruleApplicantTypes, type Discipline, type OpportunityRules } from "../types";
 import { isoDate, plain, stableId, type Listing } from "./listing";
@@ -98,6 +99,7 @@ export const EXTRACTION_SYSTEM = `You read one announcement from an official art
 - Every passage is copied exactly from the announcement, character for character, and is the shortest span that states the value (one sentence or clause, under 300 characters). Values are checked against their passages, and a value whose passage doesn't state it is thrown away.
 - An announcement of results, winners, a briefing session, or anything that isn't a call people can apply for has no calls: return an empty list.
 - One call per program the announcement opens; usually one. Calls mentioned in passing, or in a list of other news, are not this announcement's.
+- Only calls for artists, creators, and their groups or companies, to make, show, or take their work further. Not scholarships or student aid, academic research or theses, the upkeep of historic buildings, or running a business around the arts (a bookshop, ticketing, lending space).
 - Only calls the funding body named below runs, alone or with others. A call it passes on from another body (a ministry's or a foundation's, say) is that body's, read from that body's own page: not this announcement's.
 
 ## Fields
@@ -109,7 +111,7 @@ export const EXTRACTION_SYSTEM = `You read one announcement from an official art
 - disciplines: the art forms it's for: music, performing_arts, visual_arts, film (film, video, and media), writing (literature, translation, publishing), content (online content creation). ["any"] only when it says every art form.`;
 
 /** Raised when checkedCalls changes what it keeps: the answers it checked are only kept as calls, so they're read again. */
-const CHECK_VERSION = 2;
+const CHECK_VERSION = 3;
 
 export const EXTRACTION_PROMPT_VERSION = createHash("sha256")
   .update(EXTRACTION_SYSTEM + JSON.stringify(z.toJSONSchema(extractionSchema)) + CHECK_VERSION)
@@ -232,7 +234,7 @@ export function checkedCalls(answer: Extraction, text: string, link: PageLink, p
   const listings = new Map<string, Listing>();
   for (const call of answer.calls) {
     const title = plain(call.title);
-    if (title.length < 2 || title.length > 300 || !onPage(title)) continue;
+    if (title.length < 2 || title.length > 300 || !onPage(title) || outOfScope(title)) continue;
     const closesOn = date(call.closesOn);
     let opensOn = date(call.opensOn);
     if (opensOn && closesOn && opensOn > closesOn) opensOn = null;

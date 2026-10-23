@@ -261,6 +261,7 @@
       "beta": "Beta list"
     },
     "beta": {
+      "heading": "Beta list",
       "intro": "Who may sign up while the beta is invite-only. Staff can look; admins add people, send invitations, and withdraw places.",
       "cap": "Google lets at most 100 Google accounts connect Gmail until the app is verified, and connecting once uses a place for good. Check how many are left in the Google Cloud console (APIs & Services → OAuth consent screen) before inviting a batch.",
       "empty": "No one on the list yet.",
@@ -294,7 +295,7 @@
         "invalid": "{count} aren't email addresses: passed over",
         "confirm": "Add {count}",
         "nothing": "Nothing to add.",
-        "done": "Added {count}. Nobody has been emailed: send the invitations below."
+        "open": "Add people"
       },
       "invite": {
         "select": "Select {email}",
@@ -315,7 +316,14 @@
         "body": "No one will be able to sign up with this address. The record stays.",
         "invited": "They were sent an invitation: its link will now tell them they're not on the beta list.",
         "confirm": "Withdraw"
-      }
+      },
+      "search": "Search by email, name, or note",
+      "noMatch": "No one matches.",
+      "selectAll": "Select all {count} shown who can be invited",
+      "selected": "{count} selected",
+      "clearSelection": "Clear",
+      "more": "More for {email}",
+      "addedSelected": "Just added: {count} selected"
     }
   }
 }

@@ -90,7 +90,7 @@ export async function addBatch(input: { pasted: string; note: string; locale: Lo
         .where(and(eq(signupAllowlist.email, email), isNotNull(signupAllowlist.withdrawnAt)));
   });
   log.info("beta.list.added", { person_id: admin.personId, count: batch.add.length + batch.restore.length });
-  return { added: batch.add.length, restored: batch.restore.length, skipped: batch.listed.length + batch.hasAccount.length };
+  return { added: batch.add.length, restored: batch.restore.length, skipped: batch.listed.length + batch.hasAccount.length, emails: [...batch.add, ...batch.restore] };
 }
 
 /** The address an invitation's sign-up link points to. */

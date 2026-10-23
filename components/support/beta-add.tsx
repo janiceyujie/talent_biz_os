@@ -7,16 +7,16 @@ import { useSupportTranslations } from "@/lib/i18n/use-support-translations";
 type Checked = Awaited<ReturnType<typeof checkBatch>>;
 
 /**
- * Adding people to the beta list, admins only: paste a batch, see what adding it
- * would do, then add. Nobody is emailed here; invitations are sent from the list.
+ * Adding people to the beta list, admins only, in a dialog the list opens: paste
+ * a batch, see what adding it would do, then add. Nobody is emailed here: the
+ * list selects who was added, ready for their invitations (onAdded).
  */
-export function BetaAdd({ locales, defaultLocale }: { locales: { value: string; name: string }[]; defaultLocale: string }) {
+export function BetaAdd({ locales, defaultLocale, onAdded }: { locales: { value: string; name: string }[]; defaultLocale: string; onAdded: (emails: string[]) => void }) {
   const t = useSupportTranslations("support.beta.add");
   const [pasted, setPasted] = useState("");
   const [note, setNote] = useState("");
   const [locale, setLocale] = useState(defaultLocale);
   const [checked, setChecked] = useState<Checked | null>(null);
-  const [done, setDone] = useState<number | null>(null);
   const [pending, start] = useTransition();
   const adding = checked ? checked.add.length + checked.restore.length : 0;
 
@@ -25,14 +25,14 @@ export function BetaAdd({ locales, defaultLocale }: { locales: { value: string; 
       <label>
         {t("emails")}
         <textarea
-          rows={5}
+          rows={6}
           value={pasted}
           onChange={(e) => {
             setPasted(e.target.value);
             setChecked(null); // a changed batch is checked again
-            setDone(null);
           }}
           spellCheck={false}
+          autoFocus
         />
       </label>
       <p className="muted">{t("emailsHelp")}</p>
@@ -60,7 +60,7 @@ export function BetaAdd({ locales, defaultLocale }: { locales: { value: string; 
           <ul className="support-list">
             {checked.add.length > 0 && (
               <li>
-                {t("new", { count: checked.add.length })}: {checked.add.map((e) => (checked.names[e] ? `${checked.names[e]} <${e}>` : e)).join(", ")}
+                {t("new", { count: checked.add.length })}: {checked.add.map((e) => (checked.names[e] ? `${checked.names[e]}, ${e}` : e)).join("; ")}
               </li>
             )}
             {checked.restore.length > 0 && (
@@ -81,9 +81,7 @@ export function BetaAdd({ locales, defaultLocale }: { locales: { value: string; 
                 onClick={() =>
                   start(async () => {
                     const result = await addPeople({ pasted, note, locale });
-                    setDone(result.added + result.restored);
-                    setChecked(null);
-                    setPasted("");
+                    onAdded(result.emails);
                   })
                 }
               >
@@ -94,11 +92,6 @@ export function BetaAdd({ locales, defaultLocale }: { locales: { value: string; 
             <p className="muted">{t("nothing")}</p>
           )}
         </div>
-      )}
-      {done !== null && (
-        <p className="notice" role="status">
-          {t("done", { count: done })}
-        </p>
       )}
     </div>
   );

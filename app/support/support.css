@@ -135,11 +135,24 @@
   border-radius: 999px;
   border: 1px solid var(--line);
 }
+/* Each status its own color: grey not invited yet, blue invited, green signed up, red withdrawn. */
+.support-status.status-added {
+  color: var(--muted);
+}
+.support-status.status-invited {
+  color: #2f5fc4;
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
 .support-status.status-signedUp {
-  border-color: currentColor;
+  color: #2f5a27;
+  border-color: #8fbf7f;
+  background: var(--lime-soft);
 }
 .support-status.status-withdrawn {
-  text-decoration: line-through;
+  color: #b3362f;
+  border-color: var(--red);
+  background: #fbeceb;
 }
 .support-page button[aria-pressed="true"] {
   border-color: currentColor;
@@ -151,4 +164,44 @@
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 9px;
+}
+.support-heading {
+  justify-content: space-between;
+}
+.support-heading h2 {
+  margin: 0;
+}
+.support-page input[type="search"] {
+  width: 100%;
+}
+.support-places li {
+  position: relative;
+}
+/* A row's ⋯ menu, at its top right. */
+.support-row-menu {
+  position: absolute;
+  top: 8px;
+  right: 0;
+}
+.support-places li > .support-row:first-child {
+  padding-right: 44px;
+}
+/* Shown while some are selected: stays at the bottom of the screen. */
+.support-action-bar {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 6px 24px rgba(21, 23, 17, 0.16);
+}
+.support-action-bar span {
+  margin-right: auto;
+  font-weight: 700;
 }

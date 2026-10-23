@@ -2,7 +2,6 @@ import { requireStaff } from "@/lib/auth/staff";
 import { localeNames, locales, toLocale } from "@/lib/i18n/config";
 import { supportTranslator } from "@/lib/i18n/support-messages";
 import { betaList } from "@/lib/support/beta-list";
-import { BetaAdd } from "@/components/support/beta-add";
 import { BetaTable } from "@/components/support/beta-table";
 
 const time = (d: Date | null) =>
@@ -32,15 +31,8 @@ export default async function BetaListPage() {
     <>
       <p className="muted">{t("beta.intro")}</p>
       <p className="notice">{t("beta.cap")}</p>
-      {isAdmin && (
-        <section className="surface padded">
-          <h2>{t("beta.add.heading")}</h2>
-          <BetaAdd locales={locales.map((l) => ({ value: l, name: localeNames[l] }))} defaultLocale={toLocale(viewer.locale)} />
-        </section>
-      )}
       <section className="surface padded">
-        <h2>{t("tabs.beta")}</h2>
-        <BetaTable places={places} isAdmin={isAdmin} />
+        <BetaTable places={places} isAdmin={isAdmin} locales={locales.map((l) => ({ value: l, name: localeNames[l] }))} defaultLocale={toLocale(viewer.locale)} />
       </section>
     </>
   );

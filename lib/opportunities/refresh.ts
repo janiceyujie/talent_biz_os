@@ -81,16 +81,23 @@ async function readGrantsGov(): Promise<Read> {
     rows.push(...parsed.rows);
     if (rows.length >= parsed.total || !parsed.rows.length) break;
   }
-  // The rules come from each call's detail; one that fails stays unknown, and the listing is kept.
+  // The rules come from each call's detail, new calls first. A detail not read this run (a failed
+  // request, or past the cap) keeps the rules last read, so one bad request doesn't flip a call's screening.
+  const stored = new Map(
+    (await db.select({ id: opportunity.externalId, rules: opportunity.rules }).from(opportunity).where(eq(opportunity.source, "grants_gov"))).map((r) => [r.id, r.rules]),
+  );
+  for (const row of rows) row.rules = stored.get(row.externalId) ?? null;
+  const queue = rows.toSorted((a, b) => Number(stored.has(a.externalId)) - Number(stored.has(b.externalId))).slice(0, MAX_DETAILS);
   const budget = AbortSignal.timeout(30_000);
   let next = 0;
   await Promise.all(
     Array.from({ length: 3 }, async () => {
-      for (let i = next++; i < Math.min(rows.length, MAX_DETAILS) && !budget.aborted; i = next++) {
-        const id = rows[i].externalId;
-        rows[i].rules = await request(GRANTS_GOV_DETAIL, { opportunityId: Number(id) }, budget)
-          .then((text) => parseDetail(JSON.parse(text), id))
+      for (let row = queue[next++]; row && !budget.aborted; row = queue[next++]) {
+        const id = row.externalId;
+        const detail = await request(GRANTS_GOV_DETAIL, { opportunityId: Number(id) }, budget)
+          .then((text) => ({ value: JSON.parse(text) as unknown }))
           .catch(() => null);
+        if (detail) row.rules = parseDetail(detail.value, id);
       }
     }),
   );

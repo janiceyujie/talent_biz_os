@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 import { availability, listParams, pageOf } from "./list";
 import { screen } from "./screening";
 import { parseDetail, parseSearch } from "./sources/grants-gov";
+import { listingHash } from "./sources/listing";
 import { parseMoc } from "./sources/moc";
 import { announcementText, checkedCalls, datesIn, linksOn, type Extraction } from "./sources/pages";
 import { trackedPages } from "./tracked";
@@ -80,6 +81,10 @@ describe("Grants.gov", () => {
     assert.equal(parseDetail(detail(["12"]), "2"), null);
     assert.equal(parseDetail({ errorcode: 0, data: { id: 1 } }, "1"), null);
     assert.deepEqual(parseDetail(detail(["12", "00"]), "1"), parseDetail(detail(["00", "12"]), "1")); // the same each day, whatever the order
+    const call = parseSearch(hits).rows[0];
+    const rules = { applicantTypes: ["nonprofit"], countries: null, areas: null, disciplines: null, evidence: "Nonprofits" } satisfies OpportunityRules;
+    const reordered = Object.fromEntries(Object.entries(rules).reverse()) as OpportunityRules; // as jsonb gives kept rules back
+    assert.equal(listingHash({ ...call, rules }), listingHash({ ...call, rules: reordered }));
 
   });
 });

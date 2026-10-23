@@ -12,7 +12,13 @@ export function isoDate(year: number, month: number, day: number): string | null
 
 export const plain = (s: string) => s.replace(/\s+/g, " ").trim();
 
-/** What changes when a call changes: its facts and rules, not the time it was read. */
-export const listingHash = (l: Listing) => createHash("sha256").update(JSON.stringify(l)).digest("hex");
+/**
+ * What changes when a call changes: its facts and rules, not the time it was read.
+ * Keys in a fixed order, so rules kept from the catalogue (jsonb reorders them) hash as when they were read.
+ */
+export const listingHash = (l: Listing) =>
+  createHash("sha256")
+    .update(JSON.stringify(l, (_, v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).toSorted(([a], [b]) => (a < b ? -1 : 1))) : v)))
+    .digest("hex");
 
 export const stableId = (...parts: string[]) => createHash("sha256").update(parts.join("\u0000")).digest("hex").slice(0, 32);

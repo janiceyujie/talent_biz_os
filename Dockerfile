@@ -47,6 +47,7 @@ COPY --from=build --chown=node:node /app/.next ./.next
 COPY --from=build /app/dist ./dist
 COPY public ./public
 COPY drizzle ./drizzle
+COPY assets/document-templates/content ./assets/document-templates/content
 COPY next.config.ts ./
 
 USER node

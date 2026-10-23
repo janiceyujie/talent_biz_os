@@ -1,4 +1,4 @@
-// Bundles the worker and the migration script into dist/ for the deployed image
+// Bundles the worker, the migration script, and the template publisher into dist/ for the deployed image
 // (Dockerfile), so it runs them with plain node instead of tsx. Our own code is
 // bundled; packages stay in node_modules. Locally, `npm run worker` and
 // `npm run db:migrate` still run the TypeScript directly.
@@ -36,5 +36,6 @@ const common = {
 // modules, which node can require.
 await build({ ...common, entryPoints: ["worker/index.ts"], outfile: "dist/worker.cjs", format: "cjs" });
 
-// The migration script uses top-level await, so it stays an ES module.
+// The migration and template scripts use top-level await, so they stay ES modules.
 await build({ ...common, entryPoints: ["scripts/migrate.mts"], outfile: "dist/migrate.mjs", format: "esm" });
+await build({ ...common, entryPoints: ["scripts/publish-templates.mts"], outfile: "dist/publish-templates.mjs", format: "esm" });

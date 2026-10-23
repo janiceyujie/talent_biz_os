@@ -41,7 +41,7 @@ builder publishes a release tagged vX.Y.Z
 
 - A workflow deploys each environment in that order: migrations first (including the queue's schema), then the worker, then the web service, then a smoke check that the web service answers `/api/health` with the deployed commit. A failed step stops the rest.
 - Render's own auto-deploy is off for all four services; the workflow triggers each deploy through Render's API with the exact `commitId`, and waits for it to go live before the next.
-- **Migrations run on Render, not in GitHub**: the worker service's pre-deploy command runs the migrations (`node dist/migrate.mjs`). It runs on the new build, after it's built and before it goes live, reading `DATABASE_URL` from Render, so GitHub never holds it. If it fails, the deploy stops and the old worker and web keep running. The web service has no pre-deploy command; the workflow deploys it only after the worker is live.
+- **Migrations run on Render, not in GitHub**: the worker service's pre-deploy command runs the migrations (`node dist/migrate.mjs`), then publishes the contract and quote templates (`node --conditions=react-server dist/publish-templates.mjs`, decision 0020). It runs on the new build, after it's built and before it goes live, reading `DATABASE_URL` from Render, so GitHub never holds it. If it fails, the deploy stops and the old worker and web keep running. The web service has no pre-deploy command; the workflow deploys it only after the worker is live.
 - The same step first refuses to go on while the queue holds jobs the new version has no handler for (see "Old and new versions side by side").
 - Not a Render one-off job: a job runs the service's last successful build, which is the old code, without the new migration files.
 - Migrations run automatically, before new code. That's only safe because every schema change keeps the running version working (add before remove, rename in steps: launch checklist, section 2, and `docs/git-workflow.md`).
@@ -115,7 +115,7 @@ None of these adds an npm dependency. CI also bundles the worker on every pull r
 
 Setup and day-to-day use are in `docs/setup/render.md`.
 
-- `Dockerfile` builds in two stages; the image that runs has only production dependencies. The worker and the migration script run as JavaScript bundled by esbuild (`npm run build:worker`, `dist/worker.cjs` and `dist/migrate.mjs`), with plain `node`: the worker starts in 0.6 s instead of 1.3 s and idles at 139 MB instead of 206 MB.
+- `Dockerfile` builds in two stages; the image that runs has only production dependencies. The worker and the migration script run as JavaScript bundled by esbuild (`npm run build:worker`, `dist/worker.cjs`, `dist/migrate.mjs`, and `dist/publish-templates.mjs`), with plain `node`: the worker starts in 0.6 s instead of 1.3 s and idles at 139 MB instead of 206 MB.
 - Migrations use drizzle-orm's migrator instead of drizzle-kit, so the image doesn't need dev dependencies; both record applied migrations in the same table, and a database built by each dumps to the identical schema.
 - The worker's heap is capped at 384 MB of the starter plan's 512 MB. Memory-heavy jobs (analysis, bringing an email in: `heavyJobs`) run in a pool of their own, two at a time, beside the pool for the rest (four).
 - Both services use Supabase's session-mode pooler, where each open connection holds a database connection. `render.md` budgets them (about 28 per environment); the pooler's pool size is checked against it before the first deploy.

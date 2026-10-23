@@ -5,6 +5,8 @@
 //   npm run db:migrate                  # locally, through tsx
 //   node dist/migrate.mjs               # deployed: the worker's pre-deploy command (render.yaml)
 //
+// Both are followed by scripts/publish-templates.mts (decision 0020).
+//
 // It uses drizzle-orm's migrator rather than drizzle-kit, so the deployed image
 // needs no dev dependencies. Both record applied migrations in the same table
 // (drizzle.__drizzle_migrations), so either can run against the same database.

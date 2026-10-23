@@ -88,7 +88,7 @@ projects:
             branch: main
             autoDeployTrigger: "off"
             dockerCommand: node --conditions=react-server --enable-source-maps --max-old-space-size=384 dist/worker.cjs
-            preDeployCommand: node dist/migrate.mjs
+            preDeployCommand: node dist/migrate.mjs && node --conditions=react-server dist/publish-templates.mjs
             # Running jobs finish before it stops; a job is capped at 10 minutes (worker/tasks.ts).
             maxShutdownDelaySeconds: 300
             envVars:
@@ -206,7 +206,7 @@ projects:
             branch: main
             autoDeployTrigger: "off"
             dockerCommand: node --conditions=react-server --enable-source-maps --max-old-space-size=384 dist/worker.cjs
-            preDeployCommand: node dist/migrate.mjs
+            preDeployCommand: node dist/migrate.mjs && node --conditions=react-server dist/publish-templates.mjs
             maxShutdownDelaySeconds: 300
             envVars:
               - fromGroup: taloox-production

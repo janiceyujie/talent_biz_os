@@ -629,7 +629,7 @@ flowchart TD
   CHK -->|"all pass"| DP["deploy.yml: production"]
   DS --> RD["scripts/render-deploy.mjs"]
   DP --> RD
-  RD --> W1["1. worker: pre-deploy checks the queue, then migrates"]
+  RD --> W1["1. worker: pre-deploy checks the queue, migrates,<br/>publishes templates"]
   W1 -->|"live"| W2["2. web"]
   W2 -->|"live"| W3["3. /api/health answers with this commit"]
   W1 -->|"fails"| KEEP["stop: the previous version keeps running"]

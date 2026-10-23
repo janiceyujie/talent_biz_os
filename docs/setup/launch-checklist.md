@@ -10,6 +10,7 @@ What has to happen before the first production deploy and before real users. Eac
 - [ ] Supabase's pooler pool size checked against the connection budget ([render.md](render.md), "Database connections"), for staging and production.
 - [ ] The web service on the transaction-mode pooler: `lib/db` turns off prepared statements first (both use the session-mode pooler until then).
 - [ ] Staging and production as separate Render services and Supabase projects, each with its own Google project, KMS key, bucket, and Pub/Sub ([decision 0025](../decisions/0025-environments-and-deployment.md)).
+- [ ] `SITE_PASSWORD` set on staging's web service, and not on production's ([decision 0027](../decisions/0027-staging-behind-a-password.md)).
 - [ ] Deploy workflows: `main` to staging, a `vX.Y.Z` release to production, each running migrate → worker → web → smoke check; Render auto-deploy off; a tag ruleset so only the builder creates `v*` tags.
 - [ ] Secrets on each Render service as `sync: false`, non-secret settings in each environment's group; GitHub holds only the Render API key and service ids.
 - [x] CI runs the image as Render does: the pre-deploy command on an empty Postgres, the worker started and stopped, the web service's health check (`ci.yml`, `image`).

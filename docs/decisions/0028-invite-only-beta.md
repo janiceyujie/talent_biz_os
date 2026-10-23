@@ -43,6 +43,13 @@ The beta list on the Support page (`user/janlin/beta-list`), from "Later" below:
 ## Later
 
 - ~~**A staff page for the list**~~: built, see the implementation notes above.
+- **Reading the waitlist's CSV file in the page.** Today a batch is rows copied from Webflow's CSV export (or a spreadsheet) and pasted, which needs the batch picked elsewhere first. When picking in a spreadsheet gets in the way:
+  1. Drop the exported file on the Beta list. It's read in the browser and never uploaded: the export holds every applicant, and only the picked ones should reach the app.
+  2. Its header row maps the columns (Email, Name, Role); a mapping read wrong can be changed.
+  3. The rows show as a table to pick from, searchable and filtered by role. Anyone on the list already or with an account is marked and left unticked.
+  4. The picked rows go through the same Check and Add as a paste.
+  - To decide then: whether to keep each place's role (a column, and the privacy policy covering it), and what to do with a file Excel saved in Big5 rather than UTF-8 (at least say so, and ask for a UTF-8 export; Webflow's own export is UTF-8).
+  - The webhook below supersedes it: once submissions arrive on their own, there's no file to read.
 - **Waitlist submissions straight into the app.** Today a batch is copied from Webflow's submissions by hand, which is enough at 10 to 20 a batch. When there are enough applicants that copying gets in the way (or when the role and other answers should be kept with each place):
   1. A Webflow form webhook posts each submission to a new public API route, which checks Webflow's signature on it and refuses anything else.
   2. Submissions land in a table of their own (or as waitlisted places), with the form's answers: role, uses Gmail for work, how they heard. Never added to the allowlist by the webhook: picking stays a person's decision, for Google's cap.

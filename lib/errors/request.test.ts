@@ -1,7 +1,7 @@
 // The line for a failed request, and its request_id (decision 0026). Run: npm test
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, test } from "node:test";
-import { log, setErrorReporter, setLogContext } from "@/lib/log";
+import { log, noteRequestIds, setErrorReporter, setLogContext, setRequestIdentifier } from "@/lib/log";
 import { logRequestError } from "./request";
 
 const TRACE = "4bf92f3577b34da6a3ce929d0e0e4736";
@@ -56,5 +56,21 @@ describe("request_id", () => {
     setLogContext(() => ({}));
     log.error("worker.crashed", {});
     assert.equal("request_id" in lines[0], false);
+  });
+});
+
+describe("noteRequestIds", () => {
+  test("hands the ids to where the request keeps them", () => {
+    const noted: unknown[] = [];
+    setRequestIdentifier((ids) => noted.push(ids));
+    noteRequestIds({ person_id: "6f1c2b8e-4d7a-4b1e-9a3c-2f5e8d7b6a10" });
+    assert.deepEqual(noted, [{ person_id: "6f1c2b8e-4d7a-4b1e-9a3c-2f5e8d7b6a10" }]);
+  });
+
+  test("a failure there never fails the request", () => {
+    setRequestIdentifier(() => {
+      throw new Error("no scope");
+    });
+    assert.doesNotThrow(() => noteRequestIds({ talent_id: "6f1c2b8e-4d7a-4b1e-9a3c-2f5e8d7b6a10" }));
   });
 });

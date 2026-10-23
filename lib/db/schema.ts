@@ -93,6 +93,27 @@ export const signupAllowlist = pgTable(
   (t) => [check("signup_allowlist_email_check", sql`${t.email} = lower(btrim(${t.email}))`)],
 ).enableRLS();
 
+// Who may use the Support page (decision 0026): look up an account and read its
+// metadata, never its mail. Kept apart from person, whose fields can reach the
+// session. Granted and revoked only by SQL (docs/setup/support.md), with no screen
+// in the app, so no bug in the app can grant it. Revoking sets revokedAt and keeps
+// the row, so who had access when stays on record. Only `support` is used so far.
+export const staffRoles = ["support", "admin"] as const;
+
+export const staff = pgTable(
+  "staff",
+  {
+    personId: uuid()
+      .primaryKey()
+      .references(() => person.id, { onDelete: "cascade" }),
+    role: text({ enum: staffRoles }).notNull(),
+    grantedAt: createdAt(),
+    revokedAt: timestamp({ withTimezone: true }), // null while the access holds
+    note: text().notNull(), // why it was granted
+  },
+  (t) => [check("staff_role_check", oneOf(t.role, staffRoles))],
+).enableRLS();
+
 // Better Auth internals. Column set follows Better Auth's core schema;
 // `personId` is its `userId`, renamed in the auth config.
 export const authSession = pgTable(

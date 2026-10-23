@@ -21,14 +21,14 @@ This file is the shared instructions for every coding agent on this repo (Claude
 Changes here can lose data, leak data, or lock people out, so make them only when the task needs them. When a PR touches any of these, list them at the top of its description so the reviewer knows where to look closely.
 
 - **Database** (`lib/db/schema.ts`, `drizzle/`): change the schema in `schema.ts`, then generate a new migration with `npm run db:generate`. Never edit or delete an existing migration file (the one exception is the one-time squash into a baseline before the first production deploy, in `docs/setup/launch-checklist.md`, done only when asked). Never drop or rename a column with data in it without asking.
-- **Auth and access** (`lib/auth/`, `proxy.ts`): who can sign in and who can see what. Every query for a talent's data must be scoped to that account.
+- **Auth and access** (`lib/auth/`, `proxy.ts`, `lib/support/`): who can sign in and who can see what. Every query for a talent's data must be scoped to that account. The one exception is the staff-only Support page: its reads live in `lib/support` and nowhere else, each checks `requireStaff`, and they take only the columns listed in `lib/support/columns.ts`, never mail or free text (decision 0026).
 - **AI and untrusted messages** (`lib/ai/`): message content is untrusted input — follow the rules in `docs/decisions/0007-untrusted-message-content.md`. The model never gets tools or acts on its own; a person confirms everything it extracts.
   - **Only the paid providers, and no real mail in evals or tests.** Model calls go only to Anthropic and OpenAI through `lib/ai/model.ts`, in development too (`docs/decisions/0022-paid-providers-only.md`); never add a provider that may keep or train on what it's sent. Evals and tests use only made-up content, never a real email or anything copied from one.
 - **Secrets**: never commit `.env*` files (only `.env.example`), API keys, or real customer messages.
 
 ## Conventions
 
-- **Every user-facing string** goes in `messages/en.json` and `messages/zh-TW.json` with the same keys; `npm run i18n:check` enforces it.
+- **Every user-facing string** goes in `messages/en.json` and `messages/zh-TW.json` with the same keys; `npm run i18n:check` enforces it. The Support page's go in `messages/support/`, which only its pages load.
 - **Follow the code around you** — its naming, structure, and comment style — over introducing new patterns or libraries. Ask before adding a dependency.
 - **Logs**: server code logs through `lib/log`, an event name plus fields from its allowlist (ids, codes, statuses, counts, durations), never `console.*` (lint enforces it). Pass a caught error as `error`; only its name, code, and status are kept. An `error` line also goes to Sentry (`lib/errors`), so don't report it a second time. A line written during a web request gets its `request_id` on its own. A new field goes in the allowlist, and review checks it can't carry content (decision 0026).
 - **Job payloads**: a shipped job's payload never changes; a new shape is a new job name (`lib/queue/jobs.ts`). Mark the old one `@deprecated` and remove it in a later PR.

@@ -17,6 +17,8 @@ export function ErrorPanel({ error, retry }: { error: Error & { digest?: string 
   const t = useTranslations("errorPage");
   const stale = unstable_isUnrecognizedActionError(error);
   const [code] = useState(() => (stale ? undefined : screenErrorCode(error)));
+  // The code is for pasting to support: a button, since picking out digits on a phone is fiddly.
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (stale) return; // normal after a deploy: not reported
     console.error(error);
@@ -26,7 +28,23 @@ export function ErrorPanel({ error, retry }: { error: Error & { digest?: string 
     <section className="surface padded error-page" role="alert">
       <h2>{stale ? t("staleTitle") : t("title")}</h2>
       <p>{stale ? t("staleBody") : t("body")}</p>
-      {code && <p className="muted">{t("code", { code })}</p>}
+      {code && (
+        <p className="muted error-code">
+          {t("code", { code })}{" "}
+          <button
+            type="button"
+            className="secondary"
+            onClick={() =>
+              void navigator.clipboard.writeText(code).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              })
+            }
+          >
+            {copied ? t("copied") : t("copyCode")}
+          </button>
+        </p>
+      )}
       <div className="row-actions">
         <button className="primary" onClick={() => window.location.reload()}>
           {t("reload")}

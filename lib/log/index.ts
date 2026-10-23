@@ -97,7 +97,10 @@ type Reporter = (error: unknown, line: Record<string, unknown>) => void;
 const hooks = ((globalThis as { [k: symbol]: unknown })[Symbol.for("taloox.log.hooks")] ??= {}) as {
   reporter?: Reporter;
   context?: () => LogFields;
+  identify?: (ids: RequestIds) => void;
 };
+
+type RequestIds = { person_id?: string; talent_id?: string };
 
 /** lib/errors calls this when the tracker starts: each error line is reported with its fields. */
 export function setErrorReporter(r: Reporter) {
@@ -107,6 +110,24 @@ export function setErrorReporter(r: Reporter) {
 /** lib/errors calls this on the web server: each line written during a request gets its request_id. */
 export function setLogContext(c: () => LogFields) {
   hooks.context = c;
+}
+
+/** lib/errors calls this on the web server: where noteRequestIds keeps the ids for the request. */
+export function setRequestIdentifier(i: (ids: RequestIds) => void) {
+  hooks.identify = i;
+}
+
+/**
+ * lib/auth calls this once it knows who's asking: the rest of the request's lines,
+ * its request.failed, and its Sentry events carry these ids. Elsewhere (the
+ * worker, a test) it does nothing.
+ */
+export function noteRequestIds(ids: RequestIds) {
+  try {
+    hooks.identify?.(ids);
+  } catch {
+    // Who asked is a help for support, never a reason to fail the request.
+  }
 }
 
 const production = () => process.env.NODE_ENV === "production";

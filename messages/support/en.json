@@ -1,0 +1,260 @@
+{
+  "support": {
+    "title": "Support",
+    "intro": "Look up an account to see its connections and what happened lately. You see ids, statuses, and times, never mail. Opening an account is recorded in its history.",
+    "lookup": {
+      "heading": "Find an account",
+      "email": "Email address",
+      "submit": "Open",
+      "help": "The exact address the person signs in with.",
+      "notFound": "No account signs in with that address."
+    },
+    "errorCode": {
+      "heading": "Look up an error code",
+      "label": "Error code",
+      "help": "Paste the code, or the whole line, from the person's error screen.",
+      "notACode": "That doesn't look like an error code.",
+      "code": "Code {code}",
+      "copy": "Copy",
+      "copied": "Copied",
+      "renderWeb": "Web service logs",
+      "renderWorker": "Worker logs",
+      "renderHelp": "Render's links open the logs: paste the code in its search box.",
+      "sentry": "Sentry",
+      "notSet": "No link where {names} isn't set; deployed, it is."
+    },
+    "account": {
+      "back": "Find another account",
+      "created": "Created",
+      "language": "Language",
+      "views": "Support's earlier looks",
+      "viewsNone": "None before this one.",
+      "viewsSummary": "Last {date}, by id {id}; {count, plural, one {# look} other {# looks}} in 30 days",
+      "email": "Email",
+      "id": "Id",
+      "viewed": "Opening an account is recorded in its history, once per 30 minutes for each of you.",
+      "find": "Their log lines and errors",
+      "renderHelpId": "Render's links open the logs: paste the id in its search box.",
+      "workspaces": "Workspaces",
+      "noWorkspaces": "No workspace yet: they haven't finished onboarding.",
+      "role": "{role}, {status}, joined {date}",
+      "copyId": "Copy the whole id"
+    },
+    "gmail": {
+      "heading": "Gmail",
+      "none": "No mailbox connected.",
+      "status": "Status",
+      "failure": "Failure",
+      "lastSynced": "Last synced",
+      "syncRequested": "Sync now pressed",
+      "history": "Earlier mail",
+      "historyDone": "{mode}, done {date}",
+      "historyRunning": "{mode}, still bringing in",
+      "watch": "Push watch until"
+    },
+    "calendar": {
+      "heading": "Google Calendar",
+      "none": "No calendar connected.",
+      "status": "Status",
+      "error": "Error",
+      "lastSynced": "Last synced"
+    },
+    "timeline": {
+      "heading": "Timeline",
+      "help": "The latest {limit} of each kind, newest first. Times are in Taipei.",
+      "empty": "Nothing recorded yet.",
+      "when": "When",
+      "what": "What",
+      "detail": "Detail",
+      "audit": "Change",
+      "ai": "AI call",
+      "mail": "Email decision",
+      "message": "Message",
+      "job": "Job gave up",
+      "attempts": "after {attempts} of {max} tries",
+      "latency": "{ms} ms",
+      "score": "score {score}",
+      "failedWith": "failed: {reason}",
+      "looksLike": "looks like {kind}",
+      "fetchFailed": "couldn't bring in: {code}",
+      "pair": "{a}: {b}",
+      "paren": "{a} ({b})",
+      "idOf": "{what} id",
+      "actorId": "done by id"
+    },
+    "never": "Never",
+    "none": "None",
+    "values": {
+      "action": {
+        "project_created": "Created a project",
+        "project_stage_changed": "Moved a project to another stage",
+        "project_currency_changed": "Changed a project's currency",
+        "message_applied": "Applied a message to a project",
+        "calendar_deleted": "Deleted from the calendar",
+        "opportunity_followed": "Followed an opportunity",
+        "opportunity_unfollowed": "Unfollowed an opportunity",
+        "opportunity_application_updated": "Updated an application",
+        "opportunity_dates_seen": "Saw an opportunity's new dates",
+        "support_viewed": "Support opened this account",
+        "calendar_event_added_in_google": "Added an event in Google Calendar",
+        "calendar_event_changed_in_google": "Changed an event in Google Calendar",
+        "calendar_event_deleted_in_google": "Deleted an event in Google Calendar"
+      },
+      "target": {
+        "project": "project",
+        "message": "message",
+        "calendar_event": "event",
+        "opportunity_application": "application",
+        "person": "person",
+        "event": "event",
+        "todo": "to-do"
+      },
+      "task": {
+        "extract": "Reading a message",
+        "relevance": "Deciding if an email is work",
+        "payment_notice": "Reading a payment notice",
+        "assistant": "Assistant",
+        "opportunity": "Reading an opportunity",
+        "eval": "Evaluation"
+      },
+      "aiStatus": {
+        "ok": "succeeded",
+        "error": "failed"
+      },
+      "failure": {
+        "busy": "provider busy",
+        "rate_limited": "rate limited",
+        "recitation": "refused: looked like published text",
+        "blocked": "blocked by safety filters",
+        "too_long": "answer too long",
+        "unreachable": "provider unreachable",
+        "invalid_output": "answer didn't fit",
+        "not_configured": "AI not set up",
+        "unsupported_file": "file it can't read",
+        "replay_missing": "no test recording",
+        "usage_limit": "usage limit reached",
+        "paused": "AI paused",
+        "unexpected": "unexpected error",
+        "sync_failed": "mailbox sync failed",
+        "invalid_grant": "Google access revoked",
+        "auth": "Google access revoked",
+        "google": "Google answered with an error",
+        "network": "couldn't reach Google"
+      },
+      "outcome": {
+        "work": "Work: brought in",
+        "skipped": "Skipped",
+        "pending": "Waiting for the model",
+        "unsure": "Not sure it's work",
+        "not_work": "Not work"
+      },
+      "decider": {
+        "sender_always": "their rule: always bring in this sender",
+        "sender_never": "their rule: never this sender",
+        "contact": "rule: from a contact",
+        "thread": "rule: part of a known thread",
+        "esign": "rule: e-signature service",
+        "spam": "rule: Gmail's spam",
+        "trash": "rule: in Gmail's trash",
+        "draft": "rule: a draft",
+        "sent": "rule: their own sent mail",
+        "bulk": "rule: bulk mail",
+        "tab": "rule: Gmail's Promotions or Updates tab",
+        "model": "the model's score",
+        "analysis": "the analysis, after bringing it in",
+        "person": "them, by hand",
+        "gone": "deleted in Gmail first",
+        "expired": "left unhandled 30 days",
+        "too_large": "too large to bring in"
+      },
+      "kind": {
+        "offer": "an offer",
+        "negotiation": "negotiation",
+        "contract": "a contract",
+        "logistics": "logistics",
+        "payment": "payment",
+        "bank_notice": "a bank notice",
+        "press": "press",
+        "newsletter": "a newsletter",
+        "marketing": "marketing",
+        "receipt": "a receipt",
+        "personal": "personal",
+        "notification": "a notification",
+        "other": "other"
+      },
+      "channel": {
+        "paste": "pasted",
+        "upload": "uploaded",
+        "gmail": "Gmail",
+        "gmail_addon": "Gmail add-on",
+        "forwarded_email": "forwarded"
+      },
+      "messageKind": {
+        "message": "message",
+        "payment_notice": "payment notice"
+      },
+      "direction": {
+        "received": "received",
+        "sent": "sent"
+      },
+      "messageStatus": {
+        "pending": "waiting for analysis",
+        "analyzed": "analyzed",
+        "confirmed": "confirmed",
+        "dismissed": "dismissed",
+        "error": "analysis failed",
+        "history": "earlier mail"
+      },
+      "relevance": {
+        "sure": "surely work",
+        "unsure": "maybe work"
+      },
+      "job": {
+        "message_analyze": "Analyze a message",
+        "mail_sync": "Sync a mailbox",
+        "mail_relevance": "Decide if an email is work",
+        "mail_fetch": "Bring an email in",
+        "mail_disconnect": "Disconnect a mailbox",
+        "calendar_sync": "Sync a calendar",
+        "mail_reconcile": "Sync every mailbox",
+        "mail_cleanup": "Daily cleanup",
+        "calendar_reconcile": "Sync every calendar",
+        "opportunities_refresh": "Refresh opportunities"
+      },
+      "connection": {
+        "connected": "connected",
+        "reconnect_needed": "needs reconnecting",
+        "needs_reconnect": "needs reconnecting",
+        "error": "error",
+        "disconnecting": "disconnecting"
+      },
+      "history": {
+        "30_days": "last 30 days",
+        "new_only": "new mail only"
+      },
+      "role": {
+        "owner": "owner",
+        "manager": "manager",
+        "agency_admin": "agency admin"
+      },
+      "membership": {
+        "invited": "invited",
+        "active": "active",
+        "revoked": "removed"
+      },
+      "vertical": {
+        "music": "music",
+        "influencer": "influencer",
+        "model": "model",
+        "video": "video",
+        "other": "other"
+      },
+      "idKey": {
+        "messageId": "message",
+        "connectionId": "connection",
+        "decisionId": "email decision",
+        "talentId": "workspace"
+      }
+    }
+  }
+}

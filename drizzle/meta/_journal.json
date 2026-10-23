@@ -393,6 +393,13 @@
       "when": 1792778622985,
       "tag": "0055_add_staff",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1792785969225,
+      "tag": "0056_allowlist_staff_page",
+      "breakpoints": true
     }
   ]
 }

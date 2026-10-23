@@ -50,7 +50,7 @@ gcloud iam service-accounts keys create kms-worker.json --iam-account kms-worker
 1. In Render, **New → Blueprint**, pick this repository, branch `main`. Render reads `render.yaml` and shows the project `taloox` with both environments.
 2. Render asks for every `sync: false` value. Fill in staging's; for production, fill in only once its services above exist (or leave production out of the first sync).
    - `DATABASE_URL`: the session-mode pooler string, the same on web and worker.
-   - `BETTER_AUTH_URL`: the web service's address, e.g. `https://taloox-web-staging.onrender.com` until a domain is set.
+   - `BETTER_AUTH_URL`: the web service's address: `https://staging.taloox.com` for staging and `https://app.taloox.com` for production, or the `onrender.com` address (e.g. `https://taloox-web-staging.onrender.com`) until the domain points at Render. Sign-in links, Google's redirects, and beta invitations are all built from it. `taloox.com` itself is the marketing site on Webflow.
    - `SITE_PASSWORD` (staging's web service only): a password the team shares, e.g. from `openssl rand -base64 18`. Staging asks for it before anything else; any user name works ([decision 0027](../decisions/0027-staging-behind-a-password.md)). To change it, set a new value; the service restarts and everyone types the new one.
    - The rest as in `.env.example`.
 3. Apply. Render builds the image and deploys each service once; the worker's pre-deploy command runs the migrations (`node dist/migrate.mjs`) and publishes the contract and quote templates (`node --conditions=react-server dist/publish-templates.mjs`) on that first deploy.

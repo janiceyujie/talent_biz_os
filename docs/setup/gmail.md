@@ -64,7 +64,7 @@ While the app stays in Testing, test users can keep connecting, with the 7-day e
 
 ## Production
 
-Push is required in production: the Pub/Sub settings above on the worker only (the web service doesn't need them). Without them the worker refuses to start, rather than quietly checking every 2 minutes. A production OAuth client (ideally its own project) with `https://app.example.com/api/mail/callback`, the Gmail API enabled there, and on the host: `APP_ENV=production`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `BETTER_AUTH_SECRET` (it also seals the short-lived connect cookie), `BETTER_AUTH_URL`, and the Cloud KMS settings from deploy-render. No `MAIL_KEY_DEV`. The same `WORKER_SECRET` on the web service and the worker; the worker runs as a private service (not reachable from the internet) with `WORKER_HTTP_HOST=0.0.0.0`, and the web service's `WORKER_URL` is its private address.
+Push is required in production: the Pub/Sub settings above on the worker only (the web service doesn't need them). Without them the worker refuses to start, rather than quietly checking every 2 minutes. A production OAuth client (ideally its own project) with `https://app.taloox.com/api/mail/callback`, the Gmail API enabled there, and on the host: `APP_ENV=production`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `BETTER_AUTH_SECRET` (it also seals the short-lived connect cookie), `BETTER_AUTH_URL`, and the Cloud KMS settings from deploy-render. No `MAIL_KEY_DEV`. The same `WORKER_SECRET` on the web service and the worker; the worker runs as a private service (not reachable from the internet) with `WORKER_HTTP_HOST=0.0.0.0`, and the web service's `WORKER_URL` is its private address.
 
 ## Troubleshooting
 

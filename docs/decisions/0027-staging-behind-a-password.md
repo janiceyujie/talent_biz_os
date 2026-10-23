@@ -4,7 +4,7 @@
 
 ## Context
 
-Staging (decision 0025) is a public web service: Render gives it an `onrender.com` address, and later `staging.<domain>`. Sign-up is open, so anyone who finds the address can create an account, upload files, and spend our paid AI keys, and can see features before they ship.
+Staging (decision 0025) is a public web service: Render gives it an `onrender.com` address, and later `staging.taloox.com`. Sign-up is open, so anyone who finds the address can create an account, upload files, and spend our paid AI keys, and can see features before they ship.
 
 The forces:
 
@@ -41,7 +41,7 @@ Any one of these:
 ### What it takes
 
 1. **Move the domain's DNS to Cloudflare** (the free plan). Copy every record across. Keep Webflow's records DNS only (not proxied through Cloudflare), so the marketing site is unaffected.
-2. **Create an Access application for `staging.<domain>`** in Cloudflare Zero Trust (free up to 50 users): a policy allowing the team's emails or the company domain, signing in with Google or a one-time code.
+2. **Create an Access application for `staging.taloox.com`** in Cloudflare Zero Trust (free up to 50 users): a policy allowing the team's emails or the company domain, signing in with Google or a one-time code.
 3. **Keep the smoke check working**: a Cloudflare service token whose two headers the deploy workflow sends, or a bypass policy for `/api/health`.
 4. **Close the `onrender.com` address.** Cloudflare only guards the address that goes through it. In `lib/auth/site-password.ts`, replace the password check with a check of the token Cloudflare Access adds to every request it lets through (the `Cf-Access-Jwt-Assertion` header: a signed JWT, verified against the team's public keys and the application's audience tag). A request without a valid one is refused, whichever address it came to. The server-path list stays.
 5. **Run both for a week**, then remove `SITE_PASSWORD` from Render and the password code.

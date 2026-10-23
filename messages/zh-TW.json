@@ -1824,7 +1824,11 @@
     "resetSubject": "重設 Taloox 密碼",
     "resetBody": "請點擊以下連結重設密碼（1 小時內有效）：\n\n{url}\n\n如果你沒有要求重設密碼，請忽略這封信。",
     "verifySubject": "確認你的 Taloox 電子郵件",
-    "verifyBody": "請點擊以下連結確認你的電子郵件（1 小時內有效）：\n\n{url}"
+    "verifyBody": "請點擊以下連結確認你的電子郵件（1 小時內有效）：\n\n{url}",
+    "inviteSubject": "你已受邀加入 Taloox beta",
+    "inviteGreeting": "{name} 你好，",
+    "inviteGreetingNoName": "你好，",
+    "inviteBody": "歡迎加入 Taloox beta！請到這裡建立帳號：{url}\n\n請用這個 email（{email}）註冊，或用這個 email 的 Google 帳號登入。其他 email 會無法註冊。\n\nTaloox 會讀取你的工作信件，幫你追蹤邀約、合作案和款項。連接 Gmail 時，Google 會顯示「這個應用程式未經驗證」的警告，這在 beta 期間是正常的：請點「進階」，再點「繼續」。\n\n有任何問題，直接回覆這封信就可以。\n\nTaloox 團隊"
   },
   "meta": {
     "description": "藝人與創作者的商務營運系統"

@@ -115,7 +115,7 @@ Support page (`user/janlin/support-page`):
 **A service of its own (when there's a support team, a customer or audit asks for isolation such as SOC 2, or access should be limited to an office network or VPN):**
 
 1. Deploy the same code as a second Render service that serves only `/support`, and turn `/support` off in the main app.
-2. Give it its own domain (`support.<domain>`) and its own session cookie.
+2. Give it its own domain (`support.taloox.com`) and its own session cookie.
 3. Give it a database role that can read only the tables and columns in `lib/support/columns.ts`, so even a bug can't read mail.
 4. Add an IP allowlist or single sign-on as needed.
 

@@ -61,6 +61,9 @@ projects:
               # tells a service only its own id, so the worker's is set by hand.
               - key: RENDER_WORKER_SERVICE_ID
                 sync: false
+              # Where answers to beta invitations go (the Support page's beta list).
+              - key: TEAM_EMAIL
+                value: support@taloox.com
               # Staging only: one shared password in front of the whole site (decision 0027).
               - key: SITE_PASSWORD
                 sync: false
@@ -202,6 +205,9 @@ projects:
               # tells a service only its own id, so the worker's is set by hand.
               - key: RENDER_WORKER_SERVICE_ID
                 sync: false
+              # Where answers to beta invitations go (the Support page's beta list).
+              - key: TEAM_EMAIL
+                value: support@taloox.com
               # Invite-only sign-up during the beta (decision 0028, docs/setup/beta-access.md).
               - key: SIGNUP_ALLOWLIST
                 value: "1"

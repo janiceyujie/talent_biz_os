@@ -1824,7 +1824,11 @@
     "resetSubject": "Reset your Taloox password",
     "resetBody": "Click this link to reset your password (valid for 1 hour):\n\n{url}\n\nIf you didn't ask to reset your password, you can ignore this email.",
     "verifySubject": "Confirm your Taloox email",
-    "verifyBody": "Click this link to confirm your email (valid for 1 hour):\n\n{url}"
+    "verifyBody": "Click this link to confirm your email (valid for 1 hour):\n\n{url}",
+    "inviteSubject": "You're invited to the Taloox beta",
+    "inviteGreeting": "Hi {name},",
+    "inviteGreetingNoName": "Hi,",
+    "inviteBody": "You're in. Create your account at {url}\n\nSign up with this email address, {email}, or sign in with the Google account for it. Another address won't be recognized.\n\nTaloox reads your work email to keep track of offers, deals, and payments. When you connect Gmail, Google shows a warning that the app isn't verified yet. That's expected during the beta: choose Advanced, then continue.\n\nReply to this email with anything that doesn't work.\n\nThe Taloox team"
   },
   "meta": {
     "description": "The business side of an independent career."

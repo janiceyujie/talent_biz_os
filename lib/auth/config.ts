@@ -66,8 +66,13 @@ function signupLocale(headers: Headers | undefined) {
   return matchLocale(headers?.get("accept-language")) ?? defaultLocale;
 }
 
+/** On the list, and not withdrawn: a withdrawn place lets no one sign up. */
 async function onAllowlist(email: string) {
-  const [row] = await db.select({ id: signupAllowlist.id }).from(signupAllowlist).where(eq(signupAllowlist.email, email)).limit(1);
+  const [row] = await db
+    .select({ id: signupAllowlist.id })
+    .from(signupAllowlist)
+    .where(and(eq(signupAllowlist.email, email), isNull(signupAllowlist.withdrawnAt)))
+    .limit(1);
   return !!row;
 }
 

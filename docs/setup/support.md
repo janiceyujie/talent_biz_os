@@ -9,7 +9,7 @@ Staff are granted only by SQL, never from the app. In Supabase's SQL editor for 
 ```sql
 -- Grant: the person must have signed up first.
 insert into staff (person_id, role, note)
-select id, 'support', 'builder; answers beta support'  -- why, for the record
+select id, 'admin', 'builder; answers beta support and runs the beta list'  -- why, for the record
 from person where email = 'you@example.com';
 
 -- Who has access now.
@@ -19,7 +19,7 @@ select p.email, s.role, s.granted_at, s.note from staff s join person p on p.id 
 update staff set revoked_at = now() where person_id = (select id from person where email = 'someone@example.com') and revoked_at is null;
 ```
 
-Only `support` is used so far; what `admin` may do is decided when it's needed. When someone other than the builder becomes staff, add two-step sign-in first (decision 0026, "Moving the Support page later").
+Two roles. `support` reads: accounts, error codes, and the beta list. `admin` also changes what's hard to take back: adding people to the beta list, sending their invitations, and withdrawing places (decision 0028). Give `admin` only to whoever runs the beta; anyone answering questions needs `support`. To change a role: `update staff set role = 'support' where person_id = … and revoked_at is null;`. When someone other than the builder becomes staff, add two-step sign-in first (decision 0026, "Moving the Support page later").
 
 ## Answering a question
 

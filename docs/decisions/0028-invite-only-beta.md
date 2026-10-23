@@ -31,9 +31,18 @@ The forces:
 - **Adding people with a script from a laptop.** Needs production's `DATABASE_URL` on the laptop, which decision 0025 rules out. A script run in Render's shell keeps the secret on Render but is awkward, especially from a phone; the SQL editor is enough until the staff page below.
 - **An allowlist in an environment variable.** No table, but 80 emails in one setting, and each change is a restart. No record of who has signed up.
 
+### Implementation notes
+
+The beta list on the Support page (`user/janlin/beta-list`), from "Later" below:
+
+- **Admins only.** Support staff can read the list; adding, inviting, and withdrawing need the `admin` staff role (`requireStaff("admin")`), since each is hard to take back: a stranger can sign up and spend a place under Google's cap, and an email can't be unsent. This is the first thing `admin` may do that `support` may not (decision 0026).
+- **Adding and inviting are two steps.** A pasted batch is checked first (new, withdrawn before, on the list, has an account, not an address), then added; nobody is emailed. Invitations are sent from the list, after a preview of each language's email, one by one in the request (a batch is 10 to 20), from the app's email provider with `Reply-To` set to the team (`TEAM_EMAIL`). Each place records the name given with it (for the greeting), its language, who added it, and when and by whom it was last invited. Invitations are signed "The Taloox team"; answers go to support@taloox.com.
+- **Withdrawing, not deleting.** A place nobody has used can be withdrawn: `withdrawn_at` and `withdrawn_by` are set, the row stays, and the sign-up check treats it as not listed. A used place can't be (a check constraint): they have an account. Adding a withdrawn address again restores it.
+- **Google's cap isn't counted here.** Google counts every account that ever granted Gmail access, and a disconnected mailbox's row is deleted, so any count from the database would be low. The page points to the Google Cloud console instead.
+
 ## Later
 
-- **A staff page for the list**, on the Support page from decision 0026 (which brings the `staff` table): paste emails, see who has signed up, and send the invitation email from the app. Then the SQL editor isn't needed.
+- ~~**A staff page for the list**~~: built, see the implementation notes above.
 - **Workspace invitations.** When a talent can invite a manager into their workspace, sending the invitation also adds the email to the allowlist (with `invited_by`), so invited people aren't refused.
 - **Referrals.** Different from invite links: a referral code is per person, reusable, and its hard parts are attribution and rewards. Referral codes get their own table, and a sign-up records whose code it came with. While sign-up is still invite-only, signing up with a referral code adds the email to the allowlist, and the check here stays as it is; once sign-up is open, the allowlist is off and the code only records who referred whom. `invited_by` already holds who brought whom in, from the first batch on.
 - **Open sign-up.** Set `SIGNUP_ALLOWLIST` off when the beta ends. That needs Google's verification and CASA to have passed first, or the 100-user cap still applies. The table and the check stay, unused, until removed in a later change.

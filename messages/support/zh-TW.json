@@ -255,6 +255,65 @@
         "decisionId": "信件判斷",
         "talentId": "工作區"
       }
+    },
+    "tabs": {
+      "accounts": "查詢帳號",
+      "beta": "Beta 名單"
+    },
+    "beta": {
+      "intro": "beta 只開放受邀者註冊時，誰可以註冊。客服可以查看；管理員可以新增、寄邀請、撤回。",
+      "cap": "在 app 通過 Google 驗證之前，最多只有 100 個 Google 帳號可以連接 Gmail，而且連接過一次就會永久占用一個名額。每次邀請一批人之前，先到 Google Cloud console（APIs & Services → OAuth consent screen）確認還剩幾個名額。",
+      "empty": "名單上還沒有人。",
+      "status": {
+        "all": "全部",
+        "added": "尚未寄邀請",
+        "invited": "已寄邀請",
+        "signedUp": "已註冊",
+        "withdrawn": "已撤回"
+      },
+      "count": "{status} {count}",
+      "language": "語言",
+      "addedOn": "{date} 加入",
+      "invitedOn": "{date} 寄出邀請",
+      "signedUpOn": "{date} 註冊",
+      "withdrawnOn": "{date} 撤回",
+      "by": "由 {name}",
+      "bySql": "由 SQL",
+      "add": {
+        "heading": "新增名單",
+        "emails": "Email 地址",
+        "emailsHelp": "一行一個人：email，有名字的話也一起貼上（例如「Mei Lin <mei@example.com>」，或從試算表複製兩欄）。也可以直接貼上從 waitlist 匯出的資料列。名字會用在邀請信的開頭稱呼。",
+        "note": "備註",
+        "noteHelp": "這一批的來源，例如 waitlist, 2026-11 batch 1",
+        "locale": "邀請信語言",
+        "preview": "檢查",
+        "new": "{count} 個新的",
+        "restore": "{count} 個之前撤回過，會恢復",
+        "listed": "{count} 個已經在名單上：略過",
+        "hasAccount": "{count} 個已經有帳號：略過",
+        "invalid": "{count} 個不是 email 地址：略過",
+        "confirm": "加入 {count} 人",
+        "nothing": "沒有可以加入的人。",
+        "done": "已加入 {count} 人。還沒有寄出任何信：請在下方寄出邀請。"
+      },
+      "invite": {
+        "select": "選擇 {email}",
+        "send": "寄出邀請（{count}）",
+        "title": "要寄出 {count} 封邀請嗎？",
+        "sentBefore": "其中 {count} 人之前已經寄過，會再收到一封。",
+        "previewIn": "{language}版本",
+        "subject": "主旨",
+        "confirm": "寄出",
+        "sent": "已寄出 {count} 封。",
+        "failed": "寄給 {emails} 失敗，請稍後再試。"
+      },
+      "withdraw": {
+        "button": "撤回",
+        "title": "要撤回 {email} 嗎？",
+        "body": "撤回後，沒有人能用這個 email 註冊。紀錄會保留。",
+        "invited": "對方已經收到邀請信：之後點連結註冊時，會顯示不在 beta 名單上。",
+        "confirm": "撤回"
+      }
     }
   }
 }

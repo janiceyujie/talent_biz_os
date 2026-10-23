@@ -97,3 +97,58 @@
   cursor: copy;
   min-height: 0;
 }
+.support-tabs {
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.support-tabs a {
+  padding: 6px 0;
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+.support-tabs a[aria-current="page"] {
+  border-bottom-color: currentColor;
+  font-weight: 700;
+}
+.support-list,
+.support-places {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.support-places li {
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.support-places li > .secondary {
+  justify-self: start;
+}
+.support-status {
+  font-size: 0.85em;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+.support-status.status-signedUp {
+  border-color: currentColor;
+}
+.support-status.status-withdrawn {
+  text-decoration: line-through;
+}
+.support-page button[aria-pressed="true"] {
+  border-color: currentColor;
+}
+.support-email {
+  white-space: pre-wrap;
+  font: inherit;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}

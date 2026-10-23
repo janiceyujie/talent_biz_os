@@ -26,6 +26,42 @@ Shortcuts taken on purpose, and gaps we know about: what happens today, why it's
 
 **Fix.** If it matters: show the message inside the dialog when one is open.
 
+## Opportunities
+
+### The Opportunities page needs a review: what it shows, and how to say more for less
+
+**Today.** The page lists the calls from every source as cards, screened against the profile, with a dialog for each ([decision 0024](decisions/0024-opportunity-discovery.md)). It works, but it was built source by source, and what it tells a person is thin:
+
+- **Most cards say Check.** Sources state few rules, so screening rarely reaches Fits, and the chip on nearly every card says the same thing.
+- **The facts a person decides on are mostly missing.** A card has a title, an agency, and dates. How much the grant is, what it pays for, who exactly can apply, and what to submit are on the official page or its PDF guidelines: `summary` is empty for every source, and eligibility comes only from the few codes or passages a source states.
+- **Titles and cards follow the source's shape, not the person's.**
+  - A Ministry of Culture program with an individual and a group form is two cards with joined names ("Program — Program_individual").
+  - A tracked announcement's tracks are "Program（Track）".
+  - A standing program with no dates shows "No deadline given".
+- **The official link is uneven.** A tracked page's call opens its announcement, and a Grants.gov call its own page. A Ministry of Culture call opens the grants site's home page, since the open data has no link per call; finding the call there is left to the person.
+- **Nobody has looked at the page as a whole** with a talent: the filters, the order, the dialog, profile setup, and how following leads into Today and the Calendar.
+
+**Why for now.** The first goal was coverage and correct dates: every source checked against its page, nothing invented. What to show on top of that, and what it's worth spending, needs a look at the page in use.
+
+**Fix.** A review, then changes in order of cost:
+
+1. **UI/UX review** of the page and the dialog, with a talent if possible:
+   - what they look for first;
+   - what makes them open or follow a call;
+   - what the Check chip should say instead;
+   - whether calls should be grouped by program, deadline, or fit.
+2. **Free, in code:**
+   - one card per program, its forms or tracks inside it;
+   - cleaner titles;
+   - discipline and applicant type shown on the card;
+   - standing programs apart from dated calls;
+   - a better Ministry of Culture link, if the grants site has a stable address per program (not checked).
+3. **Almost free, in the model call already made:** add amount, purpose, and who can apply, as short fields with their passages, to the tracked pages' extraction. The call reads the announcement anyway, so it's a few more output tokens, checked word for word like the dates.
+4. **Paid, once per document:** read a program's PDF guidelines when its hash changes, for eligibility and what to submit. Most of the National Culture and Arts Foundation's rules are there. The cost is one larger call per new PDF, not per day.
+5. **Measure before spending more:** which calls are opened and followed, and from which source, so new sources and fields go where people use them.
+
+Start with 1 and 2. Do 3 with the next change to the extraction prompt, since that re-reads every announcement once anyway. Weigh 4 against the cost the measurement in 5 shows.
+
 ## Intake
 
 ### HEIC photos can't be sent in

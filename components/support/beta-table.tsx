@@ -120,9 +120,17 @@ export function BetaTable({ places, isAdmin }: { places: Place[]; isAdmin: boole
         <Modal title={t("invite.title", { count: check.count })} onClose={() => setCheck(null)}>
           <div className="support-stack">
             {check.sentBefore > 0 && <p className="notice">{t("invite.sentBefore", { count: check.sentBefore })}</p>}
+            <h3>{t("invite.recipients")}</h3>
+            <ul className="support-list">
+              {check.recipients.map((r) => (
+                <li key={r.email}>
+                  {r.name ? `${r.name}, ${r.email}` : r.email} <span className="muted">{[r.language, r.sentBefore && t("invite.sentBeforeMark")].filter(Boolean).join(" · ")}</span>
+                </li>
+              ))}
+            </ul>
             {check.emails.map((e) => (
               <div key={e.locale} className="support-stack">
-                <h3>{t("invite.previewIn", { language: e.language })}</h3>
+                <h3>{t("invite.previewIn", { language: e.language, who: e.sample })}</h3>
                 <p>
                   <strong>{t("invite.subject")}</strong> {e.subject}
                 </p>

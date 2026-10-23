@@ -103,7 +103,11 @@ async function invitation(locale: Locale, place: { email: string; name: string |
   return { subject: t("inviteSubject"), text: `${greeting}\n\n${t("inviteBody", { url: signUpUrl(), email: place.email })}` };
 }
 
-/** What sending to these places would do: who'd get one (and who had one already), and each language's email. */
+/**
+ * What sending to these places would do: each recipient (and whether they were
+ * sent one before), and each language's email as its first recipient will get
+ * it. Every email is written for its own recipient: their name and address.
+ */
 export async function previewInvitations(ids: string[]) {
   await requireStaff("admin");
   const places = await placesToInvite(ids);
@@ -111,8 +115,13 @@ export async function previewInvitations(ids: string[]) {
   return {
     count: places.length,
     sentBefore: places.filter((p) => p.invitationSentAt).length,
-    // Each language's email, as the first person in it will get it.
-    emails: await Promise.all(locales.map(async (locale) => ({ locale, language: localeNames[locale], ...(await invitation(locale, places.find((p) => p.locale === locale)!)) }))),
+    recipients: places.map((p) => ({ email: p.email, name: p.name, language: localeNames[toLocale(p.locale)], sentBefore: Boolean(p.invitationSentAt) })),
+    emails: await Promise.all(
+      locales.map(async (locale) => {
+        const first = places.find((p) => p.locale === locale)!;
+        return { locale, language: localeNames[locale], sample: first.name ?? first.email, ...(await invitation(locale, first)) };
+      }),
+    ),
   };
 }
 

@@ -1705,6 +1705,8 @@
     "yourName": "你的名字",
     "newPasswordHint": "密碼（至少 8 個字元）",
     "haveAccount": "已經有帳號了？",
+    "betaInviteOnly": "Taloox 目前是邀請制 beta。請用收到邀請的電子郵件註冊。",
+    "joinWaitlist": "還沒收到邀請？加入候補名單",
     "sentVerification": "確認信已寄到 {email}。請點擊信中的連結完成註冊。",
     "forgotTitle": "忘記密碼",
     "resetSent": "如果這個電子郵件有註冊，重設密碼的連結已經寄出。",
@@ -1725,12 +1727,14 @@
       "PASSWORD_TOO_SHORT": "密碼至少需要 8 個字元。",
       "USER_ALREADY_EXISTS": "這個電子郵件已經註冊過了。",
       "INVALID_TOKEN": "連結無效或已過期，請重新申請。",
+      "SIGNUP_NOT_ALLOWED": "這個電子郵件還不在 beta 名單上。請用收到邀請的電子郵件註冊，或加入候補名單。",
       "unknown": "發生錯誤，請稍後再試。"
     },
     "googleError": {
       "account_not_linked": "這個電子郵件已經有帳號，但還沒完成驗證。請點確認信中的連結，或用密碼登入。",
       "account_already_linked_to_different_user": "這個 Google 帳號已連結到另一個帳號。",
       "email_not_found": "Google 沒有提供電子郵件，無法用它登入。",
+      "SIGNUP_NOT_ALLOWED": "這個 Google 帳號的電子郵件還不在 beta 名單上。請使用收到邀請的那個電子郵件的 Google 帳號，或加入候補名單。",
       "generic": "Google 登入沒有完成，請再試一次。"
     },
     "or": "或"

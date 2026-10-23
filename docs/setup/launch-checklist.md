@@ -79,9 +79,11 @@ From [decision 0008](../decisions/0008-ai-operations.md):
 - [ ] Error reporting and logs somewhere you'll see them: JSON logs through `lib/log`, Sentry through `lib/errors` with scrubbing and its test, alerts by email and phone push ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
 - [ ] A staff-only Support page (lookup by email, a metadata-only timeline, each lookup audited), the `staff` table, and error codes on error screens ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
 - [ ] A way to delete an account and everything in it, on request (privacy policy).
+- [ ] Invite-only sign-up on production: `SIGNUP_ALLOWLIST=1` (in `render.yaml`) and `WAITLIST_URL` on the web service, the waitlist form on the marketing site, and the first batch added ([beta-access.md](beta-access.md), [decision 0028](../decisions/0028-invite-only-beta.md)).
 
 ## 7. Legal
 
 - [ ] Terms of service and a privacy policy, as pages in the app (Google's consent screen links to them too, section 4). The terms include the template clause from [decision 0020](../decisions/0020-document-templates-are-data.md): Taloox isn't a law firm, its templates are self-help documents and not legal advice, using them creates no lawyer–client relationship, and the person is responsible for what they sign.
 - [ ] The template library's disclaimer links to those terms.
+- [ ] The privacy policy covers the waitlist: what the form collects, that it's used to invite people to the beta, and how to be removed ([beta-access.md](beta-access.md)).
 - [ ] A lawyer reviews the contract and quote templates, the disclaimer under the library, and the note at the top of every Word file.

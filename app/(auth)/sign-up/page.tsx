@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { GoogleButton } from "@/components/google-button";
 import { FormMessage } from "@/components/form";
 import { getSession, isGoogleEnabled } from "@/lib/auth";
+import { allowlistOn } from "@/lib/auth/beta-access";
 import { googleErrorKey } from "@/lib/auth/google-errors";
 import { SignUpForm } from "./sign-up-form";
 
@@ -14,6 +15,18 @@ export default async function SignUpPage({ searchParams }: PageProps<"/sign-up">
   return (
     <div className="auth-stack">
       <h1>{t("createAccount")}</h1>
+      {allowlistOn() && (
+        <FormMessage tone="info">
+          {t("betaInviteOnly")}
+          {/* The marketing site's waitlist form (docs/setup/beta-access.md). */}
+          {process.env.WAITLIST_URL && (
+            <>
+              {" "}
+              <a href={process.env.WAITLIST_URL}>{t("joinWaitlist")}</a>
+            </>
+          )}
+        </FormMessage>
+      )}
       {googleError && <FormMessage tone="error">{t(`googleError.${googleError}`)}</FormMessage>}
       {isGoogleEnabled && <GoogleButton label={t("googleSignUp")} returnTo="/sign-up" />}
       <SignUpForm />

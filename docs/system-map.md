@@ -518,7 +518,7 @@ flowchart TB
     VER -->|"failed field → unknown"| CAT[("opportunity<br/>shared catalogue")]
   end
 
-  CAT --> SCR["Opportunities screen:<br/>screened against the profile<br/>Fits · Check · Doesn't fit (hidden unless asked)"]
+  CAT --> SCR["Opportunities screen:<br/>screened against the profile<br/>tabs: You can apply (Fits + Check) · Doesn't fit · Following<br/>a program's rounds together, by closing date"]
   SCR -->|Follow| APP["opportunity_application at Preparing<br/>+ a Submit to-do on the closing date<br/>(dates seen remembered)"]
   APP --> TD["Today and the Calendar"]
   CAT -->|"a followed call's dates<br/>differ from the ones seen"| NT["Notification: closing date A → B"]

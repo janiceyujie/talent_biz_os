@@ -80,14 +80,14 @@ export async function listOpportunities(talentId: string, personId: string, para
     db.select({ id: opportunityApplication.opportunityId }).from(opportunityApplication).where(eq(opportunityApplication.talentId, talentId)),
   ]);
   const followed = new Set(follows.map((f) => f.id));
-  if (params.following && !followed.size) return { items: [], total: 0, nextCursor: null };
   const profile = screeningProfileSchema.safeParse(saved?.value);
   // Two days' margin for zones: the exact cut is each call's own (lib/opportunities/list).
   const since = dateInZone("UTC", -2);
   const rows = await db
     .select()
     .from(opportunity)
-    .where(params.following ? inArray(opportunity.id, [...followed]) : or(isNull(opportunity.closesOn), gte(opportunity.closesOn, since)));
+    // Every tab's count needs the open calls, and Following its closed ones too.
+    .where(or(isNull(opportunity.closesOn), gte(opportunity.closesOn, since), followed.size ? inArray(opportunity.id, [...followed]) : undefined));
   return pageOf(rows.map(opportunityOf), params, { profile: profile.success ? profile.data : null, followed });
 }
 

@@ -30,16 +30,21 @@ Shortcuts taken on purpose, and gaps we know about: what happens today, why it's
 
 ### The Opportunities page needs a review: what it shows, and how to say more for less
 
-**Today.** The page lists the calls from every source as cards, screened against the profile, with a dialog for each ([decision 0024](decisions/0024-opportunity-discovery.md)). It works, but it was built source by source, and what it tells a person is thin:
+**Today.** A first review and its free changes are done (steps 1 and 2 below; the mockups are in the PR that made them):
+- the profile shown above the list;
+- tabs for You can apply, Doesn't fit, and Following;
+- sections by closing date, with days left;
+- one card per program, its rounds and forms inside;
+- titles without the source's filing words;
+- the rules a card matched, shown on it;
+- following in one press.
 
-- **Most cards say Check.** Sources state few rules, so screening rarely reaches Fits, and the chip on nearly every card says the same thing.
+What's left:
+
+- **Fits is nearly empty.** Sources state few rules, so screening rarely reaches Fits; it's folded into You can apply until it means something.
 - **The facts a person decides on are mostly missing.** A card has a title, an agency, and dates. How much the grant is, what it pays for, who exactly can apply, and what to submit are on the official page or its PDF guidelines: `summary` is empty for every source, and eligibility comes only from the few codes or passages a source states.
-- **Titles and cards follow the source's shape, not the person's.**
-  - A Ministry of Culture program with an individual and a group form is two cards with joined names ("Program — Program_individual").
-  - A tracked announcement's tracks are "Program（Track）".
-  - A standing program with no dates shows "No deadline given".
 - **The official link is uneven.** A tracked page's call opens its announcement, and a Grants.gov call its own page. A Ministry of Culture call opens the grants site's home page, since the open data has no link per call; finding the call there is left to the person.
-- **Nobody has looked at the page as a whole** with a talent: the filters, the order, the dialog, profile setup, and how following leads into Today and the Calendar.
+- **Nobody has used the page with a talent yet.** The review was a designer's, against the screens, not a session with someone looking for a call.
 
 **Why for now.** The first goal was coverage and correct dates: every source checked against its page, nothing invented. What to show on top of that, and what it's worth spending, needs a look at the page in use.
 
@@ -60,7 +65,7 @@ Shortcuts taken on purpose, and gaps we know about: what happens today, why it's
 4. **Paid, once per document:** read a program's PDF guidelines when its hash changes, for eligibility and what to submit. Most of the National Culture and Arts Foundation's rules are there. The cost is one larger call per new PDF, not per day.
 5. **Measure before spending more:** which calls are opened and followed, and from which source, so new sources and fields go where people use them.
 
-Start with 1 and 2. Do 3 with the next change to the extraction prompt, since that re-reads every announcement once anyway. Weigh 4 against the cost the measurement in 5 shows.
+1 and 2 are done, apart from a talent session and the Ministry of Culture link. Do 3 with the next change to the extraction prompt, since that re-reads every announcement once anyway. Weigh 4 against the cost the measurement in 5 shows.
 
 ### Disciplines are seven broad buckets, matched by keywords
 

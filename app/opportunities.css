@@ -6,75 +6,135 @@
   gap: 4px 16px;
 }
 
-.opportunity-list {
-  list-style: none;
-  margin: 16px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
+.opportunity-profile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.opportunity-profile > button {
+  margin-left: auto;
 }
 
+/* The deal tabs, here below the profile rather than flush with the box's top. */
+.opportunity-tabs.deal-tabs {
+  position: static;
+  margin: 8px -24px 12px;
+  border-radius: 0;
+}
+
+.opportunity-filters-toggle {
+  display: none;
+}
+
+.opportunity-section {
+  margin: 20px 0 8px;
+  font-size: var(--text-meta);
+  color: var(--muted);
+}
+.opportunity-section:first-child {
+  margin-top: 12px;
+}
+
+/* A card: the closing date to the left, the program and what of you it matches, Follow to the right. */
 .opportunity-card {
   display: grid;
-  gap: 8px;
-  width: 100%;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
-  color: inherit;
-  text-align: left;
-  font: inherit;
+}
+.opportunity-card.standing {
+  grid-template-columns: minmax(0, 1fr) auto;
+  border-style: dashed;
 }
 .opportunity-card:hover,
-.opportunity-card:focus-visible {
+.opportunity-card:focus-within {
   border-color: var(--ink-soft);
 }
-.opportunity-card strong {
-  overflow-wrap: anywhere;
-  line-height: 1.5;
+.opportunity-deadline {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 8px 0;
+  border-radius: 10px;
+  background: var(--paper);
+  font-size: var(--text-meta);
+  color: var(--muted);
 }
-.opportunity-card-top,
-.opportunity-card-bottom {
+.opportunity-deadline strong {
+  font-size: 18px;
+  color: var(--ink);
+}
+.opportunity-deadline.soon {
+  background: var(--orange-soft);
+  color: #8a3b1e;
+}
+.opportunity-deadline.soon strong {
+  color: #6e2c14;
+}
+.opportunity-card-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.opportunity-card-title {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.45;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.opportunity-card-title:hover {
+  text-decoration: underline;
+}
+.opportunity-chips {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 12px;
+  gap: 6px;
 }
-.opportunity-card-top {
-  justify-content: space-between;
+.opportunity-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--paper);
+  font-size: var(--text-meta);
 }
-.opportunity-card-bottom .muted {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.opportunity-profile .opportunity-chip,
+.opportunity-chip.yes {
+  background: var(--lime-soft);
+  font-weight: 600;
+}
+.opportunity-chip.no {
+  background: var(--paper);
+  color: var(--muted);
+}
+.opportunity-sources {
+  margin-top: 20px;
 }
 
-.opportunity-state,
-.opportunity-fit,
 .opportunity-following {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
+  background: var(--blue-soft);
   font-size: var(--text-meta);
   white-space: nowrap;
-}
-.opportunity-state.open,
-.opportunity-fit.fits {
-  background: var(--lime-soft);
-}
-.opportunity-state.upcoming,
-.opportunity-following {
-  background: var(--blue-soft);
-}
-.opportunity-state.unknown,
-.opportunity-fit.check {
-  background: var(--orange-soft);
-}
-.opportunity-state.closed,
-.opportunity-fit.doesNotFit {
-  background: var(--paper);
-  color: var(--muted);
 }
 
 .opportunity-dates {
@@ -91,15 +151,77 @@
   font-weight: 600;
 }
 
-.opportunity-fit-details {
-  margin-top: 12px;
+.opportunity-tracks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+  padding: 0;
+  border: 0;
 }
-.opportunity-fit-details summary {
-  cursor: pointer;
+.opportunity-tracks legend {
+  margin-bottom: 8px;
+  font-weight: 600;
 }
-.opportunity-fit-details ul {
-  margin: 8px 0;
-  padding-left: 20px;
+.opportunity-tracks button {
+  display: grid;
+  gap: 2px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.opportunity-tracks button[aria-pressed="true"] {
+  border: 2px solid var(--ink-soft);
+  background: var(--lime-soft);
+}
+
+.opportunity-fit-rows h3 {
+  margin: 16px 0 8px;
+  font-size: 15px;
+}
+.opportunity-fit-rows ul {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.opportunity-fit-rows li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+.opportunity-fit-rows li > span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 13px;
+  font-weight: 700;
+}
+.opportunity-fit-rows li.yes > span {
+  background: var(--lime-soft);
+}
+.opportunity-fit-rows li.unknown > span {
+  background: var(--orange-soft);
+}
+.opportunity-fit-rows li p {
+  margin: 2px 0 0;
+  font-size: var(--text-meta);
+}
+.opportunity-official {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
 }
 
 .opportunity-tasks {
@@ -125,5 +247,42 @@
 @media (max-width: 640px) {
   .opportunity-dates {
     gap: 20px;
+  }
+  /* A phone: the filters behind one button, a card's closing date above its title, Follow full width. */
+  .opportunity-tabs.deal-tabs {
+    margin: 8px -16px 0;
+  }
+  .opportunity-filters-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .opportunity-filters:not(.open) {
+    display: none;
+  }
+  .opportunity-profile > button {
+    margin-left: 0;
+  }
+  .opportunity-card,
+  .opportunity-card.standing {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .opportunity-deadline {
+    display: flex;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 6px 10px;
+    justify-self: start;
+  }
+  .opportunity-deadline strong {
+    font-size: 15px;
+  }
+  .opportunity-card > button {
+    width: 100%;
+  }
+  .opportunity-card > .opportunity-following {
+    justify-self: start;
   }
 }

@@ -36,8 +36,13 @@ Timothy's branch (`user/timothy0324/opportunity-discovery`, his local decision "
   - **Fits**: every stated rule matches;
   - **Check**: a rule is unknown, the profile is missing a field it needs, or the rules are out of date;
   - **Doesn't fit**: a stated rule excludes you.
-- **Doesn't fit is hidden by default**, with a switch to show everything. **Check is always shown**: incomplete data never hides a call. Screening never stops you following one.
-- **Filters on the page:** region, kind (grant, competition, showcase, residency), closing within a number of days, and following only.
+- **The page's tabs:**
+  - **You can apply:** Fits and Check together, since few sources state every rule, so Fits alone is nearly empty. Each card shows the rules it matched and the ones still to check.
+  - **Doesn't fit.**
+  - **Following.**
+
+  Incomplete data never hides a call, and screening never stops you following one.
+- **The list** puts a program's rounds and forms in one entry, ordered by closing date in sections: closing within 14 days, later, and standing programs with no fixed deadline. Filters: region, kind (grant, competition, showcase, residency), and closing within a number of days.
 
 ### Following a call
 

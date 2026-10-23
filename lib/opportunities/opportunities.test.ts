@@ -1,7 +1,7 @@
 // Opportunities (decision 0024): reading the sources, screening, and the list. Run: npm test
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { availability, listParams, pageOf } from "./list";
+import { availability, listParams, pageOf, programOf } from "./list";
 import { screen } from "./screening";
 import { parseDetail, parseSearch } from "./sources/grants-gov";
 import { outOfScope } from "./scope";
@@ -237,19 +237,45 @@ describe("the list", () => {
     call({ id: "e", title: "Gone", closesOn: "2026-10-20" }),
     call({ id: "f", title: "US", region: "US", source: "grants_gov", timeZone: "America/New_York", sourceStatus: "forecasted", opensOn: null, closesOn: null }),
   ];
-  const params = (over: Record<string, string> = {}) => listParams.parse({ region: "all", kind: "all", within: "", following: "", show: "fitting", q: "", cursor: "", ...over });
+  const params = (over: Record<string, string> = {}) => listParams.parse({ region: "all", kind: "all", within: "", tab: "canApply", q: "", cursor: "", ...over });
   const page = (over: Record<string, string> = {}, followed: string[] = []) =>
     pageOf(rows, params(over), { profile: profile(), followed: new Set(followed), now });
 
-  test("open first, soonest to close first; closed and doesn't-fit left out", () => {
+  test("soonest to close first, standing programs last; Fits and Check together; closed ones only among those you follow", () => {
     assert.deepEqual(page().items.map((o) => o.id), ["b", "a", "d", "f"]);
-    assert.deepEqual(page({ show: "all" }).items.map((o) => o.id), ["c", "b", "a", "d", "f"]);
+    assert.deepEqual(page().items.map((o) => o.section), ["soon", "later", "later", "standing"]);
+    assert.deepEqual(page({ tab: "doesNotFit" }).items.map((o) => o.id), ["c"]);
+    const fitting = pageOf([call({ id: "g", rules: rules({ applicantTypes: ["individual"], countries: "any", areas: "any", disciplines: ["music"] }) }), ...rows], params(), { profile: profile(), followed: new Set(), now });
+    assert.deepEqual(fitting.items.map((o) => [o.id, o.fit]).slice(0, 3), [["b", "check"], ["g", "fits"], ["a", "check"]]);
+    assert.deepEqual(page({}, ["a"]).counts, { canApply: 4, doesNotFit: 1, following: 1 });
+  });
+
+  test("a program's forms and tracks are one entry, its soonest first", () => {
+    const programs = [
+      call({ id: "p1", title: "測試補助作業要點_團體", agency: "測試司", closesOn: "2026-11-20" }),
+      call({ id: "p2", title: "測試補助作業要點_個人", agency: "測試司", closesOn: "2026-11-10" }),
+      call({ id: "p3", title: "測試補助（常態第1期）", source: "pages", agency: "測試局", closesOn: "2026-11-02" }),
+      call({ id: "p4", title: "測試補助（出國（交流）第1期）", source: "pages", agency: "測試局", closesOn: "2026-12-10" }),
+    ];
+    const [tracked, moc] = pageOf(programs, params(), { profile: profile(), followed: new Set(), now }).items;
+    assert.deepEqual([tracked.program, tracked.calls.map((c) => [c.id, c.track])], ["測試補助", [["p3", "常態第1期"], ["p4", "出國（交流）第1期"]]]);
+    assert.deepEqual([moc.program, moc.calls.map((c) => [c.id, c.track])], ["測試補助", [["p2", "個人"], ["p1", "團體"]]]);
+  });
+
+  test("a program's name is read without the wording its source files it under", () => {
+    const of = (title: string, source: Opportunity["source"] = "moc") => programOf({ source, title });
+    assert.deepEqual(of("個人件-測試補助作業要點"), { program: "測試補助", track: "個人" });
+    assert.deepEqual(of("測試獎勵（115年度適用） — 測試獎勵要點_團體"), { program: "測試獎勵（115年度適用）", track: "團體" });
+    assert.deepEqual(of("測試輔導執行要點(補助) — 此為團體/公司行號申請之表單"), { program: "測試輔導(補助)", track: "團體/公司行號" });
+    assert.deepEqual(of("測試獎勵要點_下一本書獎勵"), { program: "測試獎勵", track: "下一本書獎勵" });
+    assert.deepEqual(of("(115)測試空間補助"), { program: "(115)測試空間補助", track: null });
+    assert.deepEqual(of("Arts Projects (2027)", "grants_gov"), { program: "Arts Projects (2027)", track: null });
   });
 
   test("filters: region, closing within, following (closed ones too), search", () => {
     assert.deepEqual(page({ region: "US" }).items.map((o) => o.id), ["f"]);
     assert.deepEqual(page({ within: "30" }).items.map((o) => o.id), ["b"]);
-    assert.deepEqual(page({ following: "1" }, ["e", "a"]).items.map((o) => o.id), ["a", "e"]);
+    assert.deepEqual(page({ tab: "following" }, ["e", "a"]).items.map((o) => o.id), ["a", "e"]);
     assert.deepEqual(page({ q: "soon" }).items.map((o) => o.id), ["b"]);
   });
 

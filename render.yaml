@@ -44,6 +44,9 @@ projects:
             healthCheckPath: /api/health
             envVars:
               - fromGroup: taloox-staging
+              # Staging only: one shared password in front of the whole site (decision 0027).
+              - key: SITE_PASSWORD
+                sync: false
               - key: WORKER_URL
                 fromService:
                   type: pserv

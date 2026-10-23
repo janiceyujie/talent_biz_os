@@ -48,3 +48,4 @@ When a choice is easy to get wrong later, was argued over, or trades something a
 | [0024](0024-opportunity-discovery.md) | Opportunities: public calls found on a schedule, screened against who you are, followed as to-dos | Accepted |
 | [0025](0025-environments-and-deployment.md) | Three environments, deploys driven by GitHub Actions, secrets kept in Render | Accepted |
 | [0026](0026-logging-and-error-reporting.md) | Structured logs on Render, errors to Sentry, a staff-only Support page; a path to a log platform and full observability | Accepted |
+| [0027](0027-staging-behind-a-password.md) | Staging behind one shared password, checked by the app; Cloudflare Access later | Accepted |

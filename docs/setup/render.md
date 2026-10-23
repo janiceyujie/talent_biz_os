@@ -50,10 +50,12 @@ gcloud iam service-accounts keys create kms-worker.json --iam-account kms-worker
 2. Render asks for every `sync: false` value. Fill in staging's; for production, fill in only once its services above exist (or leave production out of the first sync).
    - `DATABASE_URL`: the session-mode pooler string, the same on web and worker.
    - `BETTER_AUTH_URL`: the web service's address, e.g. `https://taloox-web-staging.onrender.com` until a domain is set.
+   - `SITE_PASSWORD` (staging's web service only): a password the team shares, e.g. from `openssl rand -base64 18`. Staging asks for it before anything else; any user name works ([decision 0027](../decisions/0027-staging-behind-a-password.md)). To change it, set a new value; the service restarts and everyone types the new one.
    - The rest as in `.env.example`.
 3. Apply. Render builds the image and deploys each service once; the worker's pre-deploy command runs the migrations (`node dist/migrate.mjs`) and publishes the contract and quote templates (`node --conditions=react-server dist/publish-templates.mjs`) on that first deploy.
 4. Check:
-   - `https://<web address>/api/health` answers `{"ok":true}`.
+   - `https://<web address>/api/health` answers `{"ok":true}`, with no password.
+   - Staging's address asks for the password, and the app opens after it.
    - The worker's logs show `mail: push (Pub/Sub)…` and, if `WORKER_SECRET` reached it, `worker http: listening on 0.0.0.0:3001`.
    - Sign in, and open Intake's Filtered out: senders and subjects show, so the web service reaches the worker.
 

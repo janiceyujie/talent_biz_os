@@ -1,9 +1,9 @@
 "use client";
 
-import { CalendarDays, ExternalLink, Plus } from "lucide-react";
+import { ExternalLink, Plus, SlidersHorizontal } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { DateTimeInput } from "@/components/app/date-time-input";
@@ -19,8 +19,8 @@ import { savePreference } from "@/lib/actions/preferences";
 import { dateInZone } from "@/lib/domain/dates";
 import type { ListPage } from "@/lib/domain/list-page";
 import { isOpenStage } from "@/lib/domain/phases";
-import { areasOf } from "@/lib/opportunities/areas";
-import { availability, WITHIN_DAYS } from "@/lib/opportunities/list";
+import { areasOf, type Area } from "@/lib/opportunities/areas";
+import { availability, daysUntil, listTabs, SOON_DAYS, WITHIN_DAYS, type ListTab, type OpportunityCall, type OpportunityGroup } from "@/lib/opportunities/list";
 import { screen, type FitReason } from "@/lib/opportunities/screening";
 import {
   applicantTypes,
@@ -30,6 +30,7 @@ import {
   emptyProfile,
   opportunityKinds,
   opportunityRegions,
+  ruleApplicantTypes,
   taskKinds,
   type Application,
   type ApplicationTask,
@@ -39,22 +40,27 @@ import {
 } from "@/lib/opportunities/types";
 
 type Run = (action: () => Promise<string | null>, success?: string) => void;
+type T = ReturnType<typeof useTranslations<"opportunities">>;
+type ListResult = ListPage<OpportunityGroup> & { counts: Record<ListTab, number> };
 
 /**
  * Opportunities (decision 0024): public calls read from their sources each
- * day, screened against who you are, and the ones you follow, whose to-dos
- * are ordinary to-dos on Today and the Calendar.
+ * day, screened against who you are, a program's rounds and forms together,
+ * and the ones you follow, whose to-dos are ordinary to-dos on Today and the
+ * Calendar.
  */
 export function OpportunitiesView({ workspace }: { workspace: OpportunitiesWorkspace }) {
   const t = useTranslations("opportunities");
   const format = useFormatter();
   const data = useAppData();
   const profile = data.preferences["opportunities.profile"];
-  const [filters, setFilters] = useState({ region: "all", kind: "all", within: "", following: "", show: "fitting", q: "" });
+  const [filters, setFilters] = useState({ region: "all", kind: "all", within: "", tab: "canApply", q: "" });
   const set = (key: keyof typeof filters) => (value: string) => setFilters((f) => ({ ...f, [key]: value }));
-  const list = useListPages<ListPage<Opportunity>>("/api/opportunities", filters, data);
-  const [selected, setSelected] = useState<Opportunity | null>(null);
+  const list = useListPages<ListResult>("/api/opportunities", filters, data);
+  const counts = list.page?.counts;
+  const [selected, setSelected] = useState<{ group: OpportunityGroup; callId: string } | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -66,8 +72,12 @@ export function OpportunitiesView({ workspace }: { workspace: OpportunitiesWorks
       if (!failure) setStatus(success);
     });
   const applicationOf = (id: string) => workspace.applications.find((a) => a.opportunityId === id);
-  // The newest copy of the one open: a save reloads the workspace, and a followed call is in it.
-  const current = selected && (workspace.followed.find((o) => o.id === selected.id) ?? selected);
+  const follow = (c: OpportunityCall) => {
+    const date = c.closesOn && c.closesOn >= dateInZone(c.timeZone) ? c.closesOn : "";
+    run(() => followOpportunity(c.id, date ? { date, time: "", timeZone: c.timeZone } : undefined), t(date ? "followedWithTask" : "followed"));
+  };
+  const active = [filters.region !== "all", filters.kind !== "all", !!filters.within, !!filters.q.trim()].filter(Boolean).length;
+  const tab = filters.tab as ListTab;
 
   return (
     <section className="surface padded">
@@ -75,14 +85,42 @@ export function OpportunitiesView({ workspace }: { workspace: OpportunitiesWorks
         <div>
           <h2>{t("title")}</h2>
         </div>
-        <button className="secondary" onClick={() => setProfileOpen(true)}>
-          {t("profile.open")}
-        </button>
       </div>
       <p className="muted">
         {t("intro")} <InfoHint notes={[t("aboutSources"), t("aboutScreening"), t("aboutDates")]} />
       </p>
-      <div className="toolbar wrap">
+      {profile ? (
+        <div className="opportunity-profile">
+          <span className="muted">{t("profileBar")}</span>
+          {profileChips(t, profile).map((chip) => (
+            <span key={chip} className="opportunity-chip">
+              {chip}
+            </span>
+          ))}
+          <button className="secondary" onClick={() => setProfileOpen(true)}>
+            {t("editProfile")}
+          </button>
+        </div>
+      ) : (
+        <p className="notice">
+          {t("noProfile")}{" "}
+          <button className="text-button" onClick={() => setProfileOpen(true)}>
+            {t("profile.open")}
+          </button>
+        </p>
+      )}
+      <div className="deal-tabs opportunity-tabs" role="tablist" aria-label={t("tabsLabel")}>
+        {listTabs.map((key) => (
+          <button key={key} role="tab" aria-selected={tab === key} aria-controls="opportunity-panel" onClick={() => set("tab")(key)}>
+            {t(`tabs.${key}`)}
+            {counts && <span>{counts[key]}</span>}
+          </button>
+        ))}
+      </div>
+      <button type="button" className="secondary opportunity-filters-toggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}>
+        <SlidersHorizontal size={16} aria-hidden="true" /> {active ? t("filtersActive", { count: active }) : t("filters")}
+      </button>
+      <div className={`toolbar wrap opportunity-filters ${filtersOpen ? "open" : ""}`}>
         <input aria-label={t("search")} placeholder={t("search")} value={filters.q} onChange={(e) => set("q")(e.target.value)} />
         <select aria-label={t("region")} value={filters.region} onChange={(e) => set("region")(e.target.value)}>
           <option value="all">{t("allRegions")}</option>
@@ -108,17 +146,31 @@ export function OpportunitiesView({ workspace }: { workspace: OpportunitiesWorks
             </option>
           ))}
         </select>
-        <label className="check-line">
-          <input type="checkbox" checked={!!filters.following} onChange={(e) => set("following")(e.target.checked ? "1" : "")} />
-          {t("followingOnly")}
-        </label>
-        <label className="check-line">
-          <input type="checkbox" checked={filters.show === "all"} onChange={(e) => set("show")(e.target.checked ? "all" : "fitting")} />
-          {t("showAll")}
-        </label>
+      </div>
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
+      <div id="opportunity-panel" role="tabpanel">
+        {list.items.map((g, i) => (
+          <Fragment key={g.id}>
+            {g.section !== list.items[i - 1]?.section && <h3 className="opportunity-section">{t(`sections.${g.section}`, { days: SOON_DAYS })}</h3>}
+            <OpportunityCard
+              group={g}
+              profile={profile}
+              application={applicationOf(g.calls[0].id)}
+              pending={pending}
+              onOpen={() => setSelected({ group: g, callId: g.calls[0].id })}
+              onFollow={() => follow(g.calls[0])}
+            />
+          </Fragment>
+        ))}
+        <ListMore list={list} failedText={t("listFailed")} />
+        {!list.items.length && !list.loading && !list.failed && <p className="empty">{t(tab === "following" ? "emptyFollowing" : "empty")}</p>}
       </div>
       <p className="muted opportunity-sources">
-        {list.total !== null && <span role="status">{t("count", { count: list.total })}</span>}
+        <span>{t("sourcesTitle")}</span>
         {workspace.sources.map((s) => (
           <span key={s.id}>
             {t(`sources.${s.id}`)} ·{" "}
@@ -133,30 +185,20 @@ export function OpportunitiesView({ workspace }: { workspace: OpportunitiesWorks
           </span>
         ))}
       </p>
-      {!profile && (
-        <p className="notice">
-          {t("noProfile")}{" "}
-          <button className="text-button" onClick={() => setProfileOpen(true)}>
-            {t("profile.open")}
-          </button>
-        </p>
-      )}
-      {error && (
-        <p className="notice error" role="alert">
-          {error}
-        </p>
-      )}
-      <ul className="opportunity-list">
-        {list.items.map((o) => (
-          <li key={o.id}>
-            <OpportunityCard opportunity={o} profile={profile} application={applicationOf(o.id)} onOpen={() => setSelected(o)} />
-          </li>
-        ))}
-      </ul>
-      <ListMore list={list} failedText={t("listFailed")} />
-      {!list.items.length && !list.loading && !list.failed && <p className="empty">{t(filters.following ? "emptyFollowing" : "empty")}</p>}
-      {current && (
-        <OpportunityDialog key={current.id} opportunity={current} profile={profile} application={applicationOf(current.id)} pending={pending} run={run} onClose={() => setSelected(null)} />
+      {selected && (
+        <OpportunityDialog
+          key={selected.group.id}
+          group={selected.group}
+          callId={selected.callId}
+          onPick={(callId) => setSelected({ ...selected, callId })}
+          // The newest copy of a followed call: a save reloads the workspace, and a followed call is in it.
+          fresh={(c) => ({ ...(workspace.followed.find((o) => o.id === c.id) ?? c), track: c.track })}
+          profile={profile}
+          applicationOf={applicationOf}
+          pending={pending}
+          run={run}
+          onClose={() => setSelected(null)}
+        />
       )}
       {profileOpen && <ProfileDialog profile={profile} pending={pending} run={run} onClose={() => setProfileOpen(false)} />}
       {status && <Toast message={status} onClose={() => setStatus("")} />}
@@ -168,57 +210,167 @@ function useToday(o: Opportunity) {
   return dateInZone(o.timeZone);
 }
 
-function OpportunityCard({ opportunity: o, profile, application, onOpen }: { opportunity: Opportunity; profile: ScreeningProfile | null; application?: Application; onOpen: () => void }) {
+/** What the profile says, as the bar above the list shows it. */
+function profileChips(t: T, p: ScreeningProfile) {
+  return [
+    p.applicantType && t(`applicantTypes.${p.applicantType}`),
+    p.area ? t("profileArea", { area: t(`areas.${p.area}`) }) : p.country && t(`countries.${p.country}`),
+    ...p.disciplines.map((d) => t(`disciplines.${d}`)),
+  ].filter((chip): chip is string => !!chip);
+}
+
+const dimensions = ["applicantType", "country", "area", "discipline"] as const;
+type Dimension = (typeof dimensions)[number];
+const ruleOf = (o: Opportunity, d: Dimension) =>
+  ({ applicantType: o.rules?.applicantTypes, country: o.rules?.countries, area: o.rules?.areas, discipline: o.rules?.disciplines })[d];
+const passageKey: Record<Dimension, string> = { applicantType: "applicantTypes", country: "countries", area: "areas", discipline: "disciplines" };
+
+function valueLabel(t: T, d: Dimension, v: string) {
+  if (d === "applicantType") return t(`applicantTypes.${v as (typeof ruleApplicantTypes)[number]}`);
+  if (d === "country") return t(`countries.${v as (typeof countries)[number]}`);
+  if (d === "area") return t(`areas.${v as Area}`);
+  return t(`disciplines.${v as (typeof disciplines)[number]}`);
+}
+
+/**
+ * Each rule a call states, against the profile: one it matches (with what
+ * of yours it matched), one that leaves you out (with what it asks for), and
+ * the ones the source or the profile doesn't say.
+ */
+function fitRows(t: T, o: Opportunity, profile: ScreeningProfile | null) {
+  const { reasons } = screen(o.rules, profile, o.checkedAt);
+  const reasonOf = (d: Dimension) => reasons.find((r) => r.kind !== "stale" && r.dimension === d);
+  const mine: Record<Dimension, readonly string[]> = {
+    applicantType: profile?.applicantType ? [profile.applicantType] : [],
+    country: profile?.country ? [profile.country] : [],
+    area: profile?.area ? [profile.area] : [],
+    discipline: profile?.disciplines ?? [],
+  };
+  const rows = dimensions.map((d) => {
+    const rule = ruleOf(o, d);
+    const reason = reasonOf(d);
+    const listed = (values: readonly string[]) => values.map((v) => valueLabel(t, d, v)).join(t("listSeparator"));
+    if (reason?.kind === "excludes" && Array.isArray(rule)) return { d, kind: "no" as const, text: listed(rule) };
+    if (reason) return { d, kind: reason.kind };
+    if (rule === "any") return { d, kind: "any" as const };
+    return { d, kind: "yes" as const, text: listed(mine[d].filter((v) => (rule as readonly string[] | undefined)?.includes(v))) };
+  });
+  return { rows, stale: reasons.some((r) => r.kind === "stale") };
+}
+
+function OpportunityCard({
+  group: g,
+  profile,
+  application,
+  pending,
+  onOpen,
+  onFollow,
+}: {
+  group: OpportunityGroup;
+  profile: ScreeningProfile | null;
+  application?: Application;
+  pending: boolean;
+  onOpen: () => void;
+  onFollow: () => void;
+}) {
   const t = useTranslations("opportunities");
-  const state = availability(o, useToday(o));
-  const { fit } = screen(o.rules, profile, o.checkedAt);
+  const c = g.calls[0];
+  const today = useToday(c);
+  const state = availability(c, today);
+  const { rows } = fitRows(t, c, profile);
+  const chips = rows.filter((r) => (r.kind === "yes" && r.d !== "country") || r.kind === "no");
+  const toCheck = rows.filter((r) => r.kind === "unknown" || r.kind === "missing").map((r) => t(`dimensions.${r.d}`));
   return (
-    <button type="button" className="opportunity-card" onClick={onOpen}>
-      <span className="opportunity-card-top">
+    <article className={`opportunity-card ${g.section}`}>
+      {c.closesOn && (
+        <div className={`opportunity-deadline ${g.section}`}>
+          <span>{t("closes")}</span>
+          <strong>{c.closesOn.slice(5).replace("-", "/")}</strong>
+          <span>{state === "closed" ? t("availability.closed") : t("daysLeft", { days: daysUntil(c.closesOn, today) })}</span>
+        </div>
+      )}
+      <div className="opportunity-card-body">
         <span className="muted">
-          {t(`regions.${o.region}`)} · {o.agency}
+          {c.agency} · {t(`kinds.${c.kind}`)}
+          {state === "upcoming" && c.opensOn && ` · ${t("opensFrom", { date: c.opensOn.slice(5).replace("-", "/") })}`}
         </span>
-        <span className={`opportunity-state ${state}`}>{t(`availability.${state}`)}</span>
-      </span>
-      <strong>{o.title}</strong>
-      <span className="opportunity-card-bottom">
-        <span className={`opportunity-fit ${fit}`}>{t(`fit.${fit}`)}</span>
-        <span className="muted">
-          <CalendarDays size={14} aria-hidden="true" /> {o.closesOn ? t("closesOn", { date: o.closesOn }) : t("noDeadline")}
+        <button type="button" className="opportunity-card-title" onClick={onOpen}>
+          {g.program}
+          {c.track && ` · ${c.track}`}
+        </button>
+        <span className="opportunity-chips">
+          {chips.map((r) => (
+            <span key={r.d} className={`opportunity-chip ${r.kind}`}>
+              {r.kind === "yes" ? "✓ " : "✕ "}
+              {r.kind === "no" ? t("onlyFor", { values: r.text ?? "" }) : r.text}
+            </span>
+          ))}
+          {g.calls.length > 1 && <span className="opportunity-chip more">{t("moreTracks", { count: g.calls.length - 1 })}</span>}
+          {!c.closesOn && <span className="muted">{t("standingHelp")}</span>}
+          {g.fit === "check" && toCheck.length > 0 && <span className="muted">{t("toCheck", { list: toCheck.join(t("listSeparator")) })}</span>}
         </span>
-        {application && <span className="opportunity-following">{t(`stages.${application.stage}`)}</span>}
-      </span>
-    </button>
+      </div>
+      {application ? (
+        <span className="opportunity-following">{t(`stages.${application.stage}`)}</span>
+      ) : (
+        <button type="button" className={g.section === "soon" ? "primary" : "secondary"} disabled={pending} aria-label={t("followNamed", { title: g.program })} onClick={onFollow}>
+          {t("follow")}
+        </button>
+      )}
+    </article>
   );
 }
 
-function reasonText(t: ReturnType<typeof useTranslations<"opportunities">>, r: FitReason) {
+function reasonText(t: T, r: FitReason) {
   return r.kind === "stale" ? t("reasons.stale") : t(`reasons.${r.kind}`, { dimension: t(`dimensions.${r.dimension}`) });
 }
 
 function OpportunityDialog({
-  opportunity: o,
+  group: g,
+  callId,
+  onPick,
+  fresh,
   profile,
-  application,
+  applicationOf,
   pending,
   run,
   onClose,
 }: {
-  opportunity: Opportunity;
+  group: OpportunityGroup;
+  callId: string;
+  onPick: (callId: string) => void;
+  fresh: (c: OpportunityCall) => OpportunityCall;
   profile: ScreeningProfile | null;
-  application?: Application;
+  applicationOf: (id: string) => Application | undefined;
   pending: boolean;
   run: Run;
   onClose: () => void;
 }) {
   const t = useTranslations("opportunities");
   const format = useFormatter();
-  const { fit, reasons } = screen(o.rules, profile, o.checkedAt);
+  const o = fresh(g.calls.find((c) => c.id === callId) ?? g.calls[0]);
+  const today = useToday(o);
+  const application = applicationOf(o.id);
+  const { rows, stale } = fitRows(t, o, profile);
+  const named = (kind: string) => rows.filter((r) => r.kind === kind).map((r) => t(`dimensions.${r.d}`)).join(t("listSeparator"));
+  const span = (c: Opportunity) => [c.opensOn, c.closesOn].map((d) => (d ? d.slice(5).replace("-", "/") : "?")).join(" – ");
   return (
-    <Modal title={o.title} onClose={onClose}>
+    <Modal title={g.program} onClose={onClose}>
       <p className="muted">
         {t(`regions.${o.region}`)} · {o.agency} · {t(`kinds.${o.kind}`)}
       </p>
+      {g.calls.length > 1 && (
+        <fieldset className="opportunity-tracks">
+          <legend>{t("tracksTitle")}</legend>
+          {g.calls.map((c) => (
+            <button key={c.id} type="button" aria-pressed={c.id === o.id} onClick={() => onPick(c.id)}>
+              <strong>{c.track ?? g.program}</strong>
+              <span className="muted">{span(c)}</span>
+              {applicationOf(c.id) && <span className="opportunity-following">{t(`stages.${applicationOf(c.id)!.stage}`)}</span>}
+            </button>
+          ))}
+        </fieldset>
+      )}
       <dl className="opportunity-dates">
         <div>
           <dt>{t("opens")}</dt>
@@ -226,38 +378,70 @@ function OpportunityDialog({
         </div>
         <div>
           <dt>{t("closes")}</dt>
-          <dd>{o.closesOn ?? t("unknown")}</dd>
+          <dd>
+            {o.closesOn ?? t("unknown")}
+            {o.closesOn && o.closesOn >= today && <span className="muted"> · {t("daysLeft", { days: daysUntil(o.closesOn, today) })}</span>}
+          </dd>
         </div>
       </dl>
-      <p className="muted">{t("asChecked", { when: format.dateTime(new Date(o.checkedAt), { dateStyle: "medium", timeStyle: "short" }) })}</p>
-      <p>
+      <section className="opportunity-fit-rows" aria-label={t("fitTitle")}>
+        <h3>{t("fitTitle")}</h3>
+        <ul>
+          {rows
+            .filter((r) => r.kind === "yes" || r.kind === "no")
+            .map((r) => (
+              <li key={r.d} className={r.kind}>
+                <span aria-hidden="true">{r.kind === "yes" ? "✓" : "✕"}</span>
+                <div>
+                  {t("fitRow", { dimension: t(`dimensions.${r.d}`), values: r.kind === "no" ? t("onlyFor", { values: r.text ?? "" }) : (r.text ?? "") })}
+                  {o.passages?.[passageKey[r.d]] && <p className="muted">「{o.passages[passageKey[r.d]]}」</p>}
+                </div>
+              </li>
+            ))}
+          {named("unknown") && (
+            <li className="unknown">
+              <span aria-hidden="true">?</span>
+              <div>{t("sourceSilent", { list: named("unknown") })}</div>
+            </li>
+          )}
+          {named("missing") && (
+            <li className="unknown">
+              <span aria-hidden="true">?</span>
+              <div>
+                {t("profileSilent", { list: named("missing") })}
+              </div>
+            </li>
+          )}
+          {stale && (
+            <li className="unknown">
+              <span aria-hidden="true">?</span>
+              <div>{reasonText(t, { kind: "stale" })}</div>
+            </li>
+          )}
+        </ul>
+        {o.rules?.evidence && !o.passages && <p className="muted">{t("evidence", { text: o.rules.evidence })}</p>}
+        <p className="muted">{t("fitCaution")}</p>
+      </section>
+      <p className="opportunity-official">
         <a className="secondary button-link" href={o.url} target="_blank" rel="noopener noreferrer">
           <ExternalLink size={16} aria-hidden="true" /> {t("official")}
         </a>
+        <span className="muted">{t("asChecked", { when: format.dateTime(new Date(o.checkedAt), { dateStyle: "medium", timeStyle: "short" }) })}</span>
       </p>
-      <details className="opportunity-fit-details">
-        <summary>
-          {t("fitTitle")} <span className={`opportunity-fit ${fit}`}>{t(`fit.${fit}`)}</span>
-        </summary>
-        {reasons.length > 0 && (
-          <ul>
-            {reasons.map((r, i) => (
-              <li key={i}>{reasonText(t, r)}</li>
-            ))}
-          </ul>
-        )}
-        {o.rules?.evidence && <p className="muted">{t("evidence", { text: o.rules.evidence })}</p>}
-        <p className="muted">{t("fitCaution")}</p>
-      </details>
-      {application ? <ApplicationPanel application={application} opportunity={o} pending={pending} run={run} /> : <FollowForm opportunity={o} pending={pending} run={run} />}
+      {application ? (
+        <ApplicationPanel key={o.id} application={application} opportunity={o} pending={pending} run={run} />
+      ) : (
+        <FollowForm key={o.id} opportunity={o} label={o.track ? t("followTrack") : t("follow")} pending={pending} run={run} />
+      )}
     </Modal>
   );
 }
 
-/** Follow, with a Submit to-do on the closing date unless you change or clear it. */
-function FollowForm({ opportunity: o, pending, run }: { opportunity: Opportunity; pending: boolean; run: Run }) {
+/** Follow in one press, with a Submit to-do on the closing date; its date, time, and zone can be changed first. */
+function FollowForm({ opportunity: o, label, pending, run }: { opportunity: Opportunity; label: string; pending: boolean; run: Run }) {
   const t = useTranslations("opportunities");
   const today = useToday(o);
+  const [editing, setEditing] = useState(false);
   const [date, setDate] = useState(o.closesOn && o.closesOn >= today ? o.closesOn : "");
   const [time, setTime] = useState("");
   const [zone, setZone] = useState(o.timeZone);
@@ -269,17 +453,27 @@ function FollowForm({ opportunity: o, pending, run }: { opportunity: Opportunity
         run(() => followOpportunity(o.id, date ? { date, time, timeZone: zone } : undefined), t(date ? "followedWithTask" : "followed"));
       }}
     >
-      <h3>{t("follow")}</h3>
-      <p className="muted">{t(o.closesOn ? "followHelp" : "followHelpNoDate")}</p>
-      <div className="form-grid">
-        <DateTimeInput kind="date" label={t("submitBy")} value={date} onChange={setDate} today={dateInZone(zone)} />
-        <DateTimeInput kind="time" label={t("time")} value={time} onChange={setTime} today={dateInZone(zone)} />
-      </div>
-      {date && <TimeZonePicker label={t("timeZone")} required value={zone} onChange={setZone} />}
-      {date && o.closesOn && date > o.closesOn && <p className="notice">{t("afterDeadline")}</p>}
+      <p className="muted">
+        {date ? t("followWithDate", { date }) : t(o.closesOn ? "followHelp" : "followHelpNoDate")}{" "}
+        {!editing && (
+          <button type="button" className="text-button" onClick={() => setEditing(true)}>
+            {t(date ? "changeDate" : "addDate")}
+          </button>
+        )}
+      </p>
+      {editing && (
+        <>
+          <div className="form-grid">
+            <DateTimeInput kind="date" label={t("submitBy")} value={date} onChange={setDate} today={dateInZone(zone)} />
+            <DateTimeInput kind="time" label={t("time")} value={time} onChange={setTime} today={dateInZone(zone)} />
+          </div>
+          {date && <TimeZonePicker label={t("timeZone")} required value={zone} onChange={setZone} />}
+          {date && o.closesOn && date > o.closesOn && <p className="notice">{t("afterDeadline")}</p>}
+        </>
+      )}
       <footer className="modal-actions">
         <button type="submit" className="primary" disabled={pending || (!date && !!time)}>
-          {t(date ? "followAndAdd" : "follow")}
+          {label}
         </button>
       </footer>
     </form>

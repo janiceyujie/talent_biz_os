@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { opportunity, opportunityApplication, opportunityPage, opportunitySource } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
 import { GRANTS_GOV_DETAIL, GRANTS_GOV_SEARCH, parseDetail, parseSearch, searchBody } from "./sources/grants-gov";
+import { outOfScope } from "./scope";
 import { listingHash, type Listing } from "./sources/listing";
 import { MOC_URL, parseMoc } from "./sources/moc";
 import {
@@ -83,6 +84,7 @@ async function readGrantsGov(): Promise<Read> {
     rows.push(...parsed.rows);
     if (rows.length >= parsed.total || !parsed.rows.length) break;
   }
+  rows.splice(0, rows.length, ...rows.filter((r) => !outOfScope(r.title)));
   // The rules come from each call's detail, new calls first. A detail not read this run (a failed
   // request, or past the cap) keeps the rules last read, so one bad request doesn't flip a call's screening.
   const stored = new Map(
@@ -246,6 +248,16 @@ export async function refreshOpportunities(): Promise<RefreshOutcome[]> {
                 notExists(tx.select({ id: opportunityApplication.id }).from(opportunityApplication).where(eq(opportunityApplication.opportunityId, opportunity.id))),
               ),
             );
+        }
+        // A call read in before the scope said otherwise (lib/opportunities/scope.ts) goes, unless someone follows it.
+        const outside = (await tx.select({ id: opportunity.id, title: opportunity.title }).from(opportunity).where(eq(opportunity.source, source))).filter((o) => outOfScope(o.title));
+        if (outside.length) {
+          await tx.delete(opportunity).where(
+            and(
+              inArray(opportunity.id, outside.map((o) => o.id)),
+              notExists(tx.select({ id: opportunityApplication.id }).from(opportunityApplication).where(eq(opportunityApplication.opportunityId, opportunity.id))),
+            ),
+          );
         }
         if (unchanged.length) await tx.update(opportunity).set({ checkedAt: now }).where(and(eq(opportunity.source, source), inArray(opportunity.url, unchanged)));
         for (const page of pages) {

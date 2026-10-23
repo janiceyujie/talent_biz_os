@@ -2172,7 +2172,7 @@
   "opportunities": {
     "title": "Calls you can apply for",
     "intro": "Grants, competitions, and showcases in Taiwan and the US, read from their official sources every day and checked against your profile.",
-    "aboutSources": "For now: the Ministry of Culture's open-data list of open calls, Grants.gov's arts grants (most of them are for organizations), and the announcements of the National Culture and Arts Foundation and Taipei's Department of Cultural Affairs, read by AI and checked word for word against the page. More sources are coming.",
+    "aboutSources": "For now: the Ministry of Culture's open-data list of open calls, Grants.gov's arts grants (most of them are for organizations), and the announcements of the National Culture and Arts Foundation and the culture bureaus of Taipei, New Taipei, Taoyuan, Taichung, Tainan, and Kaohsiung, read by AI and checked word for word against the page. More sources are coming.",
     "aboutScreening": "Fits: every rule the source states matches your profile. Check: the source doesn't say, or your profile is missing something. Doesn't fit: a stated rule leaves you out, hidden unless you show all. This is a first screen, not a ruling on eligibility.",
     "aboutDates": "Dates are as the source gave them when it was last read, in the source's own time zone (Taipei for Taiwan). Always confirm on the official page.",
     "search": "Search calls",
@@ -2183,9 +2183,6 @@
     "within": "Closing",
     "anyDeadline": "Any deadline",
     "withinDays": "Closing within {days} days",
-    "followingOnly": "Following only",
-    "showAll": "Show ones that don't fit",
-    "count": "{count, plural, =0 {No calls} one {# call} other {# calls}}",
     "checkedAt": "read {when}",
     "notChecked": "not read yet",
     "noProfile": "Tell us who you are, and calls that don't fit you are hidden.",
@@ -2217,11 +2214,6 @@
       "unknown": "Check dates",
       "closed": "Closed"
     },
-    "fit": {
-      "fits": "Fits",
-      "check": "Check",
-      "doesNotFit": "Doesn't fit"
-    },
     "dimensions": {
       "applicantType": "Applying as",
       "country": "Country",
@@ -2234,8 +2226,6 @@
       "missing": "{dimension}: not in your profile.",
       "stale": "The source hasn't been read in a few days; this may be out of date."
     },
-    "closesOn": "Closes {date}",
-    "noDeadline": "No deadline given",
     "opens": "Opens",
     "closes": "Closes",
     "unknown": "Not given",
@@ -2245,7 +2235,6 @@
     "evidence": "From the source: {text}",
     "fitCaution": "Check the official guidelines before applying: there may be other requirements.",
     "follow": "Follow",
-    "followAndAdd": "Follow and add to-do",
     "followHelp": "Following adds a Submit to-do on the closing date. Change the date, or clear it to follow without one.",
     "followHelpNoDate": "The source gives no closing date. Follow it, and add the date when you've checked the official page.",
     "submitBy": "Submit by",
@@ -2299,7 +2288,8 @@
       "individual": "An individual",
       "business": "A company",
       "nonprofit": "A nonprofit",
-      "other": "Something else"
+      "other": "Something else",
+      "government": "Government or school"
     },
     "countries": {
       "TW": "Taiwan",
@@ -2398,6 +2388,40 @@
     "unfollow": "Unfollow",
     "unfollowTitle": "Unfollow {title}?",
     "unfollowBody": "{count, plural, =0 {It has no open to-dos.} one {Its open to-do comes off Today and the Calendar.} other {Its # open to-dos come off Today and the Calendar.}} Done ones stay. Its stage and notes are removed.",
-    "unfollowed": "No longer following."
+    "unfollowed": "No longer following.",
+    "profileBar": "Screened for",
+    "profileArea": "living in {area}",
+    "editProfile": "Edit",
+    "tabsLabel": "Calls by how well they fit",
+    "tabs": {
+      "canApply": "You can apply",
+      "doesNotFit": "Doesn't fit",
+      "following": "Following"
+    },
+    "filters": "Filters",
+    "filtersActive": "{count, plural, one {Filters · #} other {Filters · #}}",
+    "sections": {
+      "soon": "Closing within {days} days",
+      "later": "Closing later",
+      "standing": "Standing programs: no fixed deadline",
+      "closed": "Closed"
+    },
+    "daysLeft": "{days, plural, =0 {closes today} one {# day left} other {# days left}}",
+    "opensFrom": "opens {date}",
+    "onlyFor": "only {values}",
+    "moreTracks": "{count, plural, one {# more round or form} other {# more rounds or forms}}",
+    "standingHelp": "Dates are on the official page",
+    "followNamed": "Follow {title}",
+    "followTrack": "Follow this round",
+    "followWithDate": "Following adds a Submit to-do on {date}, on Today and the Calendar.",
+    "changeDate": "Change the date",
+    "addDate": "Add a date",
+    "sourcesTitle": "Sources:",
+    "listSeparator": ", ",
+    "tracksTitle": "Rounds and forms",
+    "fitRow": "{dimension}: {values}",
+    "sourceSilent": "The source doesn't say: {list}",
+    "profileSilent": "Your profile doesn't say: {list}",
+    "toCheck": "To check: {list}"
   }
 }

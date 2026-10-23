@@ -26,6 +26,73 @@ Shortcuts taken on purpose, and gaps we know about: what happens today, why it's
 
 **Fix.** If it matters: show the message inside the dialog when one is open.
 
+## Opportunities
+
+### The Opportunities page needs a review: what it shows, and how to say more for less
+
+**Today.** A first review and its free changes are done (steps 1 and 2 below; the mockups are in the PR that made them):
+- the profile shown above the list;
+- tabs for You can apply, Doesn't fit, and Following;
+- sections by closing date, with days left;
+- one card per program, its rounds and forms inside;
+- titles without the source's filing words;
+- the rules a card matched, shown on it;
+- following in one press.
+
+What's left:
+
+- **Fits is nearly empty.** Sources state few rules, so screening rarely reaches Fits; it's folded into You can apply until it means something.
+- **The facts a person decides on are mostly missing.** A card has a title, an agency, and dates. How much the grant is, what it pays for, who exactly can apply, and what to submit are on the official page or its PDF guidelines: `summary` is empty for every source, and eligibility comes only from the few codes or passages a source states.
+- **The official link is uneven.** A tracked page's call opens its announcement, and a Grants.gov call its own page. A Ministry of Culture call opens the grants site's home page, since the open data has no link per call; finding the call there is left to the person.
+- **Nobody has used the page with a talent yet.** The review was a designer's, against the screens, not a session with someone looking for a call.
+
+**Why for now.** The first goal was coverage and correct dates: every source checked against its page, nothing invented. What to show on top of that, and what it's worth spending, needs a look at the page in use.
+
+**Fix.** A review, then changes in order of cost:
+
+1. **UI/UX review** of the page and the dialog, with a talent if possible:
+   - what they look for first;
+   - what makes them open or follow a call;
+   - what the Check chip should say instead;
+   - whether calls should be grouped by program, deadline, or fit.
+2. **Free, in code:**
+   - one card per program, its forms or tracks inside it;
+   - cleaner titles;
+   - discipline and applicant type shown on the card;
+   - standing programs apart from dated calls;
+   - a better Ministry of Culture link, if the grants site has a stable address per program (not checked).
+3. **Almost free, in the model call already made:** add amount, purpose, and who can apply, as short fields with their passages, to the tracked pages' extraction. The call reads the announcement anyway, so it's a few more output tokens, checked word for word like the dates.
+4. **Paid, once per document:** read a program's PDF guidelines when its hash changes, for eligibility and what to submit. Most of the National Culture and Arts Foundation's rules are there. The cost is one larger call per new PDF, not per day.
+5. **Measure before spending more:** which calls are opened and followed, and from which source, so new sources and fields go where people use them.
+
+1 and 2 are done, apart from a talent session and the Ministry of Culture link. Do 3 with the next change to the extraction prompt, since that re-reads every announcement once anyway. Weigh 4 against the cost the measurement in 5 shows.
+
+### Disciplines are seven broad buckets, matched by keywords
+
+**Today.** A call's disciplines and the profile's come from one fixed list of seven, in `lib/opportunities/types.ts`: music, performing arts, visual arts, film, writing, content, and other. Each source maps to it differently:
+- **Ministry of Culture:** by the funding unit only. Pop music is music; film, radio, and TV are film; every other unit is unknown.
+- **Tracked pages:** the model picks from the list, and a pick is kept only when its passage contains one of that discipline's keywords (`disciplineWords` in `lib/opportunities/sources/pages.ts`).
+- **Grants.gov:** none, so it's always unknown.
+
+So common fields have no bucket of their own:
+- design;
+- comics and picture books;
+- crafts (folded into visual arts);
+- traditional opera (folded into performing arts);
+- cultural heritage.
+
+A comics prize comes out unknown rather than writing. The keyword check also keeps a pick when its passage only lists the discipline among many.
+
+**Why for now.** Seven buckets were enough to tell a music profile from a visual arts call, which was the first use. Finer ones change the profile people fill in and every source's mapping at once.
+
+**Fix.** Revisit with the page review above:
+- **Which buckets talents use to describe themselves.** Likely splits: design, comics and picture books, crafts, traditional arts.
+- **How each source maps to them:**
+  - the Ministry of Culture's programs by name, not only by unit;
+  - the tracked pages' keywords per bucket;
+  - a migration of saved profiles when a bucket splits.
+- **Whether a card shows the bucket or the call's own wording.** For example 傳統音樂類 rather than "music".
+
 ## Intake
 
 ### HEIC photos can't be sent in

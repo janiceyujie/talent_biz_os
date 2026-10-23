@@ -2172,7 +2172,7 @@
   "opportunities": {
     "title": "可以申請的機會",
     "intro": "臺灣與美國的補助、比賽和展演，每天從官方來源更新，並依你的條件篩選。",
-    "aboutSources": "目前包括：文化部開放資料的受理中補助、Grants.gov 的藝術類補助（多數給機構申請），以及國藝會與臺北市文化局的公告。公告由 AI 讀取，每個欄位都會和網頁原文逐字比對。之後會加入更多來源。",
+    "aboutSources": "目前包括：文化部開放資料的受理中補助、Grants.gov 的藝術類補助（多數給機構申請），以及國藝會與臺北、新北、桃園、臺中、臺南、高雄六都文化局的公告。公告由 AI 讀取，每個欄位都會和網頁原文逐字比對。之後會加入更多來源。",
     "aboutScreening": "符合：來源列出的條件都符合你的資料。需確認：來源沒寫，或你的資料缺了某一項。不符：來源寫明的條件不包括你，預設會隱藏，勾選「顯示不符的」可以看到。這只是初步篩選，不代表你一定具備申請資格。",
     "aboutDates": "日期是來源最後一次更新時的內容，以來源所在地的時區為準（臺灣的機會用臺北時間）。申請前請到官網確認。",
     "search": "搜尋機會",
@@ -2183,9 +2183,6 @@
     "within": "截止",
     "anyDeadline": "不限截止日",
     "withinDays": "{days} 天內截止",
-    "followingOnly": "只看追蹤中",
-    "showAll": "顯示不符的",
-    "count": "{count, plural, =0 {沒有機會} other {# 筆機會}}",
     "checkedAt": "{when} 更新",
     "notChecked": "尚未更新",
     "noProfile": "填寫你的條件後，就會隱藏不符合的機會。",
@@ -2217,11 +2214,6 @@
       "unknown": "日期待確認",
       "closed": "已截止"
     },
-    "fit": {
-      "fits": "符合",
-      "check": "需確認",
-      "doesNotFit": "不符"
-    },
     "dimensions": {
       "applicantType": "申請身分",
       "country": "國家",
@@ -2234,8 +2226,6 @@
       "missing": "{dimension}：你的資料沒有填。",
       "stale": "來源已經好幾天沒有更新，內容可能過時。"
     },
-    "closesOn": "{date} 截止",
-    "noDeadline": "未提供截止日",
     "opens": "開始",
     "closes": "截止",
     "unknown": "未提供",
@@ -2245,7 +2235,6 @@
     "evidence": "來源原文：{text}",
     "fitCaution": "申請前請詳閱官方簡章，可能還有其他資格限制。",
     "follow": "追蹤",
-    "followAndAdd": "追蹤並加入待辦",
     "followHelp": "追蹤時會在截止日加一個「送件」待辦。可以改日期，或清空日期，只追蹤不建待辦。",
     "followHelpNoDate": "來源沒有提供截止日。可以先追蹤，到官網確認後再加日期。",
     "submitBy": "送件日期",
@@ -2299,7 +2288,8 @@
       "individual": "個人",
       "business": "公司",
       "nonprofit": "非營利組織",
-      "other": "其他"
+      "other": "其他",
+      "government": "政府或學校"
     },
     "countries": {
       "TW": "臺灣",
@@ -2398,6 +2388,40 @@
     "unfollow": "取消追蹤",
     "unfollowTitle": "要取消追蹤「{title}」嗎？",
     "unfollowBody": "{count, plural, =0 {目前沒有未完成的待辦。} other {# 個未完成的待辦會從今日總覽和行事曆移除。}}已完成的待辦會保留。階段和備註會一起刪除。",
-    "unfollowed": "已取消追蹤。"
+    "unfollowed": "已取消追蹤。",
+    "profileBar": "依你的條件篩選",
+    "profileArea": "設籍{area}",
+    "editProfile": "編輯條件",
+    "tabsLabel": "依符合程度",
+    "tabs": {
+      "canApply": "可以申請",
+      "doesNotFit": "不符合",
+      "following": "追蹤中"
+    },
+    "filters": "篩選",
+    "filtersActive": "{count, plural, other {篩選 · #}}",
+    "sections": {
+      "soon": "{days} 天內截止",
+      "later": "之後截止",
+      "standing": "常態受理 · 沒有固定截止日",
+      "closed": "已截止"
+    },
+    "daysLeft": "{days, plural, =0 {今天截止} other {剩 # 天}}",
+    "opensFrom": "{date} 開始受理",
+    "onlyFor": "只限{values}",
+    "moreTracks": "{count, plural, other {另有 # 個梯次或申請表}}",
+    "standingHelp": "日期以官方網頁為準",
+    "followNamed": "追蹤{title}",
+    "followTrack": "追蹤這個梯次",
+    "followWithDate": "追蹤後會在 {date} 加一個「送件」待辦，出現在今日總覽和行事曆。",
+    "changeDate": "改日期",
+    "addDate": "加日期",
+    "sourcesTitle": "資料來源：",
+    "listSeparator": "、",
+    "tracksTitle": "梯次與申請表",
+    "fitRow": "{dimension}：{values}",
+    "sourceSilent": "來源沒有寫：{list}",
+    "profileSilent": "你的條件沒填：{list}",
+    "toCheck": "需確認：{list}"
   }
 }

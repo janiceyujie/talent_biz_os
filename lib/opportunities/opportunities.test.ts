@@ -1,9 +1,10 @@
 // Opportunities (decision 0024): reading the sources, screening, and the list. Run: npm test
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { availability, listParams, pageOf } from "./list";
+import { availability, listParams, pageOf, programOf } from "./list";
 import { screen } from "./screening";
 import { parseDetail, parseSearch } from "./sources/grants-gov";
+import { outOfScope } from "./scope";
 import { listingHash } from "./sources/listing";
 import { parseMoc } from "./sources/moc";
 import { announcementText, checkedCalls, datesIn, linksOn, type Extraction } from "./sources/pages";
@@ -94,6 +95,22 @@ describe("Grants.gov", () => {
   });
 });
 
+describe("scope", () => {
+  test("calls for artists and creators are in; scholarships, research, historic upkeep, and the business around the arts are out", () => {
+    for (const title of ["測試學生115學年度第1學期助學金申請", "獎助研究生撰寫測試研究論文作業要點", "測試市歷史老屋再生補助", "私有古蹟日常管理維護補助", "實體書店發展補助", "售票業者購票系統補助", "Museums for Testing (2027)", "Test Library Services Grants", "Test Crash Data Collection"])
+      assert.ok(outOfScope(title), title);
+    for (const title of ["測試表演藝術類活動補助", "鼓勵售票演出補助", "青年村落文化行動計畫", "地方文史工作出版計畫補助", "Artist Fellowships 2027", "Grants for Arts Projects"])
+      assert.ok(!outOfScope(title), title);
+  });
+
+  test("a list doesn't follow a link to something out of scope, and a call it gives isn't kept", () => {
+    const ncaf = trackedPages.find((p) => p.id === "ncaf")!;
+    const html = `<a href="/news_detail.html?sid=1">測試學生獎學金 受理申請</a><a href="/news_detail.html?sid=2">測試創作補助 受理申請</a>`;
+    assert.deepEqual(linksOn(html, ncaf).links.map((l) => l.title), ["測試創作補助 受理申請"]);
+    assert.equal(parseMoc(xml(apply("測試學生就學獎助", "測試學生就學獎助")), "2026-10-01").length, 0);
+  });
+});
+
 describe("tracked pages", () => {
   const ncaf = trackedPages.find((p) => p.id === "ncaf")!;
   const taipei = trackedPages.find((p) => p.id === "taipei-culture")!;
@@ -102,12 +119,16 @@ describe("tracked pages", () => {
     const html = `<nav><a href="/news.html">最新消息</a></nav>
       <a href="/news_detail.html?sid=12"><p>2026/10/22</p><p>測試創作專案 11月1日至30日受理申請</p></a>
       <a href="/news_detail.html?sid=11">2026年第二期補助名單公告</a>
+      <a href="/news_detail.html?sid=9">測試演出團隊徵選計畫 複審團隊公告</a>
       <a href="https://elsewhere.example/news_detail.html?sid=10">外站徵件 受理申請</a>
       <a href="/news_detail.html?sid=12">測試創作專案 11月1日至30日受理申請</a>`;
-    assert.deepEqual(linksOn(html, ncaf).total, 2);
+    assert.deepEqual(linksOn(html, ncaf).total, 3);
     assert.deepEqual(linksOn(html, ncaf).links, [{ url: "https://www.ncafroc.org.tw/news_detail.html?sid=12", title: "2026/10/22 測試創作專案 11月1日至30日受理申請" }]);
-    const tpe = `<a href="News_Content.aspx?n=63F36AA6E434AD08&amp;sms=78D644F2755ACCAA&amp;s=AB12" title="測試藝文補助 開始受理">x</a>`;
-    assert.equal(linksOn(tpe, taipei).links[0]?.url, "https://culture.gov.taipei/News_Content.aspx?n=63F36AA6E434AD08&sms=78D644F2755ACCAA&s=AB12");
+    const tpe = `<a href="News_Content.aspx?n=9305B5181A62191D&amp;sms=39A01F1F3DB5F46C&amp;s=AB12" title="測試藝文補助 開始受理">x</a>`;
+    assert.equal(linksOn(tpe, taipei).links[0]?.url, "https://culture.gov.taipei/News_Content.aspx?n=9305B5181A62191D&sms=39A01F1F3DB5F46C&s=AB12");
+    // An empty title attribute: the link's own text says what it is.
+    const tao = `<a href="News_Content.aspx?n=11134&amp;s=1001" title="" >測試影視補助 徵件開跑</a>`;
+    assert.equal(linksOn(tao, trackedPages.find((p) => p.id === "taoyuan-culture")!).links[0]?.title, "測試影視補助 徵件開跑");
   });
 
   test("an announcement's text is its own, without the site, invisible characters, or a changed hash for the same words", () => {
@@ -163,6 +184,15 @@ describe("tracked pages", () => {
     // A title that isn't on the page is no call at all; spacing and the two ways of writing Tai don't matter.
     assert.equal(checkedCalls(answer({ title: "另一個專案" }), text, link, taipei, "2026-10-22").length, 0);
     assert.equal(checkedCalls(answer({ title: "測試 創作專案" }), text, link, taipei, "2026-10-22").length, 1);
+    // A name with the track it names in brackets, each on the page; a track that isn't is no call.
+    assert.equal(checkedCalls(answer({ title: "測試創作專案（開放線上申請）" }), text, link, taipei, "2026-10-22").length, 1);
+    assert.equal(checkedCalls(answer({ title: "測試創作專案（第二期）" }), text, link, taipei, "2026-10-22").length, 0);
+    assert.equal(checkedCalls(answer({ title: "測試創作專案 開放線上申請" }), text, link, taipei, "2026-10-22").length, 1);
+    // No closing date and opened over a year ago: an earlier year's round, not an open call.
+    const lastYear = { value: "2025-10-01", passage: "測試創作專案 自2025年10月1日開始受理" };
+    const older = `${text}測試創作專案 自2025年10月1日開始受理`;
+    assert.equal(checkedCalls(answer({ opensOn: lastYear, closesOn: { value: "", passage: "" } }), older, link, taipei, "2026-10-22").length, 0);
+    assert.equal(checkedCalls(answer({ opensOn: lastYear, closesOn: { value: "", passage: "" } }), older, link, taipei, "2026-06-01").length, 1);
   });
 });
 
@@ -207,19 +237,45 @@ describe("the list", () => {
     call({ id: "e", title: "Gone", closesOn: "2026-10-20" }),
     call({ id: "f", title: "US", region: "US", source: "grants_gov", timeZone: "America/New_York", sourceStatus: "forecasted", opensOn: null, closesOn: null }),
   ];
-  const params = (over: Record<string, string> = {}) => listParams.parse({ region: "all", kind: "all", within: "", following: "", show: "fitting", q: "", cursor: "", ...over });
+  const params = (over: Record<string, string> = {}) => listParams.parse({ region: "all", kind: "all", within: "", tab: "canApply", q: "", cursor: "", ...over });
   const page = (over: Record<string, string> = {}, followed: string[] = []) =>
     pageOf(rows, params(over), { profile: profile(), followed: new Set(followed), now });
 
-  test("open first, soonest to close first; closed and doesn't-fit left out", () => {
+  test("soonest to close first, standing programs last; Fits and Check together; closed ones only among those you follow", () => {
     assert.deepEqual(page().items.map((o) => o.id), ["b", "a", "d", "f"]);
-    assert.deepEqual(page({ show: "all" }).items.map((o) => o.id), ["c", "b", "a", "d", "f"]);
+    assert.deepEqual(page().items.map((o) => o.section), ["soon", "later", "later", "standing"]);
+    assert.deepEqual(page({ tab: "doesNotFit" }).items.map((o) => o.id), ["c"]);
+    const fitting = pageOf([call({ id: "g", rules: rules({ applicantTypes: ["individual"], countries: "any", areas: "any", disciplines: ["music"] }) }), ...rows], params(), { profile: profile(), followed: new Set(), now });
+    assert.deepEqual(fitting.items.map((o) => [o.id, o.fit]).slice(0, 3), [["b", "check"], ["g", "fits"], ["a", "check"]]);
+    assert.deepEqual(page({}, ["a"]).counts, { canApply: 4, doesNotFit: 1, following: 1 });
+  });
+
+  test("a program's forms and tracks are one entry, its soonest first", () => {
+    const programs = [
+      call({ id: "p1", title: "測試補助作業要點_團體", agency: "測試司", closesOn: "2026-11-20" }),
+      call({ id: "p2", title: "測試補助作業要點_個人", agency: "測試司", closesOn: "2026-11-10" }),
+      call({ id: "p3", title: "測試補助（常態第1期）", source: "pages", agency: "測試局", closesOn: "2026-11-02" }),
+      call({ id: "p4", title: "測試補助（出國（交流）第1期）", source: "pages", agency: "測試局", closesOn: "2026-12-10" }),
+    ];
+    const [tracked, moc] = pageOf(programs, params(), { profile: profile(), followed: new Set(), now }).items;
+    assert.deepEqual([tracked.program, tracked.calls.map((c) => [c.id, c.track])], ["測試補助", [["p3", "常態第1期"], ["p4", "出國（交流）第1期"]]]);
+    assert.deepEqual([moc.program, moc.calls.map((c) => [c.id, c.track])], ["測試補助", [["p2", "個人"], ["p1", "團體"]]]);
+  });
+
+  test("a program's name is read without the wording its source files it under", () => {
+    const of = (title: string, source: Opportunity["source"] = "moc") => programOf({ source, title });
+    assert.deepEqual(of("個人件-測試補助作業要點"), { program: "測試補助", track: "個人" });
+    assert.deepEqual(of("測試獎勵（115年度適用） — 測試獎勵要點_團體"), { program: "測試獎勵（115年度適用）", track: "團體" });
+    assert.deepEqual(of("測試輔導執行要點(補助) — 此為團體/公司行號申請之表單"), { program: "測試輔導(補助)", track: "團體/公司行號" });
+    assert.deepEqual(of("測試獎勵要點_下一本書獎勵"), { program: "測試獎勵", track: "下一本書獎勵" });
+    assert.deepEqual(of("(115)測試空間補助"), { program: "(115)測試空間補助", track: null });
+    assert.deepEqual(of("Arts Projects (2027)", "grants_gov"), { program: "Arts Projects (2027)", track: null });
   });
 
   test("filters: region, closing within, following (closed ones too), search", () => {
     assert.deepEqual(page({ region: "US" }).items.map((o) => o.id), ["f"]);
     assert.deepEqual(page({ within: "30" }).items.map((o) => o.id), ["b"]);
-    assert.deepEqual(page({ following: "1" }, ["e", "a"]).items.map((o) => o.id), ["a", "e"]);
+    assert.deepEqual(page({ tab: "following" }, ["e", "a"]).items.map((o) => o.id), ["a", "e"]);
     assert.deepEqual(page({ q: "soon" }).items.map((o) => o.id), ["b"]);
   });
 

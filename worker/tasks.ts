@@ -9,6 +9,8 @@ import { reconcile } from "@/lib/mail/jobs/reconcile";
 import { scoreDecision } from "@/lib/mail/jobs/relevance";
 import { syncMailbox } from "@/lib/mail/jobs/sync";
 import { JOB_LIMIT_MS } from "@/lib/queue/heartbeat";
+import { alertOps } from "@/lib/opportunities/alert";
+import { refreshOpportunities } from "@/lib/opportunities/refresh";
 import { jobs, type JobName } from "@/lib/queue/jobs";
 
 // One handler per job in lib/queue/jobs.ts. Each must be safe to run twice:
@@ -78,6 +80,14 @@ const tasks: Record<JobName, Task> = {
   },
   "calendar.reconcile": async () => {
     await reconcileCalendars();
+  },
+  "opportunities.refresh": async (_, { job }) => {
+    // Throws when a source failed, so the job retries; what the others read is already saved.
+    // The team hears of problems once: when nothing failed, or on the last try.
+    const outcomes = await refreshOpportunities();
+    const failed = outcomes.filter((r) => !r.ok);
+    if (!failed.length || job.attempts >= job.max_attempts) await alertOps(outcomes);
+    if (failed.length) throw new Error(`opportunity sources failed: ${failed.map((r) => r.source).join(", ")}`);
   },
 };
 

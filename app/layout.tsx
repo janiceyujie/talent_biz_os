@@ -5,6 +5,7 @@ import { PRODUCT_NAME } from "@/lib/brand";
 import "./globals.css";
 import "./experience.css"; // the prototype's visual layer: brand tokens, type scale, components
 import "./planner.css"; // day and week calendar (components/views/planner.tsx)
+import "./opportunities.css"; // components/views/opportunities.tsx
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");

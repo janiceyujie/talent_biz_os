@@ -18,6 +18,7 @@
     "eval:extraction": "tsx --conditions=react-server scripts/eval-extraction.mts",
     "eval:relevance": "tsx --conditions=react-server scripts/eval-relevance.mts",
     "eval:assistant": "tsx --conditions=react-server scripts/eval-assistant.mts",
+    "opportunities:refresh": "tsx --conditions=react-server scripts/refresh-opportunities.mts",
     "test": "tsx --test 'lib/**/*.test.ts'"
   },
   "dependencies": {

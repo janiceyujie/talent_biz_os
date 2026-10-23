@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { readPreferences } from "@/lib/preferences";
 import { pairKey } from "@/lib/domain/organizations";
 import { inboxOverview } from "./inbox";
+import { opportunityChanges } from "./opportunities";
 import { summaryOf } from "./projects";
 import { changeMark } from "./changes";
 import { calendarItemsOf, contractsOf, externalEventsOf, paymentsOf } from "./rows";
@@ -172,6 +173,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     calendarFeed: Boolean(memberRow?.feedHash),
     aiUsage: await dailyUsage(current.id),
     aiPaused: !!(await aiPaused()),
+    opportunityChanges: await opportunityChanges(current.id),
     externalEvents: externalEventsOf(importedRows, importSources, seriesLinks),
     googleCalendar: {
       available: isGoogleConfigured,

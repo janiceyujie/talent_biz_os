@@ -115,6 +115,10 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 - Search across projects, contacts, calendar, and templates (⌘K) — **MVP**.
 - In-app notifications derived from upcoming to-dos, events, and payments due to be received or paid — **MVP**. Ordered by urgency (within the next two hours, overdue, today, later); read state and "remind me in an hour" are saved per person — **MVP**. Background push (browser, email) — **Later**.
 
+### Opportunities
+
+- Public calls for grants, competitions, and showcases, read on a schedule into a catalogue shared by every account, screened against the person's profile, and followed as to-dos — **Built** ([decision 0024](decisions/0024-opportunity-discovery.md)). The worker's daily `opportunities.refresh` (05:00 Taipei; `npm run opportunities:refresh` to run it now) reads the Ministry of Culture's open-data list of open calls and Grants.gov's arts grants (`lib/opportunities/sources/`) into `opportunity`, keeping a call a later read leaves out. Who a call is for comes only from what the source states (a form marked for individuals or groups, a unit that funds one discipline, Grants.gov's applicant codes); each dimension is a list, "any", or unknown. The screening profile (applicant type, country, county or state, disciplines) is the `opportunities.profile` preference; `lib/opportunities/screening.ts` gives Fits, Check (unknown, missing, or not read in three days), or Doesn't fit, which the list hides unless asked (`GET /api/opportunities`). Following a call (`opportunity_application`) can add a Submit to-do on its closing date; an application's to-dos (`opportunity_task`) are ordinary to-dos. Unfollowing, only at Preparing, deletes the application and dismisses its open to-dos. Tracked pages (`lib/opportunities/tracked.ts`, for now the National Culture and Arts Foundation and Taipei's Department of Cultural Affairs) are lists of announcements: each announcement titled as a call is fetched from the same host, and when its text has changed since the last read (`opportunity_page`) the model reads it and returns each field with the passage it came from; `lib/opportunities/sources/pages.ts` keeps a field only when the passage is verbatim on the page and states the value. When a followed call's dates at the source differ from the ones the talent last saw (`opportunity_application.known_opens_on`, `known_closes_on`, set when they follow it), a notification says what changed, with a button that moves the open Submit to-do to the new closing date and one that just says it's seen; either sets the known dates, and the to-do never moves without the button.
+
 ### Contacts
 
 - A contact list of artists, counterparties, and managers — name, company, email, phone, notes — linked to projects — **MVP**. A project keeps the counterparty's name as text too, so a project without a contact still works; a draft takes its recipient from the linked contact.
@@ -445,7 +449,7 @@ There's no "awaiting signature" stage — many gigs never have a written contrac
 
 **Travel and stays.** `travel` and `accommodation` events also carry an end — `end_date`, `end_time`, `end_time_zone` (arrival or check-out, in its own zone) — plus transport details (mode, operator, flight or train number, destination, seat), a hotel name, and an optional ticket or booking file. The calendar shows departure/arrival or check-in/check-out as two markers of one event; completing or archiving acts on the event. The end must be later than the start once both are converted to instants; a wall time made ambiguous or nonexistent by daylight saving is rejected rather than guessed. Every timed event's `.ics` uses its real end when it has one. Arrival and check-out get their own notification IDs. The form suggests common stations, airports, and places already entered; any place text is accepted. Nothing here books tickets or checks live flight data. `ticket_file_id` is added with the `file` table; until then a ticket lives in the notes.
 
-**Notifications.** Notifications stay derived, never stored (`lib/domain/notifications.ts`): open to-dos due within a week (overdue ones stay), events and travel markers still ahead in the coming week, and expected payments in or out due within a week or overdue. Items linked to an archived or unsigned project don't notify. They sort by urgency — timed and within two hours, then overdue, then today, then the rest, earliest first in each — comparing real instants in each item's own zone; a date-only deadline is due all that local day. `notification_state` records per person which ones were read and which were snoozed until when ("remind me in an hour", deadline set by the server); a snooze never changes the event or due date itself, reading one ends its snooze, and marks over 90 days old are pruned. A pop-up shows the most urgent unread one when the app opens; closing it holds it off for the browser session. Nothing is pushed while the app is closed — background push is **Later** and needs a stored feed and a scheduler.
+**Notifications.** Notifications stay derived, never stored (`lib/domain/notifications.ts`): open to-dos due within a week (overdue ones stay), events and travel markers still ahead in the coming week, expected payments in or out due within a week or overdue, and followed calls whose dates changed at the source (decision 0024). Items linked to an archived or unsigned project don't notify. They sort by urgency — timed and within two hours, then overdue, then today, then the rest, earliest first in each — comparing real instants in each item's own zone; a date-only deadline is due all that local day. `notification_state` records per person which ones were read and which were snoozed until when ("remind me in an hour", deadline set by the server); a snooze never changes the event or due date itself, reading one ends its snooze, and marks over 90 days old are pruned. A pop-up shows the most urgent unread one when the app opens; closing it holds it off for the browser session. Nothing is pushed while the app is closed — background push is **Later** and needs a stored feed and a scheduler.
 
 **Contacts.** A project links to a `contact` for its counterparty when one exists, and always keeps the counterparty name as text, so quick entries without a contact still work. A contact's email is the default recipient for drafts on its projects. Same name never implies same contact: the project form's partner field searches contacts by name or company and links by id; typing a new name keeps it as text on that project only (no contact is created), and editing a picked name unlinks it.
 
@@ -860,6 +864,80 @@ create table audit_log (
   details          jsonb,             -- e.g. { "from": "negotiating", "to": "signed" }
   created_at       timestamptz not null default now()
 );
+
+-- Opportunities (decision 0024) ----------------------------------------------
+
+-- The catalogue is shared by every account: public calls, no customer data, the one place a read isn't scoped to a talent.
+create table opportunity_source (
+  id            text primary key,           -- 'moc', 'grants_gov', 'pages'
+  checked_at    timestamptz,                -- the last successful read
+  attempted_at  timestamptz,
+  failure       text                        -- why the last read failed; null after a success
+);
+
+create table opportunity (
+  id             uuid primary key default gen_random_uuid(),
+  source         text not null references opportunity_source(id),
+  external_id    text not null,             -- the source's id, or a hash of what identifies the call
+  region         text not null check (region in ('TW','US')),
+  kind           text not null check (kind in ('grant','competition','showcase','residency')),
+  title          text not null,
+  agency         text not null,
+  url            text not null,
+  opens_on       date,
+  closes_on      date,                      -- a day in time_zone
+  source_status  text not null check (source_status in ('posted','forecasted','unknown')),
+  time_zone      text not null,             -- the funding body's: Asia/Taipei, America/New_York for Grants.gov, a tracked page's own
+  summary        text not null default '',
+  rules          jsonb,                     -- who it's for, per dimension: a list, 'any', or null (unknown); lib/opportunities/types.ts
+  passages       jsonb,                     -- a tracked page's call: the passage each checked field was read from
+  content_hash   text not null,
+  checked_at     timestamptz not null default now(),
+  changed_at     timestamptz not null default now(),   -- last read with something different
+  created_at     timestamptz not null default now(),
+  unique (source, external_id)
+);
+create index opportunity_region_closes_idx on opportunity (region, closes_on);
+
+-- What was last read from each tracked page: its list, and each announcement on it.
+create table opportunity_page (
+  url             text primary key,
+  tracked_id      text not null,            -- lib/opportunities/tracked.ts
+  role            text not null check (role in ('list','announcement')),
+  text_hash       text,                     -- an announcement's text when the model last read it
+  calls           integer,                  -- how many checked calls it gave
+  model_version   text,
+  prompt_version  text,                     -- a new prompt reads every announcement again
+  checked_at      timestamptz,
+  attempted_at    timestamptz,
+  failure         text
+);
+
+create table opportunity_application (
+  id              uuid primary key default gen_random_uuid(),
+  talent_id       uuid not null references talent(id) on delete cascade,
+  opportunity_id  uuid not null references opportunity(id),
+  project_id      uuid references project(id) on delete set null,   -- once awarded
+  stage           text not null default 'preparing'
+                    check (stage in ('preparing','submitted','awarded','not_selected','closed')),
+  notes           text not null default '',
+  known_opens_on  date,                     -- the call's dates as the talent last saw them:
+  known_closes_on date,                     -- when the source's differ, a notification says so
+  created_by      uuid references person(id) on delete set null,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  unique (talent_id, opportunity_id)
+);
+
+-- An application's to-dos are ordinary to-dos; this says which and what for.
+create table opportunity_task (
+  id              uuid primary key default gen_random_uuid(),
+  application_id  uuid not null references opportunity_application(id) on delete cascade,
+  todo_id         uuid not null unique references todo(id) on delete cascade,
+  kind            text not null check (kind in ('submission','eligibility','proposal','budget','agreement','report','settlement','custom')),
+  created_at      timestamptz not null default now()
+);
+create index opportunity_task_application_idx on opportunity_task (application_id);
 ```
 
 ## Stack

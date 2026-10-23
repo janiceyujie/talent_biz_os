@@ -27,6 +27,8 @@ export const jobs = {
   "mail.cleanup": z.object({}),
   /** A sync for every connected Google Calendar connection with none waiting (lib/calendar/google/sync.ts). */
   "calendar.reconcile": z.object({}),
+  /** Daily: read the public sources into the opportunities catalogue (lib/opportunities/refresh.ts). */
+  "opportunities.refresh": z.object({}),
 };
 
 export type JobName = keyof typeof jobs;
@@ -57,6 +59,8 @@ export const jobAttempts: Record<JobName, number> = {
   "mail.cleanup": 3,
   // The next run comes on schedule anyway.
   "calendar.reconcile": 1,
+  // A source down: a couple more tries, then tomorrow's run.
+  "opportunities.refresh": 3,
 };
 
 /** The key that makes a second "analyze this message" replace a waiting one instead of queueing twice. */

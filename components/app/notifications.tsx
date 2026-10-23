@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
 import { RolePortrait } from "@/components/role/role-portrait";
 import { markNotificationsRead, snoozeNotification } from "@/lib/actions/notifications";
+import { acceptOpportunityDates } from "@/lib/actions/opportunities";
 import {
   isUnread,
   notifications,
@@ -133,6 +134,40 @@ export function ReminderControls({ n }: { n: StatefulNotification }) {
   );
 }
 
+/**
+ * A followed call's new dates (decision 0024): move the Submit to-do to the
+ * new closing date, or just say it's seen. Either ends the notification; the
+ * to-do is never moved without this.
+ */
+export function OpportunityDateControls({ n }: { n: StatefulNotification }) {
+  const t = useTranslations("shell");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  if (n.kind !== "opportunity") return null;
+  const accept = (moveSubmit: boolean) =>
+    startTransition(async () =>
+      setError(await acceptOpportunityDates({ applicationId: n.applicationId, opensOn: n.to.opensOn ?? "", closesOn: n.to.closesOn ?? "", moveSubmit })),
+    );
+  const canMove = n.submit && n.to.closesOn && n.submit.date !== n.to.closesOn;
+  return (
+    <div className="reminder-controls">
+      {canMove && (
+        <button type="button" className="primary" disabled={pending} onClick={() => accept(true)}>
+          {t("moveSubmit", { date: n.to.closesOn! })}
+        </button>
+      )}
+      <button type="button" className="secondary" disabled={pending} onClick={() => accept(false)}>
+        {t("datesSeen")}
+      </button>
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** The notification panel's rows. Opening one marks it read. */
 export function NotificationList({ open }: { open: (href: string) => void }) {
   const { list, unread } = useNotifications();
@@ -166,6 +201,7 @@ export function NotificationList({ open }: { open: (href: string) => void }) {
               <small>{detail}</small>
               {n.kind === "calendar" && <YourTime date={n.date} time={n.time} timeZone={n.timeZone} />}
             </button>
+            <OpportunityDateControls n={n} />
             <ReminderControls n={n} />
           </article>
         );
@@ -224,6 +260,7 @@ export function ReminderToast({ onOpen, suppress }: { onOpen: () => void; suppre
         >
           {t("viewNotifications")}
         </button>
+        <OpportunityDateControls n={n} />
         <ReminderControls n={n} />
       </div>
       <button className="reminder-close" aria-label={t("closeReminder")} onClick={close}>

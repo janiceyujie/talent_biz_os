@@ -15,6 +15,18 @@ export function useNotificationText() {
         title: n.marker ? `${n.title} · ${tCalendar(`point.${n.marker}`)}` : n.title,
         detail: [`${n.date} ${n.time}`.trim(), n.time && n.timeZone, n.location].filter(Boolean).join(" · "),
       };
+    if (n.kind === "opportunity") {
+      const day = (d: string | null) => d ?? t("dateNotGiven");
+      return {
+        title: t("opportunityDatesChanged", { title: n.title }),
+        detail: [
+          n.from.closesOn !== n.to.closesOn && t("closingDateChange", { from: day(n.from.closesOn), to: day(n.to.closesOn) }),
+          n.from.opensOn !== n.to.opensOn && t("openingDateChange", { from: day(n.from.opensOn), to: day(n.to.opensOn) }),
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      };
+    }
     return {
       title: n.kind === "receivable" ? t("followUpPayment", { label: n.title }) : t("payPayment", { label: n.title }),
       detail: t("paymentDue", { date: n.date, amount: money(n.amount, n.currency) }),

@@ -10,6 +10,7 @@ import type { ChangeRecord, TargetSuggestion } from "@/lib/domain/intake";
 import type { ListPage } from "@/lib/domain/list-page";
 import type { ProjectType } from "@/lib/project-types";
 import type { Currency } from "@/lib/domain/money";
+import type { OpportunityChange } from "@/lib/opportunities/types";
 
 export const stages = [
   "offer",
@@ -362,6 +363,7 @@ export type AppData = {
   inbox: InboxOverview;
   contracts: Contract[]; // newest version first
   notificationState: NotificationState; // this person's read and snooze marks
+  opportunityChanges: OpportunityChange[]; // followed calls whose dates changed at the source (lib/opportunities)
   preferences: Preferences; // this person's settings in this workspace (lib/preferences)
   // Google Calendar sync for this person and talent (decision 0009): whether Google granted the
   // calendar permission, and the connection's state once made.

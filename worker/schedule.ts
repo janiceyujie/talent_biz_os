@@ -29,5 +29,7 @@ export function schedule(): CronItem[] {
     },
     // 03:30 in Taipei, when little else runs.
     { task: "mail.cleanup", match: "30 19 * * *", identifier: "mail.cleanup", options: { maxAttempts: jobAttempts["mail.cleanup"] } },
+    // 05:00 in Taipei: Taiwan's calls are read before the working day.
+    { task: "opportunities.refresh", match: "0 21 * * *", identifier: "opportunities.refresh", options: { maxAttempts: jobAttempts["opportunities.refresh"] } },
   ];
 }

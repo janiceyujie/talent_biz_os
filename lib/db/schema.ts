@@ -31,6 +31,7 @@ import { historyModes } from "../mail/history";
 import type { SyncFields } from "@/lib/calendar/google/two-way";
 import type { NoticeFields } from "../mail/payment-notice/fields";
 import { mailKinds } from "../mail/relevance/prompt";
+import { applicationStages, opportunityKinds, opportunityRegions, sourceStatuses, taskKinds, type OpportunityRules } from "../opportunities/types";
 import { senderChecks } from "../mail/sender-auth";
 import { ruleIds } from "../mail/relevance/rules";
 import { contactRoles, stages as projectStages, transportModes, type ContractTerms, type ProjectDetails, type TermChange } from "../types"; // relative: drizzle-kit loads this file too
@@ -717,7 +718,7 @@ export const aiCall = pgTable(
     talentId: uuid().references(() => talent.id, { onDelete: "cascade" }), // null for evals and scripts
     personId: uuid().references(() => person.id, { onDelete: "set null" }),
     messageId: uuid().references(() => message.id, { onDelete: "set null" }),
-    task: text().notNull(), // 'extract', 'relevance', 'payment_notice', 'assistant', 'eval'
+    task: text().notNull(), // 'extract', 'relevance', 'payment_notice', 'assistant', 'opportunity', 'eval'
     provider: text().notNull(),
     model: text().notNull(),
     promptVersion: text(),
@@ -830,6 +831,122 @@ export const todo = pgTable(
     index("todo_project_idx").on(t.projectId),
     check("todo_type_check", oneOf(t.type, todoTypes)),
     check("todo_status_check", oneOf(t.status, todoStatuses)),
+  ],
+).enableRLS();
+
+// Opportunities (decision 0024) ----------------------------------------------------
+
+// The catalogue is shared by every account: public calls, no customer data.
+// It's the one table a read isn't scoped to a talent; what joins it to a
+// talent's own rows is.
+
+// Each source's last read: when it last succeeded, and when it was last tried and why it failed.
+export const opportunitySource = pgTable("opportunity_source", {
+  id: text().primaryKey(), // lib/opportunities/types.ts opportunitySources
+  checkedAt: timestamp({ withTimezone: true }),
+  attemptedAt: timestamp({ withTimezone: true }),
+  failure: text(),
+}).enableRLS();
+
+export const opportunity = pgTable(
+  "opportunity",
+  {
+    id: id(),
+    source: text()
+      .notNull()
+      .references(() => opportunitySource.id),
+    externalId: text().notNull(), // the source's own id, or one made from what identifies the call
+    region: text({ enum: opportunityRegions }).notNull(),
+    kind: text({ enum: opportunityKinds }).notNull(),
+    title: text().notNull(),
+    agency: text().notNull(),
+    url: text().notNull(),
+    opensOn: date(),
+    closesOn: date(),
+    sourceStatus: text({ enum: sourceStatuses }).notNull(),
+    timeZone: text().notNull(), // the funding body's: its dates are days there
+    summary: text().notNull().default(""),
+    rules: jsonb().$type<OpportunityRules>(), // who it's for, as the source states it; null when it says nothing
+    passages: jsonb().$type<Record<string, string>>(), // a tracked page's call: the passage each checked field was read from
+    contentHash: text().notNull(),
+    checkedAt: createdAt(), // last read from the source
+    changedAt: createdAt(), // last read with something different
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("opportunity_source_external").on(t.source, t.externalId),
+    index("opportunity_region_closes_idx").on(t.region, t.closesOn),
+    check("opportunity_region_check", oneOf(t.region, opportunityRegions)),
+    check("opportunity_kind_check", oneOf(t.kind, opportunityKinds)),
+    check("opportunity_source_status_check", oneOf(t.sourceStatus, sourceStatuses)),
+  ],
+).enableRLS();
+
+// What was last read from each tracked page (lib/opportunities/tracked.ts):
+// its list of announcements, and each announcement it links to. An
+// announcement whose text hasn't changed isn't read by the model again.
+export const opportunityPage = pgTable(
+  "opportunity_page",
+  {
+    url: text().primaryKey(),
+    trackedId: text().notNull(), // the tracked page it's on
+    role: text({ enum: ["list", "announcement"] }).notNull(),
+    textHash: text(), // an announcement's text when the model last read it
+    calls: integer(), // how many checked calls it gave
+    modelVersion: text(),
+    promptVersion: text(),
+    checkedAt: timestamp({ withTimezone: true }),
+    attemptedAt: timestamp({ withTimezone: true }),
+    failure: text(),
+  },
+  (t) => [check("opportunity_page_role_check", oneOf(t.role, ["list", "announcement"]))],
+).enableRLS();
+
+// A call a talent follows, and how their application is going.
+export const opportunityApplication = pgTable(
+  "opportunity_application",
+  {
+    id: id(),
+    talentId: uuid()
+      .notNull()
+      .references(() => talent.id, { onDelete: "cascade" }),
+    opportunityId: uuid()
+      .notNull()
+      .references(() => opportunity.id),
+    projectId: uuid().references(() => project.id, { onDelete: "set null" }), // a signed project, once awarded
+    stage: text({ enum: applicationStages }).notNull().default("preparing"),
+    notes: text().notNull().default(""),
+    // The call's dates as the talent last saw them: when the source's differ, a notification says so.
+    knownOpensOn: date(),
+    knownClosesOn: date(),
+    createdBy: uuid().references(() => person.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique("opportunity_application_talent_opportunity").on(t.talentId, t.opportunityId),
+    check("opportunity_application_stage_check", oneOf(t.stage, applicationStages)),
+  ],
+).enableRLS();
+
+// An application's to-dos: ordinary to-dos (Today, Calendar), and what each is for.
+export const opportunityTask = pgTable(
+  "opportunity_task",
+  {
+    id: id(),
+    applicationId: uuid()
+      .notNull()
+      .references(() => opportunityApplication.id, { onDelete: "cascade" }),
+    todoId: uuid()
+      .notNull()
+      .references(() => todo.id, { onDelete: "cascade" }),
+    kind: text({ enum: taskKinds }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("opportunity_task_todo").on(t.todoId),
+    index("opportunity_task_application_idx").on(t.applicationId),
+    check("opportunity_task_kind_check", oneOf(t.kind, taskKinds)),
   ],
 ).enableRLS();
 

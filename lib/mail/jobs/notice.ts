@@ -11,6 +11,7 @@ import { readNotice } from "../payment-notice/read";
 import type { MailProvider } from "../provider";
 import { isBulk } from "../relevance/rules";
 import { scoreMail } from "../relevance/score";
+import { log } from "@/lib/log";
 
 // Bringing in a bank or payment-app notice (decision 0013, the restricted
 // path), called by mail.fetch (./fetch.ts) for an email of kind bank_notice
@@ -43,8 +44,7 @@ export async function pathFor(d: Decision, c: Connection, mail: MailProvider): P
   try {
     scored = await scoreMail(meta, { task: "relevance", talentId: c.talentId });
   } catch (e) {
-    // Ids and codes only: never the subject or preview.
-    console.error("mail.fetch kind failed", d.id, e instanceof ModelError ? e.code : (e as Error)?.name);
+    log.error("mail.fetch.kind_failed", { decision_id: d.id, error: e });
     if (e instanceof ModelError && (e.code === "not_configured" || e.code === "paused")) return "wait"; // retrying now won't help
     throw e;
   }
@@ -72,8 +72,7 @@ export async function bringNotice(d: Decision, c: Connection, mail: MailProvider
       if (full) fields = (await readNotice(`${full.subject}\n${full.text}`, receivedOn, c.talentId)) ?? fields;
     }
   } catch (e) {
-    // Ids and codes only: never the notice's text.
-    console.error("mail.fetch notice failed", d.id, e instanceof ModelError ? e.code : (e as Error)?.name);
+    log.error("mail.fetch.notice_failed", { decision_id: d.id, error: e });
     if (e instanceof ModelError && (e.code === "not_configured" || e.code === "paused")) return; // stays in Waiting; retrying now won't help
     throw e;
   }

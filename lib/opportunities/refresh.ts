@@ -19,6 +19,7 @@ import {
 } from "./sources/pages";
 import { trackedHosts, trackedPages } from "./tracked";
 import { opportunitySources, type OpportunitySource } from "./types";
+import { log } from "@/lib/log";
 
 // Reading the sources into the shared catalogue (decision 0024), once a day
 // from the worker (opportunities.refresh). The server reaches out to the
@@ -100,7 +101,7 @@ async function readGrantsGov(): Promise<Read> {
           .then((text) => (row.rules = parseDetail(JSON.parse(text), id)))
           .catch((e) => {
             failed++;
-            console.error("opportunities.refresh grants_gov detail", id, e);
+            log.warn("opportunities.refresh.detail_failed", { source: "grants_gov", error: e });
           });
       }
     }),
@@ -130,7 +131,7 @@ async function readPages(): Promise<Read> {
       links = on.links;
       read.pages.push({ url: page.url, trackedId: page.id, role: "list", checkedAt: now, attemptedAt: now, failure: null });
     } catch (e) {
-      console.error("opportunities.refresh page", page.id, e);
+      log.warn("opportunities.refresh.page_failed", { page_id: page.id, error: e });
       failed++;
       read.problems.push(`${page.id}: ${page.url}: ${failureOf(e)}`);
       read.pages.push({ url: page.url, trackedId: page.id, role: "list", attemptedAt: now, failure: failureOf(e) });
@@ -176,7 +177,7 @@ async function readPages(): Promise<Read> {
         });
       } catch (e) {
         if (e instanceof ModelError && e.code === "paused") continue;
-        console.error("opportunities.refresh announcement", link.url, e);
+        log.warn("opportunities.refresh.announcement_failed", { page_id: page.id, error: e });
         read.problems.push(`${page.id}: ${link.url}: ${failureOf(e)}`);
         read.pages.push({ url: link.url, trackedId: page.id, role: "announcement", attemptedAt: now, failure: failureOf(e) });
       }
@@ -255,7 +256,7 @@ export async function refreshOpportunities(): Promise<RefreshOutcome[]> {
       });
       outcomes.push({ source, ok: true, count: listings.length, lastRead, problems });
     } catch (e) {
-      console.error("opportunities.refresh", source, e);
+      log.error("opportunities.refresh.source_failed", { source, error: e });
       await db
         .update(opportunitySource)
         .set({ attemptedAt: now, failure: failureOf(e) })

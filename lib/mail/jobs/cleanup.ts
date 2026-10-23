@@ -4,6 +4,7 @@ import { makeWorkerUtils } from "graphile-worker";
 import { db } from "@/lib/db";
 import { calendarEvent, mailDecision } from "@/lib/db/schema";
 import { expireNotices } from "./notice";
+import { log } from "@/lib/log";
 
 // mail.cleanup, daily on the worker's schedule (docs/design/gmail-ingestion.md, Jobs):
 //   - skipped decisions older than 90 days: Filtered out stops at 90 days, and
@@ -43,6 +44,5 @@ export async function cleanup() {
   } finally {
     await utils.release();
   }
-  // Counts only.
-  console.log("mail.cleanup", { skippedDecisions: skipped.length, failedJobs: failed.length, deletedEvents: deletedEvents.length });
+  log.info("mail.cleanup.done", { skipped_count: skipped.length, failed_count: failed.length, deleted_count: deletedEvents.length });
 }

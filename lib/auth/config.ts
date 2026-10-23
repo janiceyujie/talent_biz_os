@@ -1,6 +1,7 @@
 import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { and, eq, isNull } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
@@ -8,6 +9,8 @@ import { db } from "@/lib/db";
 import { authAccount, authSession, authVerification, person, signupAllowlist } from "@/lib/db/schema";
 import { sendEmail } from "@/lib/email";
 import { defaultLocale, isLocale, LOCALE_COOKIE, matchLocale, toLocale } from "@/lib/i18n/config";
+import { log } from "@/lib/log";
+import { logAuthOutcome } from "./auth-log";
 import { allowlistOn, checkSignupAllowed, listEmail } from "./beta-access";
 
 const realGoogle =
@@ -133,16 +136,21 @@ export const auth = betterAuth({
           await checkSignupAllowed(user.email, { on: allowlistOn(), isListed: onAllowlist });
           return { data: { ...user, locale: signupLocale(context?.headers) } };
         },
-        // Marks their place on the list used, for "invited but not signed up yet".
+        // Marks their place on the list used, for "invited but not signed up yet",
+        // and logs the new account.
         after: async (user) => {
           await db
             .update(signupAllowlist)
             .set({ usedAt: new Date() })
             .where(and(eq(signupAllowlist.email, listEmail(user.email)), isNull(signupAllowlist.usedAt)));
+          log.info("auth.account.created", { person_id: user.id });
         },
       },
     },
   },
+
+  // Sign-in and sign-up outcomes in the log: ids and reasons, never the email typed.
+  hooks: { after: createAuthMiddleware(logAuthOutcome) },
 
   plugins: [nextCookies()], // must stay last
 });

@@ -1,5 +1,6 @@
 import "server-only";
 import { appSpend } from "./spend";
+import { log } from "@/lib/log";
 
 // AI paused app-wide (docs/decisions/0008): no model call is sent, and what
 // needs one waits instead of failing. Two causes:
@@ -44,7 +45,7 @@ export async function aiPaused(): Promise<PauseReason | null> {
 /** The cap reached: in the log, and by email to AI_ALERT_EMAIL when it's set. Once per process each time. */
 async function alert(spent: number, cap: number) {
   const line = `AI paused: about $${spent.toFixed(2)} spent in the last 24 hours, over the $${cap} daily cap (AI_DAILY_SPEND_CAP_USD)`;
-  console.error(line);
+  log.error("ai.paused", { usd: Math.round(spent * 100) / 100, limit: cap });
   const to = process.env.AI_ALERT_EMAIL;
   if (!to) return;
   try {
@@ -56,6 +57,6 @@ async function alert(spent: number, cap: number) {
       text: `${line}.\n\nNo model calls are sent; messages wait and are analyzed once spending falls under the cap. Check ai_call for what ran, and the providers' consoles for the real bill.`,
     });
   } catch (e) {
-    console.error("AI pause alert not sent", (e as Error)?.message);
+    log.error("ai.pause_alert.failed", { error: e });
   }
 }

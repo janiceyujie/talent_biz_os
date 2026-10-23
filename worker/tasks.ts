@@ -12,6 +12,7 @@ import { JOB_LIMIT_MS } from "@/lib/queue/heartbeat";
 import { alertOps } from "@/lib/opportunities/alert";
 import { refreshOpportunities } from "@/lib/opportunities/refresh";
 import { jobs, type JobName } from "@/lib/queue/jobs";
+import { log } from "@/lib/log";
 
 // One handler per job in lib/queue/jobs.ts. Each must be safe to run twice:
 // a job can run again after a crash or a redeploy.
@@ -38,7 +39,7 @@ const tasks: Record<JobName, Task> = {
     } catch (e) {
       // The last attempt: no retry follows, so don't leave the message pending.
       if (job.attempts >= job.max_attempts) {
-        await markAnalysisFailed(messageId).catch((err) => console.error("markAnalysisFailed", messageId, err));
+        await markAnalysisFailed(messageId).catch((err) => log.error("ai.analyze.mark_failed_failed", { message_id: messageId, error: err }));
       }
       throw e;
     }
@@ -57,7 +58,7 @@ const tasks: Record<JobName, Task> = {
       await fetchDecision(decisionId);
     } catch (e) {
       // The last attempt: no retry follows, so Waiting says it couldn't be brought in.
-      if (job.attempts >= job.max_attempts) await markFetchFailed(decisionId, e).catch((err) => console.error("markFetchFailed", decisionId, err));
+      if (job.attempts >= job.max_attempts) await markFetchFailed(decisionId, e).catch((err) => log.error("mail.fetch.mark_failed_failed", { decision_id: decisionId, error: err }));
       throw e;
     }
   },

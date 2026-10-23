@@ -14,8 +14,13 @@
 // Stop it with Ctrl-C (or SIGTERM on deploy): running jobs finish first.
 import { loadEnvConfig } from "@next/env";
 
+/** Set once both pools are running: before that, a failure is a setting, not a job. */
+let started = false;
+
 async function main() {
   loadEnvConfig(process.cwd());
+  const { log, setLogService } = await import("@/lib/log");
+  setLogService("worker");
   // Imported after the environment is loaded: lib/db reads DATABASE_URL when it loads.
   const { parseCronItems, run } = await import("graphile-worker");
   const { taskList } = await import("./tasks");
@@ -32,8 +37,13 @@ async function main() {
   // Push is required in production, and half set up is refused anywhere: refuse to start.
   const mode = pushMode();
   if (mode === "push") checkCredentials();
-  console.log(mode === "push" ? "mail: push (Pub/Sub), with a 15-minute check as a safety net" : "mail: checked every 2 minutes (no PUBSUB_* settings; push is required in production)");
+  // push: Pub/Sub, with a 15-minute check as a safety net. poll: every 2 minutes (no PUBSUB_* settings).
+  log.info("worker.starting", { mode });
   const alive = liveness(); // a heartbeat, and releasing jobs a stopped worker left locked
+  // A line when each job starts and ends, and Graphile's own messages without their free text.
+  const { logJobs } = await import("./job-log");
+  const { queueLogger } = await import("./queue-log");
+  logJobs(alive.events);
   // Two pools, so the memory-heavy jobs (heavyJobs) run fewer at a time and never
   // hold up the rest. Each takes only its own jobs. They share the queue's
   // connections: through Supabase's session-mode pooler each one holds a database
@@ -42,13 +52,14 @@ async function main() {
   const { heavyJobs } = await import("@/lib/queue/jobs");
   const pgPool = new Pool({ connectionString: process.env.DATABASE_URL, max: Number(process.env.WORKER_PG_POOL || 6) });
   // A connection that drops (the pooler restarting, say) is replaced; unhandled, its error
-  // would crash the worker. Idle in the pool, or checked out between queries. The code only.
-  const dropped = (e: Error & { code?: string }) => console.error("worker: a queue connection failed", e.code ?? e.name);
+  // would crash the worker. Idle in the pool, or checked out between queries.
+  const dropped = (e: Error) => log.error("queue.connection.failed", { error: e });
   pgPool.on("error", dropped);
   pgPool.on("connect", (client) => client.on("error", dropped));
   const isHeavy = ([name]: [string, unknown]) => (heavyJobs as readonly string[]).includes(name);
   const light = await run({
     events: alive.events,
+    logger: queueLogger,
     pgPool,
     concurrency: Number(process.env.WORKER_CONCURRENCY || 4),
     taskList: Object.fromEntries(Object.entries(taskList).filter((t) => !isHeavy(t))),
@@ -56,6 +67,7 @@ async function main() {
   });
   const heavy = await run({
     events: alive.events,
+    logger: queueLogger,
     pgPool,
     concurrency: Number(process.env.WORKER_HEAVY_CONCURRENCY || 2),
     taskList: Object.fromEntries(Object.entries(taskList).filter(isHeavy)),
@@ -63,16 +75,23 @@ async function main() {
   });
   const http = startHttp();
   const push = startPush(); // Gmail notices, when Pub/Sub is set up; otherwise the schedule polls
+  started = true;
   // On SIGTERM, Graphile stops both pools, letting running jobs finish.
   await Promise.all([light.promise, heavy.promise]);
   push?.stop();
   http?.close();
   await alive.stop();
   await pgPool.end();
+  log.info("worker.stopped");
   process.exit(0);
 }
 
-main().catch((e) => {
-  console.error("worker", e);
+main().catch(async (e) => {
+  // Refusing to start is our own message about a setting (KMS_KEY, PUBSUB_*): print it.
+  // Once jobs have run, an error's message can echo content: name and code only.
+  // eslint-disable-next-line no-console -- a setting's name, before any job has run
+  if (!started) console.error("worker: couldn't start:", (e as Error)?.message ?? e);
+  const { log } = await import("@/lib/log");
+  log.error(started ? "worker.crashed" : "worker.start_failed", { error: e });
   process.exit(1);
 });

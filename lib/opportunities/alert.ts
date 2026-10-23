@@ -1,5 +1,6 @@
 import "server-only";
 import type { RefreshOutcome } from "./refresh";
+import { log } from "@/lib/log";
 
 // What went wrong in a day's read of the opportunity sources (decision 0024),
 // for the team, never the people using the app: they see only when each
@@ -12,7 +13,11 @@ export async function alertOps(outcomes: RefreshOutcome[]) {
     ...o.problems.map((p) => `${o.source}: ${p}`),
   ]);
   if (!lines.length) return;
-  for (const line of lines) console.error("opportunities.refresh problem:", line);
+  // The details are in the email; the log has which source and how many.
+  for (const o of outcomes) {
+    if (!o.ok) log.error("opportunities.source.failed", { source: o.source, reason: o.failure });
+    if (o.problems.length) log.warn("opportunities.source.problems", { source: o.source, count: o.problems.length });
+  }
   const to = process.env.OPS_ALERT_EMAIL;
   if (!to) return;
   try {
@@ -23,6 +28,6 @@ export async function alertOps(outcomes: RefreshOutcome[]) {
       text: `${lines.map((l) => `- ${l}`).join("\n")}\n\nA source that changed its format needs its parser or its entry in lib/opportunities/tracked.ts updated. The worker's log has the details. People using the app see none of this: a call not read for three days shows as Check.`,
     });
   } catch (e) {
-    console.error("opportunities alert not sent", (e as Error)?.message);
+    log.error("opportunities.alert.failed", { error: e });
   }
 }

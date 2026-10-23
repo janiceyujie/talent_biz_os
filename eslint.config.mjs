@@ -27,10 +27,20 @@ const noHardCodedText = {
   },
 };
 
+// Logs: server code writes through lib/log, whose fields are an allowlist, so
+// message content can't reach a log (decision 0026). lib/log itself prints; the
+// worker prints why it couldn't start, before any job has run.
+const logThroughLib = {
+  files: ["lib/**/*.ts", "worker/**/*.ts", "app/api/**/*.ts", "proxy.ts"],
+  ignores: ["lib/log/**", "**/*.test.ts"],
+  rules: { "no-console": "error" },
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   noHardCodedText,
+  logThroughLib,
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

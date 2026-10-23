@@ -56,7 +56,7 @@ gcloud iam service-accounts keys create kms-worker.json --iam-account kms-worker
 4. Check:
    - `https://<web address>/api/health` answers `{"ok":true}`, with no password.
    - Staging's address asks for the password, and the app opens after it.
-   - The worker's logs show `mail: push (Pub/Sub)…` and, if `WORKER_SECRET` reached it, `worker http: listening on 0.0.0.0:3001`.
+   - The worker's logs show `worker.starting` with `"mode":"push"` and, if `WORKER_SECRET` reached it, `worker.http.listening`.
    - Sign in, and open Intake's Filtered out: senders and subjects show, so the web service reaches the worker.
 
 ## What the file decides

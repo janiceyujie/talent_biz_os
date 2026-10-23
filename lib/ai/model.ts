@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { aiCall } from "@/lib/db/schema";
 import type { ModelErrorCode } from "./errors";
 import { aiPaused } from "./pause";
+import { log as appLog } from "@/lib/log";
 
 // The one place that talks to a language model. The pipeline asks for an
 // object matching a zod schema; which model answers is configuration
@@ -114,7 +115,7 @@ export async function generateObject<T>(request: StructuredRequest<T>): Promise<
         latencyMs: Date.now() - started,
         ...entry,
       })
-      .catch((e) => console.error("ai_call log", e)); // logging never breaks an analysis
+      .catch((e) => appLog.error("ai.call_record.failed", { error: e })); // recording never breaks an analysis
 
   const replay = replayMode();
   const key = replay !== "off" ? recordingKey(request, provider, model) : "";
@@ -151,7 +152,7 @@ export async function generateObject<T>(request: StructuredRequest<T>): Promise<
     // The backup only when the primary can't answer at all: a bad answer is a quality problem, not an outage.
     const down = e instanceof ModelError && (e.code === "unreachable" || e.code === "busy" || e.code === "rate_limited");
     if (!down || !backup) throw e;
-    console.error("model: primary unavailable, using the backup", provider, (e as ModelError).code);
+    appLog.warn("ai.primary_unavailable", { provider, reason: (e as ModelError).code });
     result = await attempt(backup.provider, backup.model);
   }
   if (replay === "record") await writeRecording(key, result);

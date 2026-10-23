@@ -12,6 +12,7 @@ import { isBulk, RULES_VERSION } from "../relevance/rules";
 import { scoreMail } from "../relevance/score";
 import { outcomeFor } from "../relevance/thresholds";
 import { queueFetch } from "./fetch";
+import { log } from "@/lib/log";
 
 // mail.relevance (docs/design/gmail-ingestion.md, Jobs): the model step for one
 // email the rules left pending. Reads its sender, subject, labels, and Gmail's
@@ -60,8 +61,7 @@ export async function scoreDecision(decisionId: string) {
   try {
     scored = await scoreMail(mail, { task: "relevance", talentId: c.talentId });
   } catch (e) {
-    // Ids and codes only: never the subject or preview.
-    console.error("mail.relevance failed", d.id, e instanceof ModelError ? e.code : (e as Error)?.name);
+    log.error("mail.relevance.failed", { decision_id: d.id, error: e });
     if (e instanceof ModelError && (e.code === "not_configured" || e.code === "paused")) return; // stays pending; retrying now won't help
     throw e;
   }

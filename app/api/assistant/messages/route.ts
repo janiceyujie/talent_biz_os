@@ -15,6 +15,7 @@ import { getCurrentTalent, getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { dateInZone, wallTimeToUtc } from "@/lib/domain/dates";
 import { toLocale } from "@/lib/i18n/config";
+import { log } from "@/lib/log";
 
 // A quick prompt's intent, answered in code; or a question in the person's own
 // words, answered by the model from a snapshot of the workspace or of one
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
       return json({ conversationId: id, answer, monthLeft: usage.monthLeft - 1 });
     } catch (e) {
       // Ids and codes only: never the question or the data.
-      console.error("assistant failed", session.personId, e instanceof ModelError ? e.code : (e as Error)?.name);
+      log.error("assistant.failed", { person_id: session.personId, error: e });
       return json({ error: e instanceof ModelError && e.code === "paused" ? "paused" : "unavailable" }, 503);
     }
   });

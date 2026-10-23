@@ -1,5 +1,6 @@
 import { handleNotices } from "@/lib/mail/jobs/reconcile";
-import { pushConfigured, PubSubError } from "@/lib/mail/pubsub";
+import { pushConfigured } from "@/lib/mail/pubsub";
+import { log } from "@/lib/log";
 
 // Gmail's push notices, pulled from Pub/Sub for as long as the worker runs
 // (decision 0013). Each pull waits briefly when there's nothing; after a
@@ -16,8 +17,7 @@ export function startPush() {
         await handleNotices();
         wait = 1000;
       } catch (e) {
-        // Status codes only: never a notice.
-        console.error("push pull failed", e instanceof PubSubError ? e.status : (e as Error)?.name);
+        log.error("mail.push.pull_failed", { error: e });
         await new Promise((r) => setTimeout(r, wait));
         wait = Math.min(wait * 2, 60_000);
       }

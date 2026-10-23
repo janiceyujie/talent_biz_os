@@ -165,6 +165,12 @@ projects:
             healthCheckPath: /api/health
             envVars:
               - fromGroup: taloox-production
+              # Invite-only sign-up during the beta (decision 0028, docs/setup/beta-access.md).
+              - key: SIGNUP_ALLOWLIST
+                value: "1"
+              # The marketing site's waitlist form, linked from the sign-up page.
+              - key: WAITLIST_URL
+                sync: false
               - key: WORKER_URL
                 fromService:
                   type: pserv

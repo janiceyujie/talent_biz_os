@@ -379,6 +379,13 @@
       "when": 1792732139882,
       "tag": "0053_add_opportunity_time_zone",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1792740789153,
+      "tag": "0054_add_signup_allowlist",
+      "breakpoints": true
     }
   ]
 }

@@ -2,11 +2,13 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { and, eq, isNull } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
-import { authAccount, authSession, authVerification, person } from "@/lib/db/schema";
+import { authAccount, authSession, authVerification, person, signupAllowlist } from "@/lib/db/schema";
 import { sendEmail } from "@/lib/email";
 import { defaultLocale, isLocale, LOCALE_COOKIE, matchLocale, toLocale } from "@/lib/i18n/config";
+import { allowlistOn, checkSignupAllowed, listEmail } from "./beta-access";
 
 const realGoogle =
   process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
@@ -59,6 +61,11 @@ function signupLocale(headers: Headers | undefined) {
     .find(([name]) => name === LOCALE_COOKIE)?.[1];
   if (isLocale(cookie)) return cookie;
   return matchLocale(headers?.get("accept-language")) ?? defaultLocale;
+}
+
+async function onAllowlist(email: string) {
+  const [row] = await db.select({ id: signupAllowlist.id }).from(signupAllowlist).where(eq(signupAllowlist.email, email)).limit(1);
+  return !!row;
 }
 
 // Better Auth's models map onto our tables: `user` is `person`, and its
@@ -120,8 +127,19 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        // A new account takes the language its sign-up page was showing.
-        before: async (user, context) => ({ data: { ...user, locale: signupLocale(context?.headers) } }),
+        // Invite-only during the beta (./beta-access.ts). Then a new account takes
+        // the language its sign-up page was showing.
+        before: async (user, context) => {
+          await checkSignupAllowed(user.email, { on: allowlistOn(), isListed: onAllowlist });
+          return { data: { ...user, locale: signupLocale(context?.headers) } };
+        },
+        // Marks their place on the list used, for "invited but not signed up yet".
+        after: async (user) => {
+          await db
+            .update(signupAllowlist)
+            .set({ usedAt: new Date() })
+            .where(and(eq(signupAllowlist.email, listEmail(user.email)), isNull(signupAllowlist.usedAt)));
+        },
       },
     },
   },

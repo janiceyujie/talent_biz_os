@@ -31,6 +31,7 @@ const authErrorCodes = [
   "PASSWORD_TOO_SHORT",
   "USER_ALREADY_EXISTS",
   "INVALID_TOKEN",
+  "SIGNUP_NOT_ALLOWED", // invite-only beta (lib/auth/beta-access.ts)
 ] as const;
 type AuthErrorCode = (typeof authErrorCodes)[number];
 

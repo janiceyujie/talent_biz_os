@@ -77,6 +77,22 @@ export const person = pgTable(
   ],
 ).enableRLS();
 
+// Who may create an account while the beta is invite-only (decision 0028). Rows
+// are added by hand (docs/setup/beta-access.md); usedAt is set when the account
+// is created. Emails are stored as Better Auth stores them on person: trimmed, lowercased.
+export const signupAllowlist = pgTable(
+  "signup_allowlist",
+  {
+    id: id(),
+    email: text().notNull().unique(),
+    note: text(), // where they came from, e.g. "waitlist, 2026-11 batch"
+    invitedBy: uuid().references(() => person.id, { onDelete: "set null" }), // a person who invited them; empty when added by hand
+    createdAt: createdAt(),
+    usedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [check("signup_allowlist_email_check", sql`${t.email} = lower(btrim(${t.email}))`)],
+).enableRLS();
+
 // Better Auth internals. Column set follows Better Auth's core schema;
 // `personId` is its `userId`, renamed in the auth config.
 export const authSession = pgTable(

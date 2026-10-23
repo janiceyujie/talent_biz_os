@@ -33,7 +33,7 @@ export type Attachment = { mimeType: string; data: Uint8Array };
 
 /** What a call is for and whom, for the ai_call log and usage limits. */
 export type CallTrace = {
-  task: "extract" | "relevance" | "payment_notice" | "assistant" | "eval";
+  task: "extract" | "relevance" | "payment_notice" | "assistant" | "opportunity" | "eval";
   promptVersion: string;
   talentId?: string | null;
   personId?: string | null;

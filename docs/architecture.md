@@ -117,7 +117,7 @@ A **project** (UI: 專案) is the unit a person manages: one ongoing deal with o
 
 ### Opportunities
 
-- Public calls for grants, competitions, and showcases, read on a schedule into a catalogue shared by every account, screened against the person's profile, and followed as to-dos — **Built in part** ([decision 0024](decisions/0024-opportunity-discovery.md)). The worker's daily `opportunities.refresh` (05:00 Taipei; `npm run opportunities:refresh` to run it now) reads the Ministry of Culture's open-data list of open calls and Grants.gov's arts grants (`lib/opportunities/sources/`) into `opportunity`, keeping a call a later read leaves out. Who a call is for comes only from what the source states (a form marked for individuals or groups, a unit that funds one discipline, Grants.gov's applicant codes); each dimension is a list, "any", or unknown. The screening profile (applicant type, country, county or state, disciplines) is the `opportunities.profile` preference; `lib/opportunities/screening.ts` gives Fits, Check (unknown, missing, or not read in three days), or Doesn't fit, which the list hides unless asked (`GET /api/opportunities`). Following a call (`opportunity_application`) can add a Submit to-do on its closing date; an application's to-dos (`opportunity_task`) are ordinary to-dos. Tracked pages read with a checked model extraction, and the notification when a followed call's dates change — **Next**.
+- Public calls for grants, competitions, and showcases, read on a schedule into a catalogue shared by every account, screened against the person's profile, and followed as to-dos — **Built in part** ([decision 0024](decisions/0024-opportunity-discovery.md)). The worker's daily `opportunities.refresh` (05:00 Taipei; `npm run opportunities:refresh` to run it now) reads the Ministry of Culture's open-data list of open calls and Grants.gov's arts grants (`lib/opportunities/sources/`) into `opportunity`, keeping a call a later read leaves out. Who a call is for comes only from what the source states (a form marked for individuals or groups, a unit that funds one discipline, Grants.gov's applicant codes); each dimension is a list, "any", or unknown. The screening profile (applicant type, country, county or state, disciplines) is the `opportunities.profile` preference; `lib/opportunities/screening.ts` gives Fits, Check (unknown, missing, or not read in three days), or Doesn't fit, which the list hides unless asked (`GET /api/opportunities`). Following a call (`opportunity_application`) can add a Submit to-do on its closing date; an application's to-dos (`opportunity_task`) are ordinary to-dos. Tracked pages (`lib/opportunities/tracked.ts`, for now the National Culture and Arts Foundation and Taipei's Department of Cultural Affairs) are lists of announcements: each announcement titled as a call is fetched from the same host, and when its text has changed since the last read (`opportunity_page`) the model reads it and returns each field with the passage it came from; `lib/opportunities/sources/pages.ts` keeps a field only when the passage is verbatim on the page and states the value. The notification when a followed call's dates change — **Next**.
 
 ### Contacts
 
@@ -869,7 +869,7 @@ create table audit_log (
 
 -- The catalogue is shared by every account: public calls, no customer data, the one place a read isn't scoped to a talent.
 create table opportunity_source (
-  id            text primary key,           -- 'moc', 'grants_gov'
+  id            text primary key,           -- 'moc', 'grants_gov', 'pages'
   checked_at    timestamptz,                -- the last successful read
   attempted_at  timestamptz,
   failure       text                        -- why the last read failed; null after a success
@@ -889,6 +889,7 @@ create table opportunity (
   source_status  text not null check (source_status in ('posted','forecasted','unknown')),
   summary        text not null default '',
   rules          jsonb,                     -- who it's for, per dimension: a list, 'any', or null (unknown); lib/opportunities/types.ts
+  passages       jsonb,                     -- a tracked page's call: the passage each checked field was read from
   content_hash   text not null,
   checked_at     timestamptz not null default now(),
   changed_at     timestamptz not null default now(),   -- last read with something different
@@ -896,6 +897,20 @@ create table opportunity (
   unique (source, external_id)
 );
 create index opportunity_region_closes_idx on opportunity (region, closes_on);
+
+-- What was last read from each tracked page: its list, and each announcement on it.
+create table opportunity_page (
+  url             text primary key,
+  tracked_id      text not null,            -- lib/opportunities/tracked.ts
+  role            text not null check (role in ('list','announcement')),
+  text_hash       text,                     -- an announcement's text when the model last read it
+  calls           integer,                  -- how many checked calls it gave
+  model_version   text,
+  prompt_version  text,                     -- a new prompt reads every announcement again
+  checked_at      timestamptz,
+  attempted_at    timestamptz,
+  failure         text
+);
 
 create table opportunity_application (
   id              uuid primary key default gen_random_uuid(),

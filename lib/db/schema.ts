@@ -718,7 +718,7 @@ export const aiCall = pgTable(
     talentId: uuid().references(() => talent.id, { onDelete: "cascade" }), // null for evals and scripts
     personId: uuid().references(() => person.id, { onDelete: "set null" }),
     messageId: uuid().references(() => message.id, { onDelete: "set null" }),
-    task: text().notNull(), // 'extract', 'relevance', 'payment_notice', 'assistant', 'eval'
+    task: text().notNull(), // 'extract', 'relevance', 'payment_notice', 'assistant', 'opportunity', 'eval'
     provider: text().notNull(),
     model: text().notNull(),
     promptVersion: text(),
@@ -866,6 +866,7 @@ export const opportunity = pgTable(
     sourceStatus: text({ enum: sourceStatuses }).notNull(),
     summary: text().notNull().default(""),
     rules: jsonb().$type<OpportunityRules>(), // who it's for, as the source states it; null when it says nothing
+    passages: jsonb().$type<Record<string, string>>(), // a tracked page's call: the passage each checked field was read from
     contentHash: text().notNull(),
     checkedAt: createdAt(), // last read from the source
     changedAt: createdAt(), // last read with something different
@@ -878,6 +879,26 @@ export const opportunity = pgTable(
     check("opportunity_kind_check", oneOf(t.kind, opportunityKinds)),
     check("opportunity_source_status_check", oneOf(t.sourceStatus, sourceStatuses)),
   ],
+).enableRLS();
+
+// What was last read from each tracked page (lib/opportunities/tracked.ts):
+// its list of announcements, and each announcement it links to. An
+// announcement whose text hasn't changed isn't read by the model again.
+export const opportunityPage = pgTable(
+  "opportunity_page",
+  {
+    url: text().primaryKey(),
+    trackedId: text().notNull(), // the tracked page it's on
+    role: text({ enum: ["list", "announcement"] }).notNull(),
+    textHash: text(), // an announcement's text when the model last read it
+    calls: integer(), // how many checked calls it gave
+    modelVersion: text(),
+    promptVersion: text(),
+    checkedAt: timestamp({ withTimezone: true }),
+    attemptedAt: timestamp({ withTimezone: true }),
+    failure: text(),
+  },
+  (t) => [check("opportunity_page_role_check", oneOf(t.role, ["list", "announcement"]))],
 ).enableRLS();
 
 // A call a talent follows, and how their application is going.

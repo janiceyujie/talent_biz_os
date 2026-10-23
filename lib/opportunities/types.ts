@@ -11,8 +11,8 @@ export type OpportunityKind = (typeof opportunityKinds)[number];
 export const opportunityRegions = ["TW", "US"] as const;
 export type OpportunityRegion = (typeof opportunityRegions)[number];
 
-/** Where a call came from: the structured sources, read directly (tracked pages come later). */
-export const opportunitySources = ["moc", "grants_gov"] as const;
+/** Where a call came from: the structured sources, read directly, and the tracked pages (lib/opportunities/tracked.ts). */
+export const opportunitySources = ["moc", "grants_gov", "pages"] as const;
 export type OpportunitySource = (typeof opportunitySources)[number];
 
 /** What the source says of a call: open for applications, announced as coming, or not said. */
@@ -80,6 +80,8 @@ export type Opportunity = {
   sourceStatus: SourceStatus;
   summary: string;
   rules: OpportunityRules | null;
+  /** A tracked page's call: the passage each checked field was read from. */
+  passages?: Record<string, string> | null;
   checkedAt: string;
   changedAt: string;
 };

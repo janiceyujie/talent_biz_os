@@ -85,7 +85,7 @@ export const extractionSchema = z.object({
         disciplines: quotedList(statedDisciplines),
       }),
     )
-    .max(5),
+    .max(20), // a call per program; a regular round can open one per discipline
 });
 export type Extraction = z.infer<typeof extractionSchema>;
 

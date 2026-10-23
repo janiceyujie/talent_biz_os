@@ -540,7 +540,7 @@ What to know:
 ### Constraints
 
 - **Fetching:** only these hosts, over HTTPS, no redirects, 20 seconds and 2 MB per request, identified as "Taloox opportunities reader". Nothing a person typed is ever fetched.
-- **Per run:** 10 announcements per tracked page, 40 model reads across all of them, 30,000 characters of each announcement, 5 calls per announcement. A call closed more than 30 days ago is dropped.
+- **Per run:** 10 announcements per tracked page, 40 model reads across all of them, 30,000 characters of each announcement, 20 calls per announcement. A call closed more than 30 days ago is dropped.
 - **AI:** through `lib/ai/model.ts`, so it stops while AI is paused or the day's spend cap is reached (decision 0008), and an announcement not read is read the next day. A changed announcement costs one model call: about $0.01.
 - **Not read:** PDFs and other attachments, where most of NCAF's eligibility rules are, so those fields are mostly Check.
 - **Adding a page is a code change**: an entry in `tracked.ts` with which links are announcements and where the text sits on the page. A site that changes its markup stops yielding links: the page is recorded as failed, and the team is told.

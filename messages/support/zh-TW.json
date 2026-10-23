@@ -1,0 +1,260 @@
+{
+  "support": {
+    "title": "客服",
+    "intro": "查詢帳號，查看它的連線狀態和最近發生的事。這裡只會看到 id、狀態和時間，不會看到信件內容。打開帳號會記錄在該帳號的紀錄中。",
+    "lookup": {
+      "heading": "查詢帳號",
+      "email": "Email 地址",
+      "submit": "打開",
+      "help": "請輸入對方登入時使用的完整 email 地址。",
+      "notFound": "沒有帳號使用這個 email 登入。"
+    },
+    "errorCode": {
+      "heading": "查詢錯誤代碼",
+      "label": "錯誤代碼",
+      "help": "貼上對方錯誤畫面上的代碼，或直接貼上整行文字。",
+      "notACode": "這看起來不是錯誤代碼。",
+      "code": "代碼 {code}",
+      "copy": "複製",
+      "copied": "已複製",
+      "renderWeb": "網站服務的 log",
+      "renderWorker": "Worker 的 log",
+      "renderHelp": "Render 的連結會打開 log 頁，請把代碼貼到搜尋框。",
+      "sentry": "Sentry",
+      "notSet": "這裡沒有設定 {names}，所以沒有連結；部署後就會有。"
+    },
+    "account": {
+      "back": "查詢其他帳號",
+      "created": "建立時間",
+      "language": "語言",
+      "views": "之前的客服查看",
+      "viewsNone": "這是第一次。",
+      "viewsSummary": "最近一次 {date}（操作者 ID {id}），30 天內共 {count} 次",
+      "email": "Email",
+      "id": "ID",
+      "viewed": "打開帳號會記錄在該帳號的紀錄中，同一位客服 30 分鐘內只記一次。",
+      "find": "這個人的 log 和錯誤",
+      "renderHelpId": "Render 的連結會打開 log 頁，請把 ID 貼到搜尋框。",
+      "workspaces": "工作區",
+      "noWorkspaces": "還沒有工作區：對方尚未完成初始設定。",
+      "role": "{role}，{status}，{date} 加入",
+      "copyId": "點一下複製完整 ID"
+    },
+    "gmail": {
+      "heading": "Gmail",
+      "none": "沒有連接信箱。",
+      "status": "狀態",
+      "failure": "失敗原因",
+      "lastSynced": "最後同步",
+      "syncRequested": "按下立即同步",
+      "history": "過去的信件",
+      "historyDone": "{mode}，{date} 完成",
+      "historyRunning": "{mode}，仍在匯入",
+      "watch": "推播監看到期"
+    },
+    "calendar": {
+      "heading": "Google 日曆",
+      "none": "沒有連接日曆。",
+      "status": "狀態",
+      "error": "錯誤",
+      "lastSynced": "最後同步"
+    },
+    "timeline": {
+      "heading": "時間軸",
+      "help": "每一類最多顯示最新的 {limit} 筆，由新到舊。時間為台北時間。",
+      "empty": "還沒有任何紀錄。",
+      "when": "時間",
+      "what": "類型",
+      "detail": "內容",
+      "audit": "變更",
+      "ai": "AI 呼叫",
+      "mail": "信件判斷",
+      "message": "信件",
+      "job": "工作放棄",
+      "attempts": "嘗試 {attempts}／{max} 次後",
+      "latency": "{ms} 毫秒",
+      "score": "分數 {score}",
+      "failedWith": "失敗：{reason}",
+      "looksLike": "看起來像{kind}",
+      "fetchFailed": "匯入失敗：{code}",
+      "pair": "{a}：{b}",
+      "paren": "{a}（{b}）",
+      "idOf": "{what} ID",
+      "actorId": "操作者 ID"
+    },
+    "never": "從未",
+    "none": "無",
+    "values": {
+      "action": {
+        "project_created": "建立合作案",
+        "project_stage_changed": "變更合作案階段",
+        "project_currency_changed": "變更合作案幣別",
+        "message_applied": "把信件內容套用到合作案",
+        "calendar_deleted": "從行事曆刪除",
+        "opportunity_followed": "追蹤機會",
+        "opportunity_unfollowed": "取消追蹤機會",
+        "opportunity_application_updated": "更新申請進度",
+        "opportunity_dates_seen": "看過機會的日期變更",
+        "support_viewed": "客服查看了這個帳號",
+        "calendar_event_added_in_google": "在 Google 日曆新增行程",
+        "calendar_event_changed_in_google": "在 Google 日曆修改行程",
+        "calendar_event_deleted_in_google": "在 Google 日曆刪除行程"
+      },
+      "target": {
+        "project": "合作案",
+        "message": "信件",
+        "calendar_event": "行程",
+        "opportunity_application": "申請",
+        "person": "帳號",
+        "event": "行程",
+        "todo": "待辦"
+      },
+      "task": {
+        "extract": "分析信件",
+        "relevance": "判斷信件是不是工作",
+        "payment_notice": "讀取付款通知",
+        "assistant": "個人助理",
+        "opportunity": "整理機會",
+        "eval": "評測"
+      },
+      "aiStatus": {
+        "ok": "成功",
+        "error": "失敗"
+      },
+      "failure": {
+        "busy": "服務忙碌",
+        "rate_limited": "超過呼叫上限",
+        "recitation": "拒絕：疑似重製已發表的內容",
+        "blocked": "被安全機制擋下",
+        "too_long": "回答超過長度",
+        "unreachable": "連不到服務",
+        "invalid_output": "回答格式不符",
+        "not_configured": "沒有設定 AI",
+        "unsupported_file": "無法讀取的檔案",
+        "replay_missing": "沒有測試錄製",
+        "usage_limit": "達到用量上限",
+        "paused": "AI 暫停中",
+        "unexpected": "非預期的錯誤",
+        "sync_failed": "信箱同步失敗",
+        "invalid_grant": "Google 授權失效",
+        "auth": "Google 授權失效",
+        "google": "Google 回傳錯誤",
+        "network": "連不到 Google"
+      },
+      "outcome": {
+        "work": "工作信：已匯入",
+        "skipped": "跳過",
+        "pending": "等待模型判斷",
+        "unsure": "不確定是不是工作",
+        "not_work": "不是工作信"
+      },
+      "decider": {
+        "sender_always": "對方設定：一律匯入這個寄件人",
+        "sender_never": "對方設定：一律不匯入這個寄件人",
+        "contact": "規則：來自聯絡人",
+        "thread": "規則：屬於已知的對話串",
+        "esign": "規則：電子簽章服務",
+        "spam": "規則：Gmail 垃圾信",
+        "trash": "規則：在 Gmail 垃圾桶",
+        "draft": "規則：草稿",
+        "sent": "規則：自己寄出的信",
+        "bulk": "規則：大量寄送的信",
+        "tab": "規則：Gmail 的促銷或最新快訊分頁",
+        "model": "模型評分",
+        "analysis": "匯入後分析判斷",
+        "person": "對方手動",
+        "gone": "在 Gmail 先被刪除",
+        "expired": "30 天未處理而過期",
+        "too_large": "太大無法匯入"
+      },
+      "kind": {
+        "offer": "工作邀約",
+        "negotiation": "條件協商",
+        "contract": "合約",
+        "logistics": "行程與執行細節",
+        "payment": "付款",
+        "bank_notice": "銀行通知",
+        "press": "媒體邀訪",
+        "newsletter": "電子報",
+        "marketing": "行銷促銷",
+        "receipt": "收據",
+        "personal": "私人信件",
+        "notification": "系統通知",
+        "other": "其他"
+      },
+      "channel": {
+        "paste": "貼上",
+        "upload": "上傳",
+        "gmail": "Gmail",
+        "gmail_addon": "Gmail 外掛",
+        "forwarded_email": "轉寄"
+      },
+      "messageKind": {
+        "message": "信件",
+        "payment_notice": "付款通知"
+      },
+      "direction": {
+        "received": "收到",
+        "sent": "寄出"
+      },
+      "messageStatus": {
+        "pending": "等待分析",
+        "analyzed": "已分析",
+        "confirmed": "已確認",
+        "dismissed": "已略過",
+        "error": "分析失敗",
+        "history": "過去的信件"
+      },
+      "relevance": {
+        "sure": "確定是工作",
+        "unsure": "可能是工作"
+      },
+      "job": {
+        "message_analyze": "分析信件",
+        "mail_sync": "同步信箱",
+        "mail_relevance": "判斷信件是不是工作",
+        "mail_fetch": "匯入信件",
+        "mail_disconnect": "中斷信箱連線",
+        "calendar_sync": "同步日曆",
+        "mail_reconcile": "同步所有信箱",
+        "mail_cleanup": "每日清理",
+        "calendar_reconcile": "同步所有日曆",
+        "opportunities_refresh": "更新機會"
+      },
+      "connection": {
+        "connected": "已連線",
+        "reconnect_needed": "需要重新連線",
+        "needs_reconnect": "需要重新連線",
+        "error": "錯誤",
+        "disconnecting": "中斷中"
+      },
+      "history": {
+        "30_days": "過去 30 天",
+        "new_only": "只收新信"
+      },
+      "role": {
+        "owner": "擁有者",
+        "manager": "經紀人",
+        "agency_admin": "經紀公司管理員"
+      },
+      "membership": {
+        "invited": "已邀請",
+        "active": "使用中",
+        "revoked": "已移除"
+      },
+      "vertical": {
+        "music": "音樂",
+        "influencer": "網紅",
+        "model": "模特兒",
+        "video": "影音",
+        "other": "其他"
+      },
+      "idKey": {
+        "messageId": "信件",
+        "connectionId": "連線",
+        "decisionId": "信件判斷",
+        "talentId": "工作區"
+      }
+    }
+  }
+}

@@ -94,6 +94,31 @@ Request ids and error codes (`user/janlin/request-ids`):
 - `app/global-error.tsx` covers a failure of the root layout itself. With no session there, its language is the language switch's cookie, then the browser's; it loads the catalogs only when it shows.
 - `lib/log`'s hooks (the reporter and the request context) are kept on `globalThis`: Next loads a module once for `instrumentation.ts` and again for routes and pages, so a module variable set at startup didn't reach them. Before this, a `log.error` in a route or page wasn't reported to Sentry.
 
+Support page (`user/janlin/support-page`):
+
+- **Where and who.** `/support` in the same app. `requireStaff` (`lib/auth/staff.ts`) answers anyone without an unrevoked `staff` row with a 404, and every read in `lib/support` calls it, not only the page, so revoking takes effect on the next read. `lib/support` is the only code that reads across accounts. Each read takes only the columns in `lib/support/columns.ts`, and a test fails when a column is added there until it's approved in the test too. Staff are granted and revoked by SQL (`docs/setup/support.md`).
+- **What it shows.** The account, its workspaces, Gmail and Google Calendar connections (status, failure code, last sync), and a timeline of the latest 50 of each: changes from `audit_log` (action and target, not `details`), AI calls, each email's relevance decision, messages (channel, status, failure code; never sender, recipients, subject, or body), and jobs that gave up (name, attempts, payload ids; never Graphile's error text). The connected mailbox's address is shown: it's the person's own, and support needs to check it's the one they meant.
+- **Error codes and people link out.** `request.failed` lives in Render's logs and errors in Sentry, not the database, so the page links to them with the code or person id, and a copy button. Render's log search isn't documented to take a query in its address, so its link opens the service's logs. Calling Render's API instead would need a key that can deploy and delete services; copying failures into a table would mean writing to the database when it may be what failed.
+- **Whose request.** `lib/auth` notes the person and talent once it knows them (`noteRequestIds`), so the rest of a request's log lines, its `request.failed`, and its Sentry events carry `person_id` and `talent_id`.
+- **Each look is recorded**: a `support.viewed` row in each of the account's workspaces, with the staff member as actor, once per staff member per account per 30 minutes, so reloading the page isn't another look. The timeline leaves these out, so they can't crowd out what the person did; the account's card sums them up (the latest, by whom, how many in 30 days).
+- **Its own wording**: `messages/support/`, loaded only by its pages, since the app's catalog reaches every person's browser.
+- **Out of scope here**: managing the beta allowlist from this page (decision 0028), next.
+
+#### Moving the Support page later
+
+**Two-step sign-in for staff (when someone other than the builder becomes staff):**
+
+1. Add Better Auth's two-factor plugin (its tables come with a migration) and a screen to enrol an authenticator app.
+2. `requireStaff` also requires this session to have passed the second step, and sends staff who haven't to it.
+3. Enrol the existing staff, then turn the requirement on. The Support page itself doesn't change.
+
+**A service of its own (when there's a support team, a customer or audit asks for isolation such as SOC 2, or access should be limited to an office network or VPN):**
+
+1. Deploy the same code as a second Render service that serves only `/support`, and turn `/support` off in the main app.
+2. Give it its own domain (`support.<domain>`) and its own session cookie.
+3. Give it a database role that can read only the tables and columns in `lib/support/columns.ts`, so even a bug can't read mail.
+4. Add an IP allowlist or single sign-on as needed.
+
 ## Alternatives considered
 
 - **Render's logs alone.** Free and no dependency, but nothing tells the builder something broke; customers would.

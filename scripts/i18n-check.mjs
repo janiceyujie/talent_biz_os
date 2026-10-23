@@ -2,7 +2,8 @@
 // same keys, and the same ICU arguments ({name}) in each message.
 import { readdirSync, readFileSync } from "node:fs";
 
-const dir = new URL("../messages/", import.meta.url);
+// The app's catalogs, and the Support page's own (messages/support/).
+const dirs = [new URL("../messages/", import.meta.url), new URL("../messages/support/", import.meta.url)];
 const reference = "en";
 const flatten = (tree, prefix = "") =>
   Object.entries(tree).flatMap(([k, v]) =>
@@ -22,22 +23,25 @@ function args(msg) {
   return [...names].filter(Boolean).sort().join(",");
 }
 
-const load = (locale) => new Map(flatten(JSON.parse(readFileSync(new URL(`${locale}.json`, dir), "utf8"))));
-const ref = load(reference);
 let problems = 0;
 const report = (message) => {
   problems++;
   console.error(message);
 };
-for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
-  const locale = file.replace(/\.json$/, "");
-  if (locale === reference) continue;
-  const cat = load(locale);
-  for (const [key, msg] of ref) {
-    if (!cat.has(key)) report(`${locale}: missing ${key}`);
-    else if (args(cat.get(key)) !== args(msg)) report(`${locale}: ${key} has {${args(cat.get(key))}}, en has {${args(msg)}}`);
+for (const dir of dirs) {
+  const load = (locale) => new Map(flatten(JSON.parse(readFileSync(new URL(`${locale}.json`, dir), "utf8"))));
+  const ref = load(reference);
+  const where = dir.pathname.replace(/.*\/(messages\/)/, "$1");
+  for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+    const locale = file.replace(/\.json$/, "");
+    if (locale === reference) continue;
+    const cat = load(locale);
+    for (const [key, msg] of ref) {
+      if (!cat.has(key)) report(`${where}${locale}: missing ${key}`);
+      else if (args(cat.get(key)) !== args(msg)) report(`${where}${locale}: ${key} has {${args(cat.get(key))}}, en has {${args(msg)}}`);
+    }
+    for (const key of cat.keys()) if (!ref.has(key)) report(`${where}${locale}: ${key} isn't in en`);
   }
-  for (const key of cat.keys()) if (!ref.has(key)) report(`${locale}: ${key} isn't in en`);
+  if (!problems) console.log(`i18n: ${where} ${ref.size} keys, all catalogs match ${reference}`);
 }
 if (problems) process.exit(1);
-console.log(`i18n: ${ref.size} keys, all catalogs match ${reference}`);

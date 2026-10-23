@@ -386,6 +386,13 @@
       "when": 1792740789153,
       "tag": "0054_add_signup_allowlist",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1792778622985,
+      "tag": "0055_add_staff",
+      "breakpoints": true
     }
   ]
 }

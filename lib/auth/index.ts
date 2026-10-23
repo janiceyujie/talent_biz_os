@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { db } from "@/lib/db";
 import { membership, talent } from "@/lib/db/schema";
+import { noteRequestIds } from "@/lib/log";
 import { auth } from "./config";
 
 export { isGoogleConfigured, isGoogleEnabled } from "./config";
@@ -15,6 +16,8 @@ export { isGoogleConfigured, isGoogleEnabled } from "./config";
 export const getSession = cache(async () => {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return null;
+  // The rest of the request's log lines and error reports say whose it was (decision 0026).
+  noteRequestIds({ person_id: session.user.id });
   return {
     personId: session.user.id,
     email: session.user.email,
@@ -38,6 +41,7 @@ export const getCurrentTalent = cache(async (personId: string) => {
     .innerJoin(talent, eq(talent.id, membership.talentId))
     .where(and(eq(membership.personId, personId), eq(membership.status, "active")))
     .limit(1);
+  if (row) noteRequestIds({ talent_id: row.id });
   return row ?? null;
 });
 

@@ -5301,3 +5301,14 @@ p.gmail-skipped {
   gap: 8px;
   width: 100%;
 }
+/* The error code under an error screen, with its Copy code button (components/app/error-panel.tsx). */
+.error-code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.error-code .secondary {
+  min-height: 30px;
+  padding: 0 10px;
+}

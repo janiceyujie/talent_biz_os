@@ -2027,6 +2027,8 @@
     "title": "Something went wrong",
     "body": "This part of the page couldn't load. Try again, or reload the page.",
     "code": "Error code: {code}. If this keeps happening, send us this code.",
+    "copyCode": "Copy code",
+    "copied": "Copied",
     "reload": "Reload",
     "retry": "Try again"
   },

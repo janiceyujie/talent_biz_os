@@ -57,6 +57,10 @@ projects:
                 sync: false
               - key: SENTRY_PROJECT
                 sync: false
+              # The Support page's link to the worker's logs (docs/setup/support.md): Render
+              # tells a service only its own id, so the worker's is set by hand.
+              - key: RENDER_WORKER_SERVICE_ID
+                sync: false
               # Staging only: one shared password in front of the whole site (decision 0027).
               - key: SITE_PASSWORD
                 sync: false
@@ -193,6 +197,10 @@ projects:
               - key: SENTRY_ORG
                 sync: false
               - key: SENTRY_PROJECT
+                sync: false
+              # The Support page's link to the worker's logs (docs/setup/support.md): Render
+              # tells a service only its own id, so the worker's is set by hand.
+              - key: RENDER_WORKER_SERVICE_ID
                 sync: false
               # Invite-only sign-up during the beta (decision 0028, docs/setup/beta-access.md).
               - key: SIGNUP_ALLOWLIST

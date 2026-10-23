@@ -2026,6 +2026,7 @@
     "staleBody": "The app was updated while this page was open. Reload to continue — nothing you saved is lost.",
     "title": "Something went wrong",
     "body": "This part of the page couldn't load. Try again, or reload the page.",
+    "code": "Error code: {code}. If this keeps happening, send us this code.",
     "reload": "Reload",
     "retry": "Try again"
   },

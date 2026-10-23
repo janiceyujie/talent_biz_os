@@ -79,7 +79,8 @@ From [decision 0008](../decisions/0008-ai-operations.md):
 - [x] JSON logs through `lib/log`: jobs, Google and model failures, sign-in outcomes; `console.*` refused by lint in server code ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
 - [x] Error reporting through `lib/errors`: Sentry on web, browser, and worker, with scrubbing and its test, and source maps uploaded at build ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
 - [ ] Sentry set up per [sentry.md](sentry.md): the project, its data region, the DSN and token on Render, and alerts by email and phone push. The privacy policy names Sentry and its region.
-- [ ] One `info` line per request with its `request_id`, and the error code on error screens ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
+- [x] A `request_id` on every log line written during a request, a `request.failed` line for each failed one, and the error code on error screens, including a failure of the root layout ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
+- [ ] A line for every request, successful or not: Render's HTTP request logs, on a Pro workspace ([render.md](render.md), "Request logs"). Optional for the beta.
 - [ ] A staff-only Support page (lookup by email, a metadata-only timeline, each lookup audited), the `staff` table, and error codes on error screens ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
 - [ ] A way to delete an account and everything in it, on request (privacy policy).
 - [ ] Invite-only sign-up on production: `SIGNUP_ALLOWLIST=1` (in `render.yaml`) and `WAITLIST_URL` on the web service, the waitlist form on the marketing site, and the first batch added ([beta-access.md](beta-access.md), [decision 0028](../decisions/0028-invite-only-beta.md)).

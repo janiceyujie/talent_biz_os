@@ -66,6 +66,19 @@ describe("logLine", () => {
   });
 });
 
+describe("request fields", () => {
+  test("a digest and Render's request id are written as given", () => {
+    const line = logLine("error", "request.failed", { digest: "2716389457", rndr_id: "74f98356-6f57-48a5" }, base);
+    assert.equal(line.digest, "2716389457");
+    assert.equal(line.rndr_id, "74f98356-6f57-48a5");
+    assert.equal(logLine("error", "request.failed", { digest: "2716389457@E394" }, base).digest, "2716389457@E394");
+  });
+
+  test("a digest that isn't one is replaced", () => {
+    assert.equal(logLine("error", "request.failed", { digest: EMAIL }, base).digest, "[invalid]");
+  });
+});
+
 describe("errorFields", () => {
   test("name, code, and status; never the message", () => {
     const e = Object.assign(new Error(`relation for ${EMAIL}`), { code: "57P01" });

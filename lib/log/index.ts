@@ -10,6 +10,8 @@
 // When debugging needs the content, the ids lead to it in the database.
 //
 // An error line also goes to the error tracker, once lib/errors has set it up.
+// On the web server, a line written during a request carries its request_id:
+// the request's trace id, which the tracker's events carry too.
 
 const idFields = [
   "talent_id",
@@ -23,6 +25,7 @@ const idFields = [
   "request_id",
   "page_id",
   "opportunity_id",
+  "rndr_id", // Render's id for an HTTP request (its Rndr-Id header), to find it in Render's request logs
 ] as const;
 /** Short machine values: a job name, a route pattern, an outcome, a provider, an error code. */
 const codeFields = ["job", "route", "outcome", "reason", "source", "provider", "mode", "method"] as const;
@@ -35,6 +38,8 @@ type NumberField = (typeof numberFields)[number];
 export type LogFields = { [K in IdField]?: string | null } & { [K in CodeField]?: string } & { [K in NumberField]?: number } & {
   /** Any thrown value: logged as its name, code, and status only. */
   error?: unknown;
+  /** Next's digest for a server error: what its error screen shows as the error code. */
+  digest?: string;
 };
 
 export type Level = "debug" | "info" | "warn" | "error";
@@ -43,6 +48,7 @@ export type Service = "web" | "worker";
 const ID = /^[A-Za-z0-9_-]{1,64}$/; // uuids, Graphile's numeric job ids, Google's ids
 const CODE = /^[A-Za-z0-9_.:/[\]-]{1,80}$/; // "mail.sync", "/api/inbox/[id]", "rateLimitExceeded", "57P01"
 const EVENT = /^[a-z0-9_]+(\.[a-z0-9_]+)+$/; // dotted, <area>.<what>
+const DIGEST = /^\d{1,20}(@E\d{1,6})?$/; // a hash, with Next's own error code when it has one
 const INVALID = "[invalid]";
 
 const idOrInvalid = (v: unknown) => (typeof v === "string" && ID.test(v) ? v : INVALID);
@@ -72,6 +78,7 @@ export function logLine(level: Level, event: string, fields: LogFields, base: { 
     else if ((codeFields as readonly string[]).includes(key)) line[key] = codeOrInvalid(value);
     else if ((numberFields as readonly string[]).includes(key)) line[key] = typeof value === "number" && Number.isFinite(value) ? value : INVALID;
     else if (key === "error") line.error = errorFields(value);
+    else if (key === "digest") line.digest = typeof value === "string" && DIGEST.test(value) ? value : INVALID;
     // Anything else is dropped: only the allowlist is written.
   }
   return line;
@@ -84,25 +91,43 @@ export function setLogService(s: Service) {
 }
 
 type Reporter = (error: unknown, line: Record<string, unknown>) => void;
-let reporter: Reporter | undefined;
+// Kept on globalThis, not in this module: Next loads a module once for
+// instrumentation.ts, which sets these, and again for the routes and pages
+// that log, so a module variable set at startup wouldn't reach them.
+const hooks = ((globalThis as { [k: symbol]: unknown })[Symbol.for("taloox.log.hooks")] ??= {}) as {
+  reporter?: Reporter;
+  context?: () => LogFields;
+};
+
 /** lib/errors calls this when the tracker starts: each error line is reported with its fields. */
 export function setErrorReporter(r: Reporter) {
-  reporter = r;
+  hooks.reporter = r;
+}
+
+/** lib/errors calls this on the web server: each line written during a request gets its request_id. */
+export function setLogContext(c: () => LogFields) {
+  hooks.context = c;
 }
 
 const production = () => process.env.NODE_ENV === "production";
 
 function write(level: Level, event: string, fields: LogFields = {}) {
   if (level === "debug" && production()) return;
-  const line = logLine(level, event, fields, {
+  let current: LogFields = {};
+  try {
+    current = hooks.context?.() ?? {};
+  } catch {
+    // Without its context a line is still written.
+  }
+  const line = logLine(level, event, { ...current, ...fields }, {
     ts: new Date().toISOString(),
     service,
     env: process.env.DEPLOY_ENV || "development",
     release: process.env.RENDER_GIT_COMMIT?.slice(0, 12) || "local",
   });
-  if (level === "error" && reporter) {
+  if (level === "error" && hooks.reporter) {
     try {
-      reporter(fields.error, line);
+      hooks.reporter(fields.error, line);
     } catch {
       // Reporting never stops the line being written.
     }

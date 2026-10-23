@@ -12,8 +12,21 @@ export function startClientErrors() {
   });
 }
 
-/** An error a screen caught. One thrown on the server has a digest: the server reported it already. */
-export function reportScreenError(error: Error & { digest?: string }) {
+/**
+ * The error code a screen shows for an error it caught (decision 0026). One
+ * thrown on the server has Next's digest, which the server logged with
+ * request.failed and reported: the digest is its code. One thrown here gets a
+ * new code, which reportScreenError tags its Sentry event with. Without Sentry
+ * there's nothing to find it by, so no code.
+ */
+export function screenErrorCode(error: Error & { digest?: string }): string | undefined {
+  if (error.digest) return error.digest;
+  if (!Sentry.isEnabled()) return undefined;
+  return Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Reports an error a screen caught, with its code. One thrown on the server was reported there. */
+export function reportScreenError(error: Error & { digest?: string }, code: string | undefined) {
   if (error.digest) return;
-  Sentry.captureException(error);
+  Sentry.captureException(error, { tags: code ? { error_code: code } : {} });
 }

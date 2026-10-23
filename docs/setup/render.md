@@ -132,6 +132,10 @@ Through Supabase's session-mode pooler, every open connection holds one of the d
 
 That's up to about 28. Check the pool size is at least 30 before the first deploy, and raise it if not (Supabase advises at most 80% of the database's max connections). Running a second web instance or worker adds its share again.
 
+## Request logs
+
+The app logs only failed requests (`request.failed`, decision 0026). A line for every request, with its method, path, and status, comes from Render's HTTP request logs, which need a Pro workspace. Each request there has an id that Render also sends to the app as the `Rndr-Id` header; `request.failed` keeps it as `rndr_id`, so searching Render's logs for that id shows the request. Check the plan's price and log retention at render.com/pricing before upgrading.
+
 ## Adding a setting
 
 A new non-secret setting shared by both services goes in the environment's group in `render.yaml`. A new secret goes under each service that reads it, as `sync: false`, then gets its value in the dashboard. Add it to `.env.example` too.

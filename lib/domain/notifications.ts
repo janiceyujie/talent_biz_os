@@ -1,7 +1,8 @@
-// In-app notifications: computed on read from calendar items and payments,
-// never stored. Ids are stable so per-person read/snooze state
+// In-app notifications: computed on read from calendar items, payments, and
+// followed calls whose dates changed, never stored. Ids are stable so per-person read/snooze state
 // (notification_state) can refer to them. Pure functions; run anywhere.
 import { calendarPoints, pointKind } from "@/lib/calendar/points";
+import type { OpportunityChange } from "@/lib/opportunities/types";
 import type { AppData, CalendarKind, NotificationState } from "@/lib/types";
 import { dateInZone, exactInstant } from "./dates";
 import type { Currency } from "./money";
@@ -29,6 +30,7 @@ export type Notification = Base &
   (
     | { kind: "calendar"; source: "event" | "todo"; calendarKind: CalendarKind; marker: ReturnType<typeof pointKind>; location: string }
     | { kind: "receivable" | "payable"; amount: number; currency: Currency }
+    | ({ kind: "opportunity" } & Omit<OpportunityChange, "title" | "zone">)
   );
 
 /**
@@ -106,14 +108,36 @@ export function notifications(data: AppData, now = new Date()): Notification[] {
       ...timing(p.dueDate!, "", talentZone, now),
       href: "/finance",
     }));
-  return [...calendar, ...payments].sort(compareNotifications);
+  // A followed call's dates changed at the source (decision 0024): due on its new closing date, or today when it has none.
+  const opportunities = data.opportunityChanges.map((c): Notification => {
+    const date = c.to.closesOn ?? dateInZone(c.zone, 0, now);
+    const { urgency, dueAt } = timing(date, "", c.zone, now);
+    return {
+      id: `opportunity:${c.applicationId}:${c.to.opensOn ?? ""}:${c.to.closesOn ?? ""}`,
+      kind: "opportunity",
+      applicationId: c.applicationId,
+      from: c.from,
+      to: c.to,
+      submit: c.submit,
+      title: c.title,
+      date,
+      time: "",
+      timeZone: c.zone,
+      // A new date already past isn't overdue work; it's news.
+      urgency: urgency === "overdue" ? "today" : urgency,
+      dueAt,
+      href: "/opportunities",
+    };
+  });
+  return [...calendar, ...payments, ...opportunities].sort(compareNotifications);
 }
 
 /** A notification id as the server accepts it: what notifications() produces. */
 /** "Remind me in an hour", two, or three; or a time picked, up to 30 days ahead (lib/actions/notifications). */
 export const SNOOZE_HOURS = [1, 2, 3] as const;
 
-export const notificationIdPattern = /^(calendar:[0-9a-f-]{36}:(end:)?\d{4}-\d{2}-\d{2}:(\d{2}:\d{2})?|payment:[0-9a-f-]{36}:\d{4}-\d{2}-\d{2})$/;
+export const notificationIdPattern =
+  /^(calendar:[0-9a-f-]{36}:(end:)?\d{4}-\d{2}-\d{2}:(\d{2}:\d{2})?|payment:[0-9a-f-]{36}:\d{4}-\d{2}-\d{2}|opportunity:[0-9a-f-]{36}:(\d{4}-\d{2}-\d{2})?:(\d{4}-\d{2}-\d{2})?)$/;
 
 /**
  * Notifications with this person's read and snooze state. A snooze that has

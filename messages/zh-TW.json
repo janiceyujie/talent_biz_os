@@ -75,7 +75,13 @@
     "settings": "設定",
     "roleAndAssistant": "角色與助理",
     "importSent": "已送出分析，完成後會出現在「需要你處理」。",
-    "importDuplicate": "這段內容先前已匯入過，可在「進件分類」查看。"
+    "importDuplicate": "這段內容先前已匯入過，可在「進件分類」查看。",
+    "opportunityDatesChanged": "日期有變動：{title}",
+    "closingDateChange": "截止日 {from} → {to}",
+    "openingDateChange": "開始日 {from} → {to}",
+    "dateNotGiven": "未提供",
+    "moveSubmit": "把送件待辦改到 {date}",
+    "datesSeen": "知道了"
   },
   "locale": {
     "label": "語言",
@@ -1806,7 +1812,8 @@
     "gmailNotConnected": "尚未連結 Gmail。",
     "noticeCurrency": "目前只能記錄新台幣款項。",
     "opportunityNotFound": "找不到這個機會。",
-    "applicationNotFound": "找不到這筆申請。"
+    "applicationNotFound": "找不到這筆申請。",
+    "opportunityChanged": "這個機會的日期又變了，請再看一次通知。"
   },
   "emails": {
     "resetSubject": "重設 Taloox 密碼",

@@ -915,6 +915,9 @@ export const opportunityApplication = pgTable(
     projectId: uuid().references(() => project.id, { onDelete: "set null" }), // a signed project, once awarded
     stage: text({ enum: applicationStages }).notNull().default("preparing"),
     notes: text().notNull().default(""),
+    // The call's dates as the talent last saw them: when the source's differ, a notification says so.
+    knownOpensOn: date(),
+    knownClosesOn: date(),
     createdBy: uuid().references(() => person.id, { onDelete: "set null" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

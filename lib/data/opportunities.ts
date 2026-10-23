@@ -1,10 +1,10 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { opportunity, opportunityApplication, opportunitySource, opportunityTask, preference, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
-import { pageOf, type ListParams } from "@/lib/opportunities/list";
-import { opportunitySources, screeningProfileSchema, type Application, type OpportunitiesWorkspace, type Opportunity } from "@/lib/opportunities/types";
+import { pageOf, zoneOf, type ListParams } from "@/lib/opportunities/list";
+import { opportunitySources, screeningProfileSchema, type Application, type OpportunitiesWorkspace, type Opportunity, type OpportunityChange } from "@/lib/opportunities/types";
 
 type Row = typeof opportunity.$inferSelect;
 const opportunityOf = (r: Row): Opportunity => ({
@@ -87,4 +87,49 @@ export async function listOpportunities(talentId: string, personId: string, tale
     .from(opportunity)
     .where(params.following ? inArray(opportunity.id, [...followed]) : or(isNull(opportunity.closesOn), gte(opportunity.closesOn, since)));
   return pageOf(rows.map(opportunityOf), params, { profile: profile.success ? profile.data : null, talentZone, followed });
+}
+
+/**
+ * The calls this talent follows whose dates at the source aren't the ones
+ * they last saw, each with its open Submit to-do: the date-change
+ * notification (decision 0024), until they move the to-do or say they've seen it.
+ */
+export async function opportunityChanges(talentId: string, talentZone: string): Promise<OpportunityChange[]> {
+  const rows = await db
+    .select({
+      applicationId: opportunityApplication.id,
+      title: opportunity.title,
+      region: opportunity.region,
+      opensOn: opportunity.opensOn,
+      closesOn: opportunity.closesOn,
+      knownOpensOn: opportunityApplication.knownOpensOn,
+      knownClosesOn: opportunityApplication.knownClosesOn,
+    })
+    .from(opportunityApplication)
+    .innerJoin(opportunity, eq(opportunity.id, opportunityApplication.opportunityId))
+    .where(
+      and(
+        eq(opportunityApplication.talentId, talentId),
+        inArray(opportunityApplication.stage, ["preparing", "submitted"]),
+        or(sql`${opportunityApplication.knownOpensOn} is distinct from ${opportunity.opensOn}`, sql`${opportunityApplication.knownClosesOn} is distinct from ${opportunity.closesOn}`),
+      ),
+    );
+  if (!rows.length) return [];
+  const submits = await db
+    .select({ applicationId: opportunityTask.applicationId, todoId: todo.id, date: todo.dueDate })
+    .from(opportunityTask)
+    .innerJoin(todo, and(eq(todo.id, opportunityTask.todoId), eq(todo.talentId, talentId), eq(todo.status, "open")))
+    .where(and(inArray(opportunityTask.applicationId, rows.map((r) => r.applicationId)), eq(opportunityTask.kind, "submission")))
+    .orderBy(asc(opportunityTask.createdAt));
+  return rows.map((r) => {
+    const submit = submits.find((s) => s.applicationId === r.applicationId);
+    return {
+      applicationId: r.applicationId,
+      title: r.title,
+      from: { opensOn: r.knownOpensOn, closesOn: r.knownClosesOn },
+      to: { opensOn: r.opensOn, closesOn: r.closesOn },
+      zone: zoneOf(r, talentZone),
+      submit: submit ? { todoId: submit.todoId, date: submit.date } : null,
+    };
+  });
 }

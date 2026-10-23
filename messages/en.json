@@ -75,7 +75,13 @@
     "settings": "Settings",
     "roleAndAssistant": "Role and assistant",
     "importSent": "Sent for analysis; it will appear under “Needs you” when it’s done.",
-    "importDuplicate": "This was imported before; see it in Intake."
+    "importDuplicate": "This was imported before; see it in Intake.",
+    "opportunityDatesChanged": "Dates changed: {title}",
+    "closingDateChange": "Closing date {from} → {to}",
+    "openingDateChange": "Opening date {from} → {to}",
+    "dateNotGiven": "not given",
+    "moveSubmit": "Move the Submit to-do to {date}",
+    "datesSeen": "Got it"
   },
   "locale": {
     "label": "Language",
@@ -1806,7 +1812,8 @@
     "gmailNotConnected": "Gmail isn't connected.",
     "noticeCurrency": "Only NT$ payments can be recorded for now.",
     "opportunityNotFound": "That call isn't in the catalogue anymore.",
-    "applicationNotFound": "That application wasn't found."
+    "applicationNotFound": "That application wasn't found.",
+    "opportunityChanged": "The call's dates changed again. Look at the notification again."
   },
   "emails": {
     "resetSubject": "Reset your Taloox password",

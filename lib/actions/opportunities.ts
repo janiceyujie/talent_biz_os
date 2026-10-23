@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
@@ -31,12 +31,15 @@ export async function followOpportunity(id: string, submit?: unknown): Promise<s
   if (!z.uuid().safeParse(id).success) return fail("invalid");
   const plan = submit === undefined ? null : z.object(when).safeParse(submit);
   if (plan && !plan.success) return fail("invalid");
-  const [call] = await db.select({ title: opportunity.title, url: opportunity.url }).from(opportunity).where(eq(opportunity.id, id));
+  const [call] = await db
+    .select({ title: opportunity.title, url: opportunity.url, opensOn: opportunity.opensOn, closesOn: opportunity.closesOn })
+    .from(opportunity)
+    .where(eq(opportunity.id, id));
   if (!call) return fail("opportunityNotFound");
   await db.transaction(async (tx) => {
     const [created] = await tx
       .insert(opportunityApplication)
-      .values({ talentId: talent.id, opportunityId: id, createdBy: person.personId })
+      .values({ talentId: talent.id, opportunityId: id, createdBy: person.personId, knownOpensOn: call.opensOn, knownClosesOn: call.closesOn })
       .onConflictDoNothing()
       .returning({ id: opportunityApplication.id });
     if (!created) return;
@@ -174,6 +177,61 @@ export async function updateApplicationTask(data: unknown): Promise<string | nul
       .returning({ id: todo.id });
     if (!rows.length) return fail("todoNotFound");
     await tx.update(opportunityTask).set({ kind: input.kind }).where(eq(opportunityTask.id, link.id));
+    return null;
+  });
+  if (!failure) refresh();
+  return failure;
+}
+
+/**
+ * A followed call's new dates, seen (decision 0024): the dates the person
+ * saw become the known ones, which ends the notification. With `moveSubmit`,
+ * the open Submit to-do moves to the new closing date; it's never moved
+ * otherwise. Dates that changed again since are refused, so nothing moves to
+ * a date the person didn't see.
+ */
+export async function acceptOpportunityDates(data: unknown): Promise<string | null> {
+  const { talent, person } = await requireTalent();
+  const fail = await errorText();
+  const day = z.union([z.iso.date(), z.literal("")]).transform((v) => v || null);
+  const parsed = z.object({ applicationId: z.uuid(), opensOn: day, closesOn: day, moveSubmit: z.boolean() }).safeParse(data);
+  if (!parsed.success) return fail("invalid");
+  const input = parsed.data;
+  const failure = await db.transaction(async (tx) => {
+    const [app] = await tx
+      .select({ id: opportunityApplication.id, knownOpensOn: opportunityApplication.knownOpensOn, knownClosesOn: opportunityApplication.knownClosesOn, opensOn: opportunity.opensOn, closesOn: opportunity.closesOn })
+      .from(opportunityApplication)
+      .innerJoin(opportunity, eq(opportunity.id, opportunityApplication.opportunityId))
+      .where(and(eq(opportunityApplication.id, input.applicationId), eq(opportunityApplication.talentId, talent.id)))
+      .for("update", { of: opportunityApplication });
+    if (!app) return fail("applicationNotFound");
+    if (app.opensOn !== input.opensOn || app.closesOn !== input.closesOn) return fail("opportunityChanged");
+    let moved: string | null = null;
+    if (input.moveSubmit) {
+      if (!app.closesOn) return fail("invalid");
+      const [submit] = await tx
+        .select({ id: todo.id })
+        .from(opportunityTask)
+        .innerJoin(todo, and(eq(todo.id, opportunityTask.todoId), eq(todo.talentId, talent.id), eq(todo.status, "open")))
+        .where(and(eq(opportunityTask.applicationId, app.id), eq(opportunityTask.kind, "submission")))
+        .orderBy(asc(opportunityTask.createdAt))
+        .limit(1);
+      if (!submit) return fail("todoNotFound");
+      await tx.update(todo).set({ dueDate: app.closesOn }).where(and(eq(todo.id, submit.id), eq(todo.talentId, talent.id)));
+      moved = submit.id;
+    }
+    await tx
+      .update(opportunityApplication)
+      .set({ knownOpensOn: app.opensOn, knownClosesOn: app.closesOn })
+      .where(and(eq(opportunityApplication.id, app.id), eq(opportunityApplication.talentId, talent.id)));
+    await tx.insert(auditLog).values({
+      talentId: talent.id,
+      actorPersonId: person.personId,
+      action: "opportunity.dates_seen",
+      targetType: "opportunity_application",
+      targetId: app.id,
+      details: { from: { opensOn: app.knownOpensOn, closesOn: app.knownClosesOn }, to: { opensOn: app.opensOn, closesOn: app.closesOn }, movedTodoId: moved },
+    });
     return null;
   });
   if (!failure) refresh();

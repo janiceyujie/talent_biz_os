@@ -2232,6 +2232,7 @@ summary {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+.reminder-controls .primary,
 .reminder-controls .secondary {
   font-size: 14px;
   padding: 8px 12px;

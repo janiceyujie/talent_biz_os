@@ -105,6 +105,16 @@ export type Application = {
   tasks: ApplicationTask[];
 };
 
+/** A followed call whose dates at the source aren't the ones the talent last saw (decision 0024): a notification until they act on it. */
+export type OpportunityChange = {
+  applicationId: string;
+  title: string;
+  from: { opensOn: string | null; closesOn: string | null };
+  to: { opensOn: string | null; closesOn: string | null };
+  zone: string; // the source's: a closing date is that day there
+  submit: { todoId: string; date: string | null } | null; // the open Submit to-do, which the person can move
+};
+
 export type OpportunitiesWorkspace = {
   /** The calls this talent follows, whatever their state: the list pages only through the rest. */
   followed: Opportunity[];

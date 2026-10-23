@@ -7,7 +7,9 @@ import { parseDetail, parseSearch } from "./sources/grants-gov";
 import { parseMoc } from "./sources/moc";
 import { announcementText, checkedCalls, datesIn, linksOn, type Extraction } from "./sources/pages";
 import { trackedPages } from "./tracked";
-import type { Opportunity, OpportunityRules, ScreeningProfile } from "./types";
+import type { Opportunity, OpportunityChange, OpportunityRules, ScreeningProfile } from "./types";
+import { notificationIdPattern, notifications } from "@/lib/domain/notifications";
+import type { AppData } from "@/lib/types";
 
 const apply = (point: string, form: string, start = "2026/10/01", end = "2026/11/02", unit = "文化部-藝術發展司") =>
   `<Apply><Year>115</Year><UnitName>${unit}</UnitName><PointName>${point}</PointName><FormName>${form}</FormName><StartDate>${start}</StartDate><EndDate>${end}</EndDate></Apply>`;
@@ -222,5 +224,35 @@ describe("the list", () => {
     assert.equal(availability(rows[3], "2026-10-22"), "upcoming");
     assert.equal(availability(rows[4], "2026-10-22"), "closed");
     assert.equal(availability({ opensOn: null, closesOn: null, sourceStatus: "unknown" }, "2026-10-22"), "unknown");
+  });
+});
+
+describe("date changes", () => {
+  const base = { talent: { id: "t", name: "", timeZone: "America/New_York" }, projects: [], calendar: [], payments: [] } as unknown as AppData;
+  const change = (over: Partial<OpportunityChange> = {}): OpportunityChange => ({
+    applicationId: "11111111-1111-4111-8111-111111111111",
+    title: "測試補助",
+    from: { opensOn: "2026-11-01", closesOn: "2026-11-30" },
+    to: { opensOn: "2026-11-01", closesOn: "2026-12-15" },
+    zone: "Asia/Taipei",
+    submit: { todoId: "22222222-2222-4222-8222-222222222222", date: "2026-11-30" },
+    ...over,
+  });
+
+  test("a followed call whose dates changed is a notification, with an id the server accepts, new for each change", () => {
+    const [n] = notifications({ ...base, opportunityChanges: [change()] }, now);
+    assert.equal(n.kind, "opportunity");
+    assert.deepEqual([n.date, n.timeZone, n.urgency, n.href], ["2026-12-15", "Asia/Taipei", "upcoming", "/opportunities"]);
+    assert.match(n.id, notificationIdPattern);
+    const [again] = notifications({ ...base, opportunityChanges: [change({ to: { opensOn: "2026-11-01", closesOn: "2026-12-20" } })] }, now);
+    assert.notEqual(again.id, n.id);
+  });
+
+  test("a date that's gone, or one already past, is news for today, not overdue", () => {
+    const [gone] = notifications({ ...base, opportunityChanges: [change({ to: { opensOn: null, closesOn: null } })] }, now);
+    assert.deepEqual([gone.date, gone.urgency], ["2026-10-22", "today"]);
+    assert.match(gone.id, notificationIdPattern);
+    const [past] = notifications({ ...base, opportunityChanges: [change({ to: { opensOn: null, closesOn: "2026-10-01" } })] }, now);
+    assert.equal(past.urgency, "today");
   });
 });

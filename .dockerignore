@@ -1,0 +1,17 @@
+# Kept out of the image: local settings and secrets, build output, and anything the
+# running services don't read.
+.env*
+node_modules
+.next
+.next-test
+.ai-recordings
+.git
+.github
+.claude
+coverage
+docs
+tsconfig.tsbuildinfo
+*.pem
+npm-debug.log*
+.DS_Store
+dist

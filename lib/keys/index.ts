@@ -4,7 +4,7 @@ import { keyProvider } from "./provider";
 // Envelope encryption for one stored secret (decision 0016): a fresh data key
 // per secret encrypts it; the master key wraps the data key.
 
-export { KeyConfigError, keyProvider, type KeyProvider } from "./provider";
+export { KeyConfigError, KmsError, keyProvider, type KeyProvider } from "./provider";
 
 export type Envelope = Sealed & { wrappedKey: string; keyId: string };
 

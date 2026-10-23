@@ -5,6 +5,15 @@ import { locales } from "@/lib/i18n/config";
 // added and again when the worker runs it. Payloads carry ids, never message
 // content, so the job table holds nothing someone could read
 // (docs/decisions/0014-hosting-and-job-queue.md).
+//
+// A job's payload never changes once it has shipped. During a deploy the old
+// worker still takes jobs for a minute, and its strict schema fails a payload
+// it doesn't know. A new shape is a new job name ("message.analyze.v2"): the
+// old worker never takes a name it doesn't know. Mark the old name
+// `@deprecated` (replaced by which) and keep its handler until its jobs have
+// drained; remove it in a later pull request. The deploy refuses while any
+// remain (scripts/migrate.mts). payloads.json records every shape that has
+// shipped, and jobs.test.ts holds each name to it.
 
 export const jobs = {
   /** Analyze one message and store a new analysis version (lib/ai/analyze-message.ts). */
@@ -62,6 +71,14 @@ export const jobAttempts: Record<JobName, number> = {
   // A source down: a couple more tries, then tomorrow's run.
   "opportunities.refresh": 3,
 };
+
+/**
+ * Jobs that hold a lot in memory: an analysis sends up to 12 MB of files to the
+ * model inline, and bringing an email in reads its attachments. The worker runs
+ * them in a pool of their own with fewer at a time (WORKER_HEAVY_CONCURRENCY),
+ * so a burst of them can't exhaust its memory or hold up syncs (worker/index.ts).
+ */
+export const heavyJobs: readonly JobName[] = ["message.analyze", "mail.fetch"];
 
 /** The key that makes a second "analyze this message" replace a waiting one instead of queueing twice. */
 export const analyzeJobKey = (messageId: string) => `message.analyze:${messageId}`;

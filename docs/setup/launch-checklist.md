@@ -6,7 +6,14 @@ What has to happen before the first production deploy and before real users. Eac
 
 - [x] Hosting and job queue, together: Render in Singapore and Graphile Worker ([decision 0014](../decisions/0014-hosting-and-job-queue.md)).
 - [ ] Supabase on the Pro plan (backups, no idle pausing) before the first person besides the builder connects Gmail.
-- [ ] `Dockerfile` and `render.yaml`; the worker on the session-mode pooler.
+- [x] `Dockerfile` and `render.yaml`; the worker on the session-mode pooler ([render.md](render.md)).
+- [ ] Supabase's pooler pool size checked against the connection budget ([render.md](render.md), "Database connections"), for staging and production.
+- [ ] The web service on the transaction-mode pooler: `lib/db` turns off prepared statements first (both use the session-mode pooler until then).
+- [ ] Staging and production as separate Render services and Supabase projects, each with its own Google project, KMS key, bucket, and Pub/Sub ([decision 0025](../decisions/0025-environments-and-deployment.md)).
+- [ ] Deploy workflows: `main` to staging, a `vX.Y.Z` release to production, each running migrate → worker → web → smoke check; Render auto-deploy off; a tag ruleset so only the builder creates `v*` tags.
+- [ ] Secrets on each Render service as `sync: false`, non-secret settings in each environment's group; GitHub holds only the Render API key and service ids.
+- [x] CI runs the image as Render does: the pre-deploy command on an empty Postgres, the worker started and stopped, the web service's health check (`ci.yml`, `image`).
+- [ ] CI: Dependabot, CodeQL, and secret scanning with push protection.
 - [x] Move message analysis off `after()` to the queue (decision 0008).
 - [x] Move Google Calendar sync off `after()` to the queue (decision 0009); `lib/calendar/google/sync.ts` first needs its `next/*` imports moved out (decision 0014).
 - [x] Retry failed Google Calendar pushes from the queue, waiting longer after each failure (e.g. 1 min, 5 min, 30 min, 2 h, then every 6 h). Retry network errors, Google being down, and Google's "slow down"; not lost access (the person reconnects) or a request Google rejects (it would fail the same way). Until then a failed push stays pending and goes on the next change or 立即同步.
@@ -32,7 +39,7 @@ Do this **once**, as late as possible (right before creating the production data
 - [ ] A strong `BETTER_AUTH_SECRET` per environment, never reused from development. It encrypts stored Google tokens (decision 0009); changing it later forces everyone to reconnect Google.
 - [ ] `BETTER_AUTH_URL` set to the production address.
 - [ ] No test settings in production: `GOOGLE_TEST_STUB`, `AI_REPLAY`, `GOOGLE_CALENDAR_API_URL`, `GOOGLE_OAUTH_REVOKE_URL`, `NEXT_DIST_DIR`, `GMAIL_API_URL`, `GOOGLE_OAUTH_TOKEN_URL`, `MAIL_KEY_DEV` unset; `APP_ENV=production`.
-- [ ] Cloud KMS key in Singapore; an encrypt-only credential on the web service and a decrypt-only one on the worker ([decision 0016](../decisions/0016-mailbox-tokens-and-key-management.md)).
+- [ ] Cloud KMS key in Singapore; an encrypt-only credential on the web service and a decrypt-only one on the worker ([decision 0016](../decisions/0016-mailbox-tokens-and-key-management.md)). The code is in (`lib/keys/provider.ts`); the setup per environment is in [render.md](render.md), "Cloud KMS", with Data Access audit logs on.
 - [ ] Email: a real SMTP provider (architecture doc, "Transactional email").
 - [ ] Storage: a production bucket and keys (`STORAGE_*`).
 - [ ] `STORAGE_*` also set wherever `npm run db:migrate` runs on deploy: after the migrations it publishes the contract and quote templates, uploading their Word files ([decision 0020](../decisions/0020-document-templates-are-data.md)).
@@ -63,11 +70,13 @@ From [decision 0008](../decisions/0008-ai-operations.md):
 - [ ] `AI_ALERT_EMAIL` set, so a tripped spending cap reaches someone.
 - [ ] `OPS_ALERT_EMAIL` set, so a failed or changed opportunity source reaches someone.
 - [ ] Pause and resume tried once on the deployed web service and worker: with `AI_PAUSED=1`, paste a made-up message and see it wait as Paused; unset it and see the message analyzed within about 5 minutes. Then set `AI_DAILY_SPEND_CAP_USD` below the day's spend and see the alert email arrive. (Done locally for PR #28; the deployed run checks the real worker and mail provider.)
+- [ ] Evals in CI: a job that runs `npm run eval:extraction` and `eval:relevance` on pull requests touching `lib/ai/`, with a capped paid key and made-up cases only, and posts the scores. Then keep `evals/` out of the image (exclude the eval scripts from `tsconfig.json`, type-check them in that job).
 
 ## 6. Operations
 
 - [ ] Database backups, and a restore tried once.
-- [ ] Error reporting and logs somewhere you'll see them.
+- [ ] Error reporting and logs somewhere you'll see them: JSON logs through `lib/log`, Sentry through `lib/errors` with scrubbing and its test, alerts by email and phone push ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
+- [ ] A staff-only Support page (lookup by email, a metadata-only timeline, each lookup audited), the `staff` table, and error codes on error screens ([decision 0026](../decisions/0026-logging-and-error-reporting.md)).
 - [ ] A way to delete an account and everything in it, on request (privacy policy).
 
 ## 7. Legal

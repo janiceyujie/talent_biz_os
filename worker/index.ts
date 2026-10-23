@@ -23,6 +23,10 @@ async function main() {
   const { startPush } = await import("./push");
   const { schedule } = await import("./schedule");
   const { liveness } = await import("./liveness");
+  const { appEnv } = await import("@/lib/app-env");
+  const { keyProvider } = await import("@/lib/keys");
+  // Reading a mailbox needs the master key. Deployed, that's Cloud KMS: refuse to start without it (decision 0016).
+  if (appEnv() === "production") keyProvider();
   const { pushMode } = await import("@/lib/mail/push-mode");
   const { checkCredentials } = await import("@/lib/mail/pubsub");
   // Push is required in production, and half set up is refused anywhere: refuse to start.
@@ -30,19 +34,41 @@ async function main() {
   if (mode === "push") checkCredentials();
   console.log(mode === "push" ? "mail: push (Pub/Sub), with a 15-minute check as a safety net" : "mail: checked every 2 minutes (no PUBSUB_* settings; push is required in production)");
   const alive = liveness(); // a heartbeat, and releasing jobs a stopped worker left locked
-  const runner = await run({
+  // Two pools, so the memory-heavy jobs (heavyJobs) run fewer at a time and never
+  // hold up the rest. Each takes only its own jobs. They share the queue's
+  // connections: through Supabase's session-mode pooler each one holds a database
+  // connection for good (docs/setup/render.md, "Database connections").
+  const { Pool } = await import("pg");
+  const { heavyJobs } = await import("@/lib/queue/jobs");
+  const pgPool = new Pool({ connectionString: process.env.DATABASE_URL, max: Number(process.env.WORKER_PG_POOL || 6) });
+  // A connection that drops (the pooler restarting, say) is replaced; unhandled, its error
+  // would crash the worker. Idle in the pool, or checked out between queries. The code only.
+  const dropped = (e: Error & { code?: string }) => console.error("worker: a queue connection failed", e.code ?? e.name);
+  pgPool.on("error", dropped);
+  pgPool.on("connect", (client) => client.on("error", dropped));
+  const isHeavy = ([name]: [string, unknown]) => (heavyJobs as readonly string[]).includes(name);
+  const light = await run({
     events: alive.events,
-    connectionString: process.env.DATABASE_URL,
+    pgPool,
     concurrency: Number(process.env.WORKER_CONCURRENCY || 4),
-    taskList,
+    taskList: Object.fromEntries(Object.entries(taskList).filter((t) => !isHeavy(t))),
     parsedCronItems: parseCronItems(schedule()),
+  });
+  const heavy = await run({
+    events: alive.events,
+    pgPool,
+    concurrency: Number(process.env.WORKER_HEAVY_CONCURRENCY || 2),
+    taskList: Object.fromEntries(Object.entries(taskList).filter(isHeavy)),
+    parsedCronItems: [], // the schedule runs in the light pool
   });
   const http = startHttp();
   const push = startPush(); // Gmail notices, when Pub/Sub is set up; otherwise the schedule polls
-  await runner.promise;
+  // On SIGTERM, Graphile stops both pools, letting running jobs finish.
+  await Promise.all([light.promise, heavy.promise]);
   push?.stop();
   http?.close();
   await alive.stop();
+  await pgPool.end();
   process.exit(0);
 }
 

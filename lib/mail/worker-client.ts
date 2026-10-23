@@ -4,7 +4,11 @@ import { PEEK_PATH, type PeekRequest } from "./worker-api";
 
 // The web service's side of the worker's private endpoint (worker/http.ts).
 
-const workerUrl = () => (process.env.WORKER_URL || "http://127.0.0.1:3001").replace(/\/$/, "");
+// Deployed, Render sets WORKER_URL to the worker's private host:port, without a scheme (render.yaml).
+const workerUrl = () => {
+  const url = (process.env.WORKER_URL || "http://127.0.0.1:3001").replace(/\/$/, "");
+  return /^https?:\/\//.test(url) ? url : `http://${url}`;
+};
 
 /** Sender and subject for a page of a mailbox's emails; `unavailable` when the worker can't be reached. */
 export async function peek(request: PeekRequest): Promise<PeekResult | { error: "unavailable" }> {

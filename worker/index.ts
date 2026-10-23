@@ -21,6 +21,9 @@ async function main() {
   loadEnvConfig(process.cwd());
   const { log, setLogService } = await import("@/lib/log");
   setLogService("worker");
+  // Error lines go to Sentry too, when NEXT_PUBLIC_SENTRY_DSN is set (lib/errors).
+  const { startErrors, flushErrors } = await import("./errors");
+  startErrors();
   // Imported after the environment is loaded: lib/db reads DATABASE_URL when it loads.
   const { parseCronItems, run } = await import("graphile-worker");
   const { taskList } = await import("./tasks");
@@ -83,6 +86,7 @@ async function main() {
   await alive.stop();
   await pgPool.end();
   log.info("worker.stopped");
+  await flushErrors();
   process.exit(0);
 }
 
@@ -93,5 +97,7 @@ main().catch(async (e) => {
   if (!started) console.error("worker: couldn't start:", (e as Error)?.message ?? e);
   const { log } = await import("@/lib/log");
   log.error(started ? "worker.crashed" : "worker.start_failed", { error: e });
+  const { flushErrors } = await import("./errors");
+  await flushErrors();
   process.exit(1);
 });

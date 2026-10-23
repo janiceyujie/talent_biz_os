@@ -8,6 +8,8 @@
 // Errors are reduced to name, code, and HTTP status, never their message: a
 // library's message can echo content (a Google error quoting an event title).
 // When debugging needs the content, the ids lead to it in the database.
+//
+// An error line also goes to the error tracker, once lib/errors has set it up.
 
 const idFields = [
   "talent_id",
@@ -81,6 +83,13 @@ export function setLogService(s: Service) {
   service = s;
 }
 
+type Reporter = (error: unknown, line: Record<string, unknown>) => void;
+let reporter: Reporter | undefined;
+/** lib/errors calls this when the tracker starts: each error line is reported with its fields. */
+export function setErrorReporter(r: Reporter) {
+  reporter = r;
+}
+
 const production = () => process.env.NODE_ENV === "production";
 
 function write(level: Level, event: string, fields: LogFields = {}) {
@@ -91,6 +100,13 @@ function write(level: Level, event: string, fields: LogFields = {}) {
     env: process.env.DEPLOY_ENV || "development",
     release: process.env.RENDER_GIT_COMMIT?.slice(0, 12) || "local",
   });
+  if (level === "error" && reporter) {
+    try {
+      reporter(fields.error, line);
+    } catch {
+      // Reporting never stops the line being written.
+    }
+  }
   if (production()) {
     (level === "error" || level === "warn" ? process.stderr : process.stdout).write(`${JSON.stringify(line)}\n`);
     return;

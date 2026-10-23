@@ -16,6 +16,7 @@ Each environment needs its own of each of these (launch checklist, sections 3 an
 - An SMTP provider, a storage bucket and its keys, and Anthropic and OpenAI keys with spending caps.
 - A new `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), never reused between environments: it encrypts stored Google tokens.
 - A Cloud KMS key and two credentials for it ("Cloud KMS" below). The worker refuses to start in a deployed environment without them, as it does without Pub/Sub.
+- A Sentry project, its DSN, and a token for source maps ([sentry.md](sentry.md)). One project serves both environments. The token goes on each web service as the secret file `sentry_auth_token`, the one setting `render.yaml` can't list.
 
 ## Cloud KMS
 

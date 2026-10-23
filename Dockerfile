@@ -20,15 +20,31 @@ COPY . .
 ARG RENDER_GIT_COMMIT
 ENV NEXT_DEPLOYMENT_ID=$RENDER_GIT_COMMIT
 
+# Error reporting (lib/errors). The browser's settings are built into its code: the
+# DSN (public by design) and the environment. Render passes each env var as a build
+# argument; none of these is a secret.
+ARG DEPLOY_ENV
+ARG NEXT_PUBLIC_SENTRY_DSN
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT
+
 # Placeholders so the build doesn't need real services, as in CI; nothing connects at
 # build time. Set for this step only, and this stage isn't the one that runs.
-RUN DATABASE_URL=postgres://build:build@localhost:5432/build \
+#
+# Sentry's token uploads the source maps (next.config.ts). It's a Render secret file,
+# mounted for this step only, so no layer of the image holds it; without it (CI,
+# laptops) nothing is uploaded. Then every source map is deleted, so none is shipped.
+RUN --mount=type=secret,id=sentry_auth_token,required=false \
+    SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null)" \
+    NEXT_PUBLIC_DEPLOY_ENV="$DEPLOY_ENV" \
+    DATABASE_URL=postgres://build:build@localhost:5432/build \
     BETTER_AUTH_SECRET=build-placeholder-secret \
     BETTER_AUTH_URL=http://localhost:3000 \
     SMTP_URL=smtp://localhost:1025 \
     EMAIL_FROM=build@example.com \
     npm run build \
   && npm run build:worker \
+  && find .next -name '*.map' -delete \
   && rm -rf .next/cache
 
 

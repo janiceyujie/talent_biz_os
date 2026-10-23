@@ -47,6 +47,16 @@ projects:
             healthCheckPath: /api/health
             envVars:
               - fromGroup: taloox-staging
+              # Error reporting (docs/setup/sentry.md). The DSN is public by design; the
+              # browser's copy is built in, so a change needs a deploy. ORG and PROJECT name
+              # where the build uploads source maps; its token is the secret file
+              # sentry_auth_token, which a Blueprint can't hold.
+              - key: NEXT_PUBLIC_SENTRY_DSN
+                sync: false
+              - key: SENTRY_ORG
+                sync: false
+              - key: SENTRY_PROJECT
+                sync: false
               # Staging only: one shared password in front of the whole site (decision 0027).
               - key: SITE_PASSWORD
                 sync: false
@@ -99,6 +109,9 @@ projects:
             maxShutdownDelaySeconds: 300
             envVars:
               - fromGroup: taloox-staging
+              # Error reporting (docs/setup/sentry.md): the same DSN as the web service.
+              - key: NEXT_PUBLIC_SENTRY_DSN
+                sync: false
               - key: WORKER_HTTP_HOST
                 value: 0.0.0.0
               - key: WORKER_HTTP_PORT
@@ -171,6 +184,16 @@ projects:
             healthCheckPath: /api/health
             envVars:
               - fromGroup: taloox-production
+              # Error reporting (docs/setup/sentry.md). The DSN is public by design; the
+              # browser's copy is built in, so a change needs a deploy. ORG and PROJECT name
+              # where the build uploads source maps; its token is the secret file
+              # sentry_auth_token, which a Blueprint can't hold.
+              - key: NEXT_PUBLIC_SENTRY_DSN
+                sync: false
+              - key: SENTRY_ORG
+                sync: false
+              - key: SENTRY_PROJECT
+                sync: false
               # Invite-only sign-up during the beta (decision 0028, docs/setup/beta-access.md).
               - key: SIGNUP_ALLOWLIST
                 value: "1"
@@ -225,6 +248,9 @@ projects:
             maxShutdownDelaySeconds: 300
             envVars:
               - fromGroup: taloox-production
+              # Error reporting (docs/setup/sentry.md): the same DSN as the web service.
+              - key: NEXT_PUBLIC_SENTRY_DSN
+                sync: false
               - key: WORKER_HTTP_HOST
                 value: 0.0.0.0
               - key: WORKER_HTTP_PORT

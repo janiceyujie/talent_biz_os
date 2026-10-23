@@ -76,6 +76,16 @@ Logs (`user/janlin/structured-logs`):
 - ESLint's `no-console` keeps `console.*` out of server code.
 - One line per request, with its `request_id`, comes with the error codes on error screens: request ids aren't in the app yet.
 
+Errors (`user/janlin/error-reporting`):
+
+- `lib/errors` sets up Sentry for the web server (`instrumentation.ts`, with Next's `onRequestError`), the browser (`instrumentation-client.ts`, and the screens' error boundary), and the worker (`@sentry/node`, from the same Sentry release line as `@sentry/nextjs`). Each `log.error` line is reported with its event name and ids, so "`error` also goes to Sentry" needs no second call.
+- Scrubbing is an allowlist, not a list of things to remove: `beforeSend` builds a new event from the parts known to be safe (exception types and stack frames, the route, ids, the machine's context), and each exception's message becomes its name, code, and status. Breadcrumbs, the request, the user, extra data, tracing, and frames' local variables and lines of source are dropped. The test runs the real SDK and checks made-up content never reaches what it would send.
+- Browser errors are reported too: only the browser sees a broken button or a client component that throws. Breadcrumbs (clicks, console output, URLs) and session replay stay off there.
+- Source maps: the deployed build uploads the browser's and the server's to Sentry, then deletes every map, so none is served or shipped. The token is a Render secret file mounted for the build step only, so no image layer holds it. A failed upload doesn't fail the build. The worker isn't minified and keeps its own maps.
+- The source maps uploaded include our source code, so Sentry shows the lines around an error. That's our code, never customers' data; leaving it out would leave file names and line numbers only.
+- `release` is the deployed commit, as on log lines. A change of tracker touches `lib/errors`, `worker/errors.ts`, the `next.config.ts` wrapper, and the `Dockerfile`'s upload step.
+- Setup and alerts: `docs/setup/sentry.md`.
+
 ## Alternatives considered
 
 - **Render's logs alone.** Free and no dependency, but nothing tells the builder something broke; customers would.
@@ -111,6 +121,6 @@ Logs and errors go through our own modules, with stable field names, so each ste
 
 ## Consequences
 
-- New dependency: `@sentry/nextjs`. A free Sentry plan covers one person in beta; watch its event quota.
+- New dependencies: `@sentry/nextjs`, and `@sentry/node` for the worker (which `@sentry/nextjs` already installs). A free Sentry plan covers one person in beta; watch its event quota.
 - Every new error report and log field is a place message content could leak; the scrubbing test is the guard, and reviews should check new fields against it.
 - Until a log platform is added, a support question about something older than Render's retention is answered from the database or not at all.

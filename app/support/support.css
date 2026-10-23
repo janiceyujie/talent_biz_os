@@ -4,7 +4,7 @@
   margin: 0 auto;
   padding: 20px 16px 48px;
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 .support-page h1 {
   margin: 0;
@@ -122,8 +122,8 @@
 }
 .support-places li {
   display: grid;
-  gap: 4px;
-  padding: 10px 0;
+  gap: 6px;
+  padding: 16px 0;
   border-bottom: 1px solid var(--line);
 }
 .support-places li > .secondary {
@@ -154,9 +154,6 @@
   border-color: var(--red);
   background: #fbeceb;
 }
-.support-page button[aria-pressed="true"] {
-  border-color: currentColor;
-}
 .support-email {
   white-space: pre-wrap;
   font: inherit;
@@ -180,7 +177,7 @@
 /* A row's ⋯ menu, at its top right. */
 .support-row-menu {
   position: absolute;
-  top: 8px;
+  top: 12px;
   right: 0;
 }
 .support-places li > .support-row:first-child {
@@ -204,4 +201,49 @@
 .support-action-bar span {
   margin-right: auto;
   font-weight: 700;
+}
+
+/* The beta list's status filter: the chosen one filled, the others outlined. */
+.support-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0;
+}
+.support-chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: inherit;
+  font-size: var(--text-meta);
+  font-weight: 650;
+  cursor: pointer;
+}
+.support-chip:hover {
+  border-color: rgba(21, 23, 17, 0.35);
+}
+.support-chip[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: white;
+}
+/* The list's header row: select all, lined up with each row's checkbox. */
+.support-list-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--text-meta);
+  font-weight: 650;
+}
+.support-places input[type="checkbox"],
+.support-list-head input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
 }

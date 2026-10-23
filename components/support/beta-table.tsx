@@ -62,7 +62,10 @@ export function BetaTable({ places, isAdmin, locales, defaultLocale }: { places:
   const invitable = (p: Place) => p.status === "added" || p.status === "invited";
   // Only places that can still be invited count as selected: one withdrawn since drops out.
   const chosen = places.filter((p) => invitable(p) && selected.has(p.email));
-  const shownInvitable = shown.filter(invitable);
+  // What select all picks: those not invited yet, so sending to a new batch doesn't resend to anyone.
+  // Following up is deliberate: filter to Invited, and select all picks those.
+  const resending = filter === "invited";
+  const allPicks = shown.filter((p) => p.status === (resending ? "invited" : "added"));
   const select = (next: Set<string>) => {
     setSelected(next);
     setJustAdded(null);
@@ -89,29 +92,14 @@ export function BetaTable({ places, isAdmin, locales, defaultLocale }: { places:
       {places.length > 0 && (
         <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("search")} aria-label={t("search")} autoComplete="off" spellCheck={false} />
       )}
-      <div className="support-row" role="group">
+      <div className="support-filters" role="group">
         {(["all", ...statuses] as const).map((s) => (
-          <button key={s} type="button" className="secondary" aria-pressed={filter === s} onClick={() => setFilter(s)}>
+          <button key={s} type="button" className="support-chip" aria-pressed={filter === s} onClick={() => setFilter(s)}>
             {t("count", { status: t(`status.${s}`), count: s === "all" ? places.length : places.filter((p) => p.status === s).length })}
           </button>
         ))}
       </div>
 
-      {isAdmin && shownInvitable.length > 0 && (
-        <label className="support-row">
-          <input
-            type="checkbox"
-            checked={shownInvitable.every((p) => selected.has(p.email))}
-            onChange={(e) => {
-              const next = new Set(selected);
-              for (const p of shownInvitable) if (e.target.checked) next.add(p.email);
-              else next.delete(p.email);
-              select(next);
-            }}
-          />
-          {t("selectAll", { count: shownInvitable.length })}
-        </label>
-      )}
       {failed.length > 0 && (
         <p className="notice error" role="alert">
           {t("invite.failed", { emails: failed.join(", ") })}
@@ -120,6 +108,25 @@ export function BetaTable({ places, isAdmin, locales, defaultLocale }: { places:
       {sent && <Toast key={sent} message={sent} onClose={() => setSent(null)} />}
 
       {places.length > 0 && !shown.length && <p className="muted">{t("noMatch")}</p>}
+      {/* Select all: every row shown below not invited yet (or, filtered to Invited, those), as searched. */}
+      {isAdmin && allPicks.length > 0 && (
+        <label className="support-list-head" title={t(resending ? "selectAllInvitedHelp" : "selectAllHelp", { count: allPicks.length })}>
+          <input
+            type="checkbox"
+            ref={(el) => {
+              if (el) el.indeterminate = allPicks.some((p) => selected.has(p.email)) && !allPicks.every((p) => selected.has(p.email));
+            }}
+            checked={allPicks.every((p) => selected.has(p.email))}
+            onChange={(e) => {
+              const next = new Set(selected);
+              for (const p of allPicks) if (e.target.checked) next.add(p.email);
+              else next.delete(p.email);
+              select(next);
+            }}
+          />
+          {t(resending ? "selectAllInvited" : "selectAll", { count: allPicks.length })}
+        </label>
+      )}
       <ul className="support-places">
         {shown.map((p) => (
           <li key={p.id}>

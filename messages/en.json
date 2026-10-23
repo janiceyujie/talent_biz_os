@@ -1813,7 +1813,8 @@
     "noticeCurrency": "Only NT$ payments can be recorded for now.",
     "opportunityNotFound": "That call isn't in the catalogue anymore.",
     "applicationNotFound": "That application wasn't found.",
-    "opportunityChanged": "The call's dates changed again. Look at the notification again."
+    "opportunityChanged": "The call's dates changed again. Look at the notification again.",
+    "unfollowPreparingOnly": "Only a call at Preparing can be unfollowed. Set its stage to Closed instead."
   },
   "emails": {
     "resetSubject": "Reset your Taloox password",
@@ -2382,6 +2383,10 @@
       "US-MP": "Northern Mariana Islands",
       "US-PR": "Puerto Rico",
       "US-VI": "US Virgin Islands"
-    }
+    },
+    "unfollow": "Unfollow",
+    "unfollowTitle": "Unfollow {title}?",
+    "unfollowBody": "{count, plural, =0 {It has no open to-dos.} one {Its open to-do comes off Today and the Calendar.} other {Its # open to-dos come off Today and the Calendar.}} Done ones stay. Its stage and notes are removed.",
+    "unfollowed": "No longer following."
   }
 }

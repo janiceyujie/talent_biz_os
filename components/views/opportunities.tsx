@@ -5,6 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useAppData } from "@/components/app/app-data";
+import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { DateTimeInput } from "@/components/app/date-time-input";
 import { InfoHint } from "@/components/app/info-hint";
 import { ListMore } from "@/components/app/list-more";
@@ -13,7 +14,7 @@ import { Modal } from "@/components/app/modal";
 import { TimeZonePicker } from "@/components/app/time-zone-picker";
 import { Toast } from "@/components/app/toast";
 import { setTodoDone } from "@/lib/actions/calendar";
-import { addApplicationTask, followOpportunity, updateApplication, updateApplicationTask } from "@/lib/actions/opportunities";
+import { addApplicationTask, followOpportunity, unfollowOpportunity, updateApplication, updateApplicationTask } from "@/lib/actions/opportunities";
 import { savePreference } from "@/lib/actions/preferences";
 import { dateInZone } from "@/lib/domain/dates";
 import type { ListPage } from "@/lib/domain/list-page";
@@ -293,6 +294,7 @@ function ApplicationPanel({ application: a, opportunity: o, pending, run }: { ap
   const [projectId, setProjectId] = useState(a.projectId ?? "");
   const [notes, setNotes] = useState(a.notes);
   const [editing, setEditing] = useState<ApplicationTask | "new" | null>(null);
+  const [unfollowing, setUnfollowing] = useState(false);
   const open = a.tasks.filter((task) => task.status === "open");
   const done = a.tasks.filter((task) => task.status === "done");
   const projects = data.projects.filter((p) => (!p.archived && isOpenStage(p.stage)) || p.id === a.projectId);
@@ -350,11 +352,28 @@ function ApplicationPanel({ application: a, opportunity: o, pending, run }: { ap
         </label>
         <p className="muted">{t("applicationHelp")}</p>
         <footer className="modal-actions">
+          {/* Past Preparing it's a record of applying: Closed, not unfollowed. */}
+          {a.stage === "preparing" && (
+            <button type="button" className="secondary danger-outline" disabled={pending} onClick={() => setUnfollowing(true)}>
+              {t("unfollow")}
+            </button>
+          )}
           <button type="submit" className="primary" disabled={pending}>
             {t("save")}
           </button>
         </footer>
       </form>
+      {unfollowing && (
+        <ConfirmDialog
+          title={t("unfollowTitle", { title: o.title })}
+          confirmLabel={t("unfollow")}
+          pending={pending}
+          onClose={() => setUnfollowing(false)}
+          onConfirm={() => run(() => unfollowOpportunity(a.id), t("unfollowed"))}
+        >
+          <p>{t("unfollowBody", { count: open.length })}</p>
+        </ConfirmDialog>
+      )}
       {editing && (
         <TaskDialog
           task={editing === "new" ? undefined : editing}

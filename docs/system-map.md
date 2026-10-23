@@ -582,7 +582,7 @@ flowchart TB
 | Calls off the list | Not found | Search, or a partner's feed |
 | A tracked call with no date that drops off its list | Stays, as Check the official page | Cleaned up |
 | A tracked page whose titles stop matching | Missed without an error | Listed for a person in the review queue |
-| Following | Follow, stages, to-dos, link to a project | Unfollow; preparation to-dos when preparation is designed |
+| Following | Follow, stages, to-dos, link to a project; unfollow at Preparing (open to-dos dismissed) | Preparation to-dos when preparation is designed |
 | What's announced | A followed call's dates changing | Push notifications, with the port follow-ups |
 
 ## Recovery paths

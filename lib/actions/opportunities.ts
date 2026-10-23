@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
@@ -62,6 +62,44 @@ export async function followOpportunity(id: string, submit?: unknown): Promise<s
   });
   refresh();
   return null;
+}
+
+/**
+ * Stop following a call still at Preparing (decision 0024): the application,
+ * its stage and notes go; its open to-dos are dismissed, so they leave Today
+ * and the Calendar but aren't lost; its done ones stay as they are. Past
+ * Preparing it's a record of having applied, so it's set to Closed instead.
+ */
+export async function unfollowOpportunity(applicationId: string): Promise<string | null> {
+  const { talent, person } = await requireTalent();
+  const fail = await errorText();
+  if (!z.uuid().safeParse(applicationId).success) return fail("invalid");
+  const mine = and(eq(opportunityApplication.id, applicationId), eq(opportunityApplication.talentId, talent.id));
+  const failure = await db.transaction(async (tx) => {
+    const [app] = await tx.select().from(opportunityApplication).where(mine).for("update");
+    if (!app) return fail("applicationNotFound");
+    if (app.stage !== "preparing") return fail("unfollowPreparingOnly");
+    const links = await tx.select({ id: opportunityTask.todoId }).from(opportunityTask).where(eq(opportunityTask.applicationId, app.id));
+    const dismissed = links.length
+      ? await tx
+          .update(todo)
+          .set({ status: "dismissed" })
+          .where(and(inArray(todo.id, links.map((l) => l.id)), eq(todo.talentId, talent.id), eq(todo.status, "open")))
+          .returning({ id: todo.id })
+      : [];
+    await tx.delete(opportunityApplication).where(mine);
+    await tx.insert(auditLog).values({
+      talentId: talent.id,
+      actorPersonId: person.personId,
+      action: "opportunity.unfollowed",
+      targetType: "opportunity_application",
+      targetId: app.id,
+      details: { opportunityId: app.opportunityId, dismissedTodos: dismissed.map((d) => d.id) },
+    });
+    return null;
+  });
+  if (!failure) refresh();
+  return failure;
 }
 
 /** An application's stage, notes, and project; its to-dos move to the same project. */

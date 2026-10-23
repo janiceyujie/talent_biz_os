@@ -1813,7 +1813,8 @@
     "noticeCurrency": "目前只能記錄新台幣款項。",
     "opportunityNotFound": "找不到這個機會。",
     "applicationNotFound": "找不到這筆申請。",
-    "opportunityChanged": "這個機會的日期又變了，請再看一次通知。"
+    "opportunityChanged": "這個機會的日期又變了，請再看一次通知。",
+    "unfollowPreparingOnly": "只有「準備中」的機會可以取消追蹤，其他階段請改成「已結束」。"
   },
   "emails": {
     "resetSubject": "重設 Taloox 密碼",
@@ -2382,6 +2383,10 @@
       "US-MP": "北馬里亞納群島",
       "US-PR": "波多黎各",
       "US-VI": "美屬維京群島"
-    }
+    },
+    "unfollow": "取消追蹤",
+    "unfollowTitle": "要取消追蹤「{title}」嗎？",
+    "unfollowBody": "{count, plural, =0 {目前沒有未完成的待辦。} other {# 個未完成的待辦會從今日總覽和行事曆移除。}}已完成的待辦會保留。階段和備註會一起刪除。",
+    "unfollowed": "已取消追蹤。"
   }
 }

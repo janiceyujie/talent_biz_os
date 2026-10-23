@@ -42,6 +42,7 @@ Timothy's branch (`user/timothy0324/opportunity-discovery`, his local decision "
 - **Follow** creates an application for the talent, at **Preparing**, and (when the call has a closing date) a **Submit** to-do on that date, which you can change before saving. A call without a date can be followed without one.
 - **Applications move through** Preparing → Submitted → Awarded, Not selected, or Closed. You can add more to-dos to one (proposal, budget, report, and so on), and link an awarded one to a project (decision 0018). Its to-dos are ordinary to-dos: they show on Today and the Calendar, with one date each.
 - **When a followed call's dates change at the source**, the talent gets a notification saying what changed ("closing date moved from 3 March to 17 March"), with a button that moves the Submit to-do to the new date. **The to-do is never moved on its own**: it's yours, and you may have changed it. The same notification fires when a call that had no date gets one.
+- **Unfollowing** is for a call still at Preparing, after a confirmation that says what goes: the application, its stage and notes go, its open to-dos are dismissed (off Today and the Calendar, not deleted), and its done ones stay. Past Preparing, an application is a record of having applied, so it's set to Closed instead.
 - Following never creates a project, a payment, or income.
 
 ### Storage

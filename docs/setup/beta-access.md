@@ -3,15 +3,20 @@
 During the beta, sign-up on production is invite-only: an account is created only for an email on the allowlist ([decision 0028](../decisions/0028-invite-only-beta.md)). This guide is how people get onto it.
 
 ```
-Marketing site (Webflow)        The team                         The app (production)
-────────────────────────        ─────────────────────────        ──────────────────────────
+Marketing site (Webflow)        The team                          The app: Support page → Beta list
+────────────────────────        ──────────────────────────        ─────────────────────────────────
 Waitlist form submitted   ───▶  Webflow emails the team
-                                Pick this batch
-                                Add their emails  ─────────────▶  signup_allowlist
-                                Send each an invitation
-They sign up with the invited email  ────────────────────────▶  On the list: account created
-                                                                 Not on it: "not on the beta list yet"
+(kept in Webflow)               Pick a batch in Webflow's
+                                submissions, copy their rows ───▶  Paste → Check → Add
+                                                                   (signup_allowlist; nobody emailed)
+                                                                   Tick → preview → Send invitations
+                                                                   (each greeted by name)
+They sign up with the invited email  ─────────────────────────▶  On the list: account created,
+                                                                   their place shows "Signed up"
+                                                                   Not on it: "not on the beta list yet"
 ```
+
+Nothing reaches the app from the form on its own: someone picks each batch and copies it across. That's on purpose, since Google's cap of 100 Gmail users (section 2) makes each place worth choosing.
 
 ## 1. The waitlist form (Webflow)
 
@@ -25,7 +30,7 @@ The marketing site's form collects applications; the app never sees them until s
 | Do you use Gmail for work? | Yes | Mail comes in from Gmail only, and Google caps us at 100 Gmail users until verification passes (below). |
 | How did you hear about us? | No | |
 
-Set Webflow to email the team on each submission. Submissions stay in Webflow (Site settings → Forms), exportable as CSV.
+Set Webflow to email the team on each submission. Submissions stay in Webflow (Site settings → Forms), exportable as CSV: that's where a batch is copied from (section 3). The app keeps each invited person's email and name, not their role or other answers; when you pick a batch by role, say so in its note (e.g. `waitlist, 2026-11, musicians`).
 
 The privacy policy has to cover this form: what it collects, that it's used to invite people to the beta, and how to be taken off the list (launch checklist, section 7).
 
@@ -43,7 +48,7 @@ On the Support page's **Beta list** (`/support/beta`, production). Adding, invit
 
 1. **Add people.** Paste the batch: one person a line, their address and, if you have it, their name ("Mei Lin <mei@example.com>", two columns copied from a spreadsheet, or rows copied from Webflow's CSV, where the first field beside the address is taken as the name). The name greets them in the invitation; without one it says only "Hi". A line with several addresses is read as a list, without names. Write where the batch came from in **Note** (e.g. `waitlist, 2026-11 batch 1`) and pick the **Invitation language**: the one they applied in. **Check** shows what adding would do: new, withdrawn before (restored), already on the list, already with an account (both passed over), not an address. Then **Add**. Nobody is emailed yet.
 2. **Send invitations.** Tick the people to invite and **Send invitations**. The dialog shows each language's email as it will go out, and warns when someone was invited before. **Send** sends one by one; each is marked with when and by whom. Failures are listed to try again.
-3. **Follow along.** Each place shows its status (not invited yet, invited, signed up, withdrawn), its note and language, and who did what when. Filter by status.
+3. **Follow along.** Each place shows its status (not invited yet, invited, signed up, withdrawn), its note and language, and who did what when. Filter by status. A place turns to "Signed up" on its own when they create their account; their account itself (Gmail connected, errors) is on the Support page's **Accounts** tab ([support.md](support.md)).
 
 **Withdrawing** a place nobody has used: **Withdraw** on its row. No one can sign up with that address afterwards; the row stays, marked withdrawn, so who was invited when stays on record. A signed-up place can't be withdrawn: they have an account. Adding a withdrawn address again restores it.
 

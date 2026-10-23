@@ -43,6 +43,11 @@ The beta list on the Support page (`user/janlin/beta-list`), from "Later" below:
 ## Later
 
 - ~~**A staff page for the list**~~: built, see the implementation notes above.
+- **Waitlist submissions straight into the app.** Today a batch is copied from Webflow's submissions by hand, which is enough at 10 to 20 a batch. When there are enough applicants that copying gets in the way (or when the role and other answers should be kept with each place):
+  1. A Webflow form webhook posts each submission to a new public API route, which checks Webflow's signature on it and refuses anything else.
+  2. Submissions land in a table of their own (or as waitlisted places), with the form's answers: role, uses Gmail for work, how they heard. Never added to the allowlist by the webhook: picking stays a person's decision, for Google's cap.
+  3. The Beta list shows them as a queue to pick from, with filters by role and Gmail; adding a picked one works as now.
+  4. The privacy policy already covers the form; check it covers keeping its answers in the app too.
 - **Workspace invitations.** When a talent can invite a manager into their workspace, sending the invitation also adds the email to the allowlist (with `invited_by`), so invited people aren't refused.
 - **Referrals.** Different from invite links: a referral code is per person, reusable, and its hard parts are attribution and rewards. Referral codes get their own table, and a sign-up records whose code it came with. While sign-up is still invite-only, signing up with a referral code adds the email to the allowlist, and the check here stays as it is; once sign-up is open, the allowlist is off and the code only records who referred whom. `invited_by` already holds who brought whom in, from the first batch on.
 - **Open sign-up.** Set `SIGNUP_ALLOWLIST` off when the beta ends. That needs Google's verification and CASA to have passed first, or the 100-user cap still applies. The table and the check stay, unused, until removed in a later change.

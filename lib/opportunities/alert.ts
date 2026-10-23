@@ -1,0 +1,28 @@
+import "server-only";
+import type { RefreshOutcome } from "./refresh";
+
+// What went wrong in a day's read of the opportunity sources (decision 0024),
+// for the team, never the people using the app: they see only when each
+// source was last read, and a call not read lately comes out as Check. In the
+// log, and in one email to OPS_ALERT_EMAIL when it's set.
+
+export async function alertOps(outcomes: RefreshOutcome[]) {
+  const lines = outcomes.flatMap((o) => [
+    ...(o.ok ? [] : [`${o.source} failed: ${o.failure}; last read ${o.lastRead?.toISOString() ?? "never"}, and its calls are kept as they were`]),
+    ...o.problems.map((p) => `${o.source}: ${p}`),
+  ]);
+  if (!lines.length) return;
+  for (const line of lines) console.error("opportunities.refresh problem:", line);
+  const to = process.env.OPS_ALERT_EMAIL;
+  if (!to) return;
+  try {
+    const { sendEmail } = await import("@/lib/email");
+    await sendEmail({
+      to,
+      subject: `Opportunities: ${lines.length} problem${lines.length === 1 ? "" : "s"} reading the sources`,
+      text: `${lines.map((l) => `- ${l}`).join("\n")}\n\nA source that changed its format needs its parser or its entry in lib/opportunities/tracked.ts updated. The worker's log has the details. People using the app see none of this: a call not read for three days shows as Check.`,
+    });
+  } catch (e) {
+    console.error("opportunities alert not sent", (e as Error)?.message);
+  }
+}

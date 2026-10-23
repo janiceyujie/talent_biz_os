@@ -53,6 +53,9 @@ describe("Ministry of Culture", () => {
     assert.equal(rows.length, 2);
     assert.notEqual(rows[0].externalId, rows[1].externalId);
     assert.throws(() => parseMoc("<html>maintenance</html>", "2026-10-01"), /moc_structure_changed/);
+    assert.throws(() => parseMoc(xml(), "2026-10-01"), /moc_empty/);
+    assert.throws(() => parseMoc(xml(apply("補助要點", "補助要點", "115/10/01", "115/11/02")), "2026-10-01"), /moc_fields_changed/); // dates written another way
+    assert.deepEqual(parseMoc(xml(apply("補助要點", "補助要點", "2025/01/01", "2025/02/01")), "2026-10-01"), []); // only old rounds: nothing open, not a change
   });
 });
 
@@ -78,8 +81,9 @@ describe("Grants.gov", () => {
     assert.equal(parseDetail(detail(["25"]), "1")?.applicantTypes, null);
     assert.equal(parseDetail(detail(["12"], "<p>Individuals may also apply</p>"), "1")?.applicantTypes, null);
     assert.match(parseDetail(detail(["12"], "<p>Individuals may also apply</p>"), "1")!.evidence, /Individuals may also apply/);
-    assert.equal(parseDetail(detail(["12"]), "2"), null);
     assert.equal(parseDetail({ errorcode: 0, data: { id: 1 } }, "1"), null);
+    assert.throws(() => parseDetail(detail(["12"]), "2"), /grants_gov_detail_mismatch/); // not the call asked for
+    assert.throws(() => parseDetail({ errorcode: 0, data: { id: 1, synopsis: { applicants: [] } } }, "1")); // its format changed
     assert.deepEqual(parseDetail(detail(["12", "00"]), "1"), parseDetail(detail(["00", "12"]), "1")); // the same each day, whatever the order
     const call = parseSearch(hits).rows[0];
     const rules = { applicantTypes: ["nonprofit"], countries: null, areas: null, disciplines: null, evidence: "Nonprofits" } satisfies OpportunityRules;

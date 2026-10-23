@@ -121,9 +121,7 @@ export function OpportunitiesView({ workspace }: { workspace: OpportunitiesWorks
         {workspace.sources.map((s) => (
           <span key={s.id}>
             {t(`sources.${s.id}`)} ·{" "}
-            {s.failed ? (
-              t("sourceFailed")
-            ) : s.checkedAt ? (
+            {s.checkedAt ? (
               // The server's and the browser's time formats can differ by a space; the browser's wins.
               <time dateTime={s.checkedAt} suppressHydrationWarning>
                 {t("checkedAt", { when: format.dateTime(new Date(s.checkedAt), { dateStyle: "short", timeStyle: "short" }) })}

@@ -2174,7 +2174,6 @@
     "followingOnly": "Following only",
     "showAll": "Show ones that don't fit",
     "count": "{count, plural, =0 {No calls} one {# call} other {# calls}}",
-    "sourceFailed": "couldn't be read last time",
     "checkedAt": "read {when}",
     "notChecked": "not read yet",
     "noProfile": "Tell us who you are, and calls that don't fit you are hidden.",

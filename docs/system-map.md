@@ -526,7 +526,7 @@ What to know:
 - **The model reads only tracked announcements**, and only when their text changed. Everything after the catalogue (screening, following, the notification) is code, and every change to a person's to-dos is a button they press.
 - **Screening is a first pass, never a ruling.** Each rule a call states (applicant type, country, county or state, discipline) is a list, "any", or unknown. A stated rule that leaves you out is Doesn't fit; an unknown rule, a profile field left blank, or a source not read in three days is Check. Check is always shown.
 - **The dialog shows the evidence and the official link**: the passages a tracked page's fields came from, or the source's own codes.
-- **A source's last check and whether it failed** show on the Opportunities screen. A single tracked page or announcement that fails is recorded in `opportunity_page`, not on screen.
+- **Problems go to the team, not the screen.** The screen shows only when each source was last read. A source that fails, a parser that finds no fields, a structured source giving under half the calls it gave last time, or a tracked page or announcement that can't be read goes to the log and one email per run to `OPS_ALERT_EMAIL` (`lib/opportunities/alert.ts`; on a failed run, only after its last retry).
 
 ### The pages we read
 
@@ -543,7 +543,7 @@ What to know:
 - **Per run:** 10 announcements per tracked page, 40 model reads across all of them, 30,000 characters of each announcement, 5 calls per announcement. A call closed more than 30 days ago is dropped.
 - **AI:** through `lib/ai/model.ts`, so it stops while AI is paused or the day's spend cap is reached (decision 0008), and an announcement not read is read the next day. A changed announcement costs one model call: about $0.01.
 - **Not read:** PDFs and other attachments, where most of NCAF's eligibility rules are, so those fields are mostly Check.
-- **Adding a page is a code change**: an entry in `tracked.ts` with which links are announcements and where the text sits on the page. A site that changes its markup stops yielding links, and the page is recorded as failed.
+- **Adding a page is a code change**: an entry in `tracked.ts` with which links are announcements and where the text sits on the page. A site that changes its markup stops yielding links: the page is recorded as failed, and the team is told.
 
 ### Assumptions
 
@@ -581,7 +581,7 @@ flowchart TB
 | Before publishing | Code checks only | A staff review queue in front of publishing |
 | Calls off the list | Not found | Search, or a partner's feed |
 | A tracked call with no date that drops off its list | Stays, as Check the official page | Cleaned up |
-| A failed tracked page | Recorded in `opportunity_page` only | Shown on the source's status |
+| A tracked page whose titles stop matching | Missed without an error | Listed for a person in the review queue |
 | Following | Follow, stages, to-dos, link to a project | Unfollow; preparation to-dos when preparation is designed |
 | What's announced | A followed call's dates changing | Push notifications, with the port follow-ups |
 
@@ -600,7 +600,7 @@ flowchart TB
 | The model gives a bad answer | Analysis asks the large model once; if that fails too, it shows the failure with Retry. Scoring retries, then stays Not decided yet. |
 | Google Calendar push fails | Retries after 1 min, 5 min, 30 min, 2 h, then every 6 h. Lost access waits for Reconnect. |
 | A mailbox's access is revoked | The connection asks to reconnect; nothing more is read. |
-| An opportunity source fails | It keeps what it had and records why; the screen shows it failed. A tracked page fails on its own; the source fails only when every page does. |
+| An opportunity source fails or changes its format | It keeps what it had and records why; the team gets an email (`OPS_ALERT_EMAIL`), and the screen shows nothing but the last read. A tracked page fails on its own; the source fails only when every page does. Retried up to 3 times. |
 | The day's AI cap is reached | An analysis shows it's over the limit, with Retry. Scoring leaves the email Not decided yet for a later check. Nothing is dropped. |
 
 ## Timings at a glance

@@ -58,7 +58,8 @@ export async function getOpportunitiesWorkspace(talentId: string): Promise<Oppor
     ),
     sources: opportunitySources.map((id) => {
       const s = sources.find((s) => s.id === id);
-      return { id, checkedAt: s?.checkedAt?.toISOString() ?? null, failed: Boolean(s?.failure) };
+      // A failed read isn't shown: the team is told (lib/opportunities/alert.ts), and a call not read lately is Check.
+      return { id, checkedAt: s?.checkedAt?.toISOString() ?? null };
     }),
   };
 }

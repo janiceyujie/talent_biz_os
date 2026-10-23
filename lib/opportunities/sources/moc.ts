@@ -47,10 +47,14 @@ export function parseMoc(xml: string, since: string): Listing[] {
   if (!xml.includes("<database>")) throw new Error("moc_structure_changed");
   const seen = new Set<string>();
   const rows: Listing[] = [];
+  let blocks = 0;
+  let unreadable = 0;
   for (const [block] of xml.matchAll(/<Apply>[\s\S]*?<\/Apply>/g)) {
+    blocks++;
     const [year, unit, point, form] = ["Year", "UnitName", "PointName", "FormName"].map((tag) => field(block, tag));
     const opensOn = slashDate(field(block, "StartDate"));
     const closesOn = slashDate(field(block, "EndDate"));
+    if (!point || !closesOn) unreadable++;
     if (!point || !closesOn || closesOn < since) continue;
     // A program runs several rounds a year, each its own row: the round's opening tells them apart.
     const externalId = stableId(year, unit, point, form, opensOn ?? "");
@@ -74,6 +78,8 @@ export function parseMoc(xml: string, since: string): Listing[] {
       rules: applicantTypes || disciplines ? { applicantTypes, countries: null, areas: null, disciplines, evidence: [unit, form].join(" · ").slice(0, 2000) } : null,
     });
   }
-  if (!rows.length && !xml.includes("<Apply>")) throw new Error("moc_empty");
+  if (!blocks) throw new Error("moc_empty");
+  // Every row without a program or a closing date: its fields were renamed, or its dates written another way.
+  if (unreadable === blocks) throw new Error("moc_fields_changed");
   return rows;
 }

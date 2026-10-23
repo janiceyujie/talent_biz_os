@@ -119,7 +119,7 @@ export type OpportunitiesWorkspace = {
   /** The calls this talent follows, whatever their state: the list pages only through the rest. */
   followed: Opportunity[];
   applications: Application[];
-  sources: { id: OpportunitySource; checkedAt: string | null; failed: boolean }[];
+  sources: { id: OpportunitySource; checkedAt: string | null }[];
 };
 
 export type { Area };

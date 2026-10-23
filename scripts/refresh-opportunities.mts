@@ -8,5 +8,8 @@ nextEnv.loadEnvConfig(process.cwd()); // the same .env files the app reads, befo
 
 const { refreshOpportunities } = await import("@/lib/opportunities/refresh");
 const outcomes = await refreshOpportunities();
-for (const o of outcomes) console.log(`${o.source}: ${o.ok ? `${o.count} calls read` : "failed (see above)"}`);
+for (const o of outcomes) {
+  console.log(`${o.source}: ${o.ok ? `${o.count} calls read` : `failed: ${o.failure}`}`);
+  for (const p of o.problems) console.log(`  ${p}`);
+}
 process.exit(outcomes.every((o) => o.ok) ? 0 : 1);

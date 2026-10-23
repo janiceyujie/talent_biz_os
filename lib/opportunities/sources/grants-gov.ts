@@ -69,10 +69,11 @@ const detailSchema = z.object({
   }),
 });
 
-/** The rules in one call's detail; null when it doesn't parse or isn't the call asked for. */
+/** The rules in one call's detail; null when it states none. Throws when it isn't a detail of the call asked for: its format changed. */
 export function parseDetail(value: unknown, externalId: string): OpportunityRules | null {
-  const parsed = detailSchema.safeParse(value);
-  const synopsis = parsed.success && String(parsed.data.data.id) === externalId ? parsed.data.data.synopsis : null;
+  const { data } = detailSchema.parse(value);
+  if (String(data.id) !== externalId) throw new Error("grants_gov_detail_mismatch");
+  const synopsis = data.synopsis;
   if (!synopsis?.applicantTypes.length) return null;
   // More eligibility in prose ("individuals may also apply") can widen or narrow the codes: unknown.
   const prose = plain(htmlToText(synopsis.applicantEligibilityDesc ?? ""));

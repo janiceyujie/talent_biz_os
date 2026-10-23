@@ -66,9 +66,10 @@ async function request(url: string, body?: object, signal?: AbortSignal): Promis
 /**
  * What one read of a source gives: its calls, and for the tracked pages, the
  * announcements read unchanged (their calls are as current as before) and
- * what to remember of each page, written with the calls.
+ * what to remember of each page, written with the calls. `problems` are what
+ * went wrong without failing the source, for the team (lib/opportunities/alert.ts).
  */
-type Read = { listings: Listing[]; unchanged?: string[]; reread?: string[]; pages?: (typeof opportunityPage.$inferInsert)[]; failure?: string };
+type Read = { listings: Listing[]; unchanged?: string[]; reread?: string[]; pages?: (typeof opportunityPage.$inferInsert)[]; problems?: string[]; failure?: string };
 
 async function readMoc(): Promise<Read> {
   return { listings: parseMoc(await request(MOC_URL), dateInZone("Asia/Taipei", -CLOSED_KEPT_DAYS)) };
@@ -90,18 +91,21 @@ async function readGrantsGov(): Promise<Read> {
   const queue = rows.toSorted((a, b) => Number(stored.has(a.externalId)) - Number(stored.has(b.externalId))).slice(0, MAX_DETAILS);
   const budget = AbortSignal.timeout(30_000);
   let next = 0;
+  let failed = 0;
   await Promise.all(
     Array.from({ length: 3 }, async () => {
       for (let row = queue[next++]; row && !budget.aborted; row = queue[next++]) {
         const id = row.externalId;
-        const detail = await request(GRANTS_GOV_DETAIL, { opportunityId: Number(id) }, budget)
-          .then((text) => ({ value: JSON.parse(text) as unknown }))
-          .catch(() => null);
-        if (detail) row.rules = parseDetail(detail.value, id);
+        await request(GRANTS_GOV_DETAIL, { opportunityId: Number(id) }, budget)
+          .then((text) => (row.rules = parseDetail(JSON.parse(text), id)))
+          .catch((e) => {
+            failed++;
+            console.error("opportunities.refresh grants_gov detail", id, e);
+          });
       }
     }),
   );
-  return { listings: rows };
+  return { listings: rows, problems: failed ? [`${failed} of ${queue.length} details couldn't be read; their rules are as last read`] : [] };
 }
 
 /**
@@ -114,7 +118,7 @@ async function readGrantsGov(): Promise<Read> {
  */
 async function readPages(): Promise<Read> {
   const now = new Date();
-  const read: Required<Omit<Read, "failure">> = { listings: [], unchanged: [], reread: [], pages: [] };
+  const read: Required<Omit<Read, "failure">> = { listings: [], unchanged: [], reread: [], pages: [], problems: [] };
   let extractions = 0;
   let failed = 0;
   for (const page of trackedPages) {
@@ -128,6 +132,7 @@ async function readPages(): Promise<Read> {
     } catch (e) {
       console.error("opportunities.refresh page", page.id, e);
       failed++;
+      read.problems.push(`${page.id}: ${page.url}: ${failureOf(e)}`);
       read.pages.push({ url: page.url, trackedId: page.id, role: "list", attemptedAt: now, failure: failureOf(e) });
       continue;
     }
@@ -172,6 +177,7 @@ async function readPages(): Promise<Read> {
       } catch (e) {
         if (e instanceof ModelError && e.code === "paused") continue;
         console.error("opportunities.refresh announcement", link.url, e);
+        read.problems.push(`${page.id}: ${link.url}: ${failureOf(e)}`);
         read.pages.push({ url: link.url, trackedId: page.id, role: "announcement", attemptedAt: now, failure: failureOf(e) });
       }
     }
@@ -190,14 +196,25 @@ const readers: Record<OpportunitySource, () => Promise<Read>> = { moc: readMoc, 
  * leaves something out hasn't said it was withdrawn. A source that fails
  * keeps what it had, and records why.
  */
-export async function refreshOpportunities(): Promise<{ source: OpportunitySource; ok: boolean; count: number }[]> {
-  const outcomes = [];
+export type RefreshOutcome = { source: OpportunitySource; ok: boolean; count: number; failure?: string; lastRead: Date | null; problems: string[] };
+
+export async function refreshOpportunities(): Promise<RefreshOutcome[]> {
+  const outcomes: RefreshOutcome[] = [];
   for (const source of opportunitySources) {
     await db.insert(opportunitySource).values({ id: source }).onConflictDoNothing();
     const now = new Date();
+    const [{ lastRead = null } = {}] = await db.select({ lastRead: opportunitySource.checkedAt }).from(opportunitySource).where(eq(opportunitySource.id, source));
     try {
-      const { listings, unchanged = [], reread = [], pages = [], failure } = await readers[source]();
+      const { listings, unchanged = [], reread = [], pages = [], problems = [], failure } = await readers[source]();
       if (failure) throw new Error(failure);
+      // A structured source that suddenly gives far fewer calls has most likely changed its format, not its calls.
+      if (source !== "pages") {
+        const [{ before }] = await db
+          .select({ before: sql<number>`count(*)::int` })
+          .from(opportunity)
+          .where(and(eq(opportunity.source, source), sql`${opportunity.checkedAt} > ${new Date(now.getTime() - 36 * 3600_000).toISOString()}::timestamptz`));
+        if (before >= 10 && listings.length < before / 2) problems.push(`${listings.length} calls read, ${before} the last time`);
+      }
       await db.transaction(async (tx) => {
         await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`opportunity-source:${source}`}))`);
         for (const { externalId, ...listing } of listings) {
@@ -236,14 +253,14 @@ export async function refreshOpportunities(): Promise<{ source: OpportunitySourc
         }
         await tx.update(opportunitySource).set({ checkedAt: now, attemptedAt: now, failure: null }).where(eq(opportunitySource.id, source));
       });
-      outcomes.push({ source, ok: true, count: listings.length });
+      outcomes.push({ source, ok: true, count: listings.length, lastRead, problems });
     } catch (e) {
       console.error("opportunities.refresh", source, e);
       await db
         .update(opportunitySource)
-        .set({ attemptedAt: now, failure: e instanceof Error ? e.message.slice(0, 200) : "failed" })
+        .set({ attemptedAt: now, failure: failureOf(e) })
         .where(eq(opportunitySource.id, source));
-      outcomes.push({ source, ok: false, count: 0 });
+      outcomes.push({ source, ok: false, count: 0, failure: failureOf(e), lastRead, problems: [] });
     }
   }
   return outcomes;

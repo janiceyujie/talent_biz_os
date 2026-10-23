@@ -8,6 +8,7 @@ import { listingHash } from "./sources/listing";
 import { parseMoc } from "./sources/moc";
 import { announcementText, checkedCalls, datesIn, linksOn, type Extraction } from "./sources/pages";
 import { trackedPages } from "./tracked";
+import { isTimeZone } from "@/lib/time-zones";
 import type { Opportunity, OpportunityChange, OpportunityRules, ScreeningProfile } from "./types";
 import { notificationIdPattern, notifications } from "@/lib/domain/notifications";
 import type { AppData } from "@/lib/types";
@@ -196,7 +197,7 @@ describe("screening", () => {
 describe("the list", () => {
   const call = (over: Partial<Opportunity>): Opportunity => ({
     id: "00000000-0000-0000-0000-000000000000", source: "moc", region: "TW", kind: "grant", title: "", agency: "", url: "https://grants.moc.gov.tw/Web/",
-    opensOn: "2026-10-01", closesOn: "2026-11-30", sourceStatus: "posted", summary: "", rules: null, checkedAt: fresh, changedAt: fresh, ...over,
+    opensOn: "2026-10-01", closesOn: "2026-11-30", sourceStatus: "posted", timeZone: "Asia/Taipei", summary: "", rules: null, checkedAt: fresh, changedAt: fresh, ...over,
   });
   const rows = [
     call({ id: "a", title: "Later", closesOn: "2026-12-31" }),
@@ -204,11 +205,11 @@ describe("the list", () => {
     call({ id: "c", title: "For groups", closesOn: "2026-10-25", rules: rules({ applicantTypes: ["business", "nonprofit"] }) }),
     call({ id: "d", title: "Coming", opensOn: "2026-12-01", closesOn: "2027-01-15" }),
     call({ id: "e", title: "Gone", closesOn: "2026-10-20" }),
-    call({ id: "f", title: "US", region: "US", source: "grants_gov", sourceStatus: "forecasted", opensOn: null, closesOn: null }),
+    call({ id: "f", title: "US", region: "US", source: "grants_gov", timeZone: "America/New_York", sourceStatus: "forecasted", opensOn: null, closesOn: null }),
   ];
   const params = (over: Record<string, string> = {}) => listParams.parse({ region: "all", kind: "all", within: "", following: "", show: "fitting", q: "", cursor: "", ...over });
   const page = (over: Record<string, string> = {}, followed: string[] = []) =>
-    pageOf(rows, params(over), { profile: profile(), talentZone: "America/New_York", followed: new Set(followed), now });
+    pageOf(rows, params(over), { profile: profile(), followed: new Set(followed), now });
 
   test("open first, soonest to close first; closed and doesn't-fit left out", () => {
     assert.deepEqual(page().items.map((o) => o.id), ["b", "a", "d", "f"]);
@@ -220,6 +221,16 @@ describe("the list", () => {
     assert.deepEqual(page({ within: "30" }).items.map((o) => o.id), ["b"]);
     assert.deepEqual(page({ following: "1" }, ["e", "a"]).items.map((o) => o.id), ["a", "e"]);
     assert.deepEqual(page({ q: "soon" }).items.map((o) => o.id), ["b"]);
+  });
+
+  test("a call closes at the end of its last day where its funding body is, not where you are", () => {
+    // 04:00 UTC on 22 October: noon in Taipei, still the evening of the 21st in California.
+    const last = [call({ id: "tw", closesOn: "2026-10-21" }), call({ id: "ca", region: "US", timeZone: "America/Los_Angeles", closesOn: "2026-10-21" })];
+    assert.deepEqual(pageOf(last, params(), { profile: profile(), followed: new Set(), now }).items.map((o) => o.id), ["ca"]);
+  });
+
+  test("every tracked page names a real time zone", () => {
+    for (const p of trackedPages) assert.ok(isTimeZone(p.timeZone), p.id);
   });
 
   test("a cursor picks up after the last row", () => {

@@ -885,8 +885,9 @@ create table opportunity (
   agency         text not null,
   url            text not null,
   opens_on       date,
-  closes_on      date,                      -- in the source's region (Asia/Taipei for Taiwan)
+  closes_on      date,                      -- a day in time_zone
   source_status  text not null check (source_status in ('posted','forecasted','unknown')),
+  time_zone      text not null,             -- the funding body's: Asia/Taipei, America/New_York for Grants.gov, a tracked page's own
   summary        text not null default '',
   rules          jsonb,                     -- who it's for, per dimension: a list, 'any', or null (unknown); lib/opportunities/types.ts
   passages       jsonb,                     -- a tracked page's call: the passage each checked field was read from

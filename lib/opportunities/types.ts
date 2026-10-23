@@ -78,6 +78,8 @@ export type Opportunity = {
   opensOn: string | null;
   closesOn: string | null;
   sourceStatus: SourceStatus;
+  /** The funding body's time zone: its dates are days there, and so is "closed" (decision 0024). */
+  timeZone: string;
   summary: string;
   rules: OpportunityRules | null;
   /** A tracked page's call: the passage each checked field was read from. */

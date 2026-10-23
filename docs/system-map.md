@@ -551,7 +551,7 @@ What to know:
 - **An announcement's title says whether it's a call.** Titles are matched against each page's words for a call, and lists of results are skipped. A call with an unusual title is missed.
 - **The list page puts the newest first**, so the first 10 are the ones that matter.
 - **A date whose passage checks out is in the right field.** The check catches an invented date, not a real one misplaced, such as an announcement date read as the closing date. That's why the official page is one click away.
-- **Dates are the source region's:** Taipei for Taiwan, New York for the US.
+- **Dates are the funding body's days**, in the time zone kept with each call: Taipei for Taiwan, Eastern for Grants.gov, and a tracked page's own. "Closed", "today" when reading a page, and the Submit to-do all use it.
 - **The profile is what the person says about themselves**, and nothing checks it.
 
 ### Later

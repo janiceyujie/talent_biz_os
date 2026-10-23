@@ -864,6 +864,7 @@ export const opportunity = pgTable(
     opensOn: date(),
     closesOn: date(),
     sourceStatus: text({ enum: sourceStatuses }).notNull(),
+    timeZone: text().notNull(), // the funding body's: its dates are days there
     summary: text().notNull().default(""),
     rules: jsonb().$type<OpportunityRules>(), // who it's for, as the source states it; null when it says nothing
     passages: jsonb().$type<Record<string, string>>(), // a tracked page's call: the passage each checked field was read from

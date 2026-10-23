@@ -122,7 +122,7 @@ async function readPages(): Promise<Read> {
   let extractions = 0;
   let failed = 0;
   for (const page of trackedPages) {
-    const today = dateInZone(page.region === "TW" ? "Asia/Taipei" : "America/New_York");
+    const today = dateInZone(page.timeZone);
     let links;
     try {
       const on = linksOn(await request(page.url), page);

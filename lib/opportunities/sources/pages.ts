@@ -248,6 +248,7 @@ export function checkedCalls(answer: Extraction, text: string, link: PageLink, p
       source: "pages",
       externalId,
       region: page.region,
+      timeZone: page.timeZone,
       kind: page.kind,
       title,
       agency: page.agency,

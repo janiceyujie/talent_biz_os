@@ -372,6 +372,13 @@
       "when": 1792719585129,
       "tag": "0052_add_application_known_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1792732139882,
+      "tag": "0053_add_opportunity_time_zone",
+      "breakpoints": true
     }
   ]
 }

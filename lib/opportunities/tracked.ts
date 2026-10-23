@@ -9,6 +9,7 @@ export type TrackedPage = {
   id: string; // stable: the catalogue's calls and the page's read history are keyed by it
   url: string; // the list of announcements
   region: OpportunityRegion;
+  timeZone: string; // the funding body's: its dates are days there
   agency: string; // as the card names it
   kind: OpportunityKind;
   area?: Area; // the agency's own county or city, for "residents of this city"
@@ -27,6 +28,7 @@ export const trackedPages: TrackedPage[] = [
     id: "ncaf",
     url: "https://www.ncafroc.org.tw/news.html?categoryId=002",
     region: "TW",
+    timeZone: "Asia/Taipei",
     agency: "國家文化藝術基金會",
     kind: "grant",
     items: /^\/news_detail\.html\?sid=\d+$/,
@@ -37,6 +39,7 @@ export const trackedPages: TrackedPage[] = [
     id: "taipei-culture",
     url: "https://culture.gov.taipei/News.aspx?n=63F36AA6E434AD08&sms=78D644F2755ACCAA",
     region: "TW",
+    timeZone: "Asia/Taipei",
     agency: "臺北市政府文化局",
     kind: "grant",
     area: "TW-TPE",

@@ -19,7 +19,7 @@ import { dateInZone } from "@/lib/domain/dates";
 import type { ListPage } from "@/lib/domain/list-page";
 import { isOpenStage } from "@/lib/domain/phases";
 import { areasOf } from "@/lib/opportunities/areas";
-import { availability, WITHIN_DAYS, zoneOf } from "@/lib/opportunities/list";
+import { availability, WITHIN_DAYS } from "@/lib/opportunities/list";
 import { screen, type FitReason } from "@/lib/opportunities/screening";
 import {
   applicantTypes,
@@ -164,7 +164,7 @@ export function OpportunitiesView({ workspace }: { workspace: OpportunitiesWorks
 }
 
 function useToday(o: Opportunity) {
-  return dateInZone(zoneOf(o, useAppData().talent.timeZone));
+  return dateInZone(o.timeZone);
 }
 
 function OpportunityCard({ opportunity: o, profile, application, onOpen }: { opportunity: Opportunity; profile: ScreeningProfile | null; application?: Application; onOpen: () => void }) {
@@ -256,11 +256,10 @@ function OpportunityDialog({
 /** Follow, with a Submit to-do on the closing date unless you change or clear it. */
 function FollowForm({ opportunity: o, pending, run }: { opportunity: Opportunity; pending: boolean; run: Run }) {
   const t = useTranslations("opportunities");
-  const talentZone = useAppData().talent.timeZone;
   const today = useToday(o);
   const [date, setDate] = useState(o.closesOn && o.closesOn >= today ? o.closesOn : "");
   const [time, setTime] = useState("");
-  const [zone, setZone] = useState(zoneOf(o, talentZone));
+  const [zone, setZone] = useState(o.timeZone);
   return (
     <form
       className="editor-form section-gap"
@@ -362,7 +361,7 @@ function ApplicationPanel({ application: a, opportunity: o, pending, run }: { ap
           applicationId={a.id}
           opportunityTitle={o.title}
           defaultDate={o.closesOn && o.closesOn >= today ? o.closesOn : today}
-          defaultZone={zoneOf(o, data.talent.timeZone)}
+          defaultZone={o.timeZone}
           pending={pending}
           run={run}
           onClose={() => setEditing(null)}

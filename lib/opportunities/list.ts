@@ -9,9 +9,6 @@ import { opportunityKinds, opportunityRegions, type Opportunity, type ScreeningP
 export const availabilities = ["open", "upcoming", "unknown", "closed"] as const;
 export type Availability = (typeof availabilities)[number];
 
-/** Whose "today" a call's dates are in: Taiwan's calls Taipei's, others the talent's own. */
-export const zoneOf = (o: Pick<Opportunity, "region">, talentZone: string) => (o.region === "TW" ? "Asia/Taipei" : talentZone);
-
 export function availability(o: Pick<Opportunity, "opensOn" | "closesOn" | "sourceStatus">, today: string): Availability {
   if (o.closesOn && o.closesOn < today) return "closed";
   if (o.sourceStatus === "forecasted" || (o.opensOn && o.opensOn > today)) return "upcoming";
@@ -55,19 +52,17 @@ function decodeCursor(cursor: string): Key | null {
 export function pageOf(
   rows: Opportunity[],
   params: ListParams,
-  { profile, talentZone, followed, now = new Date() }: { profile: ScreeningProfile | null; talentZone: string; followed: Set<string>; now?: Date },
+  { profile, followed, now = new Date() }: { profile: ScreeningProfile | null; followed: Set<string>; now?: Date },
 ) {
   const q = params.q.normalize("NFKC").trim().toLocaleLowerCase();
   const matching = rows
-    .map((o) => {
-      const zone = zoneOf(o, talentZone);
-      return { o, zone, state: availability(o, dateInZone(zone, 0, now)) };
-    })
-    .filter(({ o, zone, state }) => {
+    // Each call's "today" is its funding body's.
+    .map((o) => ({ o, state: availability(o, dateInZone(o.timeZone, 0, now)) }))
+    .filter(({ o, state }) => {
       if (params.following ? !followed.has(o.id) : state === "closed") return false;
       if (params.region !== "all" && o.region !== params.region) return false;
       if (params.kind !== "all" && o.kind !== params.kind) return false;
-      if (params.within && (!o.closesOn || o.closesOn > dateInZone(zone, Number(params.within), now))) return false;
+      if (params.within && (!o.closesOn || o.closesOn > dateInZone(o.timeZone, Number(params.within), now))) return false;
       if (q && !`${o.title} ${o.agency}`.normalize("NFKC").toLocaleLowerCase().includes(q)) return false;
       return params.show === "all" || screen(o.rules, profile, o.checkedAt, now).fit !== "doesNotFit";
     })

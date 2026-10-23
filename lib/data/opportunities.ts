@@ -3,7 +3,7 @@ import { and, asc, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { opportunity, opportunityApplication, opportunitySource, opportunityTask, preference, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
-import { pageOf, zoneOf, type ListParams } from "@/lib/opportunities/list";
+import { pageOf, type ListParams } from "@/lib/opportunities/list";
 import { opportunitySources, screeningProfileSchema, type Application, type OpportunitiesWorkspace, type Opportunity, type OpportunityChange } from "@/lib/opportunities/types";
 
 type Row = typeof opportunity.$inferSelect;
@@ -18,6 +18,7 @@ const opportunityOf = (r: Row): Opportunity => ({
   opensOn: r.opensOn,
   closesOn: r.closesOn,
   sourceStatus: r.sourceStatus,
+  timeZone: r.timeZone,
   summary: r.summary,
   rules: r.rules,
   checkedAt: r.checkedAt.toISOString(),
@@ -70,7 +71,7 @@ export async function getOpportunitiesWorkspace(talentId: string): Promise<Oppor
  * or so, number in the hundreds, so they're read whole and screened here:
  * one screening, the same the screen shows (lib/opportunities/screening).
  */
-export async function listOpportunities(talentId: string, personId: string, talentZone: string, params: ListParams) {
+export async function listOpportunities(talentId: string, personId: string, params: ListParams) {
   const [[saved], follows] = await Promise.all([
     db
       .select({ value: preference.value })
@@ -87,7 +88,7 @@ export async function listOpportunities(talentId: string, personId: string, tale
     .select()
     .from(opportunity)
     .where(params.following ? inArray(opportunity.id, [...followed]) : or(isNull(opportunity.closesOn), gte(opportunity.closesOn, since)));
-  return pageOf(rows.map(opportunityOf), params, { profile: profile.success ? profile.data : null, talentZone, followed });
+  return pageOf(rows.map(opportunityOf), params, { profile: profile.success ? profile.data : null, followed });
 }
 
 /**
@@ -95,12 +96,12 @@ export async function listOpportunities(talentId: string, personId: string, tale
  * they last saw, each with its open Submit to-do: the date-change
  * notification (decision 0024), until they move the to-do or say they've seen it.
  */
-export async function opportunityChanges(talentId: string, talentZone: string): Promise<OpportunityChange[]> {
+export async function opportunityChanges(talentId: string): Promise<OpportunityChange[]> {
   const rows = await db
     .select({
       applicationId: opportunityApplication.id,
       title: opportunity.title,
-      region: opportunity.region,
+      timeZone: opportunity.timeZone,
       opensOn: opportunity.opensOn,
       closesOn: opportunity.closesOn,
       knownOpensOn: opportunityApplication.knownOpensOn,
@@ -129,7 +130,7 @@ export async function opportunityChanges(talentId: string, talentZone: string): 
       title: r.title,
       from: { opensOn: r.knownOpensOn, closesOn: r.knownClosesOn },
       to: { opensOn: r.opensOn, closesOn: r.closesOn },
-      zone: zoneOf(r, talentZone),
+      zone: r.timeZone,
       submit: submit ? { todoId: submit.todoId, date: submit.date } : null,
     };
   });

@@ -1,8 +1,5 @@
-import { eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { getCurrentTalent, getSession } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { talent } from "@/lib/db/schema";
 import { listOpportunities } from "@/lib/data/opportunities";
 import { listParams } from "@/lib/opportunities/list";
 
@@ -16,9 +13,7 @@ export async function GET(req: NextRequest) {
   if (!session) return new Response("Unauthorized", { status: 401 });
   const current = await getCurrentTalent(session.personId);
   if (!current) return new Response("Not found", { status: 404 });
-  const [row] = await db.select({ timeZone: talent.timeZone }).from(talent).where(eq(talent.id, current.id));
-  if (!row) return new Response("Not found", { status: 404 });
   const params = listParams.parse({ region: "all", kind: "all", within: "", following: "", show: "fitting", q: "", cursor: "", ...Object.fromEntries(req.nextUrl.searchParams) });
-  const page = await listOpportunities(current.id, session.personId, row.timeZone, params);
+  const page = await listOpportunities(current.id, session.personId, params);
   return Response.json(page, { headers: { "Cache-Control": "private, no-store" } });
 }

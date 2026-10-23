@@ -42,6 +42,7 @@ export function parseSearch(value: unknown): { rows: Listing[]; total: number } 
       opensOn: usDate(r.openDate),
       closesOn: usDate(r.closeDate),
       sourceStatus: r.oppStatus === "forecasted" ? "forecasted" : r.oppStatus === "posted" ? "posted" : "unknown",
+      timeZone: "America/New_York", // Grants.gov's closing times are Eastern
       summary: "",
       rules: null,
     })),

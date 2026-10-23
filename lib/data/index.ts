@@ -173,7 +173,7 @@ export const getAppData = cache(async (): Promise<AppData> => {
     calendarFeed: Boolean(memberRow?.feedHash),
     aiUsage: await dailyUsage(current.id),
     aiPaused: !!(await aiPaused()),
-    opportunityChanges: await opportunityChanges(current.id, talentRow.timeZone),
+    opportunityChanges: await opportunityChanges(current.id),
     externalEvents: externalEventsOf(importedRows, importSources, seriesLinks),
     googleCalendar: {
       available: isGoogleConfigured,

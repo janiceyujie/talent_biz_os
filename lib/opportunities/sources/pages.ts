@@ -41,8 +41,9 @@ export function linksOn(html: string, page: TrackedPage): { links: PageLink[]; t
     }
     if (url.protocol !== "https:" || url.hostname !== base.hostname || !page.items.test(url.pathname + url.search) || seen.has(url.href)) continue;
     seen.add(url.href);
-    const named = /\btitle="([^"]*)"/.exec(attrs)?.[1];
-    const title = plain(htmlToText(named ?? label));
+    // A title attribute when it says something (some sites leave it empty), else the link's text.
+    const named = /\btitle="([^"]*)"/.exec(attrs)?.[1]?.trim();
+    const title = plain(htmlToText(named || label));
     if (title && isCall(page, title) && links.length < MAX_ITEMS) links.push({ url: url.href, title: title.slice(0, 300) });
   }
   return { links, total: seen.size };
@@ -97,17 +98,21 @@ export const EXTRACTION_SYSTEM = `You read one announcement from an official art
 - Every passage is copied exactly from the announcement, character for character, and is the shortest span that states the value (one sentence or clause, under 300 characters). Values are checked against their passages, and a value whose passage doesn't state it is thrown away.
 - An announcement of results, winners, a briefing session, or anything that isn't a call people can apply for has no calls: return an empty list.
 - One call per program the announcement opens; usually one. Calls mentioned in passing, or in a list of other news, are not this announcement's.
+- Only calls the funding body named below runs, alone or with others. A call it passes on from another body (a ministry's or a foundation's, say) is that body's, read from that body's own page: not this announcement's.
 
 ## Fields
-- title: the program's name exactly as the announcement writes it, without the dates or words such as "now accepting applications" around it.
+- title: the program's name exactly as the announcement writes it, without the dates or words such as "now accepting applications" around it. When one announcement opens several tracks with their own dates, one call per track, titled with the program's name and then the track's name in brackets, each as written: "Program（Track）".
 - opensOn, closesOn: when applications open and close, as YYYY-MM-DD. Taiwan's calendar years (民國) are converted (115 is 2026). A year left out is the one the announcement's context gives; if none does, leave it empty. Not a briefing, an announcement of results, or a project period.
 - applicantTypes: who may apply. individual (a person, an artist), business (a company), nonprofit (a group, association, foundation, or other organization), government (a government body or school). ["any"] only when it says anyone may.
 - countries: a nationality or citizenship it requires (TW for the Republic of China / Taiwan, US). ["any"] only when it says nationality doesn't matter.
 - areas: a county, city, or state applicants must live or be registered in, as ISO 3166-2 codes (TW-TPE for Taipei City, US-NY for New York). When it says "this city" or "this county", that's the funding body's own.
 - disciplines: the art forms it's for: music, performing_arts, visual_arts, film (film, video, and media), writing (literature, translation, publishing), content (online content creation). ["any"] only when it says every art form.`;
 
+/** Raised when checkedCalls changes what it keeps: the answers it checked are only kept as calls, so they're read again. */
+const CHECK_VERSION = 2;
+
 export const EXTRACTION_PROMPT_VERSION = createHash("sha256")
-  .update(EXTRACTION_SYSTEM + JSON.stringify(z.toJSONSchema(extractionSchema)))
+  .update(EXTRACTION_SYSTEM + JSON.stringify(z.toJSONSchema(extractionSchema)) + CHECK_VERSION)
   .digest("hex")
   .slice(0, 12);
 
@@ -208,21 +213,31 @@ function checkedList<T extends string>(values: readonly (T | "any")[], holds: (v
 /**
  * The calls an answer gives, keeping each field only when its passage is in
  * the announcement and states the value. A call whose title isn't on the page
- * is dropped; one without a checked closing date is kept with none, so the
- * card says to check the official page.
+ * is dropped: as written, or as a name and the track it names, in brackets
+ * or after a space, each written there ("the 2027 grants (regular rounds)"). One without a
+ * checked closing date is kept with none, so the card says to check the
+ * official page, unless it opened over a year ago: an earlier year's round.
  */
 export function checkedCalls(answer: Extraction, text: string, link: PageLink, page: TrackedPage, today: string): Listing[] {
   const page_ = squash(text);
   const quotes = (passage: string) => passage.trim().length >= 2 && passage.length <= MAX_PASSAGE && page_.includes(squash(passage));
   const date = ({ value, passage }: { value: string; passage: string }) => (value && quotes(passage) && datesIn(passage, today).includes(value) ? value : null);
+  const onPage = (title: string) =>
+    page_.includes(squash(title)) ||
+    title
+      .split(/[\s（）()「」『』【】]/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .every((part) => part.length >= 2 && page_.includes(squash(part)));
   const listings = new Map<string, Listing>();
   for (const call of answer.calls) {
     const title = plain(call.title);
-    if (title.length < 2 || title.length > 300 || !page_.includes(squash(title))) continue;
+    if (title.length < 2 || title.length > 300 || !onPage(title)) continue;
     const closesOn = date(call.closesOn);
     let opensOn = date(call.opensOn);
     if (opensOn && closesOn && opensOn > closesOn) opensOn = null;
     if (closesOn && closesOn < shift(today, -CLOSED_KEPT_DAYS)) continue;
+    if (!closesOn && opensOn && opensOn < shift(today, -365)) continue;
     const passages: Record<string, string> = {};
     const rule = <T extends string>(name: string, field: { values: readonly (T | "any")[]; passage: string }, holds: (value: T | "any", passage: string) => boolean) => {
       if (!quotes(field.passage)) return null;

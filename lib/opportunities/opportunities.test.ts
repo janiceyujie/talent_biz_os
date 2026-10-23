@@ -102,12 +102,16 @@ describe("tracked pages", () => {
     const html = `<nav><a href="/news.html">最新消息</a></nav>
       <a href="/news_detail.html?sid=12"><p>2026/10/22</p><p>測試創作專案 11月1日至30日受理申請</p></a>
       <a href="/news_detail.html?sid=11">2026年第二期補助名單公告</a>
+      <a href="/news_detail.html?sid=9">測試演出團隊徵選計畫 複審團隊公告</a>
       <a href="https://elsewhere.example/news_detail.html?sid=10">外站徵件 受理申請</a>
       <a href="/news_detail.html?sid=12">測試創作專案 11月1日至30日受理申請</a>`;
-    assert.deepEqual(linksOn(html, ncaf).total, 2);
+    assert.deepEqual(linksOn(html, ncaf).total, 3);
     assert.deepEqual(linksOn(html, ncaf).links, [{ url: "https://www.ncafroc.org.tw/news_detail.html?sid=12", title: "2026/10/22 測試創作專案 11月1日至30日受理申請" }]);
-    const tpe = `<a href="News_Content.aspx?n=63F36AA6E434AD08&amp;sms=78D644F2755ACCAA&amp;s=AB12" title="測試藝文補助 開始受理">x</a>`;
-    assert.equal(linksOn(tpe, taipei).links[0]?.url, "https://culture.gov.taipei/News_Content.aspx?n=63F36AA6E434AD08&sms=78D644F2755ACCAA&s=AB12");
+    const tpe = `<a href="News_Content.aspx?n=9305B5181A62191D&amp;sms=39A01F1F3DB5F46C&amp;s=AB12" title="測試藝文補助 開始受理">x</a>`;
+    assert.equal(linksOn(tpe, taipei).links[0]?.url, "https://culture.gov.taipei/News_Content.aspx?n=9305B5181A62191D&sms=39A01F1F3DB5F46C&s=AB12");
+    // An empty title attribute: the link's own text says what it is.
+    const tao = `<a href="News_Content.aspx?n=11134&amp;s=1001" title="" >測試影視補助 徵件開跑</a>`;
+    assert.equal(linksOn(tao, trackedPages.find((p) => p.id === "taoyuan-culture")!).links[0]?.title, "測試影視補助 徵件開跑");
   });
 
   test("an announcement's text is its own, without the site, invisible characters, or a changed hash for the same words", () => {
@@ -163,6 +167,15 @@ describe("tracked pages", () => {
     // A title that isn't on the page is no call at all; spacing and the two ways of writing Tai don't matter.
     assert.equal(checkedCalls(answer({ title: "另一個專案" }), text, link, taipei, "2026-10-22").length, 0);
     assert.equal(checkedCalls(answer({ title: "測試 創作專案" }), text, link, taipei, "2026-10-22").length, 1);
+    // A name with the track it names in brackets, each on the page; a track that isn't is no call.
+    assert.equal(checkedCalls(answer({ title: "測試創作專案（開放線上申請）" }), text, link, taipei, "2026-10-22").length, 1);
+    assert.equal(checkedCalls(answer({ title: "測試創作專案（第二期）" }), text, link, taipei, "2026-10-22").length, 0);
+    assert.equal(checkedCalls(answer({ title: "測試創作專案 開放線上申請" }), text, link, taipei, "2026-10-22").length, 1);
+    // No closing date and opened over a year ago: an earlier year's round, not an open call.
+    const lastYear = { value: "2025-10-01", passage: "測試創作專案 自2025年10月1日開始受理" };
+    const older = `${text}測試創作專案 自2025年10月1日開始受理`;
+    assert.equal(checkedCalls(answer({ opensOn: lastYear, closesOn: { value: "", passage: "" } }), older, link, taipei, "2026-10-22").length, 0);
+    assert.equal(checkedCalls(answer({ opensOn: lastYear, closesOn: { value: "", passage: "" } }), older, link, taipei, "2026-06-01").length, 1);
   });
 });
 

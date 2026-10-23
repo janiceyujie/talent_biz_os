@@ -2172,7 +2172,7 @@
   "opportunities": {
     "title": "Calls you can apply for",
     "intro": "Grants, competitions, and showcases in Taiwan and the US, read from their official sources every day and checked against your profile.",
-    "aboutSources": "For now: the Ministry of Culture's open-data list of open calls, Grants.gov's arts grants (most of them are for organizations), and the announcements of the National Culture and Arts Foundation and Taipei's Department of Cultural Affairs, read by AI and checked word for word against the page. More sources are coming.",
+    "aboutSources": "For now: the Ministry of Culture's open-data list of open calls, Grants.gov's arts grants (most of them are for organizations), and the announcements of the National Culture and Arts Foundation and the culture bureaus of Taipei, New Taipei, Taoyuan, Taichung, Tainan, and Kaohsiung, read by AI and checked word for word against the page. More sources are coming.",
     "aboutScreening": "Fits: every rule the source states matches your profile. Check: the source doesn't say, or your profile is missing something. Doesn't fit: a stated rule leaves you out, hidden unless you show all. This is a first screen, not a ruling on eligibility.",
     "aboutDates": "Dates are as the source gave them when it was last read, in the source's own time zone (Taipei for Taiwan). Always confirm on the official page.",
     "search": "Search calls",

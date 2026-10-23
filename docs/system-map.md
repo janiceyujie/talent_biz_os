@@ -540,7 +540,7 @@ What to know:
 | Ministry of Culture | `grants.moc.gov.tw/OpenData/getOpenData_ApplyList.jsp` | Every open call: year, unit, program, form, start and end date | One XML file, parsed in code. Discipline only for units that fund one. No link per call: the card links to the grants site. |
 | Grants.gov | `api.grants.gov` (`search2`, `fetchOpportunity`) | US federal calls, arts category, forecasted or posted | Up to 10 pages of 100, and details for 30 per run, which give applicant types. Mostly for organizations. |
 | National Culture and Arts Foundation | `www.ncafroc.org.tw/news.html?categoryId=002` | Its announcements: each regular and special program's call | Tracked page: announcement text from the page body, read by the model. |
-| Taipei Department of Cultural Affairs | `culture.gov.taipei/News.aspx?n=63F36AA6E434AD08…` | Its news, including subsidies for the city's residents | Tracked page, as above. "This city" in a call means Taipei. Often has no subsidy on the list. |
+| The six municipal culture bureaus: Taipei, New Taipei, Taoyuan, Taichung, Tainan, Kaohsiung | Each one's list of its own calls where it has one (Taipei's Subsidies, New Taipei's Calls and applications, Taoyuan's Subsidies), else its notices or news (Taichung, Tainan, Kaohsiung); the URLs are in `tracked.ts` | Subsidies and calls for the city's residents and groups, and its festivals' and venues' calls | Tracked pages, as above. "This city" in a call means that bureau's. A call a bureau relays from another body (a ministry's, NCAF's) isn't taken from its page. Tainan's notices rarely carry a call. |
 
 ### Constraints
 
@@ -580,7 +580,7 @@ flowchart TB
 
 | | Today | Later |
 |---|---|---|
-| Coverage | 2 structured sources, 2 tracked pages | The full tracked list in decision 0024, kept current as ongoing work |
+| Coverage | 2 structured sources, 7 tracked pages (NCAF and the six municipal bureaus) | The full tracked list in decision 0024, kept current as ongoing work |
 | Yearly events (Golden Melody Awards, SXSW) | Not covered | Tracked pages, read like any other |
 | Eligibility in attachments | Not read, so Check | PDF guidelines read and checked the same way |
 | Before publishing | Code checks only | A staff review queue in front of publishing |

@@ -86,6 +86,14 @@ Errors (`user/janlin/error-reporting`):
 - `release` is the deployed commit, as on log lines. A change of tracker touches `lib/errors`, `worker/errors.ts`, the `next.config.ts` wrapper, and the `Dockerfile`'s upload step.
 - Setup and alerts: `docs/setup/sentry.md`.
 
+Request ids and error codes (`user/janlin/request-ids`):
+
+- **A request's id is its trace id.** Next starts a trace for each request, and the Sentry SDK carries it through everything the request runs, with or without a DSN. Every log line written during a request gets it as `request_id`, with no change where code logs, and Sentry's events carry the same id. The worker has no requests; its lines have `job_id`.
+- **No line for a successful request; one for a failed one.** Next has no hook after a response is sent: `proxy.ts` runs before, and Next's trace spans hold a status and duration only when Sentry records every trace. Wrapping each route handler and server action (about 100) would work, at the cost of every new one remembering to. Instead `request.failed` (from `onRequestError`) records the route pattern, method, kind, digest, `rndr_id`, and the error, and is reported to Sentry. A line for every request is what Render's HTTP request logs give, on a Pro workspace (since April 2026 a flat $25 a month): each request has an id there, sent to the app as the `Rndr-Id` header, and `request.failed` keeps it as `rndr_id` so the two meet.
+- **Error codes show Next's digest, not the request id.** A server error reaches the browser only as its digest, a hash of the error's message and stack: the same bug gives the same digest each time. Support finds the occurrence by the digest with the person and the time, in `request.failed`, which leads to its `request_id` and so to every line of that request and its Sentry event. An error thrown in the browser gets a random 8-character code, tagged on its Sentry event; without Sentry it shows none. A unique code per occurrence would need a second Sentry event for each server error.
+- `app/global-error.tsx` covers a failure of the root layout itself. With no session there, its language is the language switch's cookie, then the browser's; it loads the catalogs only when it shows.
+- `lib/log`'s hooks (the reporter and the request context) are kept on `globalThis`: Next loads a module once for `instrumentation.ts` and again for routes and pages, so a module variable set at startup didn't reach them. Before this, a `log.error` in a route or page wasn't reported to Sentry.
+
 ## Alternatives considered
 
 - **Render's logs alone.** Free and no dependency, but nothing tells the builder something broke; customers would.

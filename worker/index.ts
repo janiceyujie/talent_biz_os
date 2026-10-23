@@ -59,6 +59,7 @@ async function main() {
     pgPool,
     concurrency: Number(process.env.WORKER_HEAVY_CONCURRENCY || 2),
     taskList: Object.fromEntries(Object.entries(taskList).filter(isHeavy)),
+    parsedCronItems: [], // the schedule runs in the light pool
   });
   const http = startHttp();
   const push = startPush(); // Gmail notices, when Pub/Sub is set up; otherwise the schedule polls

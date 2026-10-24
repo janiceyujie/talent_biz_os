@@ -32,7 +32,7 @@ projects:
               - key: AI_BACKUP
                 value: openai
               - key: STORAGE_BUCKET
-                value: talent-files
+                value: taloox-files
               # Shared by web and worker for the worker's private endpoint.
               - key: WORKER_SECRET
                 generateValue: true
@@ -177,7 +177,7 @@ projects:
               - key: AI_BACKUP
                 value: openai
               - key: STORAGE_BUCKET
-                value: talent-files
+                value: taloox-files
               - key: WORKER_SECRET
                 generateValue: true
         services:

@@ -2183,7 +2183,6 @@
     "within": "Closing",
     "anyDeadline": "Any deadline",
     "withinDays": "Closing within {days} days",
-    "checkedAt": "read {when}",
     "notChecked": "not read yet",
     "noProfile": "Tell us who you are, and calls that don't fit you are hidden.",
     "listFailed": "The calls couldn't be loaded.",
@@ -2205,8 +2204,7 @@
     },
     "sources": {
       "moc": "Ministry of Culture",
-      "grants_gov": "Grants.gov",
-      "pages": "Official pages"
+      "grants_gov": "Grants.gov"
     },
     "availability": {
       "open": "Open",
@@ -2416,7 +2414,6 @@
     "followWithDate": "Following adds a Submit to-do on {date}, on Today and the Calendar.",
     "changeDate": "Change the date",
     "addDate": "Add a date",
-    "sourcesTitle": "Sources:",
     "listSeparator": ", ",
     "tracksTitle": "Rounds and forms",
     "fitRow": "{dimension}: {values}",
@@ -2430,6 +2427,9 @@
       "covers": "What it covers",
       "applicants": "Who can apply"
     },
-    "highlightsNote": "In the source's own words. The official page has the full terms."
+    "highlightsNote": "In the source's own words. The official page has the full terms.",
+    "sourcesSummary": "Updated daily · last <when></when> · {count, plural, one {See # source} other {See # sources}}",
+    "sourcesNotRead": "Not read yet · {count, plural, one {See # source} other {See # sources}}",
+    "sourceBehind": "last read <when></when>"
   }
 }

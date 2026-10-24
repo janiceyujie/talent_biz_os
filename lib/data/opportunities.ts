@@ -1,10 +1,11 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { opportunity, opportunityApplication, opportunitySource, opportunityTask, preference, todo } from "@/lib/db/schema";
+import { opportunity, opportunityApplication, opportunityPage, opportunitySource, opportunityTask, preference, todo } from "@/lib/db/schema";
 import { dateInZone } from "@/lib/domain/dates";
 import { pageOf, type ListParams } from "@/lib/opportunities/list";
-import { opportunitySources, screeningProfileSchema, type Application, type OpportunitiesWorkspace, type Opportunity, type OpportunityChange } from "@/lib/opportunities/types";
+import { trackedPages } from "@/lib/opportunities/tracked";
+import { screeningProfileSchema, type Application, type OpportunitiesWorkspace, type Opportunity, type OpportunityChange } from "@/lib/opportunities/types";
 
 type Row = typeof opportunity.$inferSelect;
 const opportunityOf = (r: Row): Opportunity => ({
@@ -29,9 +30,15 @@ const opportunityOf = (r: Row): Opportunity => ({
 
 /** What the Opportunities screen shows besides the list: the calls this talent follows, their applications and to-dos, and each source's last read. */
 export async function getOpportunitiesWorkspace(talentId: string): Promise<OpportunitiesWorkspace> {
-  const [applications, sources] = await Promise.all([
+  const [applications, sources, lists] = await Promise.all([
     db.select().from(opportunityApplication).where(eq(opportunityApplication.talentId, talentId)).orderBy(desc(opportunityApplication.updatedAt)),
     db.select().from(opportunitySource),
+    // Each tracked page's list, last read: a page that moved keeps its old address's row, so the newest.
+    db
+      .select({ trackedId: opportunityPage.trackedId, checkedAt: sql<Date | null>`max(${opportunityPage.checkedAt})`.mapWith((v: string | null) => (v ? new Date(v) : null)) })
+      .from(opportunityPage)
+      .where(eq(opportunityPage.role, "list"))
+      .groupBy(opportunityPage.trackedId),
   ]);
   const ids = applications.map((a) => a.id);
   const [followed, tasks] = ids.length
@@ -59,11 +66,11 @@ export async function getOpportunitiesWorkspace(talentId: string): Promise<Oppor
           .map((t) => ({ id: t.id, kind: t.kind, title: t.title, date: t.date, time: t.time?.slice(0, 5) ?? "", timeZone: t.timeZone, status: t.status })),
       }),
     ),
-    sources: opportunitySources.map((id) => {
-      const s = sources.find((s) => s.id === id);
-      // A failed read isn't shown: the team is told (lib/opportunities/alert.ts), and a call not read lately is Check.
-      return { id, checkedAt: s?.checkedAt?.toISOString() ?? null };
-    }),
+    // A failed read isn't shown: the team is told (lib/opportunities/alert.ts), and a call not read lately is Check.
+    sources: [
+      ...(["moc", "grants_gov"] as const).map((id) => ({ id, source: id, agency: null, checkedAt: sources.find((s) => s.id === id)?.checkedAt?.toISOString() ?? null })),
+      ...trackedPages.map((p) => ({ id: p.id, source: "pages" as const, agency: p.agency, checkedAt: lists.find((l) => l.trackedId === p.id)?.checkedAt?.toISOString() ?? null })),
+    ],
   };
 }
 

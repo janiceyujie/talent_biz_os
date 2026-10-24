@@ -1,9 +1,15 @@
 /* Opportunities (components/views/opportunities.tsx): the list of calls and their detail. */
 
-.opportunity-sources {
+.opportunity-sources summary {
+  cursor: pointer;
+}
+.opportunity-sources ul {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
 .opportunity-profile {

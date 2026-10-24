@@ -3,7 +3,7 @@
 // detail's official applicant codes are what screening uses.
 import { z } from "zod";
 import { htmlToText } from "@/lib/mail/clean";
-import { ruleApplicantTypes, type OpportunityRules } from "../types";
+import { ruleApplicantTypes, type OpportunityHighlights, type OpportunityRules } from "../types";
 import { isoDate, plain, type Listing } from "./listing";
 
 export const GRANTS_GOV_SEARCH = "https://api.grants.gov/v1/api/search2";
@@ -45,6 +45,7 @@ export function parseSearch(value: unknown): { rows: Listing[]; total: number } 
       timeZone: "America/New_York", // Grants.gov's closing times are Eastern
       summary: "",
       rules: null,
+      highlights: null,
     })),
   };
 }
@@ -65,16 +66,39 @@ const detailSchema = z.object({
       .object({
         applicantTypes: z.array(z.object({ id: z.string(), description: z.string().max(1000) })).max(50),
         applicantEligibilityDesc: z.string().max(20000).nullish(),
+        awardFloor: z.string().max(20).nullish(),
+        awardCeiling: z.string().max(20).nullish(),
       })
       .nullish(),
   }),
 });
 
-/** The rules in one call's detail; null when it states none. Throws when it isn't a detail of the call asked for: its format changed. */
-export function parseDetail(value: unknown, externalId: string): OpportunityRules | null {
+const dollars = (value: string | null | undefined) => {
+  const n = Number(value);
+  return value && Number.isInteger(n) && n > 0 ? `$${n.toLocaleString("en-US")}` : null;
+};
+
+/** An award's size as the detail states it: one figure, or the floor to the ceiling ($0 when it has no floor). */
+function amountOf(floor: string | null | undefined, ceiling: string | null | undefined): string | null {
+  const top = dollars(ceiling);
+  if (!top) return null;
+  const bottom = dollars(floor) ?? "$0";
+  return bottom === top ? top : `${bottom} – ${top}`;
+}
+
+/**
+ * The rules and highlights in one call's detail; each null when it states none.
+ * Throws when it isn't a detail of the call asked for: its format changed.
+ */
+export function parseDetail(value: unknown, externalId: string): { rules: OpportunityRules | null; highlights: OpportunityHighlights | null } {
   const { data } = detailSchema.parse(value);
   if (String(data.id) !== externalId) throw new Error("grants_gov_detail_mismatch");
   const synopsis = data.synopsis;
+  const amount = amountOf(synopsis?.awardFloor, synopsis?.awardCeiling);
+  return { rules: rulesOf(synopsis), highlights: amount ? { amount, covers: null, applicants: null } : null };
+}
+
+function rulesOf(synopsis: z.infer<typeof detailSchema>["data"]["synopsis"]): OpportunityRules | null {
   if (!synopsis?.applicantTypes.length) return null;
   // More eligibility in prose ("individuals may also apply") can widen or narrow the codes: unknown.
   const prose = plain(htmlToText(synopsis.applicantEligibilityDesc ?? ""));

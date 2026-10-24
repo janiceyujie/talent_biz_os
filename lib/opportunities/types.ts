@@ -67,6 +67,10 @@ export type OpportunityRules = z.infer<typeof opportunityRulesSchema>;
 
 // What the app works with -----------------------------------------------------
 
+/** What a person decides on, in the source's own words; each null when it doesn't say. */
+export type OpportunityHighlights = { amount: string | null; covers: string | null; applicants: string | null };
+export const highlightKeys = ["amount", "covers", "applicants"] as const;
+
 export type Opportunity = {
   id: string;
   source: OpportunitySource;
@@ -82,6 +86,7 @@ export type Opportunity = {
   timeZone: string;
   summary: string;
   rules: OpportunityRules | null;
+  highlights: OpportunityHighlights | null;
   /** A tracked page's call: the passage each checked field was read from. */
   passages?: Record<string, string> | null;
   checkedAt: string;
@@ -117,11 +122,18 @@ export type OpportunityChange = {
   submit: { todoId: string; date: string | null } | null; // the open Submit to-do, which the person can move
 };
 
+/** A structured source is named by its id (a message key), a tracked page by its agency. */
+export type OpportunitySourceRead = { id: string; checkedAt: string | null } & (
+  | { source: Exclude<OpportunitySource, "pages">; agency: null }
+  | { source: "pages"; agency: string }
+);
+
 export type OpportunitiesWorkspace = {
   /** The calls this talent follows, whatever their state: the list pages only through the rest. */
   followed: Opportunity[];
   applications: Application[];
-  sources: { id: OpportunitySource; checkedAt: string | null }[];
+  /** Each structured source and each tracked page, by the body it reads, and when it was last read. */
+  sources: OpportunitySourceRead[];
 };
 
 export type { Area };

@@ -28,6 +28,7 @@ import {
   countries,
   disciplines,
   emptyProfile,
+  highlightKeys,
   opportunityKinds,
   opportunityRegions,
   ruleApplicantTypes,
@@ -36,6 +37,7 @@ import {
   type ApplicationTask,
   type OpportunitiesWorkspace,
   type Opportunity,
+  type OpportunitySourceRead,
   type ScreeningProfile,
 } from "@/lib/opportunities/types";
 
@@ -51,7 +53,6 @@ type ListResult = ListPage<OpportunityGroup> & { counts: Record<ListTab, number>
  */
 export function OpportunitiesView({ workspace }: { workspace: OpportunitiesWorkspace }) {
   const t = useTranslations("opportunities");
-  const format = useFormatter();
   const data = useAppData();
   const profile = data.preferences["opportunities.profile"];
   const [filters, setFilters] = useState({ region: "all", kind: "all", within: "", tab: "canApply", q: "" });
@@ -169,22 +170,7 @@ export function OpportunitiesView({ workspace }: { workspace: OpportunitiesWorks
         <ListMore list={list} failedText={t("listFailed")} />
         {!list.items.length && !list.loading && !list.failed && <p className="empty">{t(tab === "following" ? "emptyFollowing" : "empty")}</p>}
       </div>
-      <p className="muted opportunity-sources">
-        <span>{t("sourcesTitle")}</span>
-        {workspace.sources.map((s) => (
-          <span key={s.id}>
-            {t(`sources.${s.id}`)} ·{" "}
-            {s.checkedAt ? (
-              // The server's and the browser's time formats can differ by a space; the browser's wins.
-              <time dateTime={s.checkedAt} suppressHydrationWarning>
-                {t("checkedAt", { when: format.dateTime(new Date(s.checkedAt), { dateStyle: "short", timeStyle: "short" }) })}
-              </time>
-            ) : (
-              t("notChecked")
-            )}
-          </span>
-        ))}
-      </p>
+      <SourcesNote sources={workspace.sources} />
       {selected && (
         <OpportunityDialog
           key={selected.group.id}
@@ -203,6 +189,38 @@ export function OpportunitiesView({ workspace }: { workspace: OpportunitiesWorks
       {profileOpen && <ProfileDialog profile={profile} pending={pending} run={run} onClose={() => setProfileOpen(false)} />}
       {status && <Toast message={status} onClose={() => setStatus("")} />}
     </section>
+  );
+}
+
+/**
+ * When the list was last read, in one line, and the bodies it reads, behind it. A source is
+ * dated only when it's a day behind the newest: they're read together, so the rest say the same.
+ */
+function SourcesNote({ sources }: { sources: OpportunitySourceRead[] }) {
+  const t = useTranslations("opportunities");
+  const format = useFormatter();
+  const latest = sources.reduce<string | null>((max, s) => (s.checkedAt && (!max || s.checkedAt > max) ? s.checkedAt : max), null);
+  // The server's and the browser's time formats can differ by a space; the browser's wins.
+  const when = (iso: string) => (
+    <time dateTime={iso} suppressHydrationWarning>
+      {format.dateTime(new Date(iso), { dateStyle: "short", timeStyle: "short" })}
+    </time>
+  );
+  const behind = (s: OpportunitySourceRead) => !s.checkedAt || (latest && new Date(latest).getTime() - new Date(s.checkedAt).getTime() > 24 * 3600_000);
+  return (
+    <details className="muted opportunity-sources">
+      <summary>
+        {latest ? t.rich("sourcesSummary", { when: () => when(latest), count: sources.length }) : t("sourcesNotRead", { count: sources.length })}
+      </summary>
+      <ul>
+        {sources.map((s) => (
+          <li key={s.id}>
+            {s.source === "pages" ? s.agency : t(`sources.${s.source}`)}
+            {behind(s) && <> · {s.checkedAt ? t.rich("sourceBehind", { when: () => when(s.checkedAt!) }) : t("notChecked")}</>}
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
@@ -305,6 +323,7 @@ function OpportunityCard({
               {r.kind === "no" ? t("onlyFor", { values: r.text ?? "" }) : r.text}
             </span>
           ))}
+          {c.highlights?.amount && <span className="opportunity-chip amount">{t("cardAmount", { amount: c.highlights.amount })}</span>}
           {g.calls.length > 1 && <span className="opportunity-chip more">{t("moreTracks", { count: g.calls.length - 1 })}</span>}
           {!c.closesOn && <span className="muted">{t("standingHelp")}</span>}
           {g.fit === "check" && toCheck.length > 0 && <span className="muted">{t("toCheck", { list: toCheck.join(t("listSeparator")) })}</span>}
@@ -422,6 +441,22 @@ function OpportunityDialog({
         {o.rules?.evidence && !o.passages && <p className="muted">{t("evidence", { text: o.rules.evidence })}</p>}
         <p className="muted">{t("fitCaution")}</p>
       </section>
+      {o.highlights && (
+        <section className="opportunity-highlights" aria-label={t("highlightsTitle")}>
+          <h3>{t("highlightsTitle")}</h3>
+          <dl>
+            {highlightKeys
+              .filter((k) => o.highlights?.[k])
+              .map((k) => (
+                <div key={k}>
+                  <dt>{t(`highlights.${k}`)}</dt>
+                  <dd>{o.highlights![k]}</dd>
+                </div>
+              ))}
+          </dl>
+          <p className="muted">{t("highlightsNote")}</p>
+        </section>
+      )}
       <p className="opportunity-official">
         <a className="secondary button-link" href={o.url} target="_blank" rel="noopener noreferrer">
           <ExternalLink size={16} aria-hidden="true" /> {t("official")}

@@ -42,7 +42,7 @@ Shortcuts taken on purpose, and gaps we know about: what happens today, why it's
 What's left:
 
 - **Fits is nearly empty.** Sources state few rules, so screening rarely reaches Fits; it's folded into You can apply until it means something.
-- **The facts a person decides on are mostly missing.** A card has a title, an agency, and dates. How much the grant is, what it pays for, who exactly can apply, and what to submit are on the official page or its PDF guidelines: `summary` is empty for every source, and eligibility comes only from the few codes or passages a source states.
+- **The facts a person decides on are only partly there.** Tracked pages now give the amount, what it covers, and who can apply, quoted from the announcement, and Grants.gov gives its award range. The Ministry of Culture's calls have none (its open data has only names and dates), and what to submit, or eligibility written only in a PDF, isn't read.
 - **The official link is uneven.** A tracked page's call opens its announcement, and a Grants.gov call its own page. A Ministry of Culture call opens the grants site's home page, since the open data has no link per call; finding the call there is left to the person.
 - **Nobody has used the page with a talent yet.** The review was a designer's, against the screens, not a session with someone looking for a call.
 
@@ -61,11 +61,11 @@ What's left:
    - discipline and applicant type shown on the card;
    - standing programs apart from dated calls;
    - a better Ministry of Culture link, if the grants site has a stable address per program (not checked).
-3. **Almost free, in the model call already made:** add amount, purpose, and who can apply, as short fields with their passages, to the tracked pages' extraction. The call reads the announcement anyway, so it's a few more output tokens, checked word for word like the dates.
+3. **Almost free, in the model call already made:** amount, purpose, and who can apply, as short quoted fields in the tracked pages' extraction. Done: re-reading every announcement once cost about $0.5.
 4. **Paid, once per document:** read a program's PDF guidelines when its hash changes, for eligibility and what to submit. Most of the National Culture and Arts Foundation's rules are there. The cost is one larger call per new PDF, not per day.
 5. **Measure before spending more:** which calls are opened and followed, and from which source, so new sources and fields go where people use them.
 
-1 and 2 are done, apart from a talent session and the Ministry of Culture link. Do 3 with the next change to the extraction prompt, since that re-reads every announcement once anyway. Weigh 4 against the cost the measurement in 5 shows.
+1 to 3 are done, apart from a talent session and the Ministry of Culture link. Weigh 4 against the cost the measurement in 5 shows.
 
 ### Disciplines are seven broad buckets, matched by keywords
 

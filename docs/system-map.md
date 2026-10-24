@@ -532,7 +532,8 @@ What to know:
 - **The scope comes first** (`lib/opportunities/scope.ts`): scholarships, academic research, historic upkeep, the business around the arts, and museums' and libraries' programs are left out of every source by title, before anything is read by the model.
 - **Screening is a first pass, never a ruling.** Each rule a call states (applicant type, country, county or state, discipline) is a list, "any", or unknown. A stated rule that leaves you out is Doesn't fit; an unknown rule, a profile field left blank, or a source not read in three days is Check. Check is always shown.
 - **The dialog shows the evidence and the official link**: the passages a tracked page's fields came from, or the source's own codes.
-- **Problems go to the team, not the screen.** The screen shows only when each source was last read. A source that fails, a parser that finds no fields, a structured source giving under half the calls it gave last time, or a tracked page or announcement that can't be read goes to the log and one email per run to `OPS_ALERT_EMAIL` (`lib/opportunities/alert.ts`; on a failed run, only after its last retry).
+- **Highlights are quotes, not summaries**: the amount, what it covers, and who can apply, each copied from the announcement (or Grants.gov's award floor and ceiling). The card shows the amount; the dialog shows all three.
+- **Problems go to the team, not the screen.** The screen shows one line, when the list was last read, which opens to the bodies it reads; one a day behind the rest shows its own last read. A source that fails, a parser that finds no fields, a structured source giving under half the calls it gave last time, or a tracked page or announcement that can't be read goes to the log and one email per run to `OPS_ALERT_EMAIL` (`lib/opportunities/alert.ts`; on a failed run, only after its last retry).
 
 ### The pages we read
 

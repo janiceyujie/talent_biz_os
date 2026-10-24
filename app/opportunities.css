@@ -1,9 +1,15 @@
 /* Opportunities (components/views/opportunities.tsx): the list of calls and their detail. */
 
-.opportunity-sources {
+.opportunity-sources summary {
+  cursor: pointer;
+}
+.opportunity-sources ul {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
 .opportunity-profile {
@@ -216,6 +222,34 @@
 .opportunity-fit-rows li p {
   margin: 2px 0 0;
   font-size: var(--text-meta);
+}
+.opportunity-chip.amount {
+  font-weight: 600;
+}
+
+.opportunity-highlights h3 {
+  margin: 16px 0 8px;
+  font-size: 15px;
+}
+.opportunity-highlights dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.opportunity-highlights dl > div {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--paper);
+}
+.opportunity-highlights dt {
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+.opportunity-highlights dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 .opportunity-official {
   display: flex;

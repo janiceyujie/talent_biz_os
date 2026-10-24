@@ -5,7 +5,7 @@ import { availability, listParams, pageOf, programOf } from "./list";
 import { screen } from "./screening";
 import { parseDetail, parseSearch } from "./sources/grants-gov";
 import { outOfScope } from "./scope";
-import { listingHash } from "./sources/listing";
+import { listingHash, oldRound } from "./sources/listing";
 import { parseMoc } from "./sources/moc";
 import { announcementText, checkedCalls, datesIn, linksOn, type Extraction } from "./sources/pages";
 import { trackedPages } from "./tracked";
@@ -74,6 +74,14 @@ describe("Grants.gov", () => {
     assert.deepEqual([rows[0].opensOn, rows[0].closesOn], ["2026-10-01", "2027-02-12"]);
     assert.equal(rows[1].closesOn, null);
     assert.equal(rows[1].agency, "Grants.gov");
+  });
+
+  test("a call still listed with no deadline, opened over a year ago, is an earlier round", () => {
+    const [always] = parseSearch(hits).rows.slice(1); // opened 2026-03-19, its placeholder deadline isn't one
+    assert.equal(oldRound(always, "2026-10-22"), false);
+    assert.equal(oldRound(always, "2027-03-20"), true);
+    assert.equal(oldRound({ opensOn: "2019-12-02", closesOn: "2027-01-01" }, "2026-10-22"), false); // a deadline still ahead
+    assert.equal(oldRound({ opensOn: null, closesOn: null }, "2026-10-22"), false);
   });
 
   test("official codes set who can apply; prose, Others, or the wrong call leave it unknown", () => {

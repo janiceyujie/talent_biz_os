@@ -7,7 +7,7 @@ import { opportunity, opportunityApplication, opportunityPage, opportunitySource
 import { dateInZone } from "@/lib/domain/dates";
 import { GRANTS_GOV_DETAIL, GRANTS_GOV_SEARCH, parseDetail, parseSearch, searchBody } from "./sources/grants-gov";
 import { outOfScope } from "./scope";
-import { listingHash, type Listing } from "./sources/listing";
+import { listingHash, oldRound, type Listing } from "./sources/listing";
 import { MOC_URL, parseMoc } from "./sources/moc";
 import {
   announcementText,
@@ -84,7 +84,8 @@ async function readGrantsGov(): Promise<Read> {
     rows.push(...parsed.rows);
     if (rows.length >= parsed.total || !parsed.rows.length) break;
   }
-  rows.splice(0, rows.length, ...rows.filter((r) => !outOfScope(r.title)));
+  const today = dateInZone("America/New_York");
+  rows.splice(0, rows.length, ...rows.filter((r) => !outOfScope(r.title) && !oldRound(r, today)));
   // The rules and highlights come from each call's detail, new calls first. A detail not read this run (a failed
   // request, or past the cap) keeps what was last read, so one bad request doesn't flip a call's screening.
   const stored = new Map(
@@ -254,8 +255,13 @@ export async function refreshOpportunities(): Promise<RefreshOutcome[]> {
               ),
             );
         }
-        // A call read in before the scope said otherwise (lib/opportunities/scope.ts) goes, unless someone follows it.
-        const outside = (await tx.select({ id: opportunity.id, title: opportunity.title }).from(opportunity).where(eq(opportunity.source, source))).filter((o) => outOfScope(o.title));
+        // A call read in before the scope said otherwise (lib/opportunities/scope.ts), or an earlier round, goes, unless someone follows it.
+        const outside = (
+          await tx
+            .select({ id: opportunity.id, title: opportunity.title, opensOn: opportunity.opensOn, closesOn: opportunity.closesOn, timeZone: opportunity.timeZone })
+            .from(opportunity)
+            .where(eq(opportunity.source, source))
+        ).filter((o) => outOfScope(o.title) || oldRound(o, dateInZone(o.timeZone)));
         if (outside.length) {
           await tx.delete(opportunity).where(
             and(

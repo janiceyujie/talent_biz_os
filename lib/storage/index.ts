@@ -19,7 +19,7 @@ const config = {
   region: process.env.STORAGE_S3_REGION || "local",
   accessKeyId: process.env.STORAGE_S3_ACCESS_KEY_ID,
   secretAccessKey: process.env.STORAGE_S3_SECRET_ACCESS_KEY,
-  bucket: process.env.STORAGE_BUCKET || "talent-files",
+  bucket: process.env.STORAGE_BUCKET || "taloox-files",
 };
 
 let client: S3Client | undefined;

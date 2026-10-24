@@ -400,6 +400,13 @@
       "when": 1792785969225,
       "tag": "0056_allowlist_staff_page",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1792799558639,
+      "tag": "0057_add_opportunity_highlights",
+      "breakpoints": true
     }
   ]
 }

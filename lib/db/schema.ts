@@ -31,7 +31,7 @@ import { historyModes } from "../mail/history";
 import type { SyncFields } from "@/lib/calendar/google/two-way";
 import type { NoticeFields } from "../mail/payment-notice/fields";
 import { mailKinds } from "../mail/relevance/prompt";
-import { applicationStages, opportunityKinds, opportunityRegions, sourceStatuses, taskKinds, type OpportunityRules } from "../opportunities/types";
+import { applicationStages, opportunityKinds, opportunityRegions, sourceStatuses, taskKinds, type OpportunityHighlights, type OpportunityRules } from "../opportunities/types";
 import { senderChecks } from "../mail/sender-auth";
 import { ruleIds } from "../mail/relevance/rules";
 import { contactRoles, stages as projectStages, transportModes, type ContractTerms, type ProjectDetails, type TermChange } from "../types"; // relative: drizzle-kit loads this file too
@@ -919,6 +919,7 @@ export const opportunity = pgTable(
     timeZone: text().notNull(), // the funding body's: its dates are days there
     summary: text().notNull().default(""),
     rules: jsonb().$type<OpportunityRules>(), // who it's for, as the source states it; null when it says nothing
+    highlights: jsonb().$type<OpportunityHighlights>(), // amount, what it covers, who can apply, in the source's words; null when it says none
     passages: jsonb().$type<Record<string, string>>(), // a tracked page's call: the passage each checked field was read from
     contentHash: text().notNull(),
     checkedAt: createdAt(), // last read from the source

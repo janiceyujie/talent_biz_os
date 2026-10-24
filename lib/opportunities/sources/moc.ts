@@ -79,6 +79,7 @@ export function parseMoc(xml: string, since: string): Listing[] {
       sourceStatus: "posted",
       timeZone: "Asia/Taipei",
       summary: "",
+      highlights: null,
       rules: applicantTypes || disciplines ? { applicantTypes, countries: null, areas: null, disciplines, evidence: [unit, form].join(" · ").slice(0, 2000) } : null,
     });
   }

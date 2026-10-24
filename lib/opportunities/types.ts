@@ -67,6 +67,10 @@ export type OpportunityRules = z.infer<typeof opportunityRulesSchema>;
 
 // What the app works with -----------------------------------------------------
 
+/** What a person decides on, in the source's own words; each null when it doesn't say. */
+export type OpportunityHighlights = { amount: string | null; covers: string | null; applicants: string | null };
+export const highlightKeys = ["amount", "covers", "applicants"] as const;
+
 export type Opportunity = {
   id: string;
   source: OpportunitySource;
@@ -82,6 +86,7 @@ export type Opportunity = {
   timeZone: string;
   summary: string;
   rules: OpportunityRules | null;
+  highlights: OpportunityHighlights | null;
   /** A tracked page's call: the passage each checked field was read from. */
   passages?: Record<string, string> | null;
   checkedAt: string;

@@ -2422,6 +2422,14 @@
     "fitRow": "{dimension}: {values}",
     "sourceSilent": "The source doesn't say: {list}",
     "profileSilent": "Your profile doesn't say: {list}",
-    "toCheck": "To check: {list}"
+    "toCheck": "To check: {list}",
+    "cardAmount": "Amount: {amount}",
+    "highlightsTitle": "Key facts",
+    "highlights": {
+      "amount": "Amount",
+      "covers": "What it covers",
+      "applicants": "Who can apply"
+    },
+    "highlightsNote": "In the source's own words. The official page has the full terms."
   }
 }

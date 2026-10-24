@@ -28,6 +28,7 @@ import {
   countries,
   disciplines,
   emptyProfile,
+  highlightKeys,
   opportunityKinds,
   opportunityRegions,
   ruleApplicantTypes,
@@ -305,6 +306,7 @@ function OpportunityCard({
               {r.kind === "no" ? t("onlyFor", { values: r.text ?? "" }) : r.text}
             </span>
           ))}
+          {c.highlights?.amount && <span className="opportunity-chip amount">{t("cardAmount", { amount: c.highlights.amount })}</span>}
           {g.calls.length > 1 && <span className="opportunity-chip more">{t("moreTracks", { count: g.calls.length - 1 })}</span>}
           {!c.closesOn && <span className="muted">{t("standingHelp")}</span>}
           {g.fit === "check" && toCheck.length > 0 && <span className="muted">{t("toCheck", { list: toCheck.join(t("listSeparator")) })}</span>}
@@ -422,6 +424,22 @@ function OpportunityDialog({
         {o.rules?.evidence && !o.passages && <p className="muted">{t("evidence", { text: o.rules.evidence })}</p>}
         <p className="muted">{t("fitCaution")}</p>
       </section>
+      {o.highlights && (
+        <section className="opportunity-highlights" aria-label={t("highlightsTitle")}>
+          <h3>{t("highlightsTitle")}</h3>
+          <dl>
+            {highlightKeys
+              .filter((k) => o.highlights?.[k])
+              .map((k) => (
+                <div key={k}>
+                  <dt>{t(`highlights.${k}`)}</dt>
+                  <dd>{o.highlights![k]}</dd>
+                </div>
+              ))}
+          </dl>
+          <p className="muted">{t("highlightsNote")}</p>
+        </section>
+      )}
       <p className="opportunity-official">
         <a className="secondary button-link" href={o.url} target="_blank" rel="noopener noreferrer">
           <ExternalLink size={16} aria-hidden="true" /> {t("official")}

@@ -2422,6 +2422,14 @@
     "fitRow": "{dimension}：{values}",
     "sourceSilent": "來源沒有寫：{list}",
     "profileSilent": "你的條件沒填：{list}",
-    "toCheck": "需確認：{list}"
+    "toCheck": "需確認：{list}",
+    "cardAmount": "金額：{amount}",
+    "highlightsTitle": "重點",
+    "highlights": {
+      "amount": "補助金額",
+      "covers": "補助項目",
+      "applicants": "申請對象"
+    },
+    "highlightsNote": "以上照來源原文摘錄，完整條件以官方網頁為準。"
   }
 }

@@ -21,6 +21,8 @@ const opportunityOf = (r: Row): Opportunity => ({
   timeZone: r.timeZone,
   summary: r.summary,
   rules: r.rules,
+  highlights: r.highlights,
+  passages: r.passages,
   checkedAt: r.checkedAt.toISOString(),
   changedAt: r.changedAt.toISOString(),
 });

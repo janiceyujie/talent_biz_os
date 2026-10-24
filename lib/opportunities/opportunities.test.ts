@@ -77,16 +77,28 @@ describe("Grants.gov", () => {
   });
 
   test("official codes set who can apply; prose, Others, or the wrong call leave it unknown", () => {
-    assert.deepEqual(parseDetail(detail(["12", "13"]), "1")?.applicantTypes, ["nonprofit"]);
-    assert.deepEqual(parseDetail(detail(["21"]), "1")?.applicantTypes, ["individual"]);
-    assert.equal(parseDetail(detail(["99"]), "1")?.applicantTypes, "any");
-    assert.equal(parseDetail(detail(["25"]), "1")?.applicantTypes, null);
-    assert.equal(parseDetail(detail(["12"], "<p>Individuals may also apply</p>"), "1")?.applicantTypes, null);
-    assert.match(parseDetail(detail(["12"], "<p>Individuals may also apply</p>"), "1")!.evidence, /Individuals may also apply/);
-    assert.equal(parseDetail({ errorcode: 0, data: { id: 1 } }, "1"), null);
+    assert.deepEqual(parseDetail(detail(["12", "13"]), "1").rules?.applicantTypes, ["nonprofit"]);
+    assert.deepEqual(parseDetail(detail(["21"]), "1").rules?.applicantTypes, ["individual"]);
+    assert.equal(parseDetail(detail(["99"]), "1").rules?.applicantTypes, "any");
+    assert.equal(parseDetail(detail(["25"]), "1").rules?.applicantTypes, null);
+    assert.equal(parseDetail(detail(["12"], "<p>Individuals may also apply</p>"), "1").rules?.applicantTypes, null);
+    assert.match(parseDetail(detail(["12"], "<p>Individuals may also apply</p>"), "1").rules!.evidence, /Individuals may also apply/);
+    assert.deepEqual(parseDetail({ errorcode: 0, data: { id: 1 } }, "1"), { rules: null, highlights: null });
     assert.throws(() => parseDetail(detail(["12"]), "2"), /grants_gov_detail_mismatch/); // not the call asked for
     assert.throws(() => parseDetail({ errorcode: 0, data: { id: 1, synopsis: { applicants: [] } } }, "1")); // its format changed
     assert.deepEqual(parseDetail(detail(["12", "00"]), "1"), parseDetail(detail(["00", "12"]), "1")); // the same each day, whatever the order
+  });
+
+  test("the award's size is the detail's floor to its ceiling, or none when it gives no ceiling", () => {
+    const award = (awardFloor: string, awardCeiling: string) => {
+      const d = detail(["12"]);
+      return { ...d, data: { ...d.data, synopsis: { ...d.data.synopsis, awardFloor, awardCeiling } } };
+    };
+    assert.equal(parseDetail(award("10000", "50000"), "1").highlights?.amount, "$10,000 – $50,000");
+    assert.equal(parseDetail(award("375000", "375000"), "1").highlights?.amount, "$375,000");
+    assert.equal(parseDetail(award("0", "100000"), "1").highlights?.amount, "$0 – $100,000");
+    assert.equal(parseDetail(award("0", "0"), "1").highlights, null);
+    assert.equal(parseDetail(award("", "none"), "1").highlights, null);
     const call = parseSearch(hits).rows[0];
     const rules = { applicantTypes: ["nonprofit"], countries: null, areas: null, disciplines: null, evidence: "Nonprofits" } satisfies OpportunityRules;
     const reordered = Object.fromEntries(Object.entries(rules).reverse()) as OpportunityRules; // as jsonb gives kept rules back
@@ -156,6 +168,7 @@ describe("tracked pages", () => {
     const text = "測試創作專案 11月1日至30日受理申請\n\n116年度補助申請自2026年11月1日至30日開放線上申請。申請者須為設籍本市之個人藝術工作者。本專案補助音樂及舞蹈創作。";
     const link = { url: "https://culture.gov.taipei/News_Content.aspx?s=1", title: "測試創作專案" };
     const none = { values: [], passage: "" };
+    const unsaid = { value: "", passage: "" };
     const answer = (over: Partial<Extraction["calls"][number]> = {}): Extraction => ({
       calls: [
         {
@@ -166,6 +179,9 @@ describe("tracked pages", () => {
           countries: none,
           areas: { values: ["TW-TPE"], passage: "申請者須為設籍本市之個人藝術工作者" },
           disciplines: { values: ["music", "performing_arts"], passage: "本專案補助音樂及舞蹈創作" },
+          amount: unsaid,
+          covers: unsaid,
+          applicants: unsaid,
           ...over,
         },
       ],
@@ -193,6 +209,30 @@ describe("tracked pages", () => {
     const older = `${text}測試創作專案 自2025年10月1日開始受理`;
     assert.equal(checkedCalls(answer({ opensOn: lastYear, closesOn: { value: "", passage: "" } }), older, link, taipei, "2026-10-22").length, 0);
     assert.equal(checkedCalls(answer({ opensOn: lastYear, closesOn: { value: "", passage: "" } }), older, link, taipei, "2026-06-01").length, 1);
+  });
+
+  test("a highlight is kept only when it's the page's own words, inside a passage on the page", () => {
+    const text = "測試創作專案\n\n每案補助上限新臺幣30萬元。補助項目：音樂創作、錄音及發表。申請者須為設籍本市之個人藝術工作者。";
+    const link = { url: "https://culture.gov.taipei/News_Content.aspx?s=2", title: "測試創作專案" };
+    const none = { values: [], passage: "" };
+    const unsaid = { value: "", passage: "" };
+    const answer = (over: Partial<Extraction["calls"][number]>): Extraction => ({
+      calls: [{ title: "測試創作專案", opensOn: unsaid, closesOn: unsaid, applicantTypes: none, countries: none, areas: none, disciplines: none, amount: unsaid, covers: unsaid, applicants: unsaid, ...over }],
+    });
+    const read = (over: Partial<Extraction["calls"][number]>) => checkedCalls(answer(over), text, link, taipei, "2026-10-22")[0];
+    const kept = read({
+      amount: { value: "上限新臺幣30萬元", passage: "每案補助上限新臺幣30萬元" },
+      covers: { value: "音樂創作、錄音及發表", passage: "補助項目：音樂創作、錄音及發表" },
+      applicants: { value: "設籍本市之個人藝術工作者", passage: "申請者須為設籍本市之個人藝術工作者" },
+    });
+    assert.deepEqual(kept.highlights, { amount: "上限新臺幣30萬元", covers: "音樂創作、錄音及發表", applicants: "設籍本市之個人藝術工作者" });
+    assert.equal(kept.passages?.amount, "每案補助上限新臺幣30萬元");
+    assert.equal(kept.rules, null); // highlights aren't rules: screening doesn't read them
+    // Reworded, not inside its passage, its passage not on the page, or an amount with no figure: each dropped.
+    assert.equal(read({ amount: { value: "最多30萬", passage: "每案補助上限新臺幣30萬元" } }).highlights, null);
+    assert.equal(read({ covers: { value: "音樂創作", passage: "補助項目包括音樂創作" } }).highlights, null);
+    assert.equal(read({ amount: { value: "補助上限", passage: "每案補助上限新臺幣30萬元" } }).highlights, null);
+    assert.equal(read({}).highlights, null);
   });
 });
 
@@ -227,7 +267,7 @@ describe("screening", () => {
 describe("the list", () => {
   const call = (over: Partial<Opportunity>): Opportunity => ({
     id: "00000000-0000-0000-0000-000000000000", source: "moc", region: "TW", kind: "grant", title: "", agency: "", url: "https://grants.moc.gov.tw/Web/",
-    opensOn: "2026-10-01", closesOn: "2026-11-30", sourceStatus: "posted", timeZone: "Asia/Taipei", summary: "", rules: null, checkedAt: fresh, changedAt: fresh, ...over,
+    opensOn: "2026-10-01", closesOn: "2026-11-30", sourceStatus: "posted", timeZone: "Asia/Taipei", summary: "", rules: null, highlights: null, checkedAt: fresh, changedAt: fresh, ...over,
   });
   const rows = [
     call({ id: "a", title: "Later", closesOn: "2026-12-31" }),

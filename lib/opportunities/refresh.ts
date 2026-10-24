@@ -85,12 +85,17 @@ async function readGrantsGov(): Promise<Read> {
     if (rows.length >= parsed.total || !parsed.rows.length) break;
   }
   rows.splice(0, rows.length, ...rows.filter((r) => !outOfScope(r.title)));
-  // The rules come from each call's detail, new calls first. A detail not read this run (a failed
-  // request, or past the cap) keeps the rules last read, so one bad request doesn't flip a call's screening.
+  // The rules and highlights come from each call's detail, new calls first. A detail not read this run (a failed
+  // request, or past the cap) keeps what was last read, so one bad request doesn't flip a call's screening.
   const stored = new Map(
-    (await db.select({ id: opportunity.externalId, rules: opportunity.rules }).from(opportunity).where(eq(opportunity.source, "grants_gov"))).map((r) => [r.id, r.rules]),
+    (
+      await db
+        .select({ id: opportunity.externalId, rules: opportunity.rules, highlights: opportunity.highlights })
+        .from(opportunity)
+        .where(eq(opportunity.source, "grants_gov"))
+    ).map((r) => [r.id, r]),
   );
-  for (const row of rows) row.rules = stored.get(row.externalId) ?? null;
+  for (const row of rows) Object.assign(row, { rules: stored.get(row.externalId)?.rules ?? null, highlights: stored.get(row.externalId)?.highlights ?? null });
   const queue = rows.toSorted((a, b) => Number(stored.has(a.externalId)) - Number(stored.has(b.externalId))).slice(0, MAX_DETAILS);
   const budget = AbortSignal.timeout(30_000);
   let next = 0;
@@ -100,7 +105,7 @@ async function readGrantsGov(): Promise<Read> {
       for (let row = queue[next++]; row && !budget.aborted; row = queue[next++]) {
         const id = row.externalId;
         await request(GRANTS_GOV_DETAIL, { opportunityId: Number(id) }, budget)
-          .then((text) => (row.rules = parseDetail(JSON.parse(text), id)))
+          .then((text) => Object.assign(row, parseDetail(JSON.parse(text), id)))
           .catch((e) => {
             failed++;
             log.warn("opportunities.refresh.detail_failed", { source: "grants_gov", error: e });
@@ -108,7 +113,7 @@ async function readGrantsGov(): Promise<Read> {
       }
     }),
   );
-  return { listings: rows, problems: failed ? [`${failed} of ${queue.length} details couldn't be read; their rules are as last read`] : [] };
+  return { listings: rows, problems: failed ? [`${failed} of ${queue.length} details couldn't be read; their rules and highlights are as last read`] : [] };
 }
 
 /**

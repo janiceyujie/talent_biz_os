@@ -13,12 +13,13 @@ import zhTW from "@/messages/zh-TW.json";
 import { areas, type Area } from "../areas";
 import { outOfScope } from "../scope";
 import { isCall, type TrackedPage } from "../tracked";
-import { countries, disciplines, ruleApplicantTypes, type Discipline, type OpportunityRules } from "../types";
+import { countries, disciplines, highlightKeys, ruleApplicantTypes, type Discipline, type OpportunityHighlights, type OpportunityRules } from "../types";
 import { isoDate, plain, stableId, type Listing } from "./listing";
 
 export const MAX_ITEMS = 10; // announcements read per page per day, newest first
 const MAX_TEXT = 30_000; // characters of an announcement sent to the model
 const MAX_PASSAGE = 600;
+const MAX_HIGHLIGHT = 80;
 const CLOSED_KEPT_DAYS = 30;
 
 export type PageLink = { url: string; title: string };
@@ -85,6 +86,9 @@ export const extractionSchema = z.object({
         countries: quotedList(statedCountries),
         areas: quotedList(areas),
         disciplines: quotedList(statedDisciplines),
+        amount: quoted,
+        covers: quoted,
+        applicants: quoted,
       }),
     )
     .max(20), // a call per program; a regular round can open one per discipline
@@ -108,10 +112,11 @@ export const EXTRACTION_SYSTEM = `You read one announcement from an official art
 - applicantTypes: who may apply. individual (a person, an artist), business (a company), nonprofit (a group, association, foundation, or other organization), government (a government body or school). ["any"] only when it says anyone may.
 - countries: a nationality or citizenship it requires (TW for the Republic of China / Taiwan, US). ["any"] only when it says nationality doesn't matter.
 - areas: a county, city, or state applicants must live or be registered in, as ISO 3166-2 codes (TW-TPE for Taipei City, US-NY for New York). When it says "this city" or "this county", that's the funding body's own.
-- disciplines: the art forms it's for: music, performing_arts, visual_arts, film (film, video, and media), writing (literature, translation, publishing), content (online content creation). ["any"] only when it says every art form.`;
+- disciplines: the art forms it's for: music, performing_arts, visual_arts, film (film, video, and media), writing (literature, translation, publishing), content (online content creation). ["any"] only when it says every art form.
+- amount, covers, applicants: what a person decides on, each value copied exactly from inside its passage, under 80 characters. amount: how much one grant or award gives ("up to NT$500,000", "at most 70% of the budget"), not the program's total budget. covers: what the money is for, the kinds of projects or costs. applicants: who may apply, as the announcement words it.`;
 
 /** Raised when checkedCalls changes what it keeps: the answers it checked are only kept as calls, so they're read again. */
-const CHECK_VERSION = 3;
+const CHECK_VERSION = 4;
 
 export const EXTRACTION_PROMPT_VERSION = createHash("sha256")
   .update(EXTRACTION_SYSTEM + JSON.stringify(z.toJSONSchema(extractionSchema)) + CHECK_VERSION)
@@ -203,6 +208,8 @@ const disciplineWords: Record<string, RegExp> = {
   content: /內容|自媒體|網紅|創作者經濟|content|creator/i,
   any: /不限類別|各類|不限領域|all disciplines|any discipline|all art forms/i,
 };
+// An amount says how much: a figure, in digits or words, or a share.
+const amountWords = /\d|[一二三四五六七八九十百千萬億]|元|%|％|成|\$|dollar/i;
 const areaNames = (area: Area) => [en.opportunities.areas[area], zhTW.opportunities.areas[area]];
 
 /** Every value a list states, read back from its passage; null when any can't be, or none was given. */
@@ -254,6 +261,15 @@ export function checkedCalls(answer: Extraction, text: string, link: PageLink, p
     );
     const disciplinesStated = rule("disciplines", call.disciplines, (v, p) => disciplineWords[v].test(p));
     const evidence = Object.values(passages).join(" · ").slice(0, 2000);
+    // A highlight is the page's own words: inside its passage, which is on the page.
+    const highlights: OpportunityHighlights = { amount: null, covers: null, applicants: null };
+    for (const key of highlightKeys) {
+      const { value, passage } = call[key];
+      const v = plain(value);
+      if (v.length < 2 || v.length > MAX_HIGHLIGHT || !quotes(passage) || !squash(passage).includes(squash(v)) || (key === "amount" && !amountWords.test(v))) continue;
+      highlights[key] = v;
+      passages[key] = passage;
+    }
     if (closesOn) passages.closesOn = call.closesOn.passage;
     if (opensOn) passages.opensOn = call.opensOn.passage;
     const rules: OpportunityRules | null =
@@ -275,6 +291,7 @@ export function checkedCalls(answer: Extraction, text: string, link: PageLink, p
       sourceStatus: opensOn || closesOn ? "posted" : "unknown",
       summary: "",
       rules,
+      highlights: highlightKeys.some((k) => highlights[k]) ? highlights : null,
       passages,
     });
   }

@@ -10,6 +10,16 @@ export function isoDate(year: number, month: number, day: number): string | null
   return z.iso.date().safeParse(value).success ? value : null;
 }
 
+/**
+ * A call with no closing date that opened over a year ago (`today` a day in its funding body's
+ * zone): an earlier round still listed, not an open call. A program open all year has a fresh round.
+ */
+export function oldRound(call: { opensOn: string | null; closesOn: string | null }, today: string) {
+  const yearAgo = new Date(`${today}T12:00:00Z`);
+  yearAgo.setUTCDate(yearAgo.getUTCDate() - 365);
+  return !call.closesOn && !!call.opensOn && call.opensOn < yearAgo.toISOString().slice(0, 10);
+}
+
 export const plain = (s: string) => s.replace(/\s+/g, " ").trim();
 
 /**

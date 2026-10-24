@@ -14,7 +14,7 @@ import { areas, type Area } from "../areas";
 import { outOfScope } from "../scope";
 import { isCall, type TrackedPage } from "../tracked";
 import { countries, disciplines, highlightKeys, ruleApplicantTypes, type Discipline, type OpportunityHighlights, type OpportunityRules } from "../types";
-import { isoDate, plain, stableId, type Listing } from "./listing";
+import { isoDate, oldRound, plain, stableId, type Listing } from "./listing";
 
 export const MAX_ITEMS = 10; // announcements read per page per day, newest first
 const MAX_TEXT = 30_000; // characters of an announcement sent to the model
@@ -246,7 +246,7 @@ export function checkedCalls(answer: Extraction, text: string, link: PageLink, p
     let opensOn = date(call.opensOn);
     if (opensOn && closesOn && opensOn > closesOn) opensOn = null;
     if (closesOn && closesOn < shift(today, -CLOSED_KEPT_DAYS)) continue;
-    if (!closesOn && opensOn && opensOn < shift(today, -365)) continue;
+    if (oldRound({ opensOn, closesOn }, today)) continue;
     const passages: Record<string, string> = {};
     const rule = <T extends string>(name: string, field: { values: readonly (T | "any")[]; passage: string }, holds: (value: T | "any", passage: string) => boolean) => {
       if (!quotes(field.passage)) return null;
